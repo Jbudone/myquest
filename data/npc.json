@@ -1,0 +1,15 @@
+{"npcs": [
+	{
+		"id":"player"
+	},
+	{
+		"id":"firefox",
+		"name":"firefox",
+		"sheet":"firefox",
+		"spawn":1500,
+		"killable":true,
+		"speed":15,
+		"health":50,
+		"damage":5
+	}
+] }

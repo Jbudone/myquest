@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" width="100" height="100" tilewidth="32" tileheight="32">
+ <tileset firstgid="1" name="tilesheet" tilewidth="32" tileheight="32">
+  <image source="../tilesheet.png" trans="ff00ff" width="320" height="1568"/>
+ </tileset>
+ <layer name="base" width="100" height="100">
+  <data encoding="base64" compression="zlib">
+   eJzt2b0vLHEYhuF3K1bHboderVar1eotZWv/hUSiQIkSJUqUKEhQkKAgQYnSx9P8mJ2d/Zjdee1m9r6SJzlhTvPeO5zkmAFoZtppQ/+wPKJHf/FosaQtaytGj7TCDVe1NW3dsmnC+9GZcL8NbVPbsmx6VLWKtqAtWrq70sNsW9vRdi2bHrwfnQn329P2tQOjRy+F+x1qR9qx0aOXwv1OtFPtzHx6FLWRhK83WjvP51G436V2pV2bT4+SpWsSno1vUHrcaffag/n0iN7YGnw//my8SdkGp8ez9qK9mm+P6JI+80nvU7nBc3kU7vemvWsf5tejFFn01u28I0nP5VG436f2pX2bb4/wWQ9/bvYzq1W3PPq9X8FsWCsW/Hu06pD0dwbt31ej6jCmlRx7ZL08CvcbV4cJbTLDHlNGj7SyuH2jHvH35Fy7MHo049ljxmrvd6PdWv1N6fHHs8es1d7vUXuyzu9Pj+56zBm/P9Ly7DFv9EjLs0fFsrszPbrvUbXsPuv06L5Hq/835+dVPc8e3ssjevQXegAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4n4AKj2ppQ==
+  </data>
+ </layer>
+ <layer name="sprites" width="100" height="100">
+  <data encoding="base64" compression="zlib">
+   eJzt2CtTVVEcxuFF95a8JbyU4y0pNsXmpXlpgN8ALwmBpKJFUQqiZrLZbDaqEf0mvOEQ3LORdPifGZ9n5jd7ZqU1+22rNeBfBp1v1/xEa4/S4/QkPU2vJ/brdv+fvfZYyL9/lhbTUlpOa/YYmb32eJ5//yK9TCvpVfpsj5HZbYcdb/Lv36bV9C69T5v2GJlBp671/PsPaSN9TJ/SF3uMla/2KHEgHUyH0uF0ZHj+zR4ljqZj6Xg6kU4Oz7/bo8RkOpVOpzPp7PD8lz1KnEvn04V0MV0anv+xx1j5kT1+2mRsbGWL3/YYG31vWtTpe9OiTt+bFnX63rSo0/emRZ3uOwq1uu8o1Jpsf7+jUKv7jkKty+lKmkpXi+9Ca9fS9TSdbtRehbiZbqXb6U7xXWjtbrqX7qcHxXehtZk0m+bSw+K7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOynbYdgMAg=
+  </data>
+ </layer>
+ <objectgroup name="area">
+  <object name="shire" type="home" x="47" y="78" width="656" height="518"/>
+ </objectgroup>
+</map>

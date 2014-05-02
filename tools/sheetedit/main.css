@@ -1,0 +1,15 @@
+
+#sheet { 
+	width:100%;
+	height:100%;
+	float:left;
+	margin-right:50px;
+}
+
+#sheet.hover {
+	background: #DDD;
+}
+
+#controls {
+	float: left;
+}

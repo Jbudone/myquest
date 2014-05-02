@@ -1,0 +1,43 @@
+<html>
+	<head>
+		<title>Tilesheet Editor</title>
+
+		<link rel="stylesheet" type="text/css" href="main.css">
+
+		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<script src="main.js"></script>
+
+		<!-- Bootstrap -->
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+	</head>
+	<body>
+
+		<h1><a id="save" href="#">Tilesheet</a> Editor</h1>
+
+		<canvas id="sheet">
+
+		</canvas>
+
+		<div id="controls">
+			<div class="btn-group">
+				<button id="ctrl-collision" type="button" class="btn btn-default">Collision</button>
+				<button id="ctrl-floating" type="button" class="btn btn-default">Floating</button>
+			</div>
+		</div>
+		
+		<!--
+			TODO
+				> different selections: collisions, floaters
+				> filter selections
+				> add/remove animation
+				> default load: tileset
+
+				> save json file: prompt download rather than new window
+				> drag rect selection
+				> more noticable collision rect
+		-->
+	</body>
+</html>

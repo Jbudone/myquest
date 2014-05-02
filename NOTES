@@ -1,0 +1,107 @@
+
+Sprites
+---------
+http://opengameart.org/users/emerald
+http://opengameart.org/content/16x18-magic-cast-animations-sheet-1-template
+http://opengameart.org/content/98-pixel-art-rpg-icons
+http://opengameart.org/content/lots-of-hyptosis-tiles-organized
+http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
+http://www.deviantart.com/morelikethis/artists/333013048?view_mode=2
+
+
+NO inventory, use a belt/pack for storing immediate items (scrolls/potions) limited space. Use Messagebox for purchasing items from shops (link texts). Store quest items internally, show a box of what items you have already (unable to drop/interact/sell those items). Pickup armour from ground to put it on; deletes your current armour in favour of this one. Allow for armour/weapon buffs (timed/perma for item): particle system which you can walk into to get effects, quest givers provide this, certain monsters, etc.
+
+HTML elements overlay for UI
+
+Store all json data in localstorage; compare update time of data to check for necessary redownload/setup
+
+NOTE: its MUCH more efficient to redraw individual tiles rather than all tiles; at 75%-90% tiles being redrawn the two methods are equal, 95% tiles redrawn takes slightly longer. Worth it to only redraw where necessary
+
+Epic quests to gain really special things: any spells (eg. heal, buffing, etc.), artifacts; Spells require mana which does not regenerate, and can only be refilled from certain (rare) fountains, hence spellcasting should be a rare and important case
+
+Certain skill trainers around the world can raise your skills -- costs skill points which you gain 1 every 3-5 levels? Each trainer requires you to do an epic quest (story-mode type) to gain that skill :: instruments, necromancy, wands, pet charming, cooking/brewing, planting, fighting(strength, protection, dexterity, agility)?, 
+
+Need basic items depending on where you go; those items are stored in your belt. You get those items by killing certain monsters (eg. silk from spiders nest, leather from bulls, etc.). When you die you lose ALL items and ALL gold on you. You may store gold in the bank, and also items in bank; but banks cost money weekly, and each withdrawal may cost money. On death you end up at nearest safe zone (town) which you have previously visited, and also have death sickness, and your god is mad at you
+
+Skills: evocation (items), wand usage, instruments, pet charming, necromancy, planting (medicines, poisons creation/applying), firemaking for cooking, brewing beers & potions, martial arts (feign death, dash, sneak, stun, martial arts attacks), inscriptions (inscribing stuff in dungeons -- dungeon-wide/area buff/debuff?)
+
+* The Stew Pot: a massive stew pot in one of the towns where you dump a bunch of random (edible) items to create a stew; the stew will have certain bonus/negative effects depending on the items and how the items react to each other
+
+Quests
+ - Romeo & Juliet
+ - Bridge Troll
+ - Princess & Frog: go to a dangerous place and collect the right frog which the princess can kiss and turn to a prince
+
+GOAL: name the functions and variables in such a way that they are completely readable, like an English sentence
+GOAL: STRICT coding style
+
+Game - determine visibility, 
+UI - all ui components
+Renderer - all rendering
+
+TODO
+ - How to write classes to avoid this. keyword repeatedly
+ - How to update map while players are playing?
+ - How to work with tiled & tmux; convert to optimized map file
+   	- Multiple tiles? (base tile & tile ontop)
+	  	1 base tile, static tiles; separated by areas & different tileset select per area
+		tiles:[,,,,34,68,[23,89],83,,,,] allows 0,1,n static tiles (eg. tile!=base tile, but also has static entity ontop)
+		Use 2 types of tiles: base tile, sprite tile. Base tile is default if set as undefined
+		object layer: spawn spots, stairs/portals, traps
+		Areas: music, atmosphere: object "area"; Page { defaultArea: ..., Areas: [{Area, Rect}, {Area, Rect}] }
+	- How to work with Layers? Areas??
+	- Pages
+	  	* Include boundary*2 of neighbours as apart of tileset for pages (border==zoning->border*2); cons: doesn't include movables (see empty spot on border, zone in and realize there's LOTS of people/enemies there)
+			NOTE: page update w/ movables on border could send neighbourly updates to neighbour
+ - How to handle patching?
+
+ - Server vs. Client abstraction
+   	- separate initialization of server/client (separate files?); read from Environment to figure which part to execute
+ - How to abstract rendering
+   	- map contains all entities (including player)
+	- step map -> step pages -> step entities -> step animations
+	- renderer (main.js?) check camera to consider which pages to render & what offset/angle (ctx.save/restore); render correct boundary of each page
+	- render save details of state of each screen tile, then consider next time for blitting
+ - Messaging
+    - allow callbacks for certain events on steps: {condition, callback}; allow for multiple callback objects; eg. Player move step hits boundary of page: Zoning .. Camera zoning transition finished: resume playing
+	- objects inherit from eventobj which stores event watchers in separate lists (depending on their condition); the parent object initializes eventobj with its various events it can trigger, then triggers them as necessary; then th eventobj checks through that list for making the appropriate callback
+	- use a querymgr for finding and selecting things
+ - Collision
+    - WHOLE tile collides or doesn't; if not then determine if tile is drawn ontop of movables or underneath (tree vs. firecamp)
+
+
+
+Coding Style
+	Documentation
+		methods
+		classes
+		codeblocks
+
+	Formatting
+		codeblocks
+		spacing align ='s, space out args (..), prefer to create more variables rather than make 1 massive line (eg. Camera.offsetX=Math.floor(Env.pageWidth*Env.tileSize) == var size = Env.pageWidth*Env.tileSize, offset = Math.floor(size); Camera.offsetX = offset; )
+		space out +: "sprite(" + sprite.name + ")"
+
+	Style
+		* if you read a block of code and cannot easily understand what's going on, then it needs to be rewritten (use an English style of writing -- variable names / methods)
+		* codeblocks may need comments ontop to explain why its doing things that way, explanation of the calculation, etc.
+		* serializable class objects allow initiation without args (in case of .fromJSON creation)
+		* base/extending classes use {} and write like: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
+		* extendClass = function(class){return{ with: function(module){ ... } }};   extendClass(this).with( .. )
+		* use var for ALL initializations of variables
+		* (function nameOfFunction(){ ... }())
+
+	http://google-styleguide.googlecode.com/svn/trunk/javascriptguide.xml
+
+
+
+LEARN THESE
+ > Node.js
+ > Grunt/Jasmine
+ > applicationCache, indexedDB, sessionStorage, couchDB, redis
+ > different db choice for server?
+ > Web Workers
+ > Websockets, webRTC
+ > Animation, Canvas
+ > Exceptions, Promises
+ > WebEncryption, WebP images
