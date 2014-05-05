@@ -1,10 +1,10 @@
 
 define(['resources','entity','animable'], function(Resources, Entity, Animable) {
 
-	var Movable = function(spriteID) {
-		Ext.extend(this,'movable');
+	var Movable = function(spriteID, page) {
 		this.base = Entity;
-		this.base(spriteID);
+		this.base(spriteID, page);
+		Ext.extend(this,'movable');
 
 		this.sprite=(new Animable(spriteID));
 
@@ -107,6 +107,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 			} else {
 				this.lastMoved = time;
 			}
+			// this.base.step(time); // NOTE: base class already stepped
 			this.sprite.step(time);
 
 			return stepResults;

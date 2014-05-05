@@ -1,5 +1,5 @@
 
-define(['jquery','resources','movable','map','page','client/camera','keys'], function($,Resources,Movable,Map,Page,Camera,Keys) {
+define(['jquery','resources','entity','movable','map','page','client/camera','keys'], function($,Resources,Entity,Movable,Map,Page,Camera,Keys) {
 
 
 	// ----------------------------------------------------------------------------------------- //
@@ -110,7 +110,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 
 
 						for (var pageI in evt.pages) {
-							var page = new Page(),
+							var page = new Page(The.map),
 								pageI = parseInt(pageI),
 								evtPage = JSON.parse(evt.pages[pageI]);
 							The.map.pages[pageI] = page;
@@ -214,8 +214,15 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 
 						// TODO:
 						//
+						// state
+						// 	  - AI object, built directly into AI (able to change around with various AI extensions) -- NPC can load different extensions
+						// 	  - Movable loads AI object (if AI-capable)
+						// 	  - AI ONLY on serverside...client side simply receives individual events (moving, attacking, HP loss, etc.)
 						//
-						//	> hover over movable & change icon depending on attributes (killable?)
+						//
+						//
+						//
+						//
 						//	> click -> move to npc -> kill -> respawn
 						//	> state machine (normal -> attacking[target] ;; idle -> walking -> dying -> dead) state manager to manage multiple state machines
 						//	> movable attacks when being attacked; follow if not in attack range (across pages, check max. distance [chase range])
@@ -228,6 +235,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 						//	> experience relative to dmg done (what about regeneration? what about healing? what about hit & run? what about too high level?)
 						//	> NO experience on kills during d/c; no experience on stairdancing
 						//	> aggro K.O.S.
+						//	> multiple people attacking same mob (switch after killing 1 player)
 						//
 						//
 						//	> CLEAN: throw as much as possible; exception handling on ALL potential throwable statements
@@ -275,6 +283,8 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 						//	> disallow same player id to connect twice
 						//	> portals to different spots of the same map
 						//	> entity idle
+						//	> abstract custom cursors & hovering entities
+						//	> EVT_MOVED_TILE, better than listening to EVT_STEP in some cases
 						//
 						//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
 						//
@@ -365,6 +375,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 				sprite            = new Image(),
 				tileSize          = Env.tileSize,
 				tileHover         = null,
+				hoveringEntity    = null,
 				tilePathHighlight = null,
 				activeX           = null,
 				activeY           = null,
@@ -376,6 +387,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 			camera=The.camera;
 			var playerPosition = The.map.localFromGlobalCoordinates(player.position.y, player.position.x);
 			The.map.curPage = playerPosition.page;
+			The.player.page = The.map.curPage;
 			// The.player.posY = playerPosition.y*Env.tileSize;
 			// The.player.posX = playerPosition.x*Env.tileSize;
 
@@ -922,7 +934,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 								pageI = parseInt(pageI),
 								evtPage = JSON.parse(evt.pages[pageI]),
 								pagesPerRow = The.map.pagesPerRow;
-							if (!The.map.pages[pageI]) The.map.pages[pageI] = new Page();
+							if (!The.map.pages[pageI]) The.map.pages[pageI] = new Page(The.map);
 							page = The.map.pages[pageI];
 
 							page.index = pageI;
@@ -996,7 +1008,7 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 						The.player.posX = evt.player.posX;
 
 						for (var pageI in evt.pages) {
-							var page = new Page(),
+							var page = new Page(The.map),
 								pageI = parseInt(pageI),
 								evtPage = JSON.parse(evt.pages[pageI]);
 							The.map.pages[pageI] = page;
@@ -1111,20 +1123,49 @@ define(['jquery','resources','movable','map','page','client/camera','keys'], fun
 			canvasEntities.addEventListener('mousemove', function(evt) {
 				bounds = canvasEntities.getBoundingClientRect();
 				var scale = Env.tileScale,
-					xTile = parseInt((evt.clientX - bounds.left)/(tileSize*scale)),
-					yTile = parseInt((evt.clientY - bounds.top) /(tileSize*scale));
+					x     = (evt.clientX - bounds.left)/scale,
+					y     = (evt.clientY - bounds.top)/scale,
+					xTile = parseInt(x/tileSize),
+					yTile = parseInt(y/tileSize);
 				activeX = xTile;
 				activeY = yTile;
 
 				try {
 					tileHover = new Tile(activeY, activeX);
+
+					hoveringEntity = false;
+					for (var movableID in The.map.curPage.movables) {
+						var movable = The.map.curPage.movables[movableID];
+						if (movable.npc.killable) {
+							if (x >= movable.posX && x <= movable.posX + 32 &&
+								y >= movable.posY && y <= movable.posY + 32) {
+									// Hovering movable
+									hoveringEntity = movable;
+									break;
+							}
+						}
+					}
+
+					if (hoveringEntity) {
+						canvasEntities.style.cursor = 'crosshair'; // TODO: custom cursors
+					} else {
+						canvasEntities.style.cursor = '';
+					}
 				} catch(e) {
 					tileHover = null;
 				}
-
 			});
 
 			canvasEntities.addEventListener('mousedown', function(evt) {
+
+				if (hoveringEntity) {
+
+					var event = new Event((++requestsId), EVT_ATTACKED, {id:hoveringEntity.id});
+					console.log("Sending attack request ["+hoveringEntity.id+"]..");
+					serverRequest(event).then(function(){ });
+					return;
+				}
+
 				walkToX = activeX + (The.camera.offsetX/tileSize);
 				walkToY = activeY - (The.camera.offsetY/tileSize);
 

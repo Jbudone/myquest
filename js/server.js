@@ -291,7 +291,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 									var playerPosition = your.map.localFromGlobalCoordinates(player.position.y, player.position.x);
 									
 									your.page = playerPosition.page;
-									your.player = new Movable('firefox');
+									your.player = new Movable('firefox', your.page);
 									your.player.playerID = player.id;
 									your.player.posY = playerPosition.y*Env.tileSize;
 									your.player.posX = playerPosition.x*Env.tileSize;
@@ -408,6 +408,11 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   } else if (evt.evtType==EVT_PREPARING_WALK) {
 					   console.log("new message from user.. FROM ("+evt.state.posY+", "+evt.state.posX+") ----> "+evt.data.distance);
+					   requestBuffer.queue({
+						   you:you,
+						   action:evt
+					   });
+				   } else if (evt.evtType==EVT_ATTACKED) {
 					   requestBuffer.queue({
 						   you:you,
 						   action:evt
@@ -644,6 +649,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 					   delete clients[you.id];
 
+				   } else if (action.evtType == EVT_ATTACKED) {
+					   console.log("Player requesting to attack entity..");
+					   you.page.movables[action.data.id].triggerEvent(EVT_ATTACKED, you.player, 10);
 				   } else {
 					   console.log("			Some strange unheard of event??");
 				   }

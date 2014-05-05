@@ -497,7 +497,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 				// destination = {y: toTile.y, x: toTile.x},
 				map = this,
 				isOpenTile = function(tile){
-					console.log('isOpenTile?');
 					try {
 						var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x),
 							index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
@@ -508,7 +507,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 						return false;
 					}
 				}, getNeighbours = function(tileNode){
-					console.log('getNeighbours?');
 					// return tiles neighbours
 					var tile  = tileNode.tile,
 						north = null,
@@ -533,7 +531,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					return y*magicNumber+x;
 				};
 
-			console.log('fromTiles?');
 			for (var i=0; i<fromTiles.length; ++i) {
 				var fromTile        = fromTiles[i],
 					fromCoordinates = { y: fromTile.y, x: fromTile.x },
@@ -547,7 +544,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					if (fromCoordinates.y == toCoordinates.y &&
 						fromCoordinates.x == toCoordinates.x) {
 
-							console.log('fromTile & toTile are the same!');
 						return {
 							path: null,
 							start: fromNode,
@@ -561,7 +557,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 				openTiles.push( fromNode );
 			}
 
-			console.log('toTiles?');
 			for (var i=0; i<toTiles.length; ++i) {
 				var toTile          = toTiles[i],
 					toCoordinates   = { y: toTile.y, x: toTile.x },
@@ -583,7 +578,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					return isOpenTile(neighbour.tile) && neighbour.weight < maxWeight;
 				});
 
-				console.log('check neighbour?');
 				// Check each neighbour if they were already searched (replace if necessary), otherwise add
 				for(i=0; i<tileNeighbours.length; ++i){
 					var neighbourNode = tileNeighbours[i],
@@ -595,7 +589,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 						// Path to neighbour already exists; use whichever one is cheaper
 						var existingNeighbour = neighbours[neighbourHash];// neighbours[neighbourPage][neighbour.y][neighbour.x];
 						if (existingNeighbour.hasOwnProperty('end')) {
-							console.log('check neighbour end?');
 							// Found path to end
 							nearestEnd = existingNeighbour;
 							nearestEnd.previousDirection = neighbourNode.previousDirection;
@@ -726,7 +719,8 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 		this.isTileInRange=function(tile) {
 			if (tile.x > this.mapWidth ||
-				tile.y > this.mapHeight) {
+				tile.y > this.mapHeight ||
+				tile.x < 0 || tile.y < 0) {
 					return false;
 				}
 			return true;

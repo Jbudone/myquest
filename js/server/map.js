@@ -55,7 +55,7 @@ define(['resources','page'], function(Resources,Page){
 								tiles      = [],
 								sprites    = [];
 							
-							if (!pages[pageI]) pages[pageI] = (new Page());
+							if (!pages[pageI]) pages[pageI] = (new Page(this));
 							page = pages[pageI];
 							page.index = pageI;
 							page.y     = pgY;

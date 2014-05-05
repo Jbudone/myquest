@@ -3,14 +3,17 @@ define(['resources','sprite','eventful'], function(Resources, Sprite, Eventful){
 
 	var entities = 0;
 
-	function Entity(spriteID) {
-		Ext.extend(this,'entity');
-		extendClass(this).with(Eventful);
-
-
+	function Entity(spriteID, page) {
 		this.spriteID = spriteID;
 		this.id = (++entities);
 		this.npc=Resources.npcs[spriteID];
+		this.page = page;
+		extendClass(this).with(Eventful);
+
+		this.listenTo(this, EVT_ZONE, function(me, newPage){
+			this.page = newPage;
+		}, HIGH_PRIORITY);
+
 		this.sprite=Resources.sprites[this.npc.sheet];
 		this.posX=32*2;
 		this.posY=32*2;
@@ -19,6 +22,7 @@ define(['resources','sprite','eventful'], function(Resources, Sprite, Eventful){
 			this.handlePendingEvents();
 		}
 
+		Ext.extend(this,'entity');
 	};
 
 

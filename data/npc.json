@@ -10,6 +10,7 @@
 		"killable":true,
 		"speed":15,
 		"health":50,
-		"damage":5
+		"damage":5,
+		"AI":true
 	}
 ] }

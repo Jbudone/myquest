@@ -14,7 +14,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 	 * NOTE: the edges of the page are shared with its neighbours, and movables will belong to both of the
 	 * 		pages at the same time
 	 *********************************************************/
-	var Page = function(){
+	var Page = function(map){
 		extendClass(this).with(Eventful);
 		Ext.extend(this,'page');
 
@@ -34,6 +34,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 		this.eventsBuffer = []; // To be sent out to connected users
 		this.clients = [];
 
+		this.map   = map;
 		this.index = null;
 		this.y     = null;
 		this.x     = null;
@@ -149,7 +150,13 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 			// TODO: process events queue
 			for (var i=0; i<this.updateList.length; ++i) {
 				var update = this.updateList[i];
-				update.step(time);
+				try {
+					update.step(time);
+				} catch(e) {
+					console.log("Error stepping movable: "+i);
+					console.log(e);
+					process.exit();
+				}
 			}
 		}; 
 

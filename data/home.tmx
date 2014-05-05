@@ -5,21 +5,21 @@
  </tileset>
  <layer name="base" width="100" height="100">
   <data encoding="base64" compression="zlib">
-   eJzt08dNBEEARNG+7ErAQv4J4DaDxWWAzQCbAfZEZTEl9XtSqTXHntYfAwAA5nW8GuMkO83OsvOC7+1q6b+ynF3ufpFdZlcF53V2M/F73Obud9l99lBwPk7+Hs+5+0v2mr0VnO/Zx8Tv0djH08TvoY8u+uiijy766KKPLvrooo8u+uiijy766KKPLvrooo8u+uiijy766KKPLvrooo8u+uiijy766KKPLvrooo8un7n7V/ad/RScv9nfxO+xtx5jPzvINgXnYXa0XvqvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAXP4ByWv7IA==
+   eJzt09lJBEEARdGCxgHXD81BI3fNwDUDBc1AQTNw/fJl0Q/qHHgU8zfVxT3dGuMsO88ussuC31fZrK5z95vsNrsrOO+zh4nf4zF3f8oOlzGOlvXP58nf4zV3f8uO8y1OlvXP9/yXj4nfo7GPl4nfQx9d9NFFH1300UUfXfTRRR9d9NFFH1300UUfXfTRRR9d9NFFH1300UUfXfTRRR9d9NFFH1300UUfXfTRRR9dPnP3r+w7+yk4f7O/id9jezPGTrab7RWc+9nBZu2vAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADALP4BDRs0ug==
   </data>
  </layer>
  <layer name="sprites" width="100" height="100">
   <data encoding="base64" compression="zlib">
-   eJzt1MEJwkAUBNA9pcjEGkxqSFA7UBI7UIwtOiWsB2GF92Buc/oDvxQAAAD4nb4rZUgOXV3/lN45uVT2+c4xdx2TqfK+a3pbcrdHE17ZYU/e9gD+zJy/tfhdzbhmi5s9mvHIFk97AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA05wNxRQvO
+   eJzt1UlOFGEAhuEihL4D3AQ5gRBhj4IB9uIQxqUECKAsIWAEZAlRogxHYPAIDpzFb9EL2hRU0dGNPk/yphddSSX/lz9VFECVrhuVmeosiuk001n+/3CjKB6nJ41671vMc0tpuebz/5vuG5VZyQ6rae2WPZ7lXCfT85rnu5XnttM7e5Squh+92eFB6ivZY7oj9ybNprk031H9vo/Z4VM6skepqvvxKDsMpqGSPVZz/mvpTXqb1mvswd16mt1mLDuMp4nf9nifs99Ju2kvfUj7NfZ4mHvRnwbcjz/qc87+SzpOJ+k0ndXYYyQ7jKanzT1e53fBNi0aze7rPOd/kS7TVfpaY48XedHL9Kr5wo38btqjRbt7fMv5f08/0s903cb34yAvPrRHi3b34O+o+qYDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8O/5BQA/K9c=
   </data>
  </layer>
  <objectgroup name="zoning">
-  <object x="432" y="208" width="16" height="16">
+  <object x="304" y="96" width="16" height="16">
    <properties>
     <property name="spot" value="1"/>
    </properties>
   </object>
-  <object x="432" y="144" width="16" height="16">
+  <object x="304" y="32" width="16" height="16">
    <properties>
     <property name="map" value="main"/>
     <property name="spawn" value="1"/>
