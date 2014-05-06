@@ -151,7 +151,7 @@ define(['eventful'], function(Eventful){
 										path.walks.unshift(walk);
 									}
 
-									this.entity.path = path;
+									this.entity.addPath(path);
 
 								} else {
 									console.log("Path already within range");

@@ -650,7 +650,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   delete clients[you.id];
 
 				   } else if (action.evtType == EVT_ATTACKED) {
-					   console.log("Player requesting to attack entity..");
+					   console.log("Player requesting to attack entity["+action.data.id+"]..");
 					   you.page.movables[action.data.id].triggerEvent(EVT_ATTACKED, you.player, 10);
 				   } else {
 					   console.log("			Some strange unheard of event??");

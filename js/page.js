@@ -55,7 +55,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 				// TODO: check if movable before checking zone_out
 				if (entity instanceof Movable) {
 					this.triggerEvent(EVT_ADDED_ENTITY, entity);
-					console.log("Adding Entity to page: "+this.index);
+					console.log("Adding Entity["+entity.id+"] to page: "+this.index);
 					this.listenTo(entity, EVT_STEP, function(entity){
 
 						if (entity.zoning) return; // Cannot zone again while zoning

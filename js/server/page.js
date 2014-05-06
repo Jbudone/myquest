@@ -22,7 +22,9 @@ define(['resources','movable'], function(Resources,Movable){
 					entity: ent
 				});
 
+				console.log("Listening to entity["+entity.id+"] for walking..");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
+					console.log("Entity ["+entity.id+"] preparing walk");
 					var movablePosition = { y: entity.posY + this.y * Env.tileSize,
 										   x: entity.posX + this.x * Env.tileSize,
 										   globalY: Math.floor(entity.posY / Env.tileSize) + this.y,
@@ -54,20 +56,21 @@ define(['resources','movable'], function(Resources,Movable){
 		initialize: function(){
 
 			if (this.spawns) {
-				for (var spawnCoord in this.spawns) {
-					var spawn  = this.spawns[spawnCoord],
-						localY = parseInt(spawnCoord/Env.pageWidth),
+				var page = this;
+				_.each(this.spawns, function(spawn, spawnCoord){
+					var localY = parseInt(spawnCoord/Env.pageWidth),
 						localX = spawnCoord % Env.pageWidth;
-					console.log("Spawning spawn at: ("+localY+","+localX+")");
+					console.log("Spawning spawn["+spawn.id+"] at: ("+localY+","+localX+")");
 
 					var npc = Resources.npcs[spawn.id],
-						entity = new Movable(npc.sheet, this);
+						entity = new Movable(npc.sheet, page);
 					entity.posY = localY*Env.tileSize;
 					entity.posX = localX*Env.tileSize;
-					if (entity.AI) entity.AI.map = this.map; // Give intelligible beings a sense of whats around them
-					this.addEntity(entity);
+					console.log("Entity["+entity.id+"]");
+					if (entity.AI) entity.AI.map = page.map; // Give intelligible beings a sense of whats around them
+					page.addEntity(entity);
 					// TODO: listen to entity for stuff
-				}
+				});
 			}
 		},
 

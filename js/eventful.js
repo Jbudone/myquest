@@ -30,9 +30,13 @@ define(function(){
 					if (listener.priority == HIGH_PRIORITY) {
 						listener.callback.apply( listener.caller, args );
 					} else {
-						listener.args = args;
+						// listener.args = args;
+						// listener.args.id = id; // TODO: remove this (debug)
 						if (listener.caller.pendingEvents) {
-							listener.caller.pendingEvents.push( listener );
+							listener.caller.pendingEvents.push( {args:args, callback:listener.callback} );
+							if (id == EVT_ADDED_ENTITY) {
+								console.log("PUSHING PENDING EVENT OF ADDED ENTITY: ["+args[1].id+"]");
+							}
 						} else {
 							listener.callback.apply( listener.caller, args );
 						}
@@ -44,6 +48,9 @@ define(function(){
 		handlePendingEvents:function(){
 			for (var i=0; i<this.pendingEvents.length; ++i) {
 				var handler = this.pendingEvents[i];
+				if (handler.args.id && handler.args.id == EVT_ADDED_ENTITY) {
+					console.log("HANDLING PENDING EVENT OF ADDED ENTITY ["+handler.args[1].id+"]!!!!");
+				}
 				handler.callback.apply( this, handler.args );
 			}
 			this.pendingEvents=[];
