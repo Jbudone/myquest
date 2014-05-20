@@ -1,5 +1,6 @@
 
-define(['jquery','resources','entity','movable','map','page','client/camera','keys'], function($,Resources,Entity,Movable,Map,Page,Camera,Keys) {
+define(['jquery','resources','entity','movable','map','page','client/camera','keys','AI'], function($,Resources,Entity,Movable,Map,Page,Camera,Keys,AI) {
+try{
 
 
 	// ----------------------------------------------------------------------------------------- //
@@ -83,8 +84,19 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 							console.log("Success logging in!");
 							console.log(evt);
 							player = evt.player;
-							The.player = new Movable('firefox');
+							The.player = new Movable('player');
 							The.player.id   = player.id;
+
+							// Setup basic AI (following target)
+							console.log("Giving AI to ME ("+player.id+")");
+							The.player.brain = new AI.Core(The.player);
+							The.player.brain.addComponent(AI.Components['Follow']);
+							// The.player.brain.addComponent(AI.Components['Combat']);
+
+							The.player.step=_.wrap(The.player.step,function(step,time){
+								var stepResults = step.apply(this, [time]);
+								this.brain.step(time);
+							});
 
 							loaded('player');
 
@@ -134,7 +146,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 										The.player.sprite.state = movable.state;
 
 									} else {
-										var entity = new Movable(movable.spriteID);
+										var entity = new Movable(movable.spriteID, page);
 										console.log("ADDING Entity: "+entityID);
 										entity.id           = movable.id;
 										entity.posY         = movable.posY;
@@ -144,6 +156,10 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 
 										if (movable.path) {
 											var path = JSON.parse(movable.path);
+											for (var j=0; j<path.walks.length; ++j) {
+												var walk = path.walks[j];
+												walk.started = false; // in case walk has already started on server
+											}
 											entity.addPath(path);
 										}
 
@@ -222,10 +238,10 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 						//
 						//
 						//
-						//
-						//	> click -> move to npc -> kill -> respawn
-						//	> state machine (normal -> attacking[target] ;; idle -> walking -> dying -> dead) state manager to manage multiple state machines
-						//	> movable attacks when being attacked; follow if not in attack range (across pages, check max. distance [chase range])
+						//	> physical state machine
+						//	> player AI: on attack/attacked set target, on move then remove target
+						//	> send core AI transitions to page event buffer (abstract for easily adding events)
+						//	> client AI target, face target if no path; attack animation on attack; die animation
 						//	> movable dying: animation, corpse, disappear, respawn
 						//	> player dying: animation, corpse, respawn -- death message; respawn to safe spot, remove corpse after some time
 						//	> movable idle on player zone or die; eventually move back to spawn spot
@@ -242,6 +258,12 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 						//	> CLEAN: sometimes buggy path movement?
 						//	> CLEAN: any chance of missing page events after zoning in?
 						//	> CLEAN: spam clicking movement lags out the entire game (server should ignore noisy players; client should temporarily ignore input between processing)
+						//	> CLEAN: sometimes bad rendering: the.camera.updated=true fixes it? ..render before loaded?
+						//	> CLEAN: clicking to move while zoning (disallow)
+						//	> CLEAN: movables not sent if 2 pages away (not in initial page neighbour)
+						//	> CLEAN: on-zone displays other movables in bad position
+						//	> CLEAN: high CPU usage
+						//	> CLEAN: remove server animations; auto client animations (facing target, etc.)
 						//
 						//
 						//	
@@ -285,6 +307,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 						//	> entity idle
 						//	> abstract custom cursors & hovering entities
 						//	> EVT_MOVED_TILE, better than listening to EVT_STEP in some cases
+						//	> NPC has base NPC to inherit; NPC has AI component list
 						//
 						//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
 						//
@@ -292,7 +315,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 						// 	> WebRTC UDP approach ( && archive events)
 						// 	> Webworkers for maps/pages on server & Transferable objects
 						// 	> Db sharding
-						// 	> Caching techniques
+						// 	> Caching techniques (hot/cold components; cache lines)
 						loaded('map');
 
 					}
@@ -781,7 +804,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 								if (event.entity.id == The.player.id) {
 
 								} else {
-									var entity = new Movable(event.entity.spriteID);
+									var entity = new Movable(event.entity.spriteID, The.map.pages[page]);
 									console.log("ADDING Entity: "+event.entity.id);
 									entity.id = event.entity.id;
 									entity.posY = event.entity.posY;
@@ -822,8 +845,6 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 									console.log(event.data.state);
 									console.log(event.data.path);
 
-
-
 									var movableState = {
 											y: entity.posY + entPage.y * Env.tileSize,
 											x: entity.posX + entPage.x * Env.tileSize,
@@ -841,11 +862,14 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 										},
 										path = new Path(),
 										walk = new Walk(),
-										maxWalk = 10*Env.tileSize;
+										maxWalk = 10*Env.tileSize,
+										adjustY = 0, // NOTE: in case walk already started and we need to adjust the 
+										adjustX = 0; // 	 path state
 
 									walk.fromJSON(event.data.path);
 									walk.walked = 0;
 									path.walks.push(walk);
+
 
 									var success = The.map.recalibratePath(movableState, pathState, path, maxWalk);
 									if (success) {
@@ -890,6 +914,52 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 
 									}
 								}
+							} else if (evtType == EVT_ATTACKED) {
+								var entPage = The.map.pages[event.data.entity.page],
+									entity  = null;
+								if (!entPage) throw UnexpectedError("Could not find page of entity being attack!?");
+								entity = entPage.movables[event.data.entity.id];
+
+								// abstract better
+								entity.hurt(event.data.amount);
+							} else if (evtType == EVT_ATTACKED_ENTITY) {
+								var entPage = The.map.pages[event.data.entity.page],
+									tarPage = The.map.pages[event.data.target.page],
+									entity  = null,
+									target  = null;
+								if (!entPage) throw UnexpectedError("Could not find page of entity throwing attack!?");
+								entity = entPage.movables[event.data.entity.id];
+
+								// TODO: abstract better
+								entity.sprite.animate('atk_right');
+							} else if (evtType == EVT_NEW_TARGET) {
+								var entPage = The.map.pages[event.data.entity.page],
+									tarPage = The.map.pages[event.data.target.page],
+									entity  = null,
+									target  = null;
+								if (!entPage) throw UnexpectedError("Could not find page of entity in new target!?");
+								if (!tarPage) throw UnexpectedError("Could not find page of target in new target!?");
+								entity = entPage.movables[event.data.entity.id];
+								target = tarPage.movables[event.data.target.id];
+
+								// set core target
+								entity.brain.setTarget(target);
+							} else if (evtType == EVT_REMOVED_TARGET) {
+								var entPage = The.map.pages[event.data.entity.page],
+									tarPage = The.map.pages[event.data.target.page],
+									entity  = null,
+									target  = null;
+								if (!entPage) throw UnexpectedError("Could not find page of entity in remove target!?");
+								if (!tarPage) throw UnexpectedError("Could not find page of target in remove target!?");
+								entity = entPage.movables[event.data.entity.id];
+								target = tarPage.movables[event.data.target.id];
+
+								// remove core target
+								if (entity.brain.target == target) {
+									entity.brain.setTarget(null);
+								}
+							} else if (evtType == EVT_DIED) {
+								// TODO: set die physical state, die animation, remove entity
 							} else { 
 								console.error("	NOT SURE WHAT evt IS!?");
 								console.error(evt);
@@ -1035,7 +1105,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 										The.map.pages[pageI].addEntity(The.player);
 
 									} else {
-										var entity = new Movable(movable.spriteID);
+										var entity = new Movable(movable.spriteID, page);
 										console.log("ADDING Entity: "+entityID);
 										entity.id           = movable.id;
 										entity.posY         = movable.posY;
@@ -1137,6 +1207,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 					for (var movableID in The.map.curPage.movables) {
 						var movable = The.map.curPage.movables[movableID];
 						if (movable.npc.killable) {
+							if (movable.playerID) continue;
 							if (x >= movable.posX && x <= movable.posX + 32 &&
 								y >= movable.posY && y <= movable.posY + 32) {
 									// Hovering movable
@@ -1163,6 +1234,8 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 					var event = new Event((++requestsId), EVT_ATTACKED, {id:hoveringEntity.id});
 					console.log("Sending attack request ["+hoveringEntity.id+"]..");
 					serverRequest(event).then(function(){ });
+					The.player.brain.setTarget(hoveringEntity);
+
 					return;
 				}
 
@@ -1181,6 +1254,11 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 					console.log("Path TO: ("+walkToY+","+walkToX+") FROM ("+(The.player.posY/Env.tileSize)+","+(The.player.posX/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
 					console.group();
 					console.log(path);
+					if (The.player.brain.target) {
+						var event = new Event((++requestsId), EVT_REMOVED_TARGET, {id: The.player.brain.target.id});
+						serverRequest(event).then(function(){ });
+						The.player.brain.setTarget(null);
+					}
 
 
 					// inject walk to beginning of path depending on where player is relative to start tile
@@ -1298,4 +1376,7 @@ define(['jquery','resources','entity','movable','map','page','client/camera','ke
 			});
 
 		};
+}catch(e){
+	printStackTrace();
+}
 });

@@ -5,7 +5,7 @@ define(function(){
 		CLIENT=2,
 		status={loaded:false},
 		extensions={
-			entity:(CLIENT|SERVER),
+			movable:(CLIENT|SERVER),
 			map:(CLIENT|SERVER),
 			page:(CLIENT|SERVER)
 		}, ready=function(environment){

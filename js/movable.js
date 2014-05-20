@@ -6,7 +6,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 		this.base(spriteID, page);
 		Ext.extend(this,'movable');
 
-		this.sprite=(new Animable(spriteID));
+		this.sprite=(new Animable(this.npc.sheet));
 
 		this.moving=false;
 		this.direction=null;
@@ -19,9 +19,43 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 		this.stepsToX=null;
 		this.stepsToY=null;
 
+		this.physicalState = new State(STATE_ALIVE);
+
+		this.health=this.npc.health;
+		this.hurt = function(hit, attacker){
+			if (this.physicalState.state !== STATE_ALIVE) return;
+			this.health -= hit;
+			this.triggerEvent(EVT_ATTACKED, attacker, hit);
+			console.log("["+this.id+"] AM HURT: "+this.health+"/"+this.npc.health);
+			if (this.health<=0) {
+				console.log("["+this.id+"] I died :(");
+				this.physicalState.transition(STATE_DEAD);
+				this.triggerEvent(EVT_DIED);
+			}
+		};
+
+
+
 		this.lastStep=0;
+		this.faceDirection = function(direction){
+			if (this.direction != direction) {
+				this.direction = direction;
+				var dir="";
+				     if (direction == NORTH) dir = "up";
+				else if (direction == SOUTH) dir = "down";
+				else if (direction == WEST)  dir = "left";
+				else if (direction == EAST)  dir = "right";
+				if (dir) {
+					this.sprite.idle('walk_'+dir);
+				}
+			}
+		};
 		this.step=_.wrap(this.step,function(step,time){
 
+			if (this.physicalState.state !== STATE_ALIVE) {
+				this.handlePendingEvents();
+				return;
+			}
 			var stepResults = step.apply(this, [time]); // TODO: generalize this wrap/apply operation for basic inheritance
 
 			if (this.path) {
@@ -55,12 +89,12 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 						path.walks.splice(0,1);
 						var pY=this.posY,
 							pX=this.posX;
-						console.log("Finished walk! ("+walk.distance+") -> ("+pY+","+pX+")"); // TODO: why does this show as different on server/client?
+						// console.log("["+this.id+"] Finished walk! ("+walk.distance+") -> ("+pY+","+pX+")"); // TODO: why does this show as different on server/client?
 						if (!path.walks.length) {
 							// Finished path
 							this.triggerEvent(EVT_FINISHED_PATH, path.id);
 							this.path = null;
-							console.log("Finished path! ("+this.posY+","+this.posX+")");
+							// console.log("["+this.id+"] Finished path! ("+this.posY+","+this.posX+")");
 
 							// Finished moving
 							this.moving = false; // TODO: necessary?
@@ -78,10 +112,11 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 
 					if (!walk.started) {
 						walk.started = true;
-						     if (direction==EAST)       this.sprite.animate('walk_right');
-						else if (direction==WEST)       this.sprite.animate('walk_left');
-						else if (direction==SOUTH)      this.sprite.animate('walk_down');
-						else if (direction==NORTH)      this.sprite.animate('walk_up');
+						this.direction = direction;
+						     if (direction==EAST)       this.sprite.animate('walk_right', true);
+						else if (direction==WEST)       this.sprite.animate('walk_left', true);
+						else if (direction==SOUTH)      this.sprite.animate('walk_down', true);
+						else if (direction==NORTH)      this.sprite.animate('walk_up', true);
 						
 					}
 
@@ -97,7 +132,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 							oldX = this.posX;
 						this.posX = Env.tileSize*Math.round(this.posX/Env.tileSize);
 						this.posY = Env.tileSize*Math.round(this.posY/Env.tileSize);
-						console.log("Finished paths! ("+this.posY+","+this.posX+")["+this.posY/16+","+this.posX/16+"] from ("+oldY+","+oldX+")");
+						// console.log("["+this.id+"] Finished paths! ("+this.posY+","+this.posX+")["+this.posY/16+","+this.posX/16+"] from ("+oldY+","+oldX+")");
 					}
 					
 
@@ -113,7 +148,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 			return stepResults;
 		});
 		
-		this.addPath=function(path, priority) {
+		this.addPath=function(path, priority){
 			// add/replace path
 			// TODO: implement priority better?
 			
@@ -123,13 +158,100 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 				return;
 			}
 
+			for (var j=0; j<path.walks.length; ++j) {
+				path.walks[j].started = false; // in case walk has already started on server
+				path.walks[j].steps   = 0;
+			}
+
 
 				this.path = path; // replace current path with this
 			// this.paths.push(path);
 			this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
+			var mov=this;
+			   var logWalk = function(walk) {
+				   var dir = null;
+						if (walk.direction == NORTH) dir = "NORTH";
+				   else if (walk.direction == SOUTH) dir = "SOUTH";
+				   else if (walk.direction == WEST)  dir = "WEST";
+				   else if (walk.direction == EAST)  dir = "EAST";
+				   console.log("		Walk: "+dir+"  ("+walk.distance+")");
+				   if (walk.started) console.log("			WALK ALREADY STARTED!!!");
+			   }, logPath = function(path) {
+				   console.log("	Path:");
+				   console.log("		FROM ("+mov.posY+","+mov.posX+")");
+				   for (var j=0; j<path.walks.length; ++j) {
+					   logWalk(path.walks[j]);
+				   }
+			   }
+
+			// console.log("Added path to entity ["+this.id+"] at ("+this.posY+","+this.posX+")");
+			// logPath(path);
 		};
 
 
+
+		this.inRangeOf = function(target, range){
+			// TODO: optimize this...
+			var _this         = this,
+				range         = range || 1,
+				myY           = this.page.y * Env.tileSize + this.posY,
+				myX           = this.page.x * Env.tileSize + this.posX,
+				yourPage      = target.page,
+				yourY         = yourPage.y * Env.tileSize + target.posY,
+				yourX         = yourPage.x * Env.tileSize + target.posX,
+				yourNearTiles = this.page.map.findNearestTiles( yourY, yourX ),
+				myNearTiles   = this.page.map.findNearestTiles( myY, myX ),
+				tiles         = this.page.map.getTilesInRange( myNearTiles, range, true ),
+				safeTiles     = {},
+				magicNumber   = Env.pageWidth,
+				hashTile      = function(tile){ return tile.y*magicNumber+tile.x; };
+
+			tiles = tiles.filter(function(tile){
+				return _this.tileAdjacentTo(tile, target);
+			});
+
+			for (var i=0; i<tiles.length; ++i) {
+				safeTiles[ hashTile(tiles[i]) ] = tiles[i];
+			}
+
+			for (var i=0; i<yourNearTiles.length; ++i) {
+				var hash = hashTile( yourNearTiles[i] );
+				if (safeTiles[hash]) return true;
+			}
+
+			return false;
+		};
+
+		this.tileAdjacentTo = function(tile, target){
+			var	yourPage     = target.page,
+				yourY        = yourPage.y * Env.tileSize + target.posY,
+				yourX        = yourPage.x * Env.tileSize + target.posX,
+				tY           = tile.y * Env.tileSize,
+				tX           = tile.x * Env.tileSize;
+			if (Math.abs(yourY - tY) < 2*Env.tileSize && yourX == tX) {
+				return true;
+			}
+			if (Math.abs(yourX - tX) < 2*Env.tileSize && yourY == tY) {
+				return true;
+			}
+			return false;
+		};
+
+		this.directionOfTarget = function(target){
+			var page         = this.page,
+				myY          = page.y * Env.tileSize + this.posY,
+				myX          = page.x * Env.tileSize + this.posX,
+				yourPage     = target.page,
+				yourY        = yourPage.y * Env.tileSize + target.posY,
+				yourX        = yourPage.x * Env.tileSize + target.posX,
+				direction    = null;
+
+			     if (myY > yourY) direction = NORTH;
+			else if (myY < yourY) direction = SOUTH;
+			else if (myX > yourX) direction = EAST;
+			else if (myX < yourX) direction = WEST;
+			return direction;
+		};
 	};
 
 

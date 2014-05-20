@@ -9,21 +9,35 @@ define(['resources','sprite'], function(Resources,Sprite){
 
 		this.animations=Resources.animations[spriteID].animations;
 		this.animation=null;
+		this.repeating=null;
 
 		this.lastStep=0;
 		this.spriteStep=0;
 		this.speed=100;
-		this.animate=function(spriteID){
+		this.animate=function(spriteID, repeat){
+			if (Env.isServer) return;
 			if (this.animation != this.animations[spriteID]) {
+				console.log("Animating "+spriteID);
 				this.animation=this.animations[spriteID];
+				this.repeating=repeat;
 				this.state.y = this.animation.row*this.tileSize;
 				this.state.x = 0;
 				if (this.animation.sheet) this.state.sheet = this.animation.sheet;
 				else delete this.state.sheet;
 			}
 		};
-		this.idle=function(){
-			this.animation=null;
+		this.idle=function(onAnimation){
+			if (onAnimation) {
+				console.log("Idling in animation: "+onAnimation);
+				var animation = this.animations[onAnimation];
+				this.state.y = animation.row*this.tileSize;
+				this.state.x = 0;
+				this.animation=null;
+			} else if (this.animation) {
+				this.state.y = this.animation.row*this.tileSize;
+				this.state.x = 0;
+				this.animation=null;
+			}
 		};
 		this.step=function(time){
 		
@@ -31,7 +45,12 @@ define(['resources','sprite'], function(Resources,Sprite){
 				if (time-this.lastStep >= this.speed) {
 					// update animation
 					++this.spriteStep;
-					if (this.spriteStep>=this.animation.length) this.spriteStep=0;
+					if (this.spriteStep>=this.animation.length) {
+						this.spriteStep=0;
+						if (!this.repeating) {
+							this.animation = null;
+						}
+					}
 					this.state.x = this.spriteStep*this.tileSize;
 
 					this.lastStep=time;

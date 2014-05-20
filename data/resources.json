@@ -190,6 +190,11 @@
           "length": 5,
           "row": 0
         },
+        "atk_left": {
+          "length": 5,
+          "row": 0,
+		  "flipX": true
+        },
         "walk_right": {
           "length": 4,
           "row": 1

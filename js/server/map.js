@@ -21,6 +21,8 @@ define(['resources','page'], function(Resources,Page){
 
 			this.sheet = Resources.findSheetFromFile(this.map.properties.tileset);
 			this.pagesPerRow=Math.ceil(mapWidth/pageWidth); // Number of pages in an entire row of the entire map
+			this.mapWidth = mapWidth;
+			this.mapHeight = mapHeight;
 
 			// TODO: render borders for pages; pageWidth-2*border included here
 			// TODO: HEAVY HEAVY HEAVY testing of various page sizes vs. map pages

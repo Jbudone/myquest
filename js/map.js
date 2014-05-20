@@ -31,6 +31,8 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 		this.eventsQueue = [];
 		this.pages = {};
 		this.pagesPerRow=null; // TODO: fetch this from server
+		this.mapWidth=null;
+		this.mapHeight=null;
 
 		this.pageIndex=function(y,x){
 			return this.pagesPerRow*y+x;
@@ -40,14 +42,14 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 		this.loadMap();
 
-		this.recalibratePath=function(state, pathState, path, maxWalk) {
+		this.recalibratePath=function(state, pathState, path, maxWalk){
 
 			// NOTE: state { x/y (global real) }
 			var map = this;
 		   try {
-			   console.log("	Recalibrating path..");
-			   console.log("	Path State: ("+pathState.y+","+pathState.x+")");
-			   console.log("	Player (current) State: ("+state.y+","+state.x+")");
+			   // console.log("	Recalibrating path..");
+			   // console.log("	Path State: ("+pathState.y+","+pathState.x+")");
+			   // console.log("	Player (current) State: ("+state.y+","+state.x+")");
 
 
 
@@ -57,8 +59,9 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 				   else if (walk.direction == SOUTH) dir = "SOUTH";
 				   else if (walk.direction == WEST)  dir = "WEST";
 				   else if (walk.direction == EAST)  dir = "EAST";
-				   console.log("		Walk: "+dir+"  ("+walk.distance+")");
+				   // console.log("		Walk: "+dir+"  ("+walk.distance+")");
 			   }, logPath = function(path) {
+				   return;
 				   console.log("	Path:");
 				   for (var j=0; j<path.walks.length; ++j) {
 					   logWalk(path.walks[j]);
@@ -72,7 +75,7 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 			   var findNearestTiles = function(posY, posX) {
 				   // NOTE: use global real coordinates
-				   console.log("	Finding nearest tiles.. ("+ posY +","+ posX +")");
+				   // console.log("	Finding nearest tiles.. ("+ posY +","+ posX +")");
 				   var tiles = map.findNearestTiles(posY, posX);
 
 				   // filter open tiles
@@ -88,15 +91,13 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 				   return tiles;
 			   }, findShortestPath = function(tilesStart, tilesEnd) {
-				   console.log("	Finding shortest path..");
+				   // console.log("	Finding shortest path..");
 
 				   // TODO: remove this..
-				   console.log(tilesStart);
-				   console.log(tilesEnd);
 				   var path = map.findPath(tilesStart, tilesEnd);
 				   if (!path) return false;
-				   console.log('found shortest path');
-				   console.log(path);
+				   // console.log('found shortest path');
+				   // console.log(path);
 				   if (!path.path) {
 					   return {
 						   path: null,
@@ -110,42 +111,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					   endTile:   path.end
 				   };
 
-				   /*
-
-				   // Do either tiles share the same tile?
-				   for (var j=0; j<tilesStart.length; ++j) {
-					   for (var k=0; k<tilesEnd.length; ++k) {
-						   if (tilesStart[j].y == tilesEnd[k].y &&
-							   tilesStart[j].x == tilesEnd[k].x) {
-							   return {
-								   path: null,
-								   tile: tilesStart[j]
-							   };
-						   }
-					   }
-				   }
-
-				   var shortestPath   = null,
-					   shortestLength = 99999;
-				   for (var k=0; k<tilesEnd.length; ++k) {
-					   var path = map.findPath(tilesStart, tilesEnd[k]);
-					   if (path) {
-						   var length = path.path.length();
-						   if (length < shortestLength) {
-							   shortestPath = path;
-							   shortestLength = length;
-						   }
-					   }
-				   }
-
-				   if (!shortestPath) return false;
-
-				   return {
-					   path: shortestPath.path,
-					   startTile: shortestPath.start,
-					   endTile: shortestPath.end
-				   };
-				   */
 			   }, recalibrationWalk = function(tile, posY, posX) {
 				   // NOTE: global real coordinates
 
@@ -465,7 +430,7 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 		   }
 		};
 		
-		this.findPath=function(fromTiles, toTiles) {
+		this.findPath=function(fromTiles, toTiles){
 
 			if (!fromTiles.length) throw "No tiles to start from..";
 
@@ -496,7 +461,11 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 				neighbours = {},
 				// destination = {y: toTile.y, x: toTile.x},
 				map = this,
-				isOpenTile = function(tile){
+				estimateCost = function(tile) {
+					// TODO: tileNodes include nearest to-tile (estimated by coordinates); redecide nearest
+					// to-tile every X tiles along path (when weight % X == 0)
+					// TODO: store open tiles as {[]} assoc array where key is the cost heuristic: Object.keys(tiles)[0] for lowest-weight select
+				}, isOpenTile = function(tile){
 					try {
 						var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x),
 							index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
@@ -537,7 +506,7 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					fromNode        = new TileNode(fromTile, null, 0, null),
 					index           = hashCoordinates(fromCoordinates.y, fromCoordinates.x);
 
-				for (var j=0; j<toTiles.length; ++j) {
+				for (var j=0; j<toTiles.length; ++j) { 
 					var toTile          = toTiles[j],
 						toCoordinates   = { y: toTile.y, x: toTile.x };
 
@@ -680,10 +649,6 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 
 
-
-
-
-
 		this.localFromGlobalCoordinates=function(y, x) {
 			var pageY  = parseInt( y/Env.pageHeight ),
 				pageX  = parseInt( x/Env.pageWidth ),
@@ -797,6 +762,58 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					if (tileEast && this.isTileInRange(tileEast)) tiles.push( tileEast );
 				}
 
+			}
+
+			return tiles;
+		};
+
+		this.isTileOpen = function(tile){
+		   try {
+			   var localCoordinates = this.localFromGlobalCoordinates(tile.y, tile.x),
+				   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
+			   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+		   } catch (e) {
+			   return false;
+		   }
+		};
+
+		this.getTilesInRange = function(tile, range, filterOpenTiles){
+
+			if (range < 0) throw new RangeError("getTilesInRange expects range >= 0: "+range);
+			
+			var left   = null,
+				right  = null,
+				top    = null,
+				bottom = null,
+				tiles  = [];
+
+			if (tile instanceof Array) {
+				_.each(tile, function(t){
+					// console.log("	getTilesInRange including tile("+t.y+","+t.x+")");
+					if (left==null  || t.x < left)   left   = t.x;
+					if (right==null || t.x > right)  right  = t.x;
+					if (top==null   || t.y < top)    top    = t.y;
+					if (bottom==null|| t.y > bottom) bottom = t.y;
+				});
+			} else {
+				left   = tile.x;
+				right  = tile.x;
+				top    = tile.y;
+				bottom = tile.y;
+			}
+
+			left   = Math.max(left - range, 0);
+			right  = Math.min(right + range, this.mapWidth);
+			top    = Math.max(top - range, 0);
+			bottom = Math.min(bottom + range, this.mapHeight);
+
+			// console.log("Bounds: {("+top+":"+bottom+"), ("+left+":"+right+")} :: ("+this.mapWidth+","+this.mapHeight+")");
+
+			for (var y=top; y<=bottom; ++y) {
+				for (var x=left; x<=right; ++x) {
+					var tile = new Tile(y, x);
+					if (!filterOpenTiles || this.isTileOpen(tile)) tiles.push( tile );
+				}
 			}
 
 			return tiles;

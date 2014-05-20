@@ -22,9 +22,9 @@ define(['resources','movable'], function(Resources,Movable){
 					entity: ent
 				});
 
-				console.log("Listening to entity["+entity.id+"] for walking..");
+				console.log("Listening to entity["+entity.id+"] for walking.. on page("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
-					console.log("Entity ["+entity.id+"] preparing walk");
+					// console.log("Entity ["+entity.id+"] preparing walk");
 					var movablePosition = { y: entity.posY + this.y * Env.tileSize,
 										   x: entity.posX + this.x * Env.tileSize,
 										   globalY: Math.floor(entity.posY / Env.tileSize) + this.y,
@@ -44,12 +44,68 @@ define(['resources','movable'], function(Resources,Movable){
 						path: walk.toJSON(), //(entity.path? entity.path.serialize() : null),
 					};
 
-					console.log("Sending walk of user ["+entity.id+"] on page ("+this.index+")");
+					// console.log("Sending walk of user ["+entity.id+"] on page ("+this.index+")");
 					this.eventsBuffer.push({
 						evtType: EVT_PREPARING_WALK,
 						data: data
 					});
-				});
+				}, HIGH_PRIORITY);
+
+				this.listenTo(entity, EVT_ATTACKED, function(entity, target, amount){
+					try{
+					this.eventsBuffer.push({
+						evtType: EVT_ATTACKED,
+						data: {
+							entity: { page: entity.page.index, id: entity.id },
+							target: { page: target.page.index, id: target.id },
+							amount: amount
+						}
+					});
+					} catch(e) {}
+				}, HIGH_PRIORITY);
+
+				this.listenTo(entity, EVT_ATTACKED_ENTITY, function(entity, target){
+					try{
+					this.eventsBuffer.push({
+						evtType: EVT_ATTACKED_ENTITY,
+						data: {
+							entity: { page: entity.page.index, id: entity.id },
+							target: { page: target.page.index, id: target.id }
+						}
+					});
+					} catch(e) {}
+				}, HIGH_PRIORITY);
+
+				this.listenTo(entity, EVT_NEW_TARGET, function(entity, target){
+					this.eventsBuffer.push({
+						evtType: EVT_NEW_TARGET,
+						data: {
+							entity: { page: entity.page.index, id: entity.id },
+							target: { page: target.page.index, id: target.id }
+						}
+					});
+				}, HIGH_PRIORITY);
+
+				this.listenTo(entity, EVT_REMOVED_TARGET, function(entity, target){
+					this.eventsBuffer.push({
+						evtType: EVT_REMOVED_TARGET,
+						data: {
+							entity: { page: entity.page.index, id: entity.id },
+							target: { page: target.page.index, id: target.id }
+						}
+					});
+				}, HIGH_PRIORITY);
+
+
+				this.listenTo(entity, EVT_DIED, function(entity){
+					this.eventsBuffer.push({
+						evtType: EVT_DIED,
+						data: {entity: entity.id }
+					});
+
+					this.stopListeningTo(entity);
+					delete this.movables[entity.id];
+				}, HIGH_PRIORITY);
 			});
 		},
 
@@ -119,6 +175,19 @@ define(['resources','movable'], function(Resources,Movable){
 							zoning: entity.zoning,
 							path: (entity.path? entity.path.serialize() : null),
 					};
+
+					if (entity.path) {
+						// adjust path
+						for (var j=0; j<entity.path.walks.length; ++j) {
+							var walk = entity.path.walks[j];
+							if (walk.steps==0) break;
+							
+							     if (walk.direction==NORTH) ent.posY -= walk.steps;
+							else if (walk.direction==SOUTH) ent.posY += walk.steps;
+							else if (walk.direction==WEST)  ent.posX -= walk.steps;
+							else if (walk.direction==EAST)  ent.posX += walk.steps;
+						}
+					}
 
 					serialized.movables[entityID] = ent;
 				}

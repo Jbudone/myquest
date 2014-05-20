@@ -9,7 +9,7 @@
 		},
 	});
 
-requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors'],function(The,Env,Utils,Ext,Keys,Events,Errors){
+requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
 
 	var _ = require('underscore'),
 		$ = require('jquery'),
@@ -40,6 +40,13 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	for(var err in Errors) {
 		GLOBAL[err]=Errors[err];
 	} 
+
+	for(var key in FSM) {
+		GLOBAL[key]=FSM[key];
+	}
+	for(var i=0; i<FSM['states'].length; ++i) {
+		GLOBAL[FSM['states'][i]]=i;
+	}
 
 
 	requirejs(['resources','movable','world','map'], function(Resources,Movable,World,Map) {
@@ -191,9 +198,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   this.page=null;
 			   };
 
-		   console.log('creating firefox..');
 
 		   var exitGame = function(e) {
+
+
 
 			   console.log("Stopping Game, saving state");
 			   if (e) console.log(e);
@@ -291,7 +299,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 									var playerPosition = your.map.localFromGlobalCoordinates(player.position.y, player.position.x);
 									
 									your.page = playerPosition.page;
-									your.player = new Movable('firefox', your.page);
+									your.player = new Movable('player', your.page);
 									your.player.playerID = player.id;
 									your.player.posY = playerPosition.y*Env.tileSize;
 									your.player.posX = playerPosition.x*Env.tileSize;
@@ -412,7 +420,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   you:you,
 						   action:evt
 					   });
-				   } else if (evt.evtType==EVT_ATTACKED) {
+				   } else {
 					   requestBuffer.queue({
 						   you:you,
 						   action:evt
@@ -434,7 +442,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   var buffer=requestBuffer.read();
 			   for (i=0; i<buffer.length; ++i) {
 
-				   console.log("New request");
+				   // console.log("New request");
 				   // Check if request & client still here
 				   var request=buffer[i];
 				   if (!request) continue; 
@@ -454,7 +462,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   if (action.evtType==EVT_PREPARING_WALK) {
 					   // New path
-					   console.log("EVT_PREPARING_WALK");
+					   // console.log("EVT_PREPARING_WALK");
 
 
 
@@ -500,7 +508,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   }
 
 					   k += (vert?your.page.y:your.page.x)*16;
-					   console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
+					   // console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
 					   var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x),
 						   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x,
 						   isSafe           = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
@@ -516,7 +524,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 								   }
 
 								   // check tile
-								   console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
+								   // console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
 
 								   if (!your.map.isTileInRange(nextTile)) {
 									   throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
@@ -563,14 +571,13 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   var response = new Response(action.id),
 						   client   = your.client;
 						   response.success = false;
-						   response.state = { x: movableState.x, y: movableState.y, posX: movableState.localX, posY: movableSTate.localY };
+						   response.state = { x: movableState.x, y: movableState.y, posX: movableState.localX, posY: movableState.localY };
 						   client.send(response.serialize());
 						   your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
 						   continue;
 					   }
 
 					   var success = map.recalibratePath(movableState, pathState, path, maxWalk);
-					   console.log("Found path?");
 
 					   if (success) {
 
@@ -651,7 +658,14 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   } else if (action.evtType == EVT_ATTACKED) {
 					   console.log("Player requesting to attack entity["+action.data.id+"]..");
-					   you.page.movables[action.data.id].triggerEvent(EVT_ATTACKED, you.player, 10);
+					   try {
+						   var target = you.page.movables[action.data.id];
+						   if (target.playerID) return; // NO player killing!
+						   you.player.triggerEvent(EVT_AGGRO, you.page.movables[action.data.id]);
+					   } catch(e){}
+				   } else if (action.evtType == EVT_REMOVED_TARGET) {
+					   // TODO: need to confirm same as current target?
+					   you.player.brain.setTarget(null);
 				   } else {
 					   console.log("			Some strange unheard of event??");
 				   }

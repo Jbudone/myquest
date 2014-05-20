@@ -1,6 +1,12 @@
 {"npcs": [
 	{
-		"id":"player"
+		"id":"player",
+		"name":"player",
+		"sheet":"firefox",
+		"speed":15,
+		"health":5000,
+		"damage":5,
+		"AI":true
 	},
 	{
 		"id":"firefox",

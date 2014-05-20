@@ -130,7 +130,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 									this.listenTo(entity, EVT_FINISHED_WALK, function(entity){
 
 										entity.zoning=false;
-										console.log("Entity no longer ZONING");
+										console.log("Entity ["+entity.id+"] no longer ZONING");
 										this.stopListeningTo(entity, EVT_FINISHED_WALK);
 									});
 								}
@@ -155,7 +155,8 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 				} catch(e) {
 					console.log("Error stepping movable: "+i);
 					console.log(e);
-					process.exit();
+					console.log(e.stack);
+					if (process) process.exit();
 				}
 			}
 		}; 

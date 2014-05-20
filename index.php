@@ -34,7 +34,7 @@ requirejs.config({
 });
 
 // Load the main app module to start the app
-require(['underscore','objectmgr','environment','utilities','extensions','event','lib/stacktrace','errors'],function(_,The,Env,Utils,Ext,Events,Stack,Errors){
+require(['underscore','objectmgr','environment','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(_,The,Env,Utils,Ext,Events,Stack,Errors,FSM){
 
 	// TODO: why aren't The or Env global?
 	window['The']=The;
@@ -53,6 +53,14 @@ require(['underscore','objectmgr','environment','utilities','extensions','event'
 	for(var err in Errors) {
 		window[err]=Errors[err];
 	}
+
+	for(var key in FSM) {
+		window[key]=FSM[key];
+	}
+	for(var i=0; i<FSM['states'].length; ++i) {
+		window[FSM['states'][i]]=i;
+	}
+
 
 	window['printStackTrace'] = printStackTrace;
 

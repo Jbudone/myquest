@@ -3,11 +3,10 @@ define(function(){
 
 	var Eventful = {
 
-		// 	stopListeningTo(obj)
-		// 	changeListener
-		// 	copyEvetnsAndListeners
 		evtListeners:{},
 		pendingEvents:[],
+		currentlyTriggeringEvent:false,
+		pendingOperations:[],
 		stopAllEventsAndListeners:function(){
 			this.pendingEvents=[];
 			this.evtListeners={};
@@ -19,6 +18,7 @@ define(function(){
 		},
 
 		triggerEvent:function(id){
+			this.currentlyTriggeringEvent=true;
 			if (this.evtListeners[id]) {
 				var me=this,
 					evtArgs=arguments;
@@ -30,12 +30,10 @@ define(function(){
 					if (listener.priority == HIGH_PRIORITY) {
 						listener.callback.apply( listener.caller, args );
 					} else {
-						// listener.args = args;
-						// listener.args.id = id; // TODO: remove this (debug)
 						if (listener.caller.pendingEvents) {
 							listener.caller.pendingEvents.push( {args:args, callback:listener.callback} );
-							if (id == EVT_ADDED_ENTITY) {
-								console.log("PUSHING PENDING EVENT OF ADDED ENTITY: ["+args[1].id+"]");
+							if (id == EVT_DIED) {
+								console.log("ENTITY HAS NOW DIED: ["+args[0].id+"] SENDING DEATH NOTE TO ["+listener.caller.id+"]");
 							}
 						} else {
 							listener.callback.apply( listener.caller, args );
@@ -43,14 +41,17 @@ define(function(){
 					}
 				});
 			}
+			this.currentlyTriggeringEvent=false;
+			for (var i=0; i<this.pendingOperations.length; ++i) {
+				var operation = this.pendingOperations[i];
+				operation.callback.apply(operation.context, operation.args);
+			}
+			this.pendingOperations=[];
 		},
 
 		handlePendingEvents:function(){
 			for (var i=0; i<this.pendingEvents.length; ++i) {
 				var handler = this.pendingEvents[i];
-				if (handler.args.id && handler.args.id == EVT_ADDED_ENTITY) {
-					console.log("HANDLING PENDING EVENT OF ADDED ENTITY ["+handler.args[1].id+"]!!!!");
-				}
 				handler.callback.apply( this, handler.args );
 			}
 			this.pendingEvents=[];
@@ -64,13 +65,39 @@ define(function(){
 
 		removeEventListener:function(id,context){
 			if (!this.evtListeners[id]) return false;
+			var removedSome = false;
 			for(var i=0; i<this.evtListeners[id].length; ++i) {
 				if (this.evtListeners[id][i].caller==context) {
-					this.evtListeners[id].splice(i,1);
-					return true;
+					if (this.currentlyTriggeringEvent) {
+						
+						this.evtListeners[id][i].pendingRemoval = true;
+
+						if (!removedSome) {
+							removedSome = true;
+
+							var operation = {
+								callback:function(id){
+									for (var j=0; j<this.evtListeners[id].length; ++j) {
+										if (this.evtListeners[id][j].pendingRemoval) {
+											this.evtListeners[id].splice(j,1);
+											--j;
+										}
+									}
+								},
+								context:this,
+								args:[id]
+							};
+
+							this.pendingOperations.push(operation);
+						}
+					} else {
+						this.evtListeners[id].splice(i,1);
+						--i;
+					}
+					removedSome = true;
 				}
 			}
-			return false;
+			return removedSome;
 		},
 
 		listenTo:function(obj,id,callback,priority){
