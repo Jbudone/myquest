@@ -45,7 +45,7 @@ try{
 			loaded();
 
 			//
-			websocket = new WebSocket('ws://127.0.0.1:1338/');
+			websocket = new WebSocket('ws://24.108.128.118:1338/');
 			websocket.onopen = function(evt) {
 				console.log("Connected to server..");
 				loaded('connection');
@@ -1360,6 +1360,9 @@ try{
 					console.error("Going back to state..");
 					console.error(state);
 					console.error(event);
+
+					tilePathHighlight=null;
+
 					The.map.curPage = The.map.pages[state.page];
 					if (response.state) {
 						The.player.posY = response.state.posY;

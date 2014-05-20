@@ -8,10 +8,26 @@
 	<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
 	<meta http-equiv="pragma" content="no-cache" />
 
+	<title>Web-based RPG Game -- HEAVY DEVELOPMENT</title>
+
 	<!-- Stylesheets -->
 	<style>
 		canvas {
-			position:absolute;
+			position: absolute;
+			margin-left: auto;
+			margin-right: auto;
+			left: 0;
+			right: 0;
+		}
+
+		#warnings {
+			position: absolute;
+			top:520px;
+		}
+
+		h3 {
+			margin-top: 0px;
+			margin-bottom: 0px;
 		}
 	</style>
 
@@ -24,6 +40,18 @@
 	<canvas id="background" width="2000px" height="2000px"></canvas>
 	<canvas id="entities" width="2000px" height="2000px"></canvas>
 
+	<div id="warnings">
+		<h1><b>Warning: </b>Heavy Development</h1>
+	
+		<h2> Currently working on..</h2>
+		<ul>
+			<li>Combat system: <b>Resurrection</b>, <b>Player death</b>, <b>Player autoattack</b>, <b>Fighting (facing) direction</b></li>
+			<li>Fault taulerance</li>
+			<li>Multiplayer components</li>
+		</ul>
+		<h3> Being tested on Google Chrome</h3>
+		<h3> Server is being run on a home network, on a cheap netbook in the basement. May be slow, may be offline</h3>
+	</div>
 <script>
 requirejs.config({
 	"baseUrl": "js",
@@ -68,6 +96,10 @@ require(['underscore','objectmgr','environment','utilities','extensions','event'
 	<?php if (isset($_GET['id'])) { ?> id = <?php echo $_GET['id']; } ?>;
 	if (!id) {
 		id = localStorage.getItem('id');
+	}
+
+	if (!id) {
+		id = 2;
 	}
 
 	if (id) {

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+while true
+do
+	nodejs js/server.js
+
+	echo "Server Shutdown... restarting in 5 seconds"
+	sleep 5
+done

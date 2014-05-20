@@ -11,13 +11,14 @@ define(['resources','eventful'], function(Resources,Eventful){
 	 ********************************************************/
 	var Camera = function(){
 		extendClass(this).with(Eventful);
-		this.lastTime=(new Date()).getTime();
+		this.lastTime=now();
 		this.offsetX=0;
 		this.offsetY=0;
 
 		this.isZoning=false;
 		this.updated=false;
 		this.moveSpeed=75;
+		this.lastUpdated=now();
 
 		this.listenTo(The.map, EVT_ZONE, function(map,direction){
 			console.log("CAMERA ZONING: "+direction);
@@ -53,6 +54,11 @@ define(['resources','eventful'], function(Resources,Eventful){
 				this.offsetY-=move;
 				if (this.offsetY<top) this.offsetY=top;
 				this.updated=true;
+			}
+
+			if (time - this.lastUpdated > 2500) {
+				this.updated = true; // Use this as a just in case for background redraws
+				this.lastUpdated = time;
 			}
 		};
 	};

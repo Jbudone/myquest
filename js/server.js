@@ -220,14 +220,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		   process.on('SIGINT', exitGame);
 		   process.on('uncaughtException', exitGame);
 
-		   http.createServer(function (req, res) {
-			   res.setHeader('Content-Type','application/json');
-			   res.setHeader('Access-Control-Allow-Origin', 'http://jbud.local');
-			   res.setHeader('Access-Control-Allow-Methods','GET,PUT,POST,DELETE');
-			   res.writeHead(200);
-			   res.end(JSON.stringify({ message:"Hello World\n" }));
-
-		   }).listen(1337, '127.0.0.1');
 		   websocket = new WebSocketServer({port:1338});
 		   websocket.on('connection', function(client){
 
