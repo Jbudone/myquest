@@ -45,7 +45,12 @@ try{
 			loaded();
 
 			//
-			websocket = new WebSocket('ws://24.108.128.118:1338/');
+			var testingLocal = true;
+			if (testingLocal) {
+				websocket = new WebSocket('ws://127.0.0.1:1338/');
+			} else {
+				websocket = new WebSocket('ws://24.108.128.118:1338/');
+			}
 			websocket.onopen = function(evt) {
 				console.log("Connected to server..");
 				loaded('connection');
@@ -56,7 +61,13 @@ try{
 
 
 				var login = function(id) {
-					var event = new Event((++requestsId), EVT_LOGIN, { id: id }, null);
+
+					var event;
+					if (id) {
+						event = new Event((++requestsId), EVT_LOGIN, { id: id }, null);
+					} else {
+						event = new Event((++requestsId), EVT_NEW_CHARACTER, {}, null);
+					}
 					websocket.send(event.serialize());
 				}
 
@@ -78,7 +89,16 @@ try{
 						console.log(evt);
 					}
 					if (typeof evt == "String") return;
-					if (evt.login) {
+					if (evt.newCharacter) {
+						if (evt.success) {
+							var id = evt.newCharacter.id;
+							localStorage.setItem('id', id);
+							event = new Event((++requestsId), EVT_LOGIN, { id: id }, null);
+							websocket.send(event.serialize());
+						} else {
+							console.log("Error creating new character..??");
+						}
+					} else if (evt.login) {
 
 						if (evt.success) {
 							console.log("Success logging in!");

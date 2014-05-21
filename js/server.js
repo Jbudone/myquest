@@ -257,7 +257,37 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 				   if (you.id==null) {
-					   if (evt.evtType==EVT_LOGIN) {
+					   if (evt.evtType==EVT_NEW_CHARACTER) {
+						   var id = parseInt(evt.data.id);
+						   console.log("User requesting a new character..");
+						   db
+						   	.collection('players')
+							.find({}, {sort:{'id':-1}, limit:1}).toArray(function(err, res){
+								if (err) {
+									console.log("Error retrieving id from server db..");
+									console.log(err);
+								} else {
+
+									console.log(res);
+									var maxID = res[0].id,
+										id = maxID + 1;
+									console.log("Creating new character ["+id+"] for user..");
+									if (isNaN(id)) process.exit();
+									db
+									 .collection('players')
+									 .insert([{ id: id, position:{y:20, x:14}, map:'main' }], function(res){
+
+										 var response = new Response(evt.id);
+										 response.success = true;
+										 response.newCharacter={
+											 id: id,
+										 };
+										 client.send(response.serialize());
+									 });
+								}
+							});
+						   // db.players.find().sort({"id":-1}).limit(1)
+					   } else if (evt.evtType==EVT_LOGIN) {
 						   var id = parseInt(evt.data.id);
 						   console.log("User logging in as ["+id+"]");
 						   db

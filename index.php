@@ -92,21 +92,9 @@ require(['underscore','objectmgr','environment','utilities','extensions','event'
 
 	window['printStackTrace'] = printStackTrace;
 
-	window['id']=null;
-	<?php if (isset($_GET['id'])) { ?> id = <?php echo $_GET['id']; } ?>;
-	if (!id) {
-		id = localStorage.getItem('id');
-	}
-
-	if (!id) {
-		id = 2;
-	}
-
-	if (id) {
-		requirejs(["main"]);
-	} else {
-		console.error("Need an id..");
-	}
+	var id = localStorage.getItem('id');
+	window['id']=id;
+	requirejs(["main"]);
 });
 </script>
 </body>
