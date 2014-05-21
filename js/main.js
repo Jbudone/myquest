@@ -45,11 +45,12 @@ try{
 			loaded();
 
 			//
-			var testingLocal = true;
+			var testingLocal = false;
 			if (testingLocal) {
 				websocket = new WebSocket('ws://127.0.0.1:1338/');
 			} else {
-				websocket = new WebSocket('ws://24.108.128.118:1338/');
+				websocket = new WebSocket('ws://54.86.213.238:1338/');
+				// websocket = new WebSocket('ws://24.108.128.118:1338/');
 			}
 			websocket.onopen = function(evt) {
 				console.log("Connected to server..");
