@@ -259,7 +259,11 @@
     {
       "id": "firefox",
       "image": "firefox.png"
-    }
+    },
+	{
+		"id": "deathknight",
+		"image": "sprites/deathknight.png"
+	}
   ],
   "sprites": [
     {
@@ -300,6 +304,67 @@
         },
         "walk_up": {
           "length": 8,
+          "row": 4
+        },
+        "idle_up": {
+          "length": 2,
+          "row": 5
+        },
+        "atk_down": {
+          "length": 5,
+          "row": 6
+        },
+        "walk_down": {
+          "length": 4,
+          "row": 7
+        },
+        "idle_down": {
+          "length": 2,
+          "row": 8
+        }
+      }
+    }, {
+      "id": "deathknight",
+      "sheet": "deathknight",
+	  "width": 42,
+	  "height": 42,
+	  "offset_x": -13,
+	  "offset_y": -17,
+      "states": {
+        "lol": {
+          "row": 1,
+          "frames": 3
+        }
+      },
+      "animations": {
+        "atk_right": {
+          "length": 5,
+          "row": 0
+        },
+        "atk_left": {
+          "length": 5,
+          "row": 0,
+          "flipX": true
+        },
+        "walk_right": {
+          "length": 4,
+          "row": 1
+        },
+        "walk_left": {
+          "length": 4,
+          "row": 1,
+          "flipX": true
+        },
+        "idle_right": {
+          "length": 2,
+          "row": 2
+        },
+        "atk_up": {
+          "length": 5,
+          "row": 3
+        },
+        "walk_up": {
+          "length": 4,
           "row": 4
         },
         "idle_up": {
