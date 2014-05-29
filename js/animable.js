@@ -26,6 +26,20 @@ define(['resources','sprite'], function(Resources,Sprite){
 				else delete this.state.sheet;
 			}
 		};
+		this.dirAnimate=function(spriteID, direction, repeat){
+			if (Env.isServer) return;
+				 if (direction == NORTH) dir = "up";
+			else if (direction == SOUTH) dir = "down";
+			else if (direction == WEST)  dir = "left";
+			else if (direction == EAST)  dir = "right";
+			if (this.animations[spriteID+'_'+dir]) {
+				this.animate(spriteID+'_'+dir, repeat);
+			} else if (this.animations[spriteID]) {
+				this.animate(spriteID, repeat);
+			} else {
+				console.error('Could not animate ['+spriteID+'] in direction ('+direction+')');
+			}
+		};
 		this.idle=function(onAnimation){
 			if (onAnimation) {
 				console.log("Idling in animation: "+onAnimation);

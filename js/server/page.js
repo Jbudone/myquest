@@ -107,6 +107,13 @@ define(['resources','movable'], function(Resources,Movable){
 					delete this.movables[entity.id];
 				}, HIGH_PRIORITY);
 			});
+
+			this.listenTo(this, EVT_ZONE_OUT, function(page, entity){
+				this.eventsBuffer.push({
+					evtType: EVT_REMOVED_ENTITY,
+					entity: { id: entity.id }
+				});
+			});
 		},
 
 		initialize: function(){

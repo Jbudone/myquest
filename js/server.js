@@ -237,7 +237,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   action: { evtType: EVT_DISCONNECTED }
 				   });
 
-				   console.log('websocket connection close');
+				   console.log('websocket connection close ['+you.id+']');
 			   });
 
 
@@ -462,6 +462,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   eventsArchive.pushArchive();
 
 			   var buffer=requestBuffer.read();
+			   if (buffer.length) {
+				   console.log("----Reading request buffer----");
+			   }
 			   for (i=0; i<buffer.length; ++i) {
 
 				   // console.log("New request");
@@ -682,9 +685,14 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   console.log("Player requesting to attack entity["+action.data.id+"]..");
 					   try {
 						   var target = you.page.movables[action.data.id];
-						   if (target.playerID) return; // NO player killing!
+						   if (target.playerID) {
+							   console.log('	NO Player Killing!!');
+							   continue; // NO player killing!
+						   }
 						   you.player.triggerEvent(EVT_AGGRO, you.page.movables[action.data.id]);
-					   } catch(e){}
+					   } catch(e){
+						   console.log("Error: "+e.message);
+					   }
 				   } else if (action.evtType == EVT_REMOVED_TARGET) {
 					   // TODO: need to confirm same as current target?
 					   you.player.brain.setTarget(null);
@@ -692,7 +700,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   console.log("			Some strange unheard of event??");
 				   }
 			   }
-			   requestBuffer.clear();
+			   if (buffer.length) {
+				   requestBuffer.clear();
+				   console.log("----Cleared request buffer----");
+			   }
 
 
 			   // Timestep the world

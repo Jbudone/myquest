@@ -248,8 +248,8 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 
 			     if (myY > yourY) direction = NORTH;
 			else if (myY < yourY) direction = SOUTH;
-			else if (myX > yourX) direction = EAST;
-			else if (myX < yourX) direction = WEST;
+			else if (myX > yourX) direction = WEST;
+			else if (myX < yourX) direction = EAST;
 			return direction;
 		};
 	};

@@ -45,11 +45,12 @@ try{
 			loaded();
 
 			//
-			var testingLocal = true;
+			var testingLocal = false;
 			if (testingLocal) {
 				websocket = new WebSocket('ws://127.0.0.1:1338/');
 			} else {
-				websocket = new WebSocket('ws://24.108.128.118:1338/');
+				websocket = new WebSocket('ws://54.86.213.238:1338/');
+				// websocket = new WebSocket('ws://24.108.128.118:1338/');
 			}
 			websocket.onopen = function(evt) {
 				console.log("Connected to server..");
@@ -442,9 +443,11 @@ try{
 			canvasEntities.height = (Env.pageHeight+2*Env.pageBorder)*tileSize*Env.tileScale;
 			canvasBackground.width  = (Env.pageWidth+2*Env.pageBorder)*tileSize*Env.tileScale;
 			canvasBackground.height = (Env.pageHeight+2*Env.pageBorder)*tileSize*Env.tileScale;
+			ctxEntities.mozImageSmoothingEnabled=false;
 			ctxEntities.webkitImageSmoothingEnabled=false;
 			ctxEntities.strokeStyle="#CCCCCC";
 			ctxEntities.lineWidth=lineWidth;
+			ctxBackground.mozImageSmoothingEnabled=false;
 			ctxBackground.webkitImageSmoothingEnabled=false;
 			ctxBackground.strokeStyle="#CCCCCC";
 			ctxBackground.lineWidth=lineWidth;
@@ -949,9 +952,14 @@ try{
 									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity throwing attack!?");
 								entity = entPage.movables[event.data.entity.id];
+								target = tarPage.movables[event.data.target.id];
 
 								// TODO: abstract better
-								entity.sprite.animate('atk_right');
+
+								// entity.faceDirection(direction);
+								var direction = entity.directionOfTarget(target);
+								entity.sprite.dirAnimate('atk', direction);
+								// entity.sprite.animate('atk_right');
 							} else if (evtType == EVT_NEW_TARGET) {
 								var entPage = The.map.pages[event.data.entity.page],
 									tarPage = The.map.pages[event.data.target.page],
