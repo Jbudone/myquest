@@ -55,8 +55,8 @@
   </object>
  </objectgroup>
  <objectgroup name="spawns">
-  <object type="firefox" x="208" y="160" width="16" height="16"/>
-  <object type="firefox" x="160" y="208" width="16" height="16"/>
-  <object type="firefox" x="256" y="96" width="16" height="16"/>
+  <object type="deathknight" x="208" y="160" width="16" height="16"/>
+  <object type="deathknight" x="160" y="208" width="16" height="16"/>
+  <object type="deathknight" x="256" y="96" width="16" height="16"/>
  </objectgroup>
 </map>

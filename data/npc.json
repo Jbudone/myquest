@@ -18,5 +18,16 @@
 		"health":50,
 		"damage":5,
 		"AI":true
+	},
+	{
+		"id":"deathknight",
+		"name":"deathknight",
+		"sheet":"deathknight",
+		"spawn":2500,
+		"killable":true,
+		"speed":12,
+		"health":50,
+		"damage":5,
+		"AI":true
 	}
 ] }
