@@ -11,7 +11,9 @@ define(['resources'], function(Resources){
 		this.sheet=Resources.sprites[spriteID].sheet;
 		this.spriteID=spriteID;
 
-		this.tileSize=32;
+		this.tileSize=this.sheet.tileSize.width;
+		this.offset_x=this.sheet.offset.x;
+		this.offset_y=this.sheet.offset.y;
 		this.state={y:(this.tileSize*4), x:(this.tileSize*0)};
 		this.draw=function(ctx){
 		};

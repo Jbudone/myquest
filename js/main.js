@@ -766,8 +766,9 @@ try{
 									scale=Env.tileScale,
 									offsetY = The.camera.offsetY,
 									offsetX = The.camera.offsetX,
-									movableOffX = movable.sprite.tileSize/4, // Center the entity
-									movableOffY = movable.sprite.tileSize/2;
+									// TODO: fix sprite centering with sheet offset
+									movableOffX = movable.sprite.tileSize/4,// - movable.sprite.offset_x, //movable.sprite.tileSize/4, // Center the entity
+									movableOffY = movable.sprite.tileSize/2;// - movable.sprite.offset_y; //movable.sprite.tileSize/2;
 								if (movable.sprite.state.sheet) {
 									customSheet = true;
 									movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet

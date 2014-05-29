@@ -56,8 +56,10 @@
 requirejs.config({
 	"baseUrl": "js",
 	"paths": {
-		"jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
-		"underscore": "//underscorejs.org/underscore",
+		// "jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
+		"jquery": "lib/jquery-2.0.3.min",
+		// "underscore": "//underscorejs.org/underscore",
+		"underscore": "lib/underscore-min"
 	},
 });
 
