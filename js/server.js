@@ -237,7 +237,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   action: { evtType: EVT_DISCONNECTED }
 				   });
 
-				   console.log('websocket connection close');
+				   console.log('websocket connection close ['+you.id+']');
 			   });
 
 

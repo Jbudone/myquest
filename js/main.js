@@ -952,9 +952,14 @@ try{
 									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity throwing attack!?");
 								entity = entPage.movables[event.data.entity.id];
+								target = tarPage.movables[event.data.target.id];
 
 								// TODO: abstract better
-								entity.sprite.animate('atk_right');
+
+								// entity.faceDirection(direction);
+								var direction = entity.directionOfTarget(target);
+								entity.sprite.dirAnimate('atk', direction);
+								// entity.sprite.animate('atk_right');
 							} else if (evtType == EVT_NEW_TARGET) {
 								var entPage = The.map.pages[event.data.entity.page],
 									tarPage = The.map.pages[event.data.target.page],

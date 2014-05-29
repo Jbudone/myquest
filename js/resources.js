@@ -36,6 +36,7 @@ define(['jquery'], function($){
 			}, sheet = sheets[data.sheet];
 
 			if (!Env.isServer) {
+				sheet.image.onload=function(){
 
 				for(var key in animation.animations){
 					var ani = animation.animations[key];
@@ -45,7 +46,7 @@ define(['jquery'], function($){
 						// canvas.height = 32;
 						var env = { key:key, ani:ani };
 
-						sheet.image.onload=function(){
+						// sheet.image.onload=function(){
 							var ani = env.ani,
 							key = env.key;
 
@@ -57,7 +58,7 @@ define(['jquery'], function($){
 
 							try {
 								// For Chrome
-								// ctx.scale(-1,1);
+								ctx.scale(-1,1);
 								for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
 									ctx.drawImage(sheet.image, i*32, ani.row*32, 32, 32, -i*32, 0, -32, 32);
 								}
@@ -83,7 +84,9 @@ define(['jquery'], function($){
 						}
 
 						delete canvas;
-					}
+					// }
+				}
+
 				}
 			}
 			animations[data.id]=animation;
