@@ -45,7 +45,7 @@ try{
 			loaded();
 
 			//
-			var testingLocal = true;
+			var testingLocal = false;
 			if (testingLocal) {
 				websocket = new WebSocket('ws://127.0.0.1:1338/');
 			} else {
