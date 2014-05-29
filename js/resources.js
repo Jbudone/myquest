@@ -56,16 +56,20 @@ define(['jquery'], function($){
 							ctx = canvas.getContext('2d');
 
 							try {
-								ctx.scale(-1,1);
 								// For Chrome
+								// ctx.scale(-1,1);
 								for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
 									ctx.drawImage(sheet.image, i*32, ani.row*32, 32, 32, -i*32, 0, -32, 32);
 								}
 							} catch(e) {
 								// For Firefox
+								ctx.scale(-1,1);
 								for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
-									ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, j*32, 0, 32, 32);
+									ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, -(j+1)*32, 0, 32, 32);
 								}
+								// for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
+								// 	ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, j*32, 0, 32, 32);
+								// }
 								ctx.transform(-1,0,0,1,0,0);  
 							}
 
