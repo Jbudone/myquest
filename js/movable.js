@@ -2,6 +2,7 @@
 define(['resources','entity','animable'], function(Resources, Entity, Animable) {
 
 	var Movable = function(spriteID, page) {
+		console.log("new Movable("+spriteID+")");
 		this.base = Entity;
 		this.base(spriteID, page);
 		Ext.extend(this,'movable');

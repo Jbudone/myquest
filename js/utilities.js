@@ -6,6 +6,18 @@ define(['serializable'], function(Serializable){
 
 	var now=function(){
 		return (new Date()).getTime();
+	}, isObjectEmpty=function(obj){
+		var empty=true;
+		for (var s in obj){
+			empty=false;
+			break;
+		}
+		return empty;
+	}, frontOfObject=function(obj){
+		for (var k in obj){
+			return k;
+		}
+		return null;
 	}, extendClass=function(toClass) {return{
 		with: function(module){
 			var copy=function(target){
@@ -151,5 +163,7 @@ define(['serializable'], function(Serializable){
 		Tile: Tile,
 		loadLocalExtension: loadLocalExtension,
 		BufferQueue: BufferQueue,
+		isObjectEmpty: isObjectEmpty,
+		frontOfObject: frontOfObject
 	};
 });

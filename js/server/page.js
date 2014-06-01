@@ -11,7 +11,7 @@ define(['resources','movable'], function(Resources,Movable){
 					id: entity.id,
 					posY: entity.posY,
 					posX: entity.posX,
-					spriteID: entity.sprite.spriteID,
+					spriteID: entity.spriteID,
 					state: entity.sprite.state,
 					zoning: entity.zoning,
 					path: (entity.path? entity.path.serialize() : null),
@@ -22,7 +22,7 @@ define(['resources','movable'], function(Resources,Movable){
 					entity: ent
 				});
 
-				console.log("Listening to entity["+entity.id+"] for walking.. on page("+this.index+")");
+				console.log("Added entity["+entity.id+"]("+entity.spriteID+") to page ("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
 					// console.log("Entity ["+entity.id+"] preparing walk");
 					var movablePosition = { y: entity.posY + this.y * Env.tileSize,
@@ -177,7 +177,7 @@ define(['resources','movable'], function(Resources,Movable){
 							id: entity.id,
 							posY: entity.posY,
 							posX: entity.posX,
-							spriteID: entity.sprite.spriteID,
+							spriteID: entity.spriteID,
 							state: entity.sprite.state,
 							zoning: entity.zoning,
 							path: (entity.path? entity.path.serialize() : null),

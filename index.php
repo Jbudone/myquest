@@ -45,12 +45,11 @@
 	
 		<h2> Currently working on..</h2>
 		<ul>
-			<li>Combat system: <b>Resurrection</b>, <b>Player death</b>, <b>Player autoattack</b>, <b>Fighting (facing) direction</b></li>
+			<li>Combat system: <b>Resurrection</b>, <b>Player death</b>, <b>Player autoattack</b>, <b>Player flee</b>, <b>Multiple Combat</b></li>
 			<li>Fault taulerance</li>
 			<li>Multiplayer components</li>
 		</ul>
 		<h3> Being tested on Google Chrome</h3>
-		<h3> Server is being run on a home network, on a cheap netbook in the basement. May be slow, may be offline</h3>
 	</div>
 <script>
 requirejs.config({
@@ -60,7 +59,7 @@ requirejs.config({
 		"jquery": "lib/jquery-2.0.3.min",
 		// "underscore": "//underscorejs.org/underscore",
 		"underscore": "lib/underscore-min"
-	},
+	}
 });
 
 // Load the main app module to start the app

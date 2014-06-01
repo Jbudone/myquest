@@ -300,6 +300,13 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 									response.success = false;
 									client.send(response.serialize());
 									you.responseArchive.addEvent(response);
+								} else if (!player) {
+									console.log("Could not find player ["+id+"]");
+
+									var response = new Response(evt.id);
+									response.success = false;
+									client.send(response.serialize());
+									you.responseArchive.addEvent(response);
 								}  else {
 									console.log("Successfully found player: ");
 									console.log(player);
@@ -322,6 +329,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 									
 									your.page = playerPosition.page;
 									your.player = new Movable('player', your.page);
+									console.log("PLAYER ADDED ("+your.player.spriteID+")");
 									your.player.playerID = player.id;
 									your.player.posY = playerPosition.y*Env.tileSize;
 									your.player.posX = playerPosition.x*Env.tileSize;
@@ -693,11 +701,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   } catch(e){
 						   console.log("Error: "+e.message);
 					   }
-				   } else if (action.evtType == EVT_REMOVED_TARGET) {
+				   } else if (action.evtType == EVT_DISTRACTED) {
 					   // TODO: need to confirm same as current target?
-					   you.player.brain.setTarget(null);
+					   // you.player.brain.setTarget(null);
+					   you.player.triggerEvent(EVT_DISTRACTED);
 				   } else {
-					   console.log("			Some strange unheard of event??");
+					   console.log("			Some strange unheard of event ("+action.evtType+") ??");
 				   }
 			   }
 			   if (buffer.length) {

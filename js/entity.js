@@ -4,6 +4,7 @@ define(['resources','sprite','eventful'], function(Resources, Sprite, Eventful){
 	var entities = 0;
 
 	function Entity(spriteID, page) {
+		console.log("new Movable("+spriteID+")");
 		this.spriteID = spriteID;
 		this.id = (++entities);
 		this.npc=Resources.npcs[spriteID];

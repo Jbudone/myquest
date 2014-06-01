@@ -45,7 +45,7 @@ try{
 			loaded();
 
 			//
-			var testingLocal = false;
+			var testingLocal = true;
 			if (testingLocal) {
 				websocket = new WebSocket('ws://127.0.0.1:1338/');
 			} else {
@@ -251,10 +251,17 @@ try{
 
 						// TODO:
 						//
-						// state
-						// 	  - AI object, built directly into AI (able to change around with various AI extensions) -- NPC can load different extensions
-						// 	  - Movable loads AI object (if AI-capable)
-						// 	  - AI ONLY on serverside...client side simply receives individual events (moving, attacking, HP loss, etc.)
+						// 	> player zone during combat
+						// 		listen to zone_out back in same zone
+						// 		attackList [id:{
+							// 			hatred: 0-100
+							// 			fleed: time/false
+							//			target
+							//		}]
+						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
+						// 	player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
+						// 	> disallow same user to connect twice
+						// 	> npc attack ONLY adjacent squares
 						//
 						//
 						//
@@ -285,6 +292,7 @@ try{
 						//	> CLEAN: on-zone displays other movables in bad position
 						//	> CLEAN: high CPU usage
 						//	> CLEAN: remove server animations; auto client animations (facing target, etc.)
+						//	> CLEAN: requestAnimation for drawing; do step function outside of drawing
 						//
 						//
 						//	
@@ -296,7 +304,7 @@ try{
 						// 	> combat; mob spawning; experience
 						// 	> questing; dfa's
 						// 	> loot; inv belt; usable items; armour, weapons; amulets/shoes/weapons/armour on sprite
-						// 	> testing, logging, fault tolerance, testing server, auto bug reports
+						// 	> testing, logging, fault tolerance, testing server, auto bug reports, performance
 						// 	> triggers, traps
 						//
 						// 	> animated static sprites (eg. fire)
@@ -349,7 +357,10 @@ try{
 		/////////////////////////
 
 		loading('resources');
-		$.get('data/resources.json', function(res){
+		$.ajax('data/resources.json', {
+			cache: false,
+			dataType: 'text'
+		}).done(function(res){
 			res = JSON.parse(res);
 
 			// Load Sheets
@@ -372,22 +383,26 @@ try{
 			}
 
 			loaded('resources');
-		}, 'text').fail(function(reason){
+		}).fail(function(reason){
 			console.log(reason);
 		});
 
 		loading('npc_list');
-		$.get('data/npc.json', function(res){
-			res = JSON.parse(res).npcs;
+		$.ajax('data/npc.json', {
+			cache: false,
+			dataType: 'text'
+		}).done(function(res){
+			
+				res = JSON.parse(res).npcs;
 
-			// Load NPC's
-			for (var i=0; i<res.length; ++i) {
-				var npc = res[i];
-				Resources.addNPC(npc);
-			}
+				// Load NPC's
+				for (var i=0; i<res.length; ++i) {
+					var npc = res[i];
+					Resources.addNPC(npc);
+				}
 
-			loaded('npc_list');
-		}, 'text').fail(function(reason){
+				loaded('npc_list');
+		}).fail(function(reason){
 			console.log(reason);
 		});
 
@@ -426,7 +441,9 @@ try{
 				walkToX           = null,
 				walkToY           = null,
 				lineWidth         = 3,
-				map               = null;
+				map               = null,
+				requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                              window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
 
 			camera=The.camera;
 			var playerPosition = The.map.localFromGlobalCoordinates(player.position.y, player.position.x);
@@ -457,7 +474,7 @@ try{
 			sprite = Resources.sheets['firefox'].image;
 
 			startGame = function() {
-				var speed = 20,
+				var speed = 80,
 					gameLoop = function() {
 
 						time = new Date().getTime();
@@ -795,7 +812,7 @@ try{
 						// -------------------------------------------------------------------------- //
 						// -------------------------------------------------------------------------- //
 
-
+						// requestAnimationFrame(gameLoop);
 						setTimeout(gameLoop, speed);
 				};
 
@@ -974,17 +991,21 @@ try{
 								// set core target
 								entity.brain.setTarget(target);
 							} else if (evtType == EVT_REMOVED_TARGET) {
+								console.log("Removing target for ["+event.data.entity.id+"]");
+								// NOTE: do not select the target since the target may have died and been
+								// removed locally
 								var entPage = The.map.pages[event.data.entity.page],
-									tarPage = The.map.pages[event.data.target.page],
+									// tarPage = The.map.pages[event.data.target.page],
 									entity  = null,
 									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity in remove target!?");
-								if (!tarPage) throw UnexpectedError("Could not find page of target in remove target!?");
+								// if (!tarPage) throw UnexpectedError("Could not find page of target in remove target!?");
 								entity = entPage.movables[event.data.entity.id];
-								target = tarPage.movables[event.data.target.id];
+								// target = tarPage.movables[event.data.target.id];
 
 								// remove core target
-								if (entity.brain.target == target) {
+								console.log("	Target to remove ["+event.data.target.id+"] currently targeting: ("+entity.brain.target.id+")");
+								if (entity.brain.target && entity.brain.target.id == event.data.target.id) { 
 									entity.brain.setTarget(null);
 								}
 							} else if (evtType == EVT_DIED) {
@@ -1284,9 +1305,9 @@ try{
 					console.group();
 					console.log(path);
 					if (The.player.brain.target) {
-						var event = new Event((++requestsId), EVT_REMOVED_TARGET, {id: The.player.brain.target.id});
+						var event = new Event((++requestsId), EVT_DISTRACTED, {});
 						serverRequest(event).then(function(){ });
-						The.player.brain.setTarget(null);
+						The.player.triggerEvent(EVT_DISTRACTED);
 					}
 
 
