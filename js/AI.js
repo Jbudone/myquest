@@ -20,7 +20,11 @@ define(['eventful'], function(Eventful){
 
 			this.target = null;
 			this.listenTo(character, EVT_NEW_TARGET, function(me, target){
-				this.state.transition(STATE_FOLLOWING);
+				if (!this.entity.inRangeOf(target)) {
+					this.state.transition(STATE_CHASING);
+				} else {
+					this.state.transition(STATE_FOLLOWING);
+				}
 				this.target = target;
 
 				// NOTE: this triggers as soon as the target moves to a new tile; however inRangeOf considers

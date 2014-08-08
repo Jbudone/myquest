@@ -251,11 +251,9 @@ try{
 
 						// TODO:
 						//
-						//	> BUG: attack npc (not working?)
 						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
 						// 	player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
 						// 	> disallow same user to connect twice
-						// 	> npc attack ONLY adjacent squares
 						// 	> npc respawn spot
 						// 	> npc walk back to respawn spot
 						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
