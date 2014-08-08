@@ -125,15 +125,39 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 					else                                     posK -= deltaSteps;
 
 					if (direction==NORTH || direction==SOUTH) {
-						if (parseInt(this.posY / Env.tileSize) != parseInt(posK / Env.tileSize)) {
-							this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+						// floor[ posX ] !== floor[ posK ] --> moved tiles (left first)
+						// ceil[ posX ]  !== ceil[ posK ]  --> moved tiles (right first)
+						//
+						// store tileX, tileY
+						// cur: tileX, tileY
+						//
+						// if floor[tileX] == ceil[tileX] !== tileX --> moved to new tile
+						// if (floor[tileX] !== tileX || ceil[tileX] !== tileX) --> moving to new tile
+						var tile = posK / Env.tileSize;
+						if (Math.floor(tile) != this.tileY || Math.ceil(tile) != this.tileY) {
+							// Moving to new tile
+							if (Math.floor(tile) == Math.ceil(tile)) {
+								// Moved to new tile
+								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+								this.tileY = tile;
+							} else {
+								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+							}
 						}
 						this.posY = posK;
 					} else {
-						if (parseInt(this.posX / Env.tileSize) != parseInt(posK / Env.tileSize)) {
-							this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+						var tile = posK / Env.tileSize;
+						if (Math.floor(tile) != this.tileX || Math.ceil(tile) != this.tileX) {
+							// Moving to new tile
+							if (Math.floor(tile) == Math.ceil(tile)) {
+								// Moved to new tile
+								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+								this.tileX = tile;
+							} else {
+								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+							}
 						}
-						this.posX = posK; 
+						this.posX = posK;
 					}
 
 					if (finishedWalk) {
@@ -227,16 +251,6 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 			for (var i=0; i<yourNearTiles.length; ++i) {
 				var hash = hashTile( yourNearTiles[i] );
 				if (safeTiles[hash]) return true;
-			}
-
-			myNearTiles   = this.page.map.findNearestTiles( myY, myX );
-			console.log("MY NEAR TILES: ");
-			for (var i=0; i<myNearTiles.length; ++i) {
-				console.log("	["+i+"] {"+myNearTiles[i].x+", "+myNearTiles[i].y+"}");
-			}
-			console.log("NOT IN RANGE: ");
-			for (var i=0; i<tiles.length; ++i) {
-				console.log("	["+i+"] {"+tiles[i].x+", "+tiles[i].y+"}");
 			}
 
 				

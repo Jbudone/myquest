@@ -23,6 +23,9 @@ define(['eventful'], function(Eventful){
 				this.state.transition(STATE_FOLLOWING);
 				this.target = target;
 
+				// NOTE: this triggers as soon as the target moves to a new tile; however inRangeOf considers
+				// all nearby tiles to ourselves and the target. Hence if we are only considering adjacent
+				// tiles then we need 
 				this.listenTo(target, EVT_MOVED_TO_NEW_TILE, function(target){
 					if (this.state.state != STATE_CHASING && 
 						!this.entity.inRangeOf(target)){
