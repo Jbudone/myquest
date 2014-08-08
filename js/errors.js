@@ -4,8 +4,14 @@ define(['lib/stacktrace'], function(Stack){
 		this.name    = "Error";
 		this.message = error;
 		this.print   = function() {
-			console.error(this.name + ': ' + this.message);
-			console.trace();
+			if (console.error) {
+				console.error(this.name + ': ' + this.message);
+				console.trace();
+				console.log(this.stack);
+			} else {
+				console.log(this.name + ': ' + this.message);
+				console.log(this.stack);
+			}
 		}
 	};
 	GenericError.prototype = new Error;

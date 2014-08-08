@@ -103,15 +103,13 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 									}
 								}
 
-								this.stopListeningTo(entity, EVT_STEP);
-								this.stopListeningTo(entity, EVT_PREPARING_WALK);
+								this.stopListeningTo(entity);
 
 								     if (direction=='n') entity.posY += Env.pageHeight*Env.tileSize;
 								else if (direction=='w') entity.posX += Env.pageWidth*Env.tileSize;
 								else if (direction=='e') entity.posX -= Env.pageWidth*Env.tileSize;
 								else if (direction=='s') entity.posY -= Env.pageHeight*Env.tileSize;
 								else {
-									this.stopListeningTo(entity, EVT_FINISHED_WALK);
 									if (Env.isServer ||
 										entity.id == The.player.id) {
 										console.log("ZONING OUT!");
@@ -131,7 +129,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 
 										entity.zoning=false;
 										console.log("Entity ["+entity.id+"] no longer ZONING");
-										this.stopListeningTo(entity, EVT_FINISHED_WALK);
+										this.stopListeningTo(entity);
 									});
 								}
 								console.log("Zoned user ["+entity.id+"] to page ("+newPage.index+")");

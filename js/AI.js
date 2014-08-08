@@ -22,29 +22,31 @@ define(['eventful'], function(Eventful){
 			this.listenTo(character, EVT_NEW_TARGET, function(me, target){
 				this.state.transition(STATE_FOLLOWING);
 				this.target = target;
+
+				this.listenTo(target, EVT_MOVED_TO_NEW_TILE, function(target){
+					if (this.state.state != STATE_CHASING && 
+						!this.entity.inRangeOf(target)){
+
+						this.state.transition(STATE_CHASING);
+					}
+				});
 			});
 
 			this.listenTo(character, EVT_REMOVED_TARGET, function(me, oldTarget){
 				this.state.transition(STATE_IDLE);
 				this.target = null;
+				this.stopListeningTo(oldTarget, EVT_MOVED_TO_NEW_TILE);
 			}, HIGH_PRIORITY);
 
 			this.listenTo(character, EVT_DISTRACTED, function(me){
 				if (this.target) {
 					this.state.transition(STATE_IDLE);
+					this.stopListeningTo(this.target, EVT_MOVED_TO_NEW_TILE);
 					this.target = null;
 				}
 			}, HIGH_PRIORITY);
 
 			this.step = function(time){
-
-				if (this.state.state == STATE_FOLLOWING) {
-					if (this.entity.inRangeOf(this.target)) {
-						// Continue following..
-					} else {
-						this.state.transition(STATE_CHASING);
-					}
-				}
 
 				if (this.state.state == STATE_CHASING) {
 
@@ -153,7 +155,8 @@ define(['eventful'], function(Eventful){
 				if (!this.attackList[target.id]) {
 					this.attackList[target.id] = {
 						target: target,
-						flee: 0
+						flee: 0,
+						listening: false
 					}
 				}
 				
@@ -184,7 +187,8 @@ define(['eventful'], function(Eventful){
 				if (!this.attackList[target.id]) {
 					this.attackList[target.id] = {
 						target: target,
-						flee: 0
+						flee: 0,
+						listening: false
 					}
 				}
 
@@ -193,9 +197,25 @@ define(['eventful'], function(Eventful){
 
 			this.nextTarget = function(){
 				if (!isObjectEmpty(this.attackList)) {
-					this.setTarget( frontOfObj(this.attackList) );
-					this.brain.setTarget(this.target);
-					this.state.transition(STATE_ATTACKING);
+
+					var availableTargets = [];
+					for (var someTarget in this.attackList) {
+						if (someTarget == this.target.id) continue; // Reject current target
+						// TODO: check same map
+						availableTargets.push( someTarget );
+					}
+
+					console.log(availableTargets);
+					if (availableTargets.length) {
+						var newTarget = availableTargets[0]; // TODO: find best target based off distance/hatred
+						this.setTarget( newTarget );
+						this.brain.setTarget(this.target);
+						this.state.transition(STATE_ATTACKING);
+					} else {
+						this.brain.setTarget(null);
+						this.state.transition(STATE_IDLE);
+						this.target = null;
+					}
 				} else {
 					this.brain.setTarget(null);
 					this.state.transition(STATE_IDLE);
@@ -208,33 +228,76 @@ define(['eventful'], function(Eventful){
 				console.log("["+this.entity.id+"] I'm attacking ["+target.id+"]");
 				this.target = target;
 
-				this.listenTo(target, EVT_DIED, function(target){
+				if (!this.attackList[target.id].listening) {
+					this.listenTo(target, EVT_DIED, function(target){
 
-					delete this.attackList[target.id];
+						delete this.attackList[target.id];
 
-					console.log("["+this.entity.id+"] WHELP I suppose ("+target.id+") is dead now..");
-					console.log(this.attackList);
-					this.stopListeningTo(target);
+						console.log("["+this.entity.id+"] WHELP I suppose ("+target.id+") is dead now..");
 
-					this.nextTarget();
-				}, HIGH_PRIORITY);
-
-				this.listenTo(target, EVT_ZONE_OUT, function(target){
-					console.log("["+this.entity.id+"] I guess ("+target.id+") has zoned..");
-					this.attackList[target.id].flee = now();
-					this.stopListeningTo(target);
-					this.listenTo(target, EVT_ZONE_OUT, function(target, map, page){
-						// TODO: if same map, check if within range
+					console.log("NOT LISTENING TO TARGET: ");
+					for (var i=0; i<target.evtListeners[EVT_DIED].length; ++i) {
+						var which = target.evtListeners[EVT_DIED][i];
+						if (which.caller.attackRange) {
+							console.log('	FOUND US');
+						}
+					}
+					for (var i=0; i<target.pendingOperations.length; ++i) {
+						var which = target.pendingOperations[i];
+						if (which.args[0] == EVT_DIED) {
+							console.log('PENDING DELETE EVT_DIED');
+						}
+					}
+						console.log(this.attackList);
 						this.stopListeningTo(target);
-						this.attackList[target.id].flee = 0;
-						this.setTarget(target);
-						this.brain.setTarget(this.target);
-						this.state.transition(STATE_ATTACKING);
-					});
 
-					this.nextTarget();
-				}, HIGH_PRIORITY);
+						this.nextTarget();
+					}, HIGH_PRIORITY);
+					this.attackList[target.id].listening = true;
+				}
+
 			};
+
+			this.listenTo(this.brain, EVT_TARGET_ZONED_OUT, function(me, target){
+				console.log("EVT_TARGET_ZONED_OUT");
+				if (this.target.id != target.id) {
+					console.log("Mismatched target!");
+					console.log(this.target.id);
+					console.log(target.id);
+					if (process) process.exit(); // ERROR
+					console.error("ERROR!!! Mismatched target!");
+				}
+
+				console.log("["+this.entity.id+"](combat) I guess ("+target.id+") has zoned..");
+				this.attackList[target.id].flee = now();
+				this.stopListeningTo(target);
+
+				console.log("NOT LISTENING TO TARGET: ");
+				for (var i=0; i<target.evtListeners[EVT_DIED].length; ++i) {
+					var which = target.evtListeners[EVT_DIED][i];
+					if (which.caller.attackRange) {
+						console.log('	FOUND US');
+					}
+				}
+				for (var i=0; i<target.pendingOperations.length; ++i) {
+					var which = target.pendingOperations[i];
+					if (which.args[0] == EVT_DIED) {
+						console.log('PENDING DELETE EVT_DIED');
+					}
+				}
+									
+
+				this.listenTo(target, EVT_ZONE_OUT, function(target, map, page){
+					// TODO: if same map, check if within range
+					this.stopListeningTo(target);
+					this.attackList[target.id].flee = 0;
+					this.setTarget(target);
+					this.brain.setTarget(this.target);
+					this.state.transition(STATE_ATTACKING);
+				});
+
+				this.nextTarget();
+			}, HIGH_PRIORITY);
 
 			this.listenTo(character, EVT_NEW_TARGET, function(me, attacker){
 				console.log("["+this.entity.id+"] Found new target");
@@ -245,9 +308,9 @@ define(['eventful'], function(Eventful){
 			this.listenTo(character, EVT_REMOVED_TARGET, function(me, oldTarget){
 				if (this.target === oldTarget) {
 					console.log("Removing target");
-					console.log(this.attackList);
-					delete this.attackList[this.target.id];
-					console.log(this.attackList);
+					// console.log(this.attackList);
+					// delete this.attackList[this.target.id];
+					// console.log(this.attackList);
 					this.nextTarget();
 				}
 			}, HIGH_PRIORITY);
@@ -264,7 +327,8 @@ define(['eventful'], function(Eventful){
 			this.step = function(time){
 				if (this.state.state === STATE_ATTACKING) {
 					if (!this.target) throw new UnexpectedError("ERROR: Attacking when there is no target");
-					if (time - this.lastAttacked > 750) {
+					if (time - this.lastAttacked > 750 &&
+					    !this.entity.path) {
 						if (this.entity.inRangeOf(this.target)) {
 							// Attack
 							this.target.hurt(10, this.entity);
@@ -274,7 +338,7 @@ define(['eventful'], function(Eventful){
 						}
 					}
 				} else if (this.state.state === STATE_PASSIVE) {
-					if (time - this.passiveTime > 1500) {
+					if (time - this.passiveTime > 5000) {
 						this.state.transition(STATE_IDLE);
 					}
 				}
@@ -282,7 +346,7 @@ define(['eventful'], function(Eventful){
 				var boredList = [];
 				for (var k in this.attackList){
 					if (this.attackList[k].flee &&
-						this.attackList[k].flee + 5000 > time) {
+						this.attackList[k].flee + 5000 < time) {
 							console.log("["+this.entity.id+"] It's been too long... ignoring the runaway ("+this.attackList[k].target.id+")");
 							this.stopListeningTo(this.attackList[k].target);
 							boredList.push(k);
@@ -331,15 +395,18 @@ define(['eventful'], function(Eventful){
 			if (target) console.log("["+this.entity.id+"] brain.setTarget("+target.id+")");
 			else console.log("["+this.entity.id+"] brain.setTarget(null)");
 
-			if (this.target) {
-				this.entity.triggerEvent(EVT_REMOVED_TARGET, this.target);
+			var oldTarget = this.target;
+			this.target = target;
+			if (oldTarget) {
+				this.entity.triggerEvent(EVT_REMOVED_TARGET, oldTarget);
+				this.stopListeningTo(oldTarget);
 			}
 
-			this.target = target;
 			if (target) {
 				this.entity.triggerEvent(EVT_NEW_TARGET, target);
 				this.listenTo(target, EVT_ZONE_OUT, function(){
-					console.log("["+this.entity.id+"] I guess ("+target.id+") has zoned..");
+					console.log("["+this.entity.id+"](core) I guess ("+target.id+") has zoned..");
+					this.triggerEvent(EVT_TARGET_ZONED_OUT, target);
 					this.setTarget(null);
 				}, HIGH_PRIORITY);
 			}

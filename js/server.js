@@ -204,7 +204,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 			   console.log("Stopping Game, saving state");
-			   if (e) console.log(e);
+			   if (e) {
+				   console.log(e);
+				   console.log(e.stack);
+			   }
 			   for (var clientID in clients) {
 
 			   }
@@ -461,7 +464,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		   });
 		   console.log('Server running at http://127.0.0.1:1337/');
 
-		   var stepTimer=100,
+		   var stepTimer=10,
 		   step=function(){
 			   time=now();
 
@@ -507,7 +510,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   player = your.player,
 						   map = your.map,
 						   reqState = request.action.state,
-						   maxWalk = 6*Env.tileSize;
+						   maxWalk = 1500/your.player.moveSpeed; // 5*Env.tileSize; // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
 
 					   walk.fromJSON(action.data);
 					   walk.walked = 0;

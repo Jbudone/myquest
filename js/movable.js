@@ -11,8 +11,8 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 
 		this.moving=false;
 		this.direction=null;
-		this.speed=100;
-		this.moveSpeed=8;
+		this.speed=50;
+		this.moveSpeed=10;
 		this.lastMoved=now();
 		this.path=null;
 		this.zoning=false;
@@ -124,8 +124,17 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 					if (direction==EAST || direction==SOUTH) posK += deltaSteps;
 					else                                     posK -= deltaSteps;
 
-					if (direction==NORTH || direction==SOUTH) this.posY = posK;
-					else                                      this.posX = posK;
+					if (direction==NORTH || direction==SOUTH) {
+						if (parseInt(this.posY / Env.tileSize) != parseInt(posK / Env.tileSize)) {
+							this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+						}
+						this.posY = posK;
+					} else {
+						if (parseInt(this.posX / Env.tileSize) != parseInt(posK / Env.tileSize)) {
+							this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+						}
+						this.posX = posK; 
+					}
 
 					if (finishedWalk) {
 						// TODO: might need to change lastMoved to reflect this recalibration
@@ -208,7 +217,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 				hashTile      = function(tile){ return tile.y*magicNumber+tile.x; };
 
 			tiles = tiles.filter(function(tile){
-				return _this.tileAdjacentTo(tile, target);
+				return _this.tileAdjacentTo(tile, _this);
 			});
 
 			for (var i=0; i<tiles.length; ++i) {
@@ -220,6 +229,17 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 				if (safeTiles[hash]) return true;
 			}
 
+			myNearTiles   = this.page.map.findNearestTiles( myY, myX );
+			console.log("MY NEAR TILES: ");
+			for (var i=0; i<myNearTiles.length; ++i) {
+				console.log("	["+i+"] {"+myNearTiles[i].x+", "+myNearTiles[i].y+"}");
+			}
+			console.log("NOT IN RANGE: ");
+			for (var i=0; i<tiles.length; ++i) {
+				console.log("	["+i+"] {"+tiles[i].x+", "+tiles[i].y+"}");
+			}
+
+				
 			return false;
 		};
 

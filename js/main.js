@@ -251,35 +251,27 @@ try{
 
 						// TODO:
 						//
-						// 	> player zone during combat
-						// 		listen to zone_out back in same zone
-						// 		attackList [id:{
-							// 			hatred: 0-100
-							// 			fleed: time/false
-							//			target
-							//		}]
+						//	> BUG: attack npc (not working?)
 						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
 						// 	player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
 						// 	> disallow same user to connect twice
 						// 	> npc attack ONLY adjacent squares
+						// 	> npc respawn spot
+						// 	> npc walk back to respawn spot
+						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
+						//	> multiple people attacking same mob (switch after killing 1 player)
+						//	> coreAI evt_target_zoned (but works with combat and following components too)
 						//
 						//
 						//
 						//
 						//	> physical state machine
-						//	> player AI: on attack/attacked set target, on move then remove target
-						//	> send core AI transitions to page event buffer (abstract for easily adding events)
-						//	> client AI target, face target if no path; attack animation on attack; die animation
-						//	> movable dying: animation, corpse, disappear, respawn
 						//	> player dying: animation, corpse, respawn -- death message; respawn to safe spot, remove corpse after some time
-						//	> movable idle on player zone or die; eventually move back to spawn spot
 						//	> experience, level up; level up notification
 						//	> regenerate hp
-						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
 						//	> experience relative to dmg done (what about regeneration? what about healing? what about hit & run? what about too high level?)
 						//	> NO experience on kills during d/c; no experience on stairdancing
 						//	> aggro K.O.S.
-						//	> multiple people attacking same mob (switch after killing 1 player)
 						//
 						//
 						//	> CLEAN: throw as much as possible; exception handling on ALL potential throwable statements
@@ -292,7 +284,10 @@ try{
 						//	> CLEAN: on-zone displays other movables in bad position
 						//	> CLEAN: high CPU usage
 						//	> CLEAN: remove server animations; auto client animations (facing target, etc.)
-						//	> CLEAN: requestAnimation for drawing; do step function outside of drawing
+						//	> CLEAN: requestAnimation for drawing; do step function outside of drawing (NOTE: requestAnimation WILL pause when inactive; hence do not allow core/networking functionality in the rendering)
+						//	> CLEAN: try/catch (performance)
+						//	> CLEAN: functions have to be object properties prototype functions kill performance
+						//	> CLEAN: able to handle pauses from client (page not in focus -- delayed timeouts)
 						//
 						//
 						//	
@@ -337,6 +332,9 @@ try{
 						//	> abstract custom cursors & hovering entities
 						//	> EVT_MOVED_TILE, better than listening to EVT_STEP in some cases
 						//	> NPC has base NPC to inherit; NPC has AI component list
+						//	> death animation
+						//	> debugging: monitor events -- in case the same object listens to the same event more than once
+						//	> debugging: keep track of all events, and periodic snapshots of the game output to a logfile -- that logfile could be read back to re-animate the game and show step-by-step what happened and where things went wrong
 						//
 						//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
 						//
@@ -474,7 +472,7 @@ try{
 			sprite = Resources.sheets['firefox'].image;
 
 			startGame = function() {
-				var speed = 80,
+				var speed = 30,
 					gameLoop = function() {
 
 						time = new Date().getTime();
@@ -882,7 +880,7 @@ try{
 									var entPage = The.map.pages[page],
 										entity = entPage.movables[event.data.id],
 									    reqState = event.data.state;
-									console.log("MOVING ENTITY: "+entity.id);
+									console.log("("+now()+") MOVING ENTITY: "+entity.id);
 									console.log(event.data.state);
 									console.log(event.data.path);
 
@@ -903,7 +901,7 @@ try{
 										},
 										path = new Path(),
 										walk = new Walk(),
-										maxWalk = 10*Env.tileSize,
+										maxWalk = 1500 / entity.moveSpeed, // 5*Env.tileSize,
 										adjustY = 0, // NOTE: in case walk already started and we need to adjust the 
 										adjustX = 0; // 	 path state
 
@@ -1279,6 +1277,7 @@ try{
 
 			canvasEntities.addEventListener('mousedown', function(evt) {
 
+
 				if (hoveringEntity) {
 
 					var event = new Event((++requestsId), EVT_ATTACKED, {id:hoveringEntity.id});
@@ -1291,6 +1290,8 @@ try{
 
 				walkToX = activeX + (The.camera.offsetX/tileSize);
 				walkToY = activeY - (The.camera.offsetY/tileSize);
+
+				console.log("Mouse clicked (move): ("+walkToY+","+walkToX+")");
 
 				// 	click to move player creates path for player
 				var playerY      = The.map.curPage.y * Env.tileSize + The.player.posY,
@@ -1362,6 +1363,37 @@ try{
 					console.log("Bad path :(");
 				}
 			});
+
+			// Load testing tools
+			//////////////////////
+
+			var randomMapPoint = function(attemptCount) {
+				if (attemptCount > 100) return null;
+				var randY     = Math.floor(Math.random()*13 + 1),
+					randX     = Math.floor(Math.random()*29 + 1),
+							  randIndex = randY*30 + randX;
+				if ( The.map.curPage.collidables[randY] & (1<<randIndex) !== 0 ) {
+					return randomMapPoint(attemptCount+1);
+				}
+				console.log("Random Map Point: {y: "+randY+", x: "+randX+"}   ("+attemptCount+" attempts)");
+				return {y: randY, x: randX, index: randIndex};
+			};
+
+			var clickPoint = function(point){
+				// var evt = document.createEvent("MouseEvents"); evt.initMouseEvent("mousemove", true, true, window, 0, 0, 0, (4)*Env.tileSize*Env.tileScale + 96, (3)*Env.tileSize*Env.tileScale + 8); document.getElementById('entities').dispatchEvent( evt )
+				var evt = document.createEvent("MouseEvents"),
+					bounds = document.getElementById('entities').getBoundingClientRect(),
+					clientY = (point.y+1)*Env.tileSize*Env.tileScale + bounds.top,
+					clientX = (point.x)*Env.tileSize*Env.tileScale + bounds.left;
+				activeY = point.y;
+				activeX = point.x;
+				// evt.initMouseEvent("mousemove", true, true, window, 0, 0, 0, clientX, clientY);
+				evt.initMouseEvent("mousedown", true, true, window, 0, 0, 0, clientX, clientY);
+				document.getElementById('entities').dispatchEvent( evt );
+			};
+
+		window['randomMapPoint'] = randomMapPoint;
+		window['clickPoint'] = clickPoint;
 
 			var serverRequest = function(request) {
 				return new Promise(function(allow, disallow){

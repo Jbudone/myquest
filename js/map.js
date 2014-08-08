@@ -91,7 +91,7 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 				   return tiles;
 			   }, findShortestPath = function(tilesStart, tilesEnd) {
-				   // console.log("	Finding shortest path..");
+				   console.log("	Finding shortest path..");
 
 				   // TODO: remove this..
 				   var path = map.findPath(tilesStart, tilesEnd);
@@ -434,38 +434,67 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 			if (!fromTiles.length) throw "No tiles to start from..";
 
-			// TODO: A*
-			// 	> find start tile, to tile
-			// 	> wrap tile in TileNode{ checked:false, tile:.. }
-			// 	> neighbours: list of open tiles, their min weight, previous direction (from previous tile to
-			// 				this). When creating neighbour tile try to select from this instead, otherwise
-			// 				create new neighbour
-			// 	> find neighbours, add to open tiles (if not collidable & in page or border of neighbourpage)
-			// 	> repeat while neighbours
-			// 	> work backwards along neighbours previous directions to build path
-
-			function TileNode(tile,directionToTile,walkTime,previousTile){
+			function TileNode(tile, directionToTile, walkTime, previousTile, ignoreHeuristics){
 				this.tile=tile;
 				this.checked=false;
 				this.previousDirection=directionToTile;
 				this.weight=walkTime;
 				this.nextTile=[];
 				this.previousTile=previousTile;
+				this.nearestDestination=null;
+				this.estimateCost = function(endTile){
+					if (!endTile) endTile = this.nearestDestination.tile;
+					if (!endTile) return null;
+					var estimatedWeight = Math.abs(endTile.y - this.tile.y) + Math.abs(endTile.x - this.tile.x) + this.weight;
+					return estimatedWeight;
+				};
+
+				if (!ignoreHeuristics) {
+					if (previousTile && previousTile.nearestDestination) {
+						if (previousTile.nearestDestination - this.weight < weightToRecheckHeuristics) {
+							this.nearestDestination = previousTile.nearestDestination;
+						}
+					}
+
+					if (!this.nearestDestination) {
+						var cheapestWeight = 99999,
+							nearestEnd = null;
+						for (var i=0; i<toTiles.length; ++i) {
+							var endTile = toTiles[i],
+								estimatedWeight = this.estimateCost(endTile);
+							if (estimatedWeight < cheapestWeight) {
+								nearestEnd = endTile;
+							}
+						}
+
+						this.nearestDestination = new NearestDestination(nearestEnd, this.weight);
+					}
+				}
 			};
 
-			var start = [], // new TileNode(fromTile,null,0,null),
-				end   = [], //new TileNode(toTile,null,null,null),
+			// Since the path can have multiple destinations, we have to compare each destination in order to
+			// decide a paths heuristic estimation cost.
+			//
+			// In case there are a large number of destinations, its costly to loop through each of them in
+			// checking our estimation cost. Instead we can keep track of the nearest destination tile to our
+			// previous tile in the path. Then every X steps along that path, simply re-estimate the nearest
+			// tile to use as a comparison.
+			function NearestDestination(tile, weightWhenDecided){
+				this.tile = tile;
+				this.time = weightWhenDecided;
+			};
+
+			var start = [],
+				end   = [],
 				nearestEnd = null,
-				openTiles = [],
+				openTiles = {},
+				weightToRecheckHeuristics = 1, // TODO: fix this
+				totalCostOfPathfind = 0,
 				maxWeight = 100, // TODO: better place to store this
 				neighbours = {},
 				// destination = {y: toTile.y, x: toTile.x},
 				map = this,
-				estimateCost = function(tile) {
-					// TODO: tileNodes include nearest to-tile (estimated by coordinates); redecide nearest
-					// to-tile every X tiles along path (when weight % X == 0)
-					// TODO: store open tiles as {[]} assoc array where key is the cost heuristic: Object.keys(tiles)[0] for lowest-weight select
-				}, isOpenTile = function(tile){
+				isOpenTile = function(tile){
 					try {
 						var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x),
 							index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
@@ -494,11 +523,29 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 					if (east)  neighbours.push( new TileNode(east,'e',weight,tileNode) );
 					if (south) neighbours.push( new TileNode(south,'s',weight,tileNode) );
 					if (west)  neighbours.push( new TileNode(west,'w',weight,tileNode) );
+
+					if (north) ++totalCostOfPathfind;
+					if (east) ++totalCostOfPathfind;
+					if (south) ++totalCostOfPathfind;
+					if (west) ++totalCostOfPathfind;
 					return neighbours;
 				}, hashCoordinates = function(y,x){
 					var magicNumber = maxWeight+Env.pageWidth;
 					return y*magicNumber+x;
 				};
+
+
+			// NOTE: must setup the toTiles first so that the fromTiles may properly estimate their nearest
+			// destination tile
+			for (var i=0; i<toTiles.length; ++i) {
+				var toTile          = toTiles[i],
+					toCoordinates   = { y: toTile.y, x: toTile.x },
+					toNode          = new TileNode(toTile, null, 9999, null, true),
+					index           = hashCoordinates(toCoordinates.y, toCoordinates.x);
+
+				toNode.end = true;
+				neighbours[index] = toNode;
+			}
 
 			for (var i=0; i<fromTiles.length; ++i) {
 				var fromTile        = fromTiles[i],
@@ -523,24 +570,23 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 				start.push( fromNode );
 				neighbours[index] = fromNode;
-				openTiles.push( fromNode );
-			}
-
-			for (var i=0; i<toTiles.length; ++i) {
-				var toTile          = toTiles[i],
-					toCoordinates   = { y: toTile.y, x: toTile.x },
-					toNode          = new TileNode(toTile, null, 9999, null),
-					index           = hashCoordinates(toCoordinates.y, toCoordinates.x);
-
-				toNode.end = true;
-				neighbours[index] = toNode;
+				var estimatedCost = fromNode.estimateCost();
+				if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
+				openTiles[estimatedCost].push( fromNode );
 			}
 
 
 
-			while (openTiles.length) {
-				var tileNode       = openTiles.shift(),
-					tileNeighbours = [];
+			if (toTiles.length == 1) weightToRecheckHeuristics = 999999;
+			while (!isObjectEmpty(openTiles)) {
+				var cheapestWeightClass = frontOfObject(openTiles),
+					tileNode            = openTiles[cheapestWeightClass].shift(),
+					tileNeighbours      = [];
+
+				if (openTiles[cheapestWeightClass].length == 0) {
+					delete openTiles[cheapestWeightClass];
+				}
+				if (tileNode.hasOwnProperty('expired')) continue;
 
 				// Check each open neighbour of tile
 				tileNeighbours = getNeighbours(tileNode).filter(function(neighbour){
@@ -567,14 +613,21 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 						} else if (existingNeighbour.weight <= neighbourNode.weight) {
 							continue; // This neighbour is a cheaper path, ignore our current path..
 						} else {
-							// TODO: will this EVER occur ???
-							console.log('The UNEXPECTED has happened!! A*');
-							throw new UnexpectedError("Unexpected neighbour in path with weight less than this..");
+							existingNeighbour.expired = true;
+							neighbours[neighbourHash] = neighbourNode;
+							var estimatedCost = neighbourNode.estimateCost();
+							if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
+							openTiles[estimatedCost].push( neighbourNode );
+							// This existing neighbour has a faster path than ours
+							// console.log('The UNEXPECTED has happened!! A*');
+							// throw new UnexpectedError("Unexpected neighbour in path with weight less than this..");
 						}
 					} else {
 						// add neighbour
 						neighbours[neighbourHash] = neighbourNode;
-						openTiles.push(neighbourNode);
+						var estimatedCost = neighbourNode.estimateCost();
+						if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
+						openTiles[estimatedCost].push( neighbourNode );
 					}
 				}
 				if (nearestEnd) break; // Turns out one of the neighbours was the end
@@ -583,7 +636,7 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 
 			if (nearestEnd) { 
 				// Build path working backwards from this..
-				console.log("Path found is: "+nearestEnd.weight+" steps..");
+				console.log("Path found is: "+nearestEnd.weight+" steps..  FOUND IN "+totalCostOfPathfind+" iterations");
 
 				// continue stepping backwards and walk.steps++ until direction changes, then create a new walk
 				var path                 = new Path(),

@@ -44,7 +44,7 @@ define(['resources','movable'], function(Resources,Movable){
 						path: walk.toJSON(), //(entity.path? entity.path.serialize() : null),
 					};
 
-					// console.log("Sending walk of user ["+entity.id+"] on page ("+this.index+")");
+					console.log("("+now()+") Sending walk of user ["+entity.id+"] on page ("+this.index+") :: ("+state.posY+","+state.posX+")");
 					this.eventsBuffer.push({
 						evtType: EVT_PREPARING_WALK,
 						data: data

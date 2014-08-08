@@ -23,7 +23,7 @@
 		"id":"deathknight",
 		"name":"deathknight",
 		"sheet":"deathknight",
-		"spawn":2500,
+		"spawn":7500,
 		"killable":true,
 		"speed":12,
 		"health":150,
