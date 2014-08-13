@@ -51,10 +51,18 @@ define(['serializable'], function(Serializable){
 		extendClass(this).with(Serializable);
 		this.x=x;
 		this.y=y;
-	}, Tile=function(y, x){
+	}, Tile=function(y, x, map){
 		extendClass(this).with(Serializable);
 		this.y=y;
 		this.x=x;
+
+
+		if (map) {
+			var pageY = parseInt(y / Env.pageHeight),
+				pageX = parseInt(x / Env.pageWidth);
+			this.page = map.pages[ map.pagesPerRow * pageY + pageX ];
+		}
+
 		this.toJSON=function(){
 			var tile={
 				y:y,

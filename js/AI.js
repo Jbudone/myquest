@@ -30,25 +30,27 @@ define(['eventful'], function(Eventful){
 				// NOTE: this triggers as soon as the target moves to a new tile; however inRangeOf considers
 				// all nearby tiles to ourselves and the target. Hence if we are only considering adjacent
 				// tiles then we need 
-				this.listenTo(target, EVT_MOVED_TO_NEW_TILE, function(target){
-					if (this.state.state != STATE_CHASING && 
-						!this.entity.inRangeOf(target)){
+				if (target.triggerEvent) { // Is Eventful
+					this.listenTo(target, EVT_MOVED_TO_NEW_TILE, function(target){
+						if (this.state.state != STATE_CHASING && 
+							!this.entity.inRangeOf(target)){
 
-						this.state.transition(STATE_CHASING);
-					}
-				});
+							this.state.transition(STATE_CHASING);
+						}
+					});
+				}
 			});
 
 			this.listenTo(character, EVT_REMOVED_TARGET, function(me, oldTarget){
 				this.state.transition(STATE_IDLE);
 				this.target = null;
-				this.stopListeningTo(oldTarget, EVT_MOVED_TO_NEW_TILE);
+				if (oldTarget.triggerEvent) this.stopListeningTo(oldTarget, EVT_MOVED_TO_NEW_TILE);
 			}, HIGH_PRIORITY);
 
 			this.listenTo(character, EVT_DISTRACTED, function(me){
 				if (this.target) {
 					this.state.transition(STATE_IDLE);
-					this.stopListeningTo(this.target, EVT_MOVED_TO_NEW_TILE);
+					if (this.target.triggerEvent) this.stopListeningTo(this.target, EVT_MOVED_TO_NEW_TILE);
 					this.target = null;
 				}
 			}, HIGH_PRIORITY);
@@ -60,24 +62,34 @@ define(['eventful'], function(Eventful){
 					// Reconsider route??
 					if (!this.state.hasOwnProperty('reconsideredRoute') ||
 						(time - this.state.reconsideredRoute) > 200) {
-						// TODO: different maps? skip this.. continue using same route
-						var me           = this,
-							you          = this.target,
-							page         = this.entity.page,
-							map          = page.map,
-							myY          = page.y * Env.tileSize + this.entity.posY,
-							myX          = page.x * Env.tileSize + this.entity.posX,
-							nearestTiles = map.findNearestTiles(myY, myX),
-							yourPage     = you.page,
-							yourY        = yourPage.y * Env.tileSize + you.posY,
-							yourX        = yourPage.x * Env.tileSize + you.posX,
-							yourNearTiles= map.findNearestTiles(yourY, yourX),
-							toTiles      = map.getTilesInRange( yourNearTiles, 1, true );
 
+						// TODO: different maps? skip this.. continue using same route
+						var me            = this,
+							you           = this.target,
+							page          = this.entity.page,
+							map           = page.map,
+							myY           = page.y * Env.tileSize + this.entity.posY,
+							myX           = page.x * Env.tileSize + this.entity.posX,
+							nearestTiles  = map.findNearestTiles(myY, myX),
+							yourNearTiles = null,
+							toTiles       = null;
+						if (this.target instanceof Tile) {
+							toTiles = [this.target];
+						} else {
+							var yourPage      = you.page,
+								yourY         = yourPage.y * Env.tileSize + you.posY,
+								yourX         = yourPage.x * Env.tileSize + you.posX,
+								yourNearTiles = map.findNearestTiles(yourY, yourX);
+
+						toTiles = map.getTilesInRange( yourNearTiles, 1, true );
 						toTiles = toTiles.filter(function(tile){
 							return me.entity.tileAdjacentTo(tile, you);
 						});
-						var	path         = map.findPath(nearestTiles, toTiles);
+						}
+
+						var path = map.findPath(nearestTiles, toTiles);
+
+
 						if (path) {
 
 							if (path.path) {
@@ -136,7 +148,7 @@ define(['eventful'], function(Eventful){
 
 			this.reset = function(){
 				this.state.transition(STATE_IDLE);
-				if (this.target) this.stopListeningTo(this.target);
+				if (this.target && this.target.triggerEvent) this.stopListeningTo(this.target);
 				this.target = null;
 			};
 		},
@@ -307,6 +319,7 @@ define(['eventful'], function(Eventful){
 			}, HIGH_PRIORITY);
 
 			this.listenTo(character, EVT_NEW_TARGET, function(me, attacker){
+				if (attacker instanceof Tile) return; // TODO: shouldn't have to check weird stuff like this
 				console.log("["+this.entity.id+"] Found new target");
 				if (this.target === attacker) return; // NOTE: we most likely set this ourselves already
 				this.setTarget(attacker);
@@ -359,11 +372,18 @@ define(['eventful'], function(Eventful){
 							boredList.push(k);
 						}
 				}
-				if (boredList) {
+				if (boredList.length) {
 					for (var i=0; i<boredList.length; ++i) {
 						delete this.attackList[ boredList[i] ];
 					}
+
+					if (isObjectEmpty(this.attackList)) {
+						console.log("I am now BORED");
+						this.brain.triggerEvent(EVT_BORED);
+					}
+
 				}
+
 
 
 				this.handlePendingEvents();
@@ -375,6 +395,24 @@ define(['eventful'], function(Eventful){
 				this.target = null;
 				this.attackList = {};
 				this.lastAttacked = 0;
+			};
+		},
+		"Respawn": function(character, params){
+
+			var STATE_IDLE = 0;
+
+			this.base = AIComponent;
+			this.base(character, STATE_IDLE);
+
+			this.respawnPoint = params.respawnPoint;
+
+			this.listenTo(this.brain, EVT_BORED, function(brain){
+				console.log("Moving to respawn point..");
+				this.brain.setTarget(this.respawnPoint); // TODO: what if brain already has a target ??
+			});
+
+			this.step = function(time){
+				this.handlePendingEvents();
 			};
 		}
 	};
@@ -406,16 +444,18 @@ define(['eventful'], function(Eventful){
 			this.target = target;
 			if (oldTarget) {
 				this.entity.triggerEvent(EVT_REMOVED_TARGET, oldTarget);
-				this.stopListeningTo(oldTarget);
+				if (oldTarget.triggerEvent) this.stopListeningTo(oldTarget);
 			}
 
 			if (target) {
 				this.entity.triggerEvent(EVT_NEW_TARGET, target);
-				this.listenTo(target, EVT_ZONE_OUT, function(){
-					console.log("["+this.entity.id+"](core) I guess ("+target.id+") has zoned..");
-					this.triggerEvent(EVT_TARGET_ZONED_OUT, target);
-					this.setTarget(null);
-				}, HIGH_PRIORITY);
+				if (target.triggerEvent) {
+					this.listenTo(target, EVT_ZONE_OUT, function(){
+						console.log("["+this.entity.id+"](core) I guess ("+target.id+") has zoned..");
+						this.triggerEvent(EVT_TARGET_ZONED_OUT, target);
+						this.setTarget(null);
+					}, HIGH_PRIORITY);
+				}
 			}
 		};
 		
@@ -429,8 +469,8 @@ define(['eventful'], function(Eventful){
 			this.handlePendingEvents();
 		};
 
-		this.addComponent = function(Component){
-			this.components.push(new Component(this.entity));
+		this.addComponent = function(Component, params){
+			this.components.push(new Component(this.entity, params));
 		};
 
 		this.reset = function(){

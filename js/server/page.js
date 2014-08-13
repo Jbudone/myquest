@@ -81,7 +81,7 @@ define(['resources','movable'], function(Resources,Movable){
 						evtType: EVT_NEW_TARGET,
 						data: {
 							entity: { page: entity.page.index, id: entity.id },
-							target: { page: target.page.index, id: target.id }
+							target: { page: (target instanceof Tile ? null:target.page.index), id: target.id }
 						}
 					});
 				}, HIGH_PRIORITY);

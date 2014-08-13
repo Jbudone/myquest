@@ -250,12 +250,18 @@ try{
 
 
 						// TODO:
+						// 	> npc respawn spot
+						// 	> npc walk back to respawn spot
+						// 		- switch tile .y .x to .tileY .tileX
+						// 		- allow inRangeOf to check Tiles (if typeOf Tile)
+						// 		- allow Following AI to follow/chase Tile
+						// 		- new AI component (Respawn) to go to target respawn point when bored; save
+						// 			respawn point in Respawn
+						// 		- respawn uses AI Respawn point for repositioning
 						//
 						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
 						// 	player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
 						// 	> disallow same user to connect twice
-						// 	> npc respawn spot
-						// 	> npc walk back to respawn spot
 						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
 						//	> multiple people attacking same mob (switch after killing 1 player)
 						//	> coreAI evt_target_zoned (but works with combat and following components too)

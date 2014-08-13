@@ -225,32 +225,53 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 
 
 		this.inRangeOf = function(target, range){
-			// TODO: optimize this...
-			var _this         = this,
-				range         = range || 1,
-				myY           = this.page.y * Env.tileSize + this.posY,
-				myX           = this.page.x * Env.tileSize + this.posX,
-				yourPage      = target.page,
-				yourY         = yourPage.y * Env.tileSize + target.posY,
-				yourX         = yourPage.x * Env.tileSize + target.posX,
-				yourNearTiles = this.page.map.findNearestTiles( yourY, yourX ),
-				myNearTiles   = this.page.map.findNearestTiles( myY, myX ),
-				tiles         = this.page.map.getTilesInRange( myNearTiles, range, true ),
-				safeTiles     = {},
-				magicNumber   = Env.pageWidth,
-				hashTile      = function(tile){ return tile.y*magicNumber+tile.x; };
 
-			tiles = tiles.filter(function(tile){
-				return _this.tileAdjacentTo(tile, _this);
-			});
+			if ( target instanceof Tile ) {
 
-			for (var i=0; i<tiles.length; ++i) {
-				safeTiles[ hashTile(tiles[i]) ] = tiles[i];
-			}
+				var _this         = this,
+					range         = range || 1,
+					myY           = this.page.y * Env.tileSize + this.posY,
+					myX           = this.page.x * Env.tileSize + this.posX,
+					myNearTiles   = this.page.map.findNearestTiles( myY, myX );
+				
+				for (var i=0; i<myNearTiles.length; ++i) {
+					if (myNearTiles[i].y === target.y &&
+						myNearTiles[i].x === target.x) {
 
-			for (var i=0; i<yourNearTiles.length; ++i) {
-				var hash = hashTile( yourNearTiles[i] );
-				if (safeTiles[hash]) return true;
+						return true;
+					}
+				}
+
+			} else {
+
+				// TODO: optimize this...
+				var _this         = this,
+					range         = range || 1,
+					myY           = this.page.y * Env.tileSize + this.posY,
+					myX           = this.page.x * Env.tileSize + this.posX,
+					yourPage      = target.page,
+					yourY         = yourPage.y * Env.tileSize + target.posY,
+					yourX         = yourPage.x * Env.tileSize + target.posX,
+					yourNearTiles = this.page.map.findNearestTiles( yourY, yourX ),
+					myNearTiles   = this.page.map.findNearestTiles( myY, myX ),
+					tiles         = this.page.map.getTilesInRange( myNearTiles, range, true ),
+					safeTiles     = {},
+					magicNumber   = Env.pageWidth,
+					hashTile      = function(tile){ return tile.y*magicNumber+tile.x; };
+
+				tiles = tiles.filter(function(tile){
+					return _this.tileAdjacentTo(tile, _this);
+				});
+
+				for (var i=0; i<tiles.length; ++i) {
+					safeTiles[ hashTile(tiles[i]) ] = tiles[i];
+				}
+
+				for (var i=0; i<yourNearTiles.length; ++i) {
+					var hash = hashTile( yourNearTiles[i] );
+					if (safeTiles[hash]) return true;
+				}
+
 			}
 
 				
