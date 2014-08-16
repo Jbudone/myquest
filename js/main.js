@@ -276,13 +276,11 @@ try{
 
 						// TODO:
 						//
-						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
-						// 		player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
-						//
 						// 	> disallow same user to connect twice
 						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
 						//	> multiple people attacking same mob (switch after killing 1 player)
 						//	> coreAI evt_target_zoned (but works with combat and following components too)
+						//	> multiplayer combat extremely slow: player A attacks NPC A, player B attacks NPC B, player A switches to NPC B, player B switches to NPC A
 						//
 						//
 						//

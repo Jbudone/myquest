@@ -224,13 +224,16 @@ define(['eventful'], function(Eventful){
 						availableTargets.push( someTarget );
 					}
 
+					console.log("Available targets: ");
 					console.log(availableTargets);
 					if (availableTargets.length) {
-						var newTarget = availableTargets[0]; // TODO: find best target based off distance/hatred
+						var newTarget = this.attackList[availableTargets[0]].target; // TODO: find best target based off distance/hatred
+						console.log("Picking target: "+newTarget.id);
 						this.setTarget( newTarget );
 						this.brain.setTarget(this.target);
 						this.state.transition(STATE_ATTACKING);
 					} else {
+						console.log("No targets..setting target null");
 						this.brain.setTarget(null);
 						this.state.transition(STATE_IDLE);
 						this.target = null;
@@ -254,24 +257,27 @@ define(['eventful'], function(Eventful){
 
 						console.log("["+this.entity.id+"] WHELP I suppose ("+target.id+") is dead now..");
 
-					console.log("NOT LISTENING TO TARGET: ");
-					for (var i=0; i<target.evtListeners[EVT_DIED].length; ++i) {
-						var which = target.evtListeners[EVT_DIED][i];
-						if (which.caller.attackRange) {
-							console.log('	FOUND US');
+						console.log("NOT LISTENING TO TARGET: ");
+						for (var i=0; i<target.evtListeners[EVT_DIED].length; ++i) {
+							var which = target.evtListeners[EVT_DIED][i];
+							if (which.caller.attackRange) {
+								console.log('	FOUND US');
+							}
 						}
-					}
-					for (var i=0; i<target.pendingOperations.length; ++i) {
-						var which = target.pendingOperations[i];
-						if (which.args[0] == EVT_DIED) {
-							console.log('PENDING DELETE EVT_DIED');
+						for (var i=0; i<target.pendingOperations.length; ++i) {
+							var which = target.pendingOperations[i];
+							if (which.args[0] == EVT_DIED) {
+								console.log('PENDING DELETE EVT_DIED');
+							}
 						}
-					}
+
 						console.log(this.attackList);
 						this.stopListeningTo(target);
 
 						this.nextTarget();
+
 					}, HIGH_PRIORITY);
+
 					this.attackList[target.id].listening = true;
 				}
 
@@ -327,9 +333,11 @@ define(['eventful'], function(Eventful){
 
 			this.listenTo(character, EVT_REMOVED_TARGET, function(me, oldTarget){
 				if (this.target === oldTarget) {
-					console.log("Removing target");
+					console.log("Removing target "+this.target.id);
 					// console.log(this.attackList);
-					// delete this.attackList[this.target.id];
+					// NOTE: remove target from our attack list; nextTarget will clear any event listening and
+					// target info regarding this target
+					delete this.attackList[this.target.id];
 					// console.log(this.attackList);
 					this.nextTarget();
 				}
@@ -457,6 +465,7 @@ define(['eventful'], function(Eventful){
 		this.setTarget = function(target){
 			if (!this.target && !target) return;
 			if (this.state.state === STATE_MINDLESS) return; 
+			if (this.target == target) return;
 
 			if (target) console.log("["+this.entity.id+"] brain.setTarget("+target.id+")");
 			else console.log("["+this.entity.id+"] brain.setTarget(null)");
