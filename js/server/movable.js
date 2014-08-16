@@ -7,7 +7,7 @@ define(['AI'], function(AI){
 				this.brain = new AI.Core(this);
 				if (this.npc.name!=='player') {
 					this.brain.addComponent(AI.Components['Follow']);
-					// this.brain.addComponent(AI.Components['Respawn'], {respawnPoint: new Tile(this.posY/Env.tileSize,this.posX/Env.tileSize, this.page.map)});
+					this.brain.addComponent(AI.Components['Respawn'], {respawnPoint: new Tile(this.posY/Env.tileSize,this.posX/Env.tileSize, this.page.map)});
 				}
 				this.brain.addComponent(AI.Components['Combat']);
 
@@ -30,18 +30,7 @@ define(['AI'], function(AI){
 			}
 		},
 		respawn: function(){
-			console.log("RESPAWNING!!");
-			this.physicalState.transition(STATE_ALIVE);
-			this.path = null;
-			this.zoning = false;
-			this.lastMoved=now();
-			this.health=this.npc.health;
-			this.lastStep=0;
-			this.sprite.idle();
-			this.brain.reset();
-			this.pendingEvents=[];
-			console.log("["+this.id+"] RESPAWNED");
-			this.page.addEntity(this);
+			this.brain.triggerEvent(EVT_RESPAWNING);
 		}
 	};
 

@@ -1,10 +1,17 @@
 
 define(['resources','entity','animable'], function(Resources, Entity, Animable) {
 
-	var Movable = function(spriteID, page) {
+	var Movable = function(spriteID, page, params) {
 		console.log("new Movable("+spriteID+")");
 		this.base = Entity;
 		this.base(spriteID, page);
+
+		if (params) {
+			for (var param in params) {
+				this[param] = params[param];
+			}
+		}
+
 		Ext.extend(this,'movable');
 
 		this.sprite=(new Animable(this.npc.sheet));

@@ -56,15 +56,35 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 				if (entity instanceof Movable) {
 					this.triggerEvent(EVT_ADDED_ENTITY, entity);
 					console.log("Adding Entity["+entity.id+"] to page: "+this.index);
+					if (!(Env.isServer || entity.id == The.player.id)) {
+						// TODO: what if the entity has already zoned in by the time we get here? (already
+						// finished walk, not zoning ?)
+
+						// The server/player are taken care of, but to keep track of other movables zoning
+						// in/out, this checks if they've finished their walk and then sets them as no longer
+						// zoning. NOTE: this is separated since when the movable zones to the next page, we
+						// no longer receive updates from them; however, when we (or the almighty server who
+						// sees all) zone to the next page, we still get updates about our movements and
+						// cannot say we've finished zoning until we've moved to a zone-free tile in the new
+						// page
+						this.listenTo(entity, EVT_FINISHED_WALK, function(entity){
+							var tY = parseInt(entity.posY / Env.tileSize),
+								tX = parseInt(entity.posX / Env.tileSize),
+								zoning = this.checkZoningTile(tY, tX);
+							if (!zoning) {
+								entity.zoning = false;
+								this.stopListeningTo(entity, EVT_MOVED_TO_NEW_TILE);
+							}
+						}, HIGH_PRIORITY);
+					}
 					this.listenTo(entity, EVT_STEP, function(entity){
 
 						if (entity.zoning) return; // Cannot zone again while zoning
-						var zoning=null;
 
 						// check zoning tiles
 						var tY = parseInt(entity.posY / Env.tileSize),
-							tX = parseInt(entity.posX / Env.tileSize);
-						zoning = this.checkZoningTile(tY, tX);
+							tX = parseInt(entity.posX / Env.tileSize),
+							zoning = this.checkZoningTile(tY, tX);
 
 						if (!zoning) {
 							var border=Env.pageBorder*Env.tileSize;
@@ -127,7 +147,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 									entity.triggerEvent(EVT_ZONE, newPage, direction);
 									this.listenTo(entity, EVT_FINISHED_WALK, function(entity){
 
-										entity.zoning=false;
+										entity.zoning = false;
 										console.log("Entity ["+entity.id+"] no longer ZONING");
 										this.stopListeningTo(entity);
 									});

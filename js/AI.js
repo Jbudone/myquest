@@ -414,6 +414,27 @@ define(['eventful'], function(Eventful){
 			this.step = function(time){
 				this.handlePendingEvents();
 			};
+
+			this.reset = function(){
+				
+			};
+
+			this.listenTo(this.brain, EVT_RESPAWNING, function(brain){
+				console.log("RESPAWNING!!");
+				this.entity.posY = this.respawnPoint.y * Env.tileSize;
+				this.entity.posX = this.respawnPoint.x * Env.tileSize;
+				this.entity.physicalState.transition(STATE_ALIVE);
+				this.entity.path = null;
+				this.entity.zoning = false;
+				this.entity.lastMoved=now();
+				this.entity.health=this.entity.npc.health;
+				this.entity.lastStep=0;
+				this.entity.sprite.idle();
+				this.entity.brain.reset();
+				this.entity.pendingEvents=[];
+				console.log("["+this.entity.id+"] RESPAWNED");
+				this.entity.page.addEntity(this.entity);
+			}, HIGH_PRIORITY);
 		}
 	};
 

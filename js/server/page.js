@@ -126,9 +126,9 @@ define(['resources','movable'], function(Resources,Movable){
 					console.log("Spawning spawn["+spawn.id+"] at: ("+localY+","+localX+")");
 
 					var npc = Resources.npcs[spawn.id],
-						entity = new Movable(npc.sheet, page);
-					entity.posY = localY*Env.tileSize;
-					entity.posX = localX*Env.tileSize;
+						entity = new Movable(npc.sheet, page, {
+							posY: localY*Env.tileSize,
+							posX: localX*Env.tileSize});
 					console.log("Entity["+entity.id+"]");
 					if (entity.AI) entity.AI.map = page.map; // Give intelligible beings a sense of whats around them
 					page.addEntity(entity);
