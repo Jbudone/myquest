@@ -248,11 +248,34 @@ try{
 							this.zone(direction);
 						});
 
+						window['TheOtherPlayer'] = function(){
+							var otherPlayerID = null;
+							for (var movableID in The.player.page.movables) {
+								var movable = The.player.page.movables[movableID];
+								if (movable.spriteID == 'player' &&
+									movable.id != The.player.id) {
+
+									if (otherPlayerID !== null) {
+										console.error("Multiple other players on page!?");
+									} else {
+										otherPlayerID = movable.id;
+									}
+								}
+							}
+
+							if (otherPlayerID) {
+								var exists = (The.player.page.movables[otherPlayerID]);
+								if (exists) {
+									console.log("Other player ["+otherPlayerID+"] exists");
+								} else {
+									console.error("Other player ["+otherPlayerID+"] does NOT exists!");
+								}
+							}
+						};
+
 
 						// TODO:
 						//
-						// 	> respawn facing initial direction
-						// 	> BUG: multiplayer connect at different pages: doesn't show the other player, doesn't show NPC dying --- sees wrong player ID for other player
 						// 	> multi-combat (multiple players & multiple npc's all attacking: npc A attacks
 						// 		player 1, player 1 attacks npc B, npc B attacks player 2, player 2 attacks npc A)
 						//
@@ -261,6 +284,10 @@ try{
 						//	> multiple people attacking same mob (switch after killing 1 player)
 						//	> coreAI evt_target_zoned (but works with combat and following components too)
 						//
+						//
+						//
+						//	Bugs (cannot reproduce)
+						// 	> BUG: multiplayer connect at different pages: doesn't show the other player, doesn't show NPC dying --- sees wrong player ID for other player
 						//
 						//
 						//
@@ -1003,12 +1030,19 @@ try{
 								// target = tarPage.movables[event.data.target.id];
 
 								// remove core target
-								console.log("	Target to remove ["+event.data.target.id+"] currently targeting: ("+entity.brain.target.id+")");
 								if (entity.brain.target && entity.brain.target.id == event.data.target.id) { 
+									console.log("	Target to remove ["+event.data.target.id+"] currently targeting: ("+entity.brain.target.id+")");
 									entity.brain.setTarget(null);
 								}
 							} else if (evtType == EVT_DIED) {
 								// TODO: set die physical state, die animation, remove entity
+								var entity = The.map.pages[page].movables[event.data.entity];
+								// NOTE: the entity may have already died if we've already received the killing blow event (client side noticed their health went below 0)
+								// TODO: will this ever occur? Do we need to set the dying process somewhere else?
+								if (entity) {
+									console.error("EVT_DIED OCCURRED!! Make note that this actually happened in main.js");
+									entity.triggerEvent(EVT_DIED);
+								}
 							} else { 
 								console.error("	NOT SURE WHAT evt IS!?");
 								console.error(evt);
