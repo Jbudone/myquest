@@ -331,14 +331,13 @@ define(['eventful'], function(Eventful){
 				this.setTarget(attacker);
 			});
 
+			// This target is no longer our current target (maybe zoned out or we changed our priority target)
 			this.listenTo(character, EVT_REMOVED_TARGET, function(me, oldTarget){
 				if (this.target === oldTarget) {
 					console.log("Removing target "+this.target.id);
-					// console.log(this.attackList);
-					// NOTE: remove target from our attack list; nextTarget will clear any event listening and
-					// target info regarding this target
-					delete this.attackList[this.target.id];
-					// console.log(this.attackList);
+					// NOTE: do not remove this target from our attackList since we may still want to attack
+					// them later (eg. if they zoned out temporarily, or we've started attacking their friend
+					// instead)
 					this.nextTarget();
 				}
 			}, HIGH_PRIORITY);

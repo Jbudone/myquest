@@ -25,7 +25,7 @@ define(function(){
 		EVT_DIED:18,
 		EVT_NEW_TARGET:19,
 		EVT_ATTACKED_ENTITY:20,
-		EVT_REMOVED_TARGET:21,
+		EVT_REMOVED_TARGET:21, // unset this target from our current target
 		EVT_AGGRO:22,
 		EVT_NEW_CHARACTER:23,
 		EVT_DISTRACTED:24,
