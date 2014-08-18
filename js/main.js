@@ -276,16 +276,47 @@ try{
 
 						// TODO:
 						//
-						// 	> disallow same user to connect twice
-						//	> d/c during combat -- player auto attacks whomever attacks him; wait X time to d/c; on reconnect allow player to connect, already in attack mode
-						//	> multiple people attacking same mob (switch after killing 1 player)
+						// 	> BAD COMBAT -- slow & buggy during circular attack and running off :: bad movement, player aggro without wait time after moving, NPC sits idle without chasing players (until player moves again to trigger them), if the wrong NPC attacks player and player can't reach their target then they don't switch to new NPC, I'm Attacking [X] shows different numbers for NPC's when they're both hitting same target
+						// 		- look at ALL places outside of AI which may call AI listened events; keep track of these
+						// 		- go through ALL core AI event handling; make necessary notes & comments
+						// 		- test ONLY combat: check all event handling, make comments/notes
+						// 		- test ONLY following: check all event handling, make comments/notes
+						// 		- Recordable component: eventListening function which handles logging; keep track of ALL state changes, events handled; personal log function; allow enabling/disabling logging for each AI component; allow batching and serializing events, periodically add in a transaction to send to the DB; allow serializing a snapshot of the current component state (such that you can read the serialization and load it back to that exact state) - NOTE this needs to work with eventful component, AND needs to flush all Recordable components in order and in the same transactions since most will depend on each other.
+						// 		- Set Recordable components: Movable, AI components, World, Map, Pages
+						// 		- on D/C flush Recording
+						// 		- Allow starting up from a Recording table (each table represents EITHER a date/startup_instance OR a snapshot/multiple_tables_per_game_startup); load everything in order, allow easy debugging (stopping at a certain point)
+						//
+						// 	> player D/C
+						// 		EVT_PLAYER_DISCONNECTING, EVT_PLAYER_DISCONNECTED
+						// 		- put on D/C queue; set lastActive property on player
+						// 		- D/C queue checks lastActive property to determine if its okay to D/C (low priority check... every 50x gameLoops?)
+						// 		- broadcast D/C_Initialized key; change opacity of player
+						// 		- add AI to player on D/C_Initialized
+						// 		- listen to player: move, attack; change lastActive
+						// 		- on D/C save player to db, dc player, broadcast D/C
+						// 		- on player logon: is he currently logged on?
+						// 			- on D/C queue?
+						// 				- check current AI status (for client-AI), send to client for initializing
+						// 				- remove AI
+						// 				- client setup local AI
+						// 				- remove from D/C queue; remove lastActive
+						// 			- ELSE
+						// 				- send D/C to current client; close connection
+						// 				- accept new connection
+						// 		- on client receive D/C
+						// 			- stop game; change opacity of canvas
+						// 		- on client receive closed connection
+						// 			- stop game; change opacity of canvas
+						//
 						//	> coreAI evt_target_zoned (but works with combat and following components too)
-						//	> multiplayer combat extremely slow: player A attacks NPC A, player B attacks NPC B, player A switches to NPC B, player B switches to NPC A
+						//	> respawn on correct page
+						//	> BUG: when client spam clicks for a path and then enters debug mode, then leaving debug mode skips him to an illegal spot
 						//
 						//
 						//
 						//	Bugs (cannot reproduce)
 						// 	> BUG: multiplayer connect at different pages: doesn't show the other player, doesn't show NPC dying --- sees wrong player ID for other player
+						// 	> BUG: multiplayer combat extremely slow (perhaps client side only w/ console open?)
 						//
 						//
 						//
@@ -314,6 +345,7 @@ try{
 						//	> CLEAN: able to handle pauses from client (page not in focus -- delayed timeouts)
 						//	> CLEAN: Movable setting params before/after Ext
 						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
+						//	> CLEAN: multiple target types (NPC, Tile)
 						//
 						//
 						//	
@@ -321,6 +353,7 @@ try{
 						//
 						//
 						//
+						//	> scripting language for combat, skills, interacting, UI, gameplay
 						// 	> application (UI, login, etc.)
 						// 	> combat; mob spawning; experience
 						// 	> questing; dfa's
@@ -984,9 +1017,10 @@ try{
 									entity  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity being attack!?");
 								entity = entPage.movables[event.data.entity.id];
+								target = The.map.pages[event.data.target.page].movables[event.data.target.id];
 
 								// abstract better
-								entity.hurt(event.data.amount);
+								entity.hurt(event.data.amount, target);
 							} else if (evtType == EVT_ATTACKED_ENTITY) {
 								var entPage = The.map.pages[event.data.entity.page],
 									tarPage = The.map.pages[event.data.target.page],

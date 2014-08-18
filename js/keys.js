@@ -51,12 +51,21 @@ define(function(){
 		PAGE_SERIALIZE_MOVABLES:2,
 	};
 
+	var keyValue = 0,
+		global = (typeof window !== 'undefined' ? window : GLOBAL),
+		addKey = function(key){
+			keys[key] = (keyValue++);
+			global[key]=keys[key];
+		};
+
+	for (var key in keys){
+		global[key] = keys[key];
+	}
+
+	// addKey('NORTH'); addKey('EAST'); addKey('SOUTH'); addKey('WEST');
+
 	// TODO: organize with arrays, {'events':{prefix:'evt',keys:['step','zone','finished_moving',...]}} and automatically add
 
-	var global = (typeof window !== 'undefined' ? window : GLOBAL);
-	for(var key in keys) {
-		global[key]=keys[key];
-	}
 
 	return keys;
 });

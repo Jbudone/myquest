@@ -707,6 +707,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   } else if (action.evtType == EVT_DISTRACTED) {
 					   // TODO: need to confirm same as current target?
 					   // you.player.brain.setTarget(null);
+					   console.log("["+you.player.id+"] Is Distracted..");
 					   you.player.triggerEvent(EVT_DISTRACTED);
 				   } else {
 					   console.log("			Some strange unheard of event ("+action.evtType+") ??");
