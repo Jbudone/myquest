@@ -311,6 +311,8 @@ try{
 						//	> coreAI evt_target_zoned (but works with combat and following components too)
 						//	> respawn on correct page
 						//	> BUG: when client spam clicks for a path and then enters debug mode, then leaving debug mode skips him to an illegal spot
+						//	> BUG: both players attack NPC; NPC chases other player to next page; the remaining player doesn't receive page change of NPC and thinks its in the same page
+						//	> BUG: player doesn't receive movement update of other player
 						//
 						//
 						//
