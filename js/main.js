@@ -282,7 +282,6 @@ try{
 						//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
 						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
 						//	> CLEAN: clean up properties/method names...abstract ALL methods into units of code; the name of method describes precisely what its doing (without side effects) and the name of the property describes precisely what it is
-						//	> BUG: NPC respawn correct page
 						//	> Adopt Jasmine unit testing
 						//
 						//
@@ -326,6 +325,7 @@ try{
 						//	> BUG: when client spam clicks for a path and then enters debug mode, then leaving debug mode skips him to an illegal spot
 						//	> BUG: both players attack NPC; NPC chases other player to next page; the remaining player doesn't receive page change of NPC and thinks its in the same page
 						//	> BUG: player doesn't receive movement update of other player
+						//	> BUG: in circle attack after 1 NPC dies, the other player can't choose to attack the previous NPC (already in attackList and not re-added?)
 						//
 						//
 						//

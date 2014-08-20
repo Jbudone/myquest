@@ -446,7 +446,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			};
 
 			this.listenTo(this.brain, EVT_RESPAWNING, function(brain){
-				console.log("RESPAWNING!!");
+				this.Log("RESPAWNING");
 				this.entity.posY = this.respawnPoint.y * Env.tileSize;
 				this.entity.posX = this.respawnPoint.x * Env.tileSize;
 				this.entity.physicalState.transition(STATE_ALIVE);
@@ -458,8 +458,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.sprite.idle();
 				this.entity.brain.reset();
 				this.entity.pendingEvents=[];
-				console.log("["+this.entity.id+"] RESPAWNED");
-				this.entity.page.addEntity(this.entity);
+				this.Log("RESPAWNED");
+				this.respawnPoint.page.addEntity(this.entity);
 			}, HIGH_PRIORITY);
 		}
 	};
