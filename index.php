@@ -63,7 +63,7 @@ requirejs.config({
 });
 
 // Load the main app module to start the app
-require(['underscore','objectmgr','environment','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(_,The,Env,Utils,Ext,Events,Stack,Errors,FSM){
+require(['underscore','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
 
 	// TODO: why aren't The or Env global?
 	window['The']=The;

@@ -502,9 +502,11 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.triggerEvent(EVT_NEW_TARGET, target);
 				if (target.triggerEvent) {
 					this.listenTo(target, EVT_ZONE_OUT, function(){
-						console.log("["+this.entity.id+"](core) I guess ("+target.id+") has zoned..");
-						this.triggerEvent(EVT_TARGET_ZONED_OUT, target);
+						this.Log("target ("+target.id+") has zoned..");
+						// NOTE: combat may try to set a new target from TARGET_ZONED_OUT, so set target to
+						// null first before triggering event
 						this.setTarget(null);
+						this.triggerEvent(EVT_TARGET_ZONED_OUT, target);
 					}, HIGH_PRIORITY);
 				}
 			}

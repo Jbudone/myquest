@@ -1,5 +1,5 @@
 
-define(['jquery','resources','entity','movable','map','page','client/camera','keys','AI'], function($,Resources,Entity,Movable,Map,Page,Camera,Keys,AI) {
+define(['jquery','resources','entity','movable','map','page','client/camera','AI'], function($,Resources,Entity,Movable,Map,Page,Camera,AI) {
 try{
 
 
