@@ -77,7 +77,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 							}
 						}, HIGH_PRIORITY);
 					}
-					this.listenTo(entity, EVT_STEP, function(entity){
+					this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
 
 						if (entity.zoning) return; // Cannot zone again while zoning
 

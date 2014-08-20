@@ -295,16 +295,11 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			};
 
 			this.listenTo(this.brain, EVT_TARGET_ZONED_OUT, function(me, target){
-				console.log("EVT_TARGET_ZONED_OUT");
-				if (this.target.id != target.id) {
-					console.log("Mismatched target!");
-					console.log(this.target.id);
-					console.log(target.id);
-					if (process) process.exit(); // ERROR
-					console.error("ERROR!!! Mismatched target!");
+				this.Log("Target ("+target.id+") has zoned out");
+				if (this.target && (this.target.id == target.id)) {
+					this.Log("We should have replaced our target before getting here", LOG_ERROR);
 				}
 
-				console.log("["+this.entity.id+"](combat) I guess ("+target.id+") has zoned..");
 				this.attackList[target.id].flee = now();
 				this.stopListeningTo(target);
 
@@ -325,7 +320,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 									
 
 				this.listenTo(target, EVT_ZONE_OUT, function(target, map, page){
-					// TODO: if same map, check if within range
+					// TODO: if same map, check if within range & hate level
 					this.stopListeningTo(target);
 					this.attackList[target.id].flee = 0;
 					this.brain.setTarget(this.target);
@@ -333,7 +328,6 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 					this.state.transition(STATE_ATTACKING);
 				}, HIGH_PRIORITY);
 
-				this.nextTarget();
 			}, HIGH_PRIORITY);
 
 			this.listenTo(character, EVT_NEW_TARGET, function(me, attacker){
@@ -352,6 +346,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 					// instead)
 					if (this.state.state !== STATE_PASSIVE) {
 						this.nextTarget();
+					} else {
+						this.target = null;
 					}
 				}
 			}, HIGH_PRIORITY);

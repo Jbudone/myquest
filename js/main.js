@@ -276,8 +276,6 @@ try{
 
 						// TODO:
 						//
-						//	> better plan testing details (MUST be scalable; debug/release mode? client/server? client side events? what about serializing client side events + replay?)
-						//	> Logging: Loggable component; object loads Loggable with an array of groups defined ([Movable, Player], [AI, NPC, Movable], etc.); auto format logs based on group; console.log and/or file log (use bitmask on groups to decide); log levels (CRITICAL, ERROR, WARNING, INFO, DEBUG, VERBOSE)
 						//	> D/C queue; play player on D/C queue, D/C player when ready
 						//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
 						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
@@ -335,7 +333,7 @@ try{
 						//
 						//
 						//
-						//	> Loggable to log objects; output to file
+						//	> Loggable output to file
 						//	> physical state machine
 						//	> player dying: animation, corpse, respawn -- death message; respawn to safe spot, remove corpse after some time
 						//	> experience, level up; level up notification
@@ -946,6 +944,7 @@ try{
 									}
 								}
 
+								// TODO: stopListeningTo everything?
 								page.stopListeningTo(entity, EVT_FINISHED_WALK);
 								page.stopListeningTo(entity, EVT_STEP);
 								page.stopListeningTo(entity, EVT_PREPARING_WALK);
@@ -1013,6 +1012,7 @@ try{
 												}
 											}
 
+											// TODO: stopListeningTo everything?
 											page.stopListeningTo(entity, EVT_FINISHED_WALK);
 											page.stopListeningTo(entity, EVT_STEP);
 											page.stopListeningTo(entity, EVT_PREPARING_WALK);
