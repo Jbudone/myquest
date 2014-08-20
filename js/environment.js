@@ -22,6 +22,14 @@ define(function(){
 		this.tileSize=16;
 		this.tileScale=2;
 		this.isServer=false;
+
+		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
+			logVerbose = logImportant | LOG_INFO | LOG_DEBUG;
+		this.logmask = {
+			'AI': (logVerbose),
+			'Movable': (logVerbose),
+			'Default': (logVerbose)
+		};
 	};
 
 	return Environment;

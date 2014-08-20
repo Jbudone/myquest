@@ -47,6 +47,12 @@ define(function(){
 		SOUTH:3,
 		WEST:4,
 
+		LOG_CRITICAL:1<<0,
+		LOG_ERROR:1<<1,
+		LOG_WARNING:1<<2,
+		LOG_INFO:1<<3,
+		LOG_DEBUG:1<<4,
+
 		PAGE_SERIALIZE_BASE:1,
 		PAGE_SERIALIZE_MOVABLES:2,
 	};

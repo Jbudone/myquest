@@ -276,6 +276,19 @@ try{
 
 						// TODO:
 						//
+						//	> better plan testing details (MUST be scalable; debug/release mode? client/server? client side events? what about serializing client side events + replay?)
+						//	> Logging: Loggable component; object loads Loggable with an array of groups defined ([Movable, Player], [AI, NPC, Movable], etc.); auto format logs based on group; console.log and/or file log (use bitmask on groups to decide); log levels (CRITICAL, ERROR, WARNING, INFO, DEBUG, VERBOSE)
+						//	> D/C queue; play player on D/C queue, D/C player when ready
+						//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
+						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
+						//	> CLEAN: clean up properties/method names...abstract ALL methods into units of code; the name of method describes precisely what its doing (without side effects) and the name of the property describes precisely what it is
+						//	> BUG: NPC respawn correct page
+						//	> Adopt Jasmine unit testing
+						//
+						//
+						//
+						//
+						//
 						// 	> BAD COMBAT -- slow & buggy during circular attack and running off :: bad movement, player aggro without wait time after moving, NPC sits idle without chasing players (until player moves again to trigger them), if the wrong NPC attacks player and player can't reach their target then they don't switch to new NPC, I'm Attacking [X] shows different numbers for NPC's when they're both hitting same target
 						// 		- look at ALL places outside of AI which may call AI listened events; keep track of these
 						// 		- go through ALL core AI event handling; make necessary notes & comments
@@ -322,6 +335,7 @@ try{
 						//
 						//
 						//
+						//	> Loggable to log objects; output to file
 						//	> physical state machine
 						//	> player dying: animation, corpse, respawn -- death message; respawn to safe spot, remove corpse after some time
 						//	> experience, level up; level up notification
@@ -346,8 +360,8 @@ try{
 						//	> CLEAN: functions have to be object properties prototype functions kill performance
 						//	> CLEAN: able to handle pauses from client (page not in focus -- delayed timeouts)
 						//	> CLEAN: Movable setting params before/after Ext
-						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
 						//	> CLEAN: multiple target types (NPC, Tile)
+						//	> CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
 						//
 						//
 						//	
@@ -1016,13 +1030,15 @@ try{
 								}
 							} else if (evtType == EVT_ATTACKED) {
 								var entPage = The.map.pages[event.data.entity.page],
-									entity  = null;
+									tarPage = The.map.pages[event.data.target.page],
+									entity  = null,
+									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity being attack!?");
 								entity = entPage.movables[event.data.entity.id];
-								target = The.map.pages[event.data.target.page].movables[event.data.target.id];
+								if (tarPage) target = tarPage.movables[event.data.target.id];
 
 								// abstract better
-								entity.hurt(event.data.amount, target);
+								if (entity) entity.hurt(event.data.amount, target);
 							} else if (evtType == EVT_ATTACKED_ENTITY) {
 								var entPage = The.map.pages[event.data.entity.page],
 									tarPage = The.map.pages[event.data.target.page],
@@ -1030,14 +1046,16 @@ try{
 									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity throwing attack!?");
 								entity = entPage.movables[event.data.entity.id];
-								target = tarPage.movables[event.data.target.id];
+								if (tarPage) target = tarPage.movables[event.data.target.id];
 
 								// TODO: abstract better
 
-								// entity.faceDirection(direction);
-								var direction = entity.directionOfTarget(target);
-								entity.sprite.dirAnimate('atk', direction);
-								// entity.sprite.animate('atk_right');
+								if (entity && target) {
+									// entity.faceDirection(direction);
+									var direction = entity.directionOfTarget(target);
+									entity.sprite.dirAnimate('atk', direction);
+									// entity.sprite.animate('atk_right');
+								}
 							} else if (evtType == EVT_NEW_TARGET) {
 								var entPage = The.map.pages[event.data.entity.page],
 									tarPage = The.map.pages[event.data.target.page],
@@ -1049,7 +1067,7 @@ try{
 								target = tarPage.movables[event.data.target.id];
 
 								// set core target
-								entity.brain.setTarget(target);
+								if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
 							} else if (evtType == EVT_REMOVED_TARGET) {
 								console.log("Removing target for ["+event.data.entity.id+"]");
 								// NOTE: do not select the target since the target may have died and been
@@ -1060,13 +1078,15 @@ try{
 									target  = null;
 								if (!entPage) throw UnexpectedError("Could not find page of entity in remove target!?");
 								// if (!tarPage) throw UnexpectedError("Could not find page of target in remove target!?");
-								entity = entPage.movables[event.data.entity.id];
-								// target = tarPage.movables[event.data.target.id];
+								if (entity) {
+									entity = entPage.movables[event.data.entity.id];
+									// target = tarPage.movables[event.data.target.id];
 
-								// remove core target
-								if (entity.brain.target && entity.brain.target.id == event.data.target.id) { 
-									console.log("	Target to remove ["+event.data.target.id+"] currently targeting: ("+entity.brain.target.id+")");
-									entity.brain.setTarget(null);
+									// remove core target
+									if (entity.brain.target && entity.brain.target.id == event.data.target.id) { 
+										console.log("	Target to remove ["+event.data.target.id+"] currently targeting: ("+entity.brain.target.id+")");
+										entity.brain.setTarget(null);
+									}
 								}
 							} else if (evtType == EVT_DIED) {
 								// TODO: set die physical state, die animation, remove entity
@@ -1075,6 +1095,7 @@ try{
 								// TODO: will this ever occur? Do we need to set the dying process somewhere else?
 								if (entity) {
 									console.error("EVT_DIED OCCURRED!! Make note that this actually happened in main.js");
+									console.log(entity);
 									entity.triggerEvent(EVT_DIED);
 								}
 							} else { 
@@ -1131,6 +1152,40 @@ try{
 							page.tiles = evtPage.tiles;
 							page.sprites = evtPage.sprites;
 							page.collidables = evtPage.collidables;
+
+							
+							if (evtPage.movables) {
+								for (var entityID in page.movables) {
+									if (entityID == The.player.id) continue;
+									page.stopListeningTo(page.movables[entityID]);
+									delete page.movables[entityID];
+								}
+
+								for (var entityID in evtPage.movables) {
+									var movable = evtPage.movables[entityID];
+									if (The.map.pages[pageI].movables[entityID]) continue; // incase zoned in as we received this
+									if (entityID == The.player.id) {
+										// NOTE: we keep track of ourselves locally
+									} else {
+										var entity = new Movable(movable.spriteID, page);
+										console.log("ADDING Entity: "+entityID);
+										entity.id           = movable.id;
+										entity.posY         = movable.posY;
+										entity.posX         = movable.posX;
+										entity.sprite.state = movable.state;
+										entity.zoning       = movable.zoning;
+
+										if (movable.path) {
+											var path = JSON.parse(movable.path);
+											entity.addPath(path);
+										}
+
+										The.map.pages[pageI].addEntity(entity);
+									}
+
+								}
+							}
+
 
 							// figure out neighbours..
 							if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1]) { // West Neighbour

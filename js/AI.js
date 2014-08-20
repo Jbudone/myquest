@@ -1,11 +1,15 @@
-define(['eventful'], function(Eventful){ 
+define(['eventful','loggable'], function(Eventful, Loggable){ 
 
 	var AIComponent = function(character, initialState){
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Loggable);
 
 		this.entity = character;
 		this.state  = new State(initialState);
 		this.brain  = character.brain;
+
+		this.setLogGroup('AI');
+		this.setLogPrefix('[' + this.entity.id + '](Component) ');
 	};
 
 	var AIComponents = {
@@ -18,6 +22,8 @@ define(['eventful'], function(Eventful){
 			this.base = AIComponent;
 			this.base(character, STATE_IDLE);
 
+			this.setLogPrefix('[' + this.entity.id + '](Following) ');
+
 			this.target = null;
 			this.listenTo(character, EVT_NEW_TARGET, function(me, target){
 				if (!this.entity.inRangeOf(target)) {
@@ -25,7 +31,7 @@ define(['eventful'], function(Eventful){
 				} else {
 					this.state.transition(STATE_FOLLOWING);
 				}
-				console.log("["+this.entity.id+"] Following ("+target.id+")");
+				this.Log("Following ("+(target&&target.id?target.id:"null")+")");
 				this.target = target;
 
 				// NOTE: this triggers as soon as the target moves to a new tile; however inRangeOf considers
@@ -162,6 +168,8 @@ define(['eventful'], function(Eventful){
 
 			this.base = AIComponent;
 			this.base(character, STATE_IDLE);
+
+			this.setLogPrefix('[' + this.entity.id + '](Combat) ');
 
 			this.target       = null;
 			this.attackList   = {};
@@ -420,6 +428,8 @@ define(['eventful'], function(Eventful){
 			this.base = AIComponent;
 			this.base(character, STATE_IDLE);
 
+			this.setLogPrefix('[' + this.entity.id + '](Respawn) ');
+
 			this.respawnPoint = params.respawnPoint;
 
 			this.listenTo(this.brain, EVT_BORED, function(brain){
@@ -460,6 +470,7 @@ define(['eventful'], function(Eventful){
 	 ***********************************************/
 	var CoreAI = function(entity){
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Loggable);
 
 		var STATE_IDLE = 1,
 			STATE_TARGET = 2,
@@ -470,13 +481,15 @@ define(['eventful'], function(Eventful){
 		this.target = null;
 		this.components = [];
 
+		this.setLogGroup('AI');
+		this.setLogPrefix('[' + this.entity.id + '](Core) ');
+
 		this.setTarget = function(target){
 			if (!this.target && !target) return;
 			if (this.state.state === STATE_MINDLESS) return; 
 			if (this.target == target) return;
 
-			if (target) console.log("["+this.entity.id+"] brain.setTarget("+target.id+")");
-			else console.log("["+this.entity.id+"] brain.setTarget(null)");
+			this.Log("brain.setTarget("+((target&&target.id)?target.id:"null")+")");
 
 			var oldTarget = this.target;
 			this.target = target;
