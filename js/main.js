@@ -276,9 +276,16 @@ try{
 
 						// TODO:
 						//
+						// 	> main.js (refactoring)
+						// 		- remove try/catch; return error objects from functions
+						// 		- abstract server handling: serverHandler.js  - server object, connect/login/request, returns promises; hook various things: server.onDied(..).onZoned(..).on___(...)
+						// 		- client/map.js: initialization, initalize page, add/remove entities/events; have a function for each well defined unit of operation (Map.entityAttacked(id, id, amount))
+						// 		- client/resources.js: fetch (ajax/cache), load(resources.json, npc.json)
+						// 		- client/renderer.js: init (pass canvases, camera, map/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
+						// 		- client/ui.js: init (canvas); set input handling (hover tile, click); hook events: UI.onHoverTile(..), 
+						//
 						//	> D/C queue; play player on D/C queue, D/C player when ready
 						//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
-						//	> CLEAN: use MOVING_TO_NEW_TILE and MOVED_TO_NEW_TILE (also MOVED) instead of EVT_STEP
 						//	> CLEAN: clean up properties/method names...abstract ALL methods into units of code; the name of method describes precisely what its doing (without side effects) and the name of the property describes precisely what it is
 						//	> Adopt Jasmine unit testing
 						//
