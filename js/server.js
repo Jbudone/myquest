@@ -245,6 +245,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 			   client.on('message', function(evt) {
+				   console.log(evt);
 				   var evt=JSON.parse(evt);
 				   if (!evt) {
 					   console.log("			BAD MESSAGE!? Weird..");

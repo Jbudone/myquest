@@ -1,6 +1,9 @@
 
-define(['jquery','resources','entity','movable','map','page','client/camera','AI'], function($,Resources,Entity,Movable,Map,Page,Camera,AI) {
+define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable) {
 try{
+
+	extendClass(this).with(Loggable);
+	this.setLogPrefix('(main): ');
 
 
 	// ----------------------------------------------------------------------------------------- //
@@ -18,10 +21,8 @@ try{
 		loading=function(module){ modulesToLoad[module]=false; },
 		initializeGame=null,
 		startGame=null,
-		requestBuffer     = new EventsArchive(),
-		requestsId        = 0,
-		requests          = [], // Requests sent to server
 		player = {},
+		server = null,
 		loaded=function(module){
 			if (module) {
 				console.log("Loaded: "+module);
@@ -36,22 +37,63 @@ try{
 		}, connectToServer=function(){
 			// Connect to the server
 
-
-			var websocket=null;
-			ready=false;
-			loading('connection');
-			loading('map');
-			ready=true;
-			loaded();
-
-			//
-			var testingLocal = true;
+			server = new ServerHandler();
+			var testingLocal = true,
+				link = null;
 			if (testingLocal) {
-				websocket = new WebSocket('ws://127.0.0.1:1338/');
+				link = 'ws://127.0.0.1:1338/';
 			} else {
-				websocket = new WebSocket('ws://54.86.213.238:1338/');
-				// websocket = new WebSocket('ws://24.108.128.118:1338/');
+				link = 'ws://54.86.213.238:1338/';
 			}
+
+
+
+			server.onDisconnect = function(){
+				Log("Disconnected from server..");
+			};
+
+			server.onLogin = function(player){
+
+				console.log("Success logging in!");
+				console.log(evt);
+				player = evt.player;
+				The.player = new Movable('player');
+				The.player.id   = player.id;
+
+				// Setup basic AI (following target)
+				console.log("Giving AI to ME ("+player.id+")");
+				The.player.brain = new AI.Core(The.player);
+				The.player.brain.addComponent(AI.Components['Follow']);
+				// The.player.brain.addComponent(AI.Components['Combat']);
+
+				The.player.step=_.wrap(The.player.step,function(step,time){
+					var stepResults = step.apply(this, [time]);
+					this.brain.step(time);
+				});
+
+				loaded('player');
+
+				var event = new Event((++requestsId), EVT_REQUEST_MAP, null, null);
+				websocket.send(event.serialize());
+				loading('map');
+			};
+
+			server.onLoginFailed = function(evt){
+				console.log("Login failed");
+				console.error(evt);
+			};
+
+			server.connect(link).then(function(){
+				// Connected
+
+				// Attempt to login under id from localStorage (if none then creates new character)
+				var id = localStorage.getItem('id');
+				server.login(id);
+			}, function(evt){
+				console.error(evt);
+			}).
+
+			websocket = {};
 			websocket.onopen = function(evt) {
 				console.log("Connected to server..");
 				loaded('connection');
@@ -288,6 +330,7 @@ try{
 						//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
 						//	> CLEAN: clean up properties/method names...abstract ALL methods into units of code; the name of method describes precisely what its doing (without side effects) and the name of the property describes precisely what it is
 						//	> Adopt Jasmine unit testing
+						//	> server: abstract user & message queue as much as possible to allow for replays later on (saving batches of the message queue, reading it back in later); should also be able to load a debug client for viewing step-by-step operations during replay.. possible for doing this on client as well?
 						//
 						//
 						//

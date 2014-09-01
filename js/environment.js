@@ -28,6 +28,7 @@ define(function(){
 		this.logmask = {
 			'AI': (logVerbose),
 			'Movable': (logVerbose),
+			'Connection': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};
