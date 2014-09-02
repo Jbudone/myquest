@@ -45,9 +45,9 @@ define(['loggable'],function(Loggable){
 					// TODO: form server as an FSM, since we can expect newCharacter or login first; and then
 					// map initialization responses next, and then map related events. Move from one state of
 					// responses to the next
-					       if (evt.newCharacter) {
-						if (evt.success) server.onLogin( evt.newCharacter );
-						else             server.onLoginFailed();
+					if (evt.newCharacter) {
+						if (evt.success) server.onNewCharacter( evt.newCharacter );
+						else             server.onNewCharacterFailed();
 					} else if (evt.login) {
 						if (evt.success) server.onLogin( evt.player );
 						else             server.onLoginFailed();
@@ -64,11 +64,11 @@ define(['loggable'],function(Loggable){
 							     if (evtType == EVT_ADDED_ENTITY) server.onEntityAdded( page, event.entity );
 							else if (evtType == EVT_REMOVED_ENTITY) server.onEntityRemoved( page, event.entity );
 							else if (evtType == EVT_PREPARING_WALK) server.onEntityWalking( page, event.data );
-							else if (evtType == EVT_ATTACKED) server.onEntityHurt( page, event.data.entity, event.data.target );
-							else if (evtType == EVT_ATTACKED_ENTITY) server.onEntityAttackedEntity( page, event.data.entity, event.data.target );
+							else if (evtType == EVT_ATTACKED) server.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount );
+							else if (evtType == EVT_ATTACKED_ENTITY) server.onEntityAttackedTarget( page, event.data.entity, event.data.target );
 							else if (evtType == EVT_NEW_TARGET) server.onEntityNewTarget( page, event.data.entity, event.data.target );
 							else if (evtType == EVT_REMOVED_TARGET) server.onEntityRemovedTarget( page, event.data.entity, event.data.target );
-							else if (evtType == EVT_DEAD) server.onEntityDied( page, event.data.entity );
+							else if (evtType == EVT_DIED) server.onEntityDied( page, event.data.entity );
 							else {
 								server.Log("Unknown event received from server", LOG_ERROR);
 								server.Log(evt, LOG_ERROR);
@@ -77,7 +77,9 @@ define(['loggable'],function(Loggable){
 					} else if (evt.zone) {
 						server.onZone( evt.pages );
 					} else if (evt.zoneMap) {
-						server.onLoadedMap( evt.map );
+						server.onLoadedMap( evt.map, evt.pages, evt.player );
+					} else if (evt.id) {
+						// INTENTIONALLY BLANK (success/fail response to request)
 					} else {
 						server.Log("Unknown event received from server", LOG_ERROR);
 						server.Log(evt, LOG_ERROR);
@@ -89,6 +91,8 @@ define(['loggable'],function(Loggable){
 		this.onDisconnect = new Function();
 		this.onLogin = new Function();
 		this.onLoginFailed = new Function();
+		this.onNewCharacter = new Function();
+		this.onNewCharacterFailed = new Function();
 		this.onInitialization = new Function();
 		this.onLoadedMap = new Function();
 		this.onZone = new Function();
@@ -96,10 +100,11 @@ define(['loggable'],function(Loggable){
 		this.onEntityRemoved = new Function();
 		this.onEntityWalking = new Function();
 		this.onEntityHurt = new Function();
-		this.onEntityAttackedEntity = new Function();
+		this.onEntityAttackedTarget = new Function();
 		this.onEntityNewTarget = new Function();
 		this.onEntityRemovedTarget = new Function();
 		this.onEntityDied = new Function();
+		this.onFinishedMoving = new Function(); // TODO: is this one necessary?
 
 
 
@@ -107,9 +112,36 @@ define(['loggable'],function(Loggable){
 			this.Log("Logging in..");
 			
 			var event;
-			if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { playerID: playerID }, null);
-			else    event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
-			this.request(event).then( this.onLogin, this.onLoginFailed );
+			if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { id: playerID }, null);
+			else          event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
+			return this.request(event);
+		};
+
+		this.requestMap = function(){
+			this.Log("Requesting current map from server");
+			var event = new Event((++this.requestsId), EVT_REQUEST_MAP, null, null);
+			return this.request(event);
+		};
+
+		this.attackEntity = function(entity){
+			this.Log("Sending attack request ["+entity.id+"]..", LOG_DEBUG);
+			var event = new Event((++this.requestsId), EVT_ATTACKED, {id:entity.id});
+			return this.request(event);
+		};
+
+		this.playerDistracted = function(){
+			var event = new Event((++this.requestsId), EVT_DISTRACTED, {});
+			return this.request(event);
+		};
+
+		this.walkTo = function(walk, state){
+			this.Log("Sending path request..", LOG_DEBUG);
+			// this.LogGroup();
+			this.Log(event, LOG_DEBUG);
+			// this.LogGroupEnd();
+			event = new Event((++this.requestsId), EVT_PREPARING_WALK, walk.toJSON(), state);
+			if (walk.time) event.time = walk.time;
+			return this.request(event);
 		};
 
 		this.request = function(event){
