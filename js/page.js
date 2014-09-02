@@ -73,7 +73,7 @@ define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
 								zoning = this.checkZoningTile(tY, tX);
 							if (!zoning) {
 								entity.zoning = false;
-								this.stopListeningTo(entity, EVT_MOVED_TO_NEW_TILE);
+								this.stopListeningTo(entity, EVT_FINISHED_WALK);
 							}
 						}, HIGH_PRIORITY);
 					}

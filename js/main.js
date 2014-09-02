@@ -2,7 +2,7 @@
 				//
 				// 	> main.js (refactoring)
 				// 		- remove try/catch; return error objects from functions
-				// 		- client/map.js: initialization, initalize page, add/remove entities/events; have a function for each well defined unit of operation (Map.entityAttacked(id, id, amount)), abstract initializeMap/zonePage/zoneMap
+				// 		- client/map.js: initialization, initalize page, add/remove entities/events; have a function for each well defined unit of operation (Map.entityAttacked(id, id, amount))
 				// 		- client/resources.js: fetch (ajax/cache), load(resources.json, npc.json)
 				// 		- client/renderer.js: init (pass canvases, camera, map/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
 				// 		- client/ui.js: init (canvas); set input handling (hover tile, click); hook events: UI.onHoverTile(..), 
@@ -244,108 +244,10 @@ try{
 			server.onInitialization = function(evt){
 
 				Log("Initializing map");
-				var pagesPerRow = evt.map.pagesPerRow;
+				The.map = new Map();
+				The.map.loadMap(evt.map);
+				The.map.addPages(evt.pages);
 
-				The.map             = new Map();
-				The.map.id          = evt.map.id;
-				The.map.pagesPerRow = evt.map.pagesPerRow;
-				The.map.mapWidth    = evt.map.mapWidth;
-				The.map.mapHeight   = evt.map.mapHeight;
-				The.map.sheet       = Resources.findSheetFromFile(evt.map.tileset);
-
-
-				for (var pageI in evt.pages) {
-					var page             = new Page(The.map),
-						pageI            = parseInt(pageI),
-						evtPage          = JSON.parse(evt.pages[pageI]);
-					The.map.pages[pageI] = page;
-
-					Log("Adding page to map ("+pageI+")");
-					page.index       = pageI;
-					page.y           = evtPage.y;
-					page.x           = evtPage.x;
-					page.tiles       = evtPage.tiles;
-					page.sprites     = evtPage.sprites;
-					page.collidables = evtPage.collidables;
-
-					if (evtPage.movables) {
-						for (var entityID in evtPage.movables) {
-							var movable = evtPage.movables[entityID];
-							if (entityID == The.player.id) {
-
-								Log("	Adding player (me) to page");
-								The.player.posY         = movable.posY;
-								The.player.posX         = movable.posX;
-								The.player.sprite.state = movable.state;
-
-							} else {
-								Log("	Adding movable to page");
-								var entity = new Movable(movable.spriteID, page);
-								entity.id           = movable.id;
-								entity.posY         = movable.posY;
-								entity.posX         = movable.posX;
-								entity.sprite.state = movable.state;
-								entity.zoning       = movable.zoning;
-
-								if (movable.path) {
-									var path = JSON.parse(movable.path);
-									for (var j=0; j<path.walks.length; ++j) {
-										var walk = path.walks[j];
-										walk.started = false; // in case walk has already started on server
-									}
-									entity.addPath(path);
-								}
-
-								The.map.pages[pageI].addEntity(entity);
-							}
-
-						}
-					}
-
-					// figure out neighbours..
-					if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1]) { // West Neighbour
-						page.neighbours.west = The.map.pages[pageI-1];
-						page.neighbours.west.neighbours.east = page;
-					}
-
-					if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1]) { // East Neighbour
-						page.neighbours.east = The.map.pages[pageI+1];
-						page.neighbours.east.neighbours.west = page;
-					}
-
-					if ((pageI-pagesPerRow)>=0 && The.map.pages[pageI-pagesPerRow]) { // North Neighbour
-						page.neighbours.north = The.map.pages[pageI-pagesPerRow];
-						page.neighbours.north.neighbours.south = page;
-					}
-
-					if (The.map.pages[pageI+pagesPerRow]) { // South Neighbour
-						page.neighbours.south = The.map.pages[pageI+pagesPerRow];
-						page.neighbours.south.neighbours.north = page;
-					}
-
-					if (pageI%pagesPerRow!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI-1-pagesPerRow]) { // Northwest Neighbour
-						page.neighbours.northwest = The.map.pages[pageI-1-pagesPerRow];
-						page.neighbours.northwest.neighbours.southeast = page;
-					}
-
-
-					if (((pageI+1)%pagesPerRow)!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI+1-pagesPerRow]) { // Northeast Neighbour
-						page.neighbours.northeast = The.map.pages[pageI+1-pagesPerRow];
-						page.neighbours.northeast.neighbours.southwest = page;
-					}
-
-					if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1+pagesPerRow]) { // Southeast Neighbour
-						page.neighbours.southeast = The.map.pages[pageI+1+pagesPerRow];
-						page.neighbours.southeast.neighbours.northwest = page;
-					}
-
-					if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1+pagesPerRow]) { // Southwest Neighbour
-						page.neighbours.southwest = The.map.pages[pageI-1+pagesPerRow];
-						page.neighbours.southwest.neighbours.northeast = page;
-					}
-
-						
-				}
 
 				The.camera = new Camera();
 				camera     = The.camera;
@@ -922,6 +824,12 @@ try{
 						var entPage = The.map.pages[page],
 							entity = entPage.movables[event.id],
 							reqState = event.state;
+
+						if (!entity) {
+							Log("Event to move entity, but entity not on same page. Ignoring event");
+							return;
+						}
+
 						Log("Moving entity: "+entity.id, LOG_DEBUG);
 						Log(event.state, LOG_DEBUG);
 						Log(event.path, LOG_DEBUG);
@@ -1109,219 +1017,27 @@ try{
 						// delete The.map.pages[pageI];
 					}
 
-
-					for (var pageI in pages) {
-						var page = null,
-							pageI = parseInt(pageI),
-							evtPage = JSON.parse(pages[pageI]),
-							pagesPerRow = The.map.pagesPerRow;
-						if (!The.map.pages[pageI]) The.map.pages[pageI] = new Page(The.map);
-						page = The.map.pages[pageI];
-
-						page.index = pageI;
-						if (!isNaN(evtPage.y)) page.y = evtPage.y;
-						if (!isNaN(evtPage.x)) page.x = evtPage.x;
-
-						page.tiles = evtPage.tiles;
-						page.sprites = evtPage.sprites;
-						page.collidables = evtPage.collidables;
-
-						
-						if (evtPage.movables) {
-							for (var entityID in page.movables) {
-								if (entityID == The.player.id) continue;
-								page.stopListeningTo(page.movables[entityID]);
-								delete page.movables[entityID];
-							}
-
-							for (var entityID in evtPage.movables) {
-								var movable = evtPage.movables[entityID];
-								if (The.map.pages[pageI].movables[entityID]) continue; // incase zoned in as we received this
-								if (entityID == The.player.id) {
-									// NOTE: we keep track of ourselves locally
-								} else {
-									var entity = new Movable(movable.spriteID, page);
-									console.log("ADDING Entity: "+entityID);
-									entity.id           = movable.id;
-									entity.posY         = movable.posY;
-									entity.posX         = movable.posX;
-									entity.sprite.state = movable.state;
-									entity.zoning       = movable.zoning;
-
-									if (movable.path) {
-										var path = JSON.parse(movable.path);
-										entity.addPath(path);
-									}
-
-									The.map.pages[pageI].addEntity(entity);
-								}
-
-							}
-						}
-
-
-						// figure out neighbours..
-						if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1]) { // West Neighbour
-							page.neighbours.west = The.map.pages[pageI-1];
-							page.neighbours.west.neighbours.east = page;
-						}
-
-						if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1]) { // East Neighbour
-							page.neighbours.east = The.map.pages[pageI+1];
-							page.neighbours.east.neighbours.west = page;
-						}
-
-						if ((pageI-pagesPerRow)>=0 && The.map.pages[pageI-pagesPerRow]) { // North Neighbour
-							page.neighbours.north = The.map.pages[pageI-pagesPerRow];
-							page.neighbours.north.neighbours.south = page;
-						}
-
-						if (The.map.pages[pageI+pagesPerRow]) { // South Neighbour
-							page.neighbours.south = The.map.pages[pageI+pagesPerRow];
-							page.neighbours.south.neighbours.north = page;
-						}
-
-						if (pageI%pagesPerRow!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI-1-pagesPerRow]) { // Northwest Neighbour
-							page.neighbours.northwest = The.map.pages[pageI-1-pagesPerRow];
-							page.neighbours.northwest.neighbours.southeast = page;
-						}
-
-						if (((pageI+1)%pagesPerRow)!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI+1-pagesPerRow]) { // Northeast Neighbour
-							page.neighbours.northeast = The.map.pages[pageI+1-pagesPerRow];
-							page.neighbours.northeast.neighbours.southwest = page;
-						}
-
-						if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1+pagesPerRow]) { // Southeast Neighbour
-							page.neighbours.southeast = The.map.pages[pageI+1+pagesPerRow];
-							page.neighbours.southeast.neighbours.northwest = page;
-						}
-
-						if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1+pagesPerRow]) { // Southwest Neighbour
-							page.neighbours.southwest = The.map.pages[pageI-1+pagesPerRow];
-							page.neighbours.southwest.neighbours.northeast = page;
-						}
-
-
-					}
-
+					The.map.addPages(pages, true); // Zoning into one of the new pages
 
 				};
 
 				server.onLoadedMap = function(newMap, pages, player){
 
+					Log("Zoned to new map");
+					var oldMap = The.map;
 
-					var pagesPerRow = The.map.pagesPerRow,
-						map         = The.map;
+					The.map = new Map();
+					The.map.loadMap(newMap);
+					The.map.addPages(pages);
 
-					The.map             = new Map();
-					The.map.id          = newMap.id;
-					The.map.pagesPerRow = newMap.pagesPerRow;
-					The.map.mapWidth    = newMap.mapWidth;
-					The.map.mapHeight   = newMap.mapHeight;
-					The.map.sheet       = Resources.findSheetFromFile(newMap.tileset);
-
-					map.copyEventsAndListeners(The.map);
-					map.stopAllEventsAndListeners();
-					The.player.changeListeners(map, The.map);
+					oldMap.copyEventsAndListeners(The.map);
+					oldMap.stopAllEventsAndListeners();
+					The.player.changeListeners(oldMap, The.map);
+					The.map.curPage    = The.map.pages[player.page];
 
 					The.player.posY = player.posY;
 					The.player.posX = player.posX;
-
-					for (var pageI in pages) {
-						var page = new Page(The.map),
-							pageI = parseInt(pageI),
-							evtPage = JSON.parse(pages[pageI]);
-						The.map.pages[pageI] = page;
-
-						page.index = pageI;
-						page.y = evtPage.y;
-						page.x = evtPage.x;
-
-						page.tiles = evtPage.tiles;
-						page.sprites = evtPage.sprites;
-						page.collidables = evtPage.collidables;
-
-						if (evtPage.movables) {
-							for (var entityID in evtPage.movables) {
-								var movable = evtPage.movables[entityID];
-								if (The.map.pages[pageI].movables[entityID]) continue; // incase zoned in as we received this
-								if (entityID == The.player.id) {
-
-									console.log('creating firefox..');
-									The.player.sprite.state = movable.state;
-									The.player.posY         = movable.posY;
-									The.player.posX         = movable.posX;
-									The.player.zoning       = false;
-									The.map.pages[pageI].addEntity(The.player);
-
-								} else {
-									var entity = new Movable(movable.spriteID, page);
-									console.log("ADDING Entity: "+entityID);
-									entity.id           = movable.id;
-									entity.posY         = movable.posY;
-									entity.posX         = movable.posX;
-									entity.sprite.state = movable.state;
-									entity.zoning       = movable.zoning;
-
-									if (movable.path) {
-										var path = JSON.parse(movable.path);
-										entity.addPath(path);
-									}
-
-									The.map.pages[pageI].addEntity(entity);
-								}
-
-							}
-						}
-
-						// figure out neighbours..
-						if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1]) { // West Neighbour
-							page.neighbours.west = The.map.pages[pageI-1];
-							page.neighbours.west.neighbours.east = page;
-						}
-
-						if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1]) { // East Neighbour
-							page.neighbours.east = The.map.pages[pageI+1];
-							page.neighbours.east.neighbours.west = page;
-						}
-
-						if ((pageI-pagesPerRow)>=0 && The.map.pages[pageI-pagesPerRow]) { // North Neighbour
-							page.neighbours.north = The.map.pages[pageI-pagesPerRow];
-							page.neighbours.north.neighbours.south = page;
-						}
-
-						if (The.map.pages[pageI+pagesPerRow]) { // South Neighbour
-							page.neighbours.south = The.map.pages[pageI+pagesPerRow];
-							page.neighbours.south.neighbours.north = page;
-						}
-
-						if (pageI%pagesPerRow!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI-1-pagesPerRow]) { // Northwest Neighbour
-							page.neighbours.northwest = The.map.pages[pageI-1-pagesPerRow];
-							page.neighbours.northwest.neighbours.southeast = page;
-						}
-
-
-						if (((pageI+1)%pagesPerRow)!=0 && (pageI-pagesPerRow)>=0 && The.map.pages[pageI+1-pagesPerRow]) { // Northeast Neighbour
-							page.neighbours.northeast = The.map.pages[pageI+1-pagesPerRow];
-							page.neighbours.northeast.neighbours.southwest = page;
-						}
-
-						if (((pageI+1)%pagesPerRow)!=0 && The.map.pages[pageI+1+pagesPerRow]) { // Southeast Neighbour
-							page.neighbours.southeast = The.map.pages[pageI+1+pagesPerRow];
-							page.neighbours.southeast.neighbours.northwest = page;
-						}
-
-						if ((pageI%pagesPerRow)!=0 && The.map.pages[pageI-1+pagesPerRow]) { // Southwest Neighbour
-							page.neighbours.southwest = The.map.pages[pageI-1+pagesPerRow];
-							page.neighbours.southwest.neighbours.northeast = page;
-						}
-
-							
-					}
-
-					The.map.curPage    = The.map.pages[player.page];
 					The.camera.updated = true;
-
 
 				};
 

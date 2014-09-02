@@ -1,6 +1,6 @@
 
 
-define(['resources','eventful','page'], function(Resources,Eventful,Page){
+define(['resources','eventful','page','loggable'], function(Resources,Eventful,Page,Loggable){
 	
 	/* Map
 	 *
@@ -20,9 +20,11 @@ define(['resources','eventful','page'], function(Resources,Eventful,Page){
 	 *}
 	 *******************************************************/
 	var Map = function(id){
-		console.log("Loading map...");
 		Ext.extend(this,'map');
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Loggable);
+
+		this.Log("Loading map..");
 
 		if (id) {
 			this.id = id;

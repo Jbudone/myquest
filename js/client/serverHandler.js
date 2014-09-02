@@ -137,7 +137,7 @@ define(['loggable'],function(Loggable){
 		this.walkTo = function(walk, state){
 			this.Log("Sending path request..", LOG_DEBUG);
 			// this.LogGroup();
-			this.Log(event, LOG_DEBUG);
+			this.Log(walk, LOG_DEBUG);
 			// this.LogGroupEnd();
 			event = new Event((++this.requestsId), EVT_PREPARING_WALK, walk.toJSON(), state);
 			if (walk.time) event.time = walk.time;
