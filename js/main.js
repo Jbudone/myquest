@@ -2,7 +2,6 @@
 				//
 				// 	> main.js (refactoring)
 				// 		- remove try/catch; return error objects from functions
-				// 		- client/map.js: initialization, initalize page, add/remove entities/events; have a function for each well defined unit of operation (Map.entityAttacked(id, id, amount))
 				// 		- client/resources.js: fetch (ajax/cache), load(resources.json, npc.json)
 				// 		- client/renderer.js: init (pass canvases, camera, map/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
 				// 		- client/ui.js: init (canvas); set input handling (hover tile, click); hook events: UI.onHoverTile(..), 
@@ -909,30 +908,16 @@ try{
 
 				server.onEntityHurt = function(page, hurtEntity, targetEntity, amount){
 
-					var entPage = The.map.pages[hurtEntity.page],
-						tarPage = The.map.pages[targetEntity.page],
-						entity  = null,
-						target  = null;
-					if (!entPage) throw UnexpectedError("Could not find page of entity being attack!?");
-					entity = entPage.movables[hurtEntity.id];
-					if (tarPage) target = tarPage.movables[targetEntity.id];
-
-					// abstract better
-					if (entity) entity.hurt(amount, target);
+					var entity = The.map.getEntityFromPage(hurtEntity.page, hurtEntity.id),
+						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
+					if (entity && target) entity.hurt(amount, target);
 
 				};
 
 				server.onEntityAttackedTarget = function(page, attackerEntity, targetEntity){
 
-					var entPage = The.map.pages[attackerEntity.page],
-						tarPage = The.map.pages[targetEntity.page],
-						entity  = null,
-						target  = null;
-					if (!entPage) throw UnexpectedError("Could not find page of entity throwing attack!?");
-					entity = entPage.movables[attackerEntity.id];
-					if (tarPage) target = tarPage.movables[targetEntity.id];
-
-					// TODO: abstract better
+					var entity = The.map.getEntityFromPage(attackerEntity.page, attackerEntity.id),
+						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
 
 					if (entity && target) {
 						// entity.faceDirection(direction);
@@ -944,34 +929,22 @@ try{
 
 				server.onEntityNewTarget = function(page, eventEntity, targetEntity){
 
-					var entPage = The.map.pages[eventEntity.page],
-						tarPage = The.map.pages[targetEntity.page],
-						entity  = null,
-						target  = null;
-					if (!entPage) throw UnexpectedError("Could not find page of entity in new target!?");
-					if (!tarPage) throw UnexpectedError("Could not find page of target in new target!?");
-					entity = entPage.movables[eventEntity.id];
-					target = tarPage.movables[targetEntity.id];
+					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id),
+						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
 
-					// set core target
 					if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
 
 				};
 
 				server.onEntityRemovedTarget = function(page, eventEntity, targetEntity){
 
+
 					Log("Removing target for ["+eventEntity.id+"]");
+					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id);
+
 					// NOTE: do not select the target since the target may have died and been
 					// removed locally
-					var entPage = The.map.pages[eventEntity.page],
-						// tarPage = The.map.pages[targetEntity.page],
-						entity  = null,
-						target  = null;
-					if (!entPage) throw UnexpectedError("Could not find page of entity in remove target!?");
-					// if (!tarPage) throw UnexpectedError("Could not find page of target in remove target!?");
 					if (entity) {
-						entity = entPage.movables[eventEntity.id];
-						// target = tarPage.movables[targetEntity.id];
 
 						// remove core target
 						if (entity.brain.target && entity.brain.target.id == targetEntity.id) { 
@@ -985,7 +958,7 @@ try{
 				server.onEntityDied = function(page, deadEntity){
 
 					// TODO: set die physical state, die animation, remove entity
-					var entity = The.map.pages[page].movables[deadEntity];
+					var entity = The.map.getEntityFromPage(deadEntity.page, deadEntity.id);
 					// NOTE: the entity may have already died if we've already received the killing blow event (client side noticed their health went below 0)
 					// TODO: will this ever occur? Do we need to set the dying process somewhere else?
 					if (entity) {

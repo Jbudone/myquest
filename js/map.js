@@ -44,6 +44,12 @@ define(['resources','eventful','page','loggable'], function(Resources,Eventful,P
 
 		this.loadMap();
 
+		this.getEntityFromPage = function(page, entityID){
+			if (!isNaN(page)) page = this.pages[page];
+			if (!page) return null;
+			return page.movables[entityID];
+		};
+
 		this.recalibratePath=function(state, pathState, path, maxWalk){
 
 			// NOTE: state { x/y (global real) }
