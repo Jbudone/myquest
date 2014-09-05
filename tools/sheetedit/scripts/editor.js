@@ -89,7 +89,7 @@ var Editor = function(container, sheet){
 
 	// ------------ Loading/Unloading ------------ //
 
-	view_tilesheet.loadData = function(data){
+	view_tilesheet.loadData = function(data, linkEl){
 
 		// TODO: setup html from data
 		this.data = data;
@@ -97,6 +97,20 @@ var Editor = function(container, sheet){
 		view_tilesheet.components.id.val( data.id );
 
 		sheet.loadSheet( data );
+		sheet.onModified = function(modified){
+			// TODO: transfer modifications
+			if (modified.type == 'floating') {
+				var _floats = [],
+					floats = modified.selection.tiles;
+				for (var i=0; i<floats.length; ++i) {
+					var float = floats[i],
+						_float = float.y * parseInt(view_tilesheet.data.data.tilesPerRow) + float.x;
+					_floats.push( _float );
+				}
+				view_tilesheet.data.data.floating = _floats;
+			}
+			linkEl.data('modify')();
+		};
 	};
 
 	view_tilesheet.unload = function(){
@@ -127,7 +141,7 @@ var Editor = function(container, sheet){
 	// -------------------------------------------------------------------- //
 	// -------------------------------------------------------------------- //
 
-	interface.loadView = function(viewType, data){
+	interface.loadView = function(viewType, data, linkEl){
 
 		if (view) {
 			view.unload();
@@ -142,7 +156,7 @@ var Editor = function(container, sheet){
 			return;
 		}
 
-		view.loadData(data);
+		view.loadData(data, linkEl);
 		view.show();
 	};
 

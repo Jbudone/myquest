@@ -77,7 +77,7 @@ var Sheet = function(canvas){
 			
 			setTimeout(redraw, settings.redrawTime);
 	},  selections = {},
-		activeSelection = null,
+		activeSelection = { type: null, selection: null },
 		hover = null;
 			
 
@@ -137,11 +137,11 @@ var Sheet = function(canvas){
 
 	interface.setMode = function(selectionType){
 		if (selectionType == 'floating') {
-			activeSelection = selections.floating.selection;
+			activeSelection = { type: 'floating', selection: selections.floating.selection };
 		} else if (selectionType == 'collision') {
-			activeSelection = selections.collisions.selection;
+			activeSelection = { type: 'collision', selection: selections.collision.selection };
 		} else if (selectionType == 'animation') {
-			activeSelection = selections.animations.selection;
+			activeSelection = { type: 'animation', selection: selections.animation.selection };
 		} else {
 			activeSelection = null;
 		}
@@ -213,7 +213,8 @@ var Sheet = function(canvas){
 		evt.preventDefault();
 		if (ready) {
 			if (hover && activeSelection) {
-				activeSelection.addTile(hover);
+				activeSelection.selection.addTile(hover);
+				interface.onModified(activeSelection);
 			}
 		}
 

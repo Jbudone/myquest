@@ -5,7 +5,9 @@ var AssetsManager = function(assets, container){
 		onClickTilesheet: new Function(),
 		onClickSpritesheet: new Function(),
 		onClickNPC: new Function()
-	},  _el = null;
+	},  _el = null,
+		assets = assets,
+		modifiedList = [];
 
 	// Setup html
 	_el = $('<div/>').addClass('assets');
@@ -32,11 +34,21 @@ var AssetsManager = function(assets, container){
 
 				var assetType = $(this).data('type'),
 					asset     = $(this).data('asset');
-				if (assetType == 'tilesheets') interface.onClickTilesheet( asset );
-				else if (assetType == 'spritesheets') interface.onClickSpritesheet( asset );
-				else interface.onClickNPC( asset );
+				if (assetType == 'tilesheets') interface.onClickTilesheet( asset, $(this) );
+				else if (assetType == 'spritesheets') interface.onClickSpritesheet( asset, $(this) );
+				else interface.onClickNPC( asset, $(this) );
 
 				return false;
+			});
+
+			assetEl.data('modify', function(){
+				for (var i=0; i<modifiedList.length; ++i) {
+					if ($(this) == modifiedList[i]) return;
+				}
+				modifiedList.push( $(this) );
+				$(this).addClass('modified');
+				$('#assetsArea').addClass('modified');
+				$('#assetsSave').addClass('modified');
 			});
 			// assetEl.click((function(){
 			// 	var clickType = null; 
@@ -54,6 +66,25 @@ var AssetsManager = function(assets, container){
 	}
 
 	$(container).append( _el );
+
+
+	$('#assetsSave').data('assets', assets).click(function(){
+
+		$.post('assets.php', { assets: assets }, function(data){
+			var json = JSON.parse(data);
+			console.log('success: '+(!!json.success?'true':'false'));
+
+			for (var i=0; i<modifiedList.length; ++i) {
+				modifiedList[i].removeClass('modified');
+			}
+			modifiedList = [];
+			$('#assetsArea').removeClass('modified');
+			$('#assetsSave').removeClass('modified');
+			// TODO: effects to show that save was successful
+		});
+
+		return false;
+	});
 
 	return interface;
 };

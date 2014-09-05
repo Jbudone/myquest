@@ -167,6 +167,17 @@
 	font-weight: bold;
 }
 
+#assetsArea.modified {
+	border: thick solid yellow;
+}
+
+#assetsSave.modified {
+	background: yellow;
+}
+
+.asset.modified {
+	color: yellow;
+}
 
 
 

@@ -12,22 +12,22 @@ $(document).ready(function(){
 			var assets = data;
 			assetsMgr = new AssetsManager( assets, $('#assets') );
 
-			assetsMgr.onClickTilesheet = function(data){
+			assetsMgr.onClickTilesheet = function(data, linkEl){
 				console.log('Tilesheet');
 				console.log(data);
-				editor.loadView('tilesheet', data);
+				editor.loadView('tilesheet', data, linkEl);
 			};
 
-			assetsMgr.onClickSpritesheet = function(data){
+			assetsMgr.onClickSpritesheet = function(data, linkEl){
 				console.log('Spritesheet');
 				console.log(data);
-				editor.loadView('spritesheet', data);
+				editor.loadView('spritesheet', data, linkEL);
 			};
 
-			assetsMgr.onClickNPC = function(data){
+			assetsMgr.onClickNPC = function(data, linkEl){
 				console.log('NPC');
 				console.log(data);
-				editor.loadView('npc', data);
+				editor.loadView('npc', data, linkEl);
 			};
 		}
 	});
