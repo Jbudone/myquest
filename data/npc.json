@@ -29,5 +29,16 @@
 		"health":150,
 		"damage":5,
 		"AI":true
+	},
+	{
+		"id":"goblin",
+		"name":"goblin",
+		"sheet":"goblin",
+		"spawn":5500,
+		"killable":true,
+		"speed":10,
+		"health":80,
+		"damage":3,
+		"AI":true
 	}
 ] }

@@ -1,6 +1,50 @@
 
 $(document).ready(function(){
 
+	var assetsMgr = null,
+		editor    = null,
+		sheet     = null;
+
+	$.getJSON('../../data/assets.json', function(data){
+
+		if (data) {
+
+			var assets = data;
+			assetsMgr = new AssetsManager( assets, $('#assets') );
+
+			assetsMgr.onClickTilesheet = function(data){
+				console.log('Tilesheet');
+				console.log(data);
+				editor.loadView('tilesheet', data);
+			};
+
+			assetsMgr.onClickSpritesheet = function(data){
+				console.log('Spritesheet');
+				console.log(data);
+				editor.loadView('spritesheet', data);
+			};
+
+			assetsMgr.onClickNPC = function(data){
+				console.log('NPC');
+				console.log(data);
+				editor.loadView('npc', data);
+			};
+		}
+	});
+
+	sheet  = new Sheet( document.getElementById('sheet') );
+	editor = new Editor( $('#editArea'), sheet );
+
+
+
+
+	// =======================================================================
+	// Crap below
+
+
+
+
+	/*
 	
 	var canvas         = document.getElementById('sheet'),
 		ctx            = canvas.getContext('2d'),
@@ -168,6 +212,17 @@ $(document).ready(function(){
 		return false;
 	});
 
+
+
+
+
+
+
+
+
+
+
+
 	canvas.ondragover = function () { this.className = 'hover'; return false; };
 	canvas.ondragend  = function () { this.className = ''; return false; };
 	canvas.ondrop     = function(e) {
@@ -223,6 +278,23 @@ $(document).ready(function(){
 
 		return false;
 	};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	ctx.webkitImageSmoothingEnabled=false;
 	ctx.strokeStyle=lineColour;
@@ -349,5 +421,6 @@ $(document).ready(function(){
 	});
 
 	redraw();
+	*/
 
 });

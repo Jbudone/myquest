@@ -269,6 +269,14 @@
 		"height": 42,
 		"offset_x": -13,
 		"offset_y": -17
+	},
+	{
+		"id": "goblin",
+		"image": "sprites/goblin.png",
+		"width": 26,
+		"height": 26,
+		"offset_x": -5,
+		"offset_y": -9
 	}
   ],
   "sprites": [
@@ -282,52 +290,57 @@
         }
       },
       "animations": {
-        "atk_right": {
-          "length": 5,
-          "row": 0
-        },
-        "atk_left": {
-          "length": 5,
-          "row": 0,
-          "flipX": true
-        },
-        "walk_right": {
-          "length": 4,
-          "row": 1
-        },
-        "walk_left": {
-          "length": 4,
-          "row": 1,
-          "flipX": true
-        },
-        "idle_right": {
-          "length": 5,
-          "row": 2
-        },
-        "atk_up": {
-          "length": 5,
-          "row": 3
-        },
-        "walk_up": {
-          "length": 8,
-          "row": 4
-        },
-        "idle_up": {
-          "length": 2,
-          "row": 5
-        },
-        "atk_down": {
-          "length": 5,
-          "row": 6
-        },
-        "walk_down": {
-          "length": 4,
-          "row": 7
-        },
-        "idle_down": {
-          "length": 2,
-          "row": 8
-        }
+		"atk_right": {
+			"length": 3,
+			"row": 0
+		},
+		"walk_right": {
+			"length": 3,
+			"row": 1
+		},
+		"idle_right": {
+			"length": 2,
+			"row": 2
+		},
+		"atk_left": {
+			"length": 3,
+			"row": 0,
+			"flipX": true
+		},
+		"walk_left": {
+			"length": 3,
+			"row": 1,
+			"flipX": true
+		},
+		"idle_left": {
+			"length": 2,
+			"row": 2,
+			"flipX": true
+		},
+		"atk_up": {
+			"length": 3,
+			"row": 3
+		},
+		"walk_up": {
+			"length": 4,
+			"row": 4
+		},
+		"idle_up": {
+			"length": 2,
+			"row": 5
+		},
+		"atk_down": {
+			"length": 3,
+			"row": 6
+		},
+		"walk_down": {
+			"length": 4,
+			"row": 7
+		},
+		"idle_down": {
+			"length": 2,
+			"row": 8
+		}
       }
     }, {
       "id": "deathknight",
@@ -386,6 +399,68 @@
           "row": 8
         }
       }
-    }
+    }, {
+		"id": "goblin",
+		"sheet": "goblin",
+		"states": {
+			"lol": {
+				"row": 1,
+				"frames": 3
+			}
+		},
+		"animations": {
+			"atk_right": {
+				"length": 3,
+				"row": 0
+			},
+			"walk_right": {
+				"length": 3,
+				"row": 1
+			},
+			"idle_right": {
+				"length": 2,
+				"row": 2
+			},
+			"atk_left": {
+				"length": 3,
+				"row": 0,
+				"flipX": true
+			},
+			"walk_left": {
+				"length": 3,
+				"row": 1,
+				"flipX": true
+			},
+			"idle_left": {
+				"length": 2,
+				"row": 2,
+				"flipX": true
+			},
+			"atk_up": {
+				"length": 3,
+				"row": 3
+			},
+			"walk_up": {
+				"length": 4,
+				"row": 4
+			},
+			"idle_up": {
+				"length": 2,
+				"row": 5
+			},
+			"atk_down": {
+				"length": 3,
+				"row": 6
+			},
+			"walk_down": {
+				"length": 4,
+				"row": 7
+			},
+			"idle_down": {
+				"length": 2,
+				"row": 8
+			}
+		}
+	}
   ]
 }

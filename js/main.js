@@ -3,15 +3,20 @@
 				// 	> main.js (refactoring)
 				// 		- remove try/catch; return error objects from functions
 				// 		- client/resources.js: fetch (ajax/cache), load(resources.json, npc.json)
-				// 		- client/renderer.js: init (pass canvases, camera, map/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
-				// 		- client/ui.js: init (canvas); set input handling (hover tile, click); hook events: UI.onHoverTile(..), 
 				// 		- debug.js, client/debug.js, server/debug.js: various debugging things,  window['TheOtherPlayer'] = ...
+				// 		- pathfinding.js
+				//
+				// 	> server.js (refactoring)
+				// 		- server/db.js: (create like client/serverHandler.js); connect, loadPlayer, savePlayer
+				// 		- server/player.js: create/load/save, player.onDisconnected(..), player.onReconnected(..), player.onZoneOut(..), ...
+				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
 				//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
 				//	> CLEAN: clean up properties/method names...abstract ALL methods into units of code; the name of method describes precisely what its doing (without side effects) and the name of the property describes precisely what it is
 				//	> Adopt Jasmine unit testing
 				//	> server: abstract user & message queue as much as possible to allow for replays later on (saving batches of the message queue, reading it back in later); should also be able to load a debug client for viewing step-by-step operations during replay.. possible for doing this on client as well?
+				//	> tools: fix + usage notes for tilesheet editor; use tilesheet editor for both animations + tiles; load resources.json on tilesheet editor to load all assets in list (easy access); npc tilesheets for maps; parse map spawns (find npc from npc tilesheets, then match to correct npc); automated updateAssets script
 				//
 				//
 				//
@@ -50,7 +55,7 @@
 				// 			- stop game; change opacity of canvas
 				//
 				//	> coreAI evt_target_zoned (but works with combat and following components too)
-				//	> respawn on correct page
+				//	> BUG: walk to new page (east), doesn't set zoning to false (cant walk to west and zone back)
 				//	> BUG: when client spam clicks for a path and then enters debug mode, then leaving debug mode skips him to an illegal spot
 				//	> BUG: both players attack NPC; NPC chases other player to next page; the remaining player doesn't receive page change of NPC and thinks its in the same page
 				//	> BUG: player doesn't receive movement update of other player
@@ -91,6 +96,7 @@
 				//	> CLEAN: Movable setting params before/after Ext
 				//	> CLEAN: multiple target types (NPC, Tile)
 				//	> CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
+				//	> CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages
 				//
 				//
 				//	
@@ -148,11 +154,11 @@
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
 
-define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable) {
+define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI) {
 try{
 
 	extendClass(this).with(Loggable);
-	this.setLogPrefix('(main): ');
+	this.setLogPrefix('(main) ');
 
 
 	// ----------------------------------------------------------------------------------------- //
@@ -160,18 +166,20 @@ try{
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
 
-	var modulesToLoad={},
-		ready=false,
-		LOADING_RESOURCES=1,
-		LOADING_CONNECTION=2,
-		LOADING_INITIALIZATION=3,
-		LOADING_FINISHED=4,
-		loadingPhase=LOADING_RESOURCES,
-		loading=function(module){ modulesToLoad[module]=false; },
-		initializeGame=null,
-		startGame=null,
-		player = {},
-		server = null,
+	var modulesToLoad          = {},
+		ready                  = false,
+		LOADING_RESOURCES      = 1,
+		LOADING_CONNECTION     = 2,
+		LOADING_INITIALIZATION = 3,
+		LOADING_FINISHED       = 4,
+		loadingPhase           = LOADING_RESOURCES,
+		loading                = function(module){ modulesToLoad[module] = false; },
+		initializeGame         = null,
+		startGame              = null,
+		player                 = {},
+		server                 = null,
+		renderer               = null,
+		ui                     = null,
 		loaded=function(module){
 			if (module) {
 				console.log("Loaded: "+module);
@@ -203,7 +211,7 @@ try{
 
 			server.onNewCharacter = function(player){
 				Log("Created new character "+player.id);
-				var id = evt.newCharacter.id;
+				var id = player.id;
 				localStorage.setItem('id', id);
 				server.login(id);
 			};
@@ -376,25 +384,6 @@ try{
 		// Game Initialization
 		initializeGame = function(){
 
-			var canvasEntities    = document.getElementById('entities'),
-				canvasBackground  = document.getElementById('background'),
-				ctxEntities       = canvasEntities.getContext('2d'),
-				ctxBackground     = canvasBackground.getContext('2d'),
-				tiles             = new Image(),
-				sprite            = new Image(),
-				tileSize          = Env.tileSize,
-				tileHover         = null,
-				hoveringEntity    = null,
-				tilePathHighlight = null,
-				activeX           = null,
-				activeY           = null,
-				walkToX           = null,
-				walkToY           = null,
-				lineWidth         = 3,
-				requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-                              window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-
-			camera=The.camera;
 			var playerPosition = The.map.localFromGlobalCoordinates(The.player.position.y, The.player.position.x);
 			The.map.curPage = playerPosition.page;
 			The.player.page = The.map.curPage;
@@ -403,23 +392,24 @@ try{
 
 			The.map.curPage.addEntity( The.player );
 
-			// Canvas setup
-			canvasEntities.width  = (Env.pageWidth+2*Env.pageBorder)*tileSize*Env.tileScale;
-			canvasEntities.height = (Env.pageHeight+2*Env.pageBorder)*tileSize*Env.tileScale;
-			canvasBackground.width  = (Env.pageWidth+2*Env.pageBorder)*tileSize*Env.tileScale;
-			canvasBackground.height = (Env.pageHeight+2*Env.pageBorder)*tileSize*Env.tileScale;
-			ctxEntities.mozImageSmoothingEnabled=false;
-			ctxEntities.webkitImageSmoothingEnabled=false;
-			ctxEntities.strokeStyle="#CCCCCC";
-			ctxEntities.lineWidth=lineWidth;
-			ctxBackground.mozImageSmoothingEnabled=false;
-			ctxBackground.webkitImageSmoothingEnabled=false;
-			ctxBackground.strokeStyle="#CCCCCC";
-			ctxBackground.lineWidth=lineWidth;
+			ui = new UI();
+			ui.initialize( document.getElementById('entities') );
 
-			// TODO: store objects & sprites better; load from resources properly
-			tiles = The.map.sheet.image;
-			sprite = Resources.sheets['firefox'].image;
+			renderer = new Renderer();
+			renderer.canvasEntities    = document.getElementById('entities');
+			renderer.canvasBackground  = document.getElementById('background');
+			renderer.ctxEntities       = renderer.canvasEntities.getContext('2d');
+			renderer.ctxBackground     = renderer.canvasBackground.getContext('2d');
+			renderer.camera            = The.camera;
+			renderer.ui                = ui;
+			renderer.setMap( The.map );
+			renderer.initialize();
+
+
+			var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                              window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+
+
 
 			startGame = function() {
 				var speed = 30,
@@ -429,335 +419,8 @@ try{
 
 						The.map.step(time);
 						The.camera.step(time);
-
-
-						// -------------------------------------------------------------------------- //
-						// -------------------------------------------------------------------------- //
-						//             Rendering
-						//
-						// -------------------------------------------------------------------------- //
-
-						ctxEntities.clearRect(0, 0, canvasEntities.width, canvasEntities.height);
-						var sheetData = The.map.sheet,
-							sheet = sheetData.image;
-						if (The.camera.updated) {
-							ctxBackground.clearRect(0, 0, canvasBackground.width, canvasBackground.height);
-
-							var tileSize=Env.tileSize,
-								pageWidth=Env.pageWidth,
-								pageHeight=Env.pageHeight,
-								tilesPerRow=sheetData.tilesPerRow,
-								offsetY=The.camera.offsetY,
-								offsetX=The.camera.offsetX;
-
-
-
-							// Draw Current Page
-							// 	startY:
-							// 		require  pt + size < page
-							// 		starts @ max(floor(ipt) - 1, 0)
-							var page = The.map.curPage,
-								startY = Math.abs(parseInt(Math.min(0, The.camera.offsetY)/tileSize)),
-								endY   = parseInt((Math.max(pageHeight*tileSize, pageHeight*tileSize - The.camera.offsetY))/tileSize),
-								startX = Math.abs(parseInt(Math.min(0,  -The.camera.offsetX)/tileSize)),
-								endX   = parseInt((Math.min(pageWidth*tileSize, pageWidth*tileSize + The.camera.offsetX))/tileSize);
-
-							startY=0;
-							endY=pageHeight;
-							startX=0;
-							endX=pageWidth;
-							for(var iy=startY; iy<endY; ++iy) {
-								for(var ix=startX; ix<endX; ++ix) {
-									// TODO: abstract ty/tx and sy/sx fetch; use on all renders
-									var tile=page.tiles[iy*pageWidth+ix]-1,
-										spriteObj=page.sprites[iy*pageWidth+ix],
-										sprite=(spriteObj?spriteObj.sprite-1:-1),
-										ty=Math.max(-1,parseInt(tile/tilesPerRow)),
-										tx=Math.max(-1,tile%tilesPerRow),
-										sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-										sx=Math.max(-1,sprite%tilesPerRow),
-										scale=Env.tileScale,
-										py=(iy*tileSize+The.camera.offsetY)*scale,
-										px=(ix*tileSize-The.camera.offsetX)*scale;
-									if (py+tileSize<=0 || py>=pageHeight*tileSize) {
-										console.log("Bad spot!");
-									}
-									if (ty!=-1 && tx!=-1)
-										ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-									// Draw sprite ONLY if its static
-									if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static'))
-										ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-								}
-							}
-
-							// Draw border
-							//	Camera width/height and offset (offset by -border)
-							//	Draw ALL neighbours using this algorithm
-							//	If no neighbour to left/top then leave offset as 0?
-							var neighbours=[];
-							for(var neighbourKey in The.map.curPage.neighbours) {
-								var neighbour = The.map.curPage.neighbours[neighbourKey];
-								if (!neighbour) continue;
-
-								var neighbourInfo = {};
-								neighbourInfo.neighbour = neighbour;
-								neighbourInfo.name = neighbourKey;
-
-								if (neighbourKey.indexOf('south')!=-1) {
-									neighbourInfo.offsetY = pageHeight*Env.tileSize;
-								} else if (neighbourKey.indexOf('north')!=-1) {
-									neighbourInfo.offsetY = -pageHeight*Env.tileSize;
-								} else {
-									neighbourInfo.offsetY = 0;
-								}
-
-								if (neighbourKey.indexOf('west')!=-1) {
-									neighbourInfo.offsetX = -pageWidth*Env.tileSize;
-								} else if (neighbourKey.indexOf('east')!=-1) {
-									neighbourInfo.offsetX = pageWidth*Env.tileSize;
-								} else {
-									neighbourInfo.offsetX = 0;
-								}
-
-								neighbours.push(neighbourInfo);
-							}
-							for(var neighbourKey in neighbours) {
-								var neighbourInfo = neighbours[neighbourKey],
-									neighbour = neighbourInfo.neighbour,
-									offX = neighbourInfo.offsetX,
-									offY = neighbourInfo.offsetY;
-								for (var iy=0; iy<pageHeight; ++iy) {
-									for (var ix=0; ix<pageWidth; ++ix) {
-										var tile=neighbour.tiles[iy*pageWidth+ix]-1,
-											spriteObj=neighbour.sprites[iy*pageWidth+ix],
-											sprite=(spriteObj?spriteObj.sprite-1:-1),
-											ty=Math.max(-1,parseInt(tile/tilesPerRow)),
-											tx=Math.max(-1,tile%tilesPerRow),
-											sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-											sx=Math.max(-1,sprite%tilesPerRow),
-											scale=Env.tileScale,
-											py=(iy*tileSize+offsetY+offY)*scale,
-											px=(ix*tileSize-offsetX+offX)*scale;
-
-										// TODO: test routine to check that each tile rendered IS displayed (0<py,py+size<pageHeight)
-
-										// NOTE: 0<py,py+tileSize<pageHeight --> render
-										if (ty!=-1 && tx!=-1)
-											ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-										if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static'))
-											ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-									}
-								}
-							}
-
-							The.camera.updated = false;
-						}
-
-
-						// Draw tile highlights
-						if (tileHover) {
-
-							var scale = Env.tileScale,
-								tileSize = Env.tileSize;
-							ctxEntities.save();
-							ctxEntities.globalAlpha = 0.4;
-							ctxEntities.strokeRect(scale*tileSize*tileHover.x, scale*tileSize*tileHover.y, scale*tileSize-(lineWidth/2), scale*tileSize-(lineWidth/2));
-							ctxEntities.restore();
-
-						}
-
-						if (tilePathHighlight) {
-
-							if (!tilePathHighlight.hasOwnProperty('step')) tilePathHighlight.step=0;
-
-							var scale = Env.tileScale,
-								tileSize = Env.tileSize,
-								y = (tilePathHighlight.y - The.map.curPage.y) * scale * tileSize + The.camera.offsetY * scale,
-								x = (tilePathHighlight.x - The.map.curPage.x) * scale * tileSize - The.camera.offsetX * scale,
-								width = scale*tileSize-(lineWidth/2),
-								height = scale*tileSize-(lineWidth/2),
-								step = ++tilePathHighlight.step,
-								color = (step<5?'#88FF88':'#22DD22');
-
-							if (step%10==0) {
-								tilePathHighlight.step = 0;
-							}
-								
-
-							ctxEntities.save();
-							ctxEntities.strokeStyle='#669966';
-							ctxEntities.globalAlpha = 0.4;
-							ctxEntities.strokeRect(x, y, width, height);
-
-							ctxEntities.globalAlpha = 0.8;
-							ctxEntities.strokeStyle=color;
-							ctxEntities.setLineDash([4*scale]);
-							ctxEntities.strokeRect(x, y, width, height);
-							ctxEntities.restore();
-
-						}
-
-
-
-						var floatingSprites = [];
-
-						// TODO: draw neighbour sprites
-
-
-						// Draw sprites
-						var page = The.map.curPage;
-						for (var coord in page.sprites) {
-							var spriteObj=page.sprites[coord],
-								sprite=(spriteObj?spriteObj.sprite-1:-1),
-								tilesPerRow=sheetData.tilesPerRow,
-								scale=Env.tileScale,
-								iy = Math.floor(coord / Env.pageWidth),
-								ix = coord % Env.pageWidth,
-								sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-								sx=Math.max(-1,sprite%tilesPerRow),
-								tileSize = Env.tileSize,
-								py=(iy*tileSize+The.camera.offsetY)*scale,
-								px=(ix*tileSize-The.camera.offsetX)*scale;
-							try {
-								if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
-									if (sheetData.floating !== 'undefined' &&
-										sheetData.floating.indexOf(sprite) >= 0) {
-										floatingSprites.push({
-											sprite: sprite,
-											sx: sx,
-											sy: sy,
-											px: px,
-											py: py
-										});
-									} else {
-										ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-									}
-								}
-							} catch(e) {
-								console.log("Error!");
-							}
-						}
-
-						// Draw border
-						//	Camera width/height and offset (offset by -border)
-						//	Draw ALL neighbours using this algorithm
-						//	If no neighbour to left/top then leave offset as 0?
-						var neighbours=[],
-							tileSize=Env.tileSize,
-							pageWidth=Env.pageWidth,
-							pageHeight=Env.pageHeight,
-							tilesPerRow=sheetData.tilesPerRow,
-							offsetY=The.camera.offsetY,
-							offsetX=The.camera.offsetX;
-						for(var neighbourKey in The.map.curPage.neighbours) {
-							var neighbour = The.map.curPage.neighbours[neighbourKey];
-							if (!neighbour) continue;
-
-							var neighbourInfo = {};
-							neighbourInfo.neighbour = neighbour;
-							neighbourInfo.name = neighbourKey;
-
-							if (neighbourKey.indexOf('south')!=-1) {
-								neighbourInfo.offsetY = pageHeight*Env.tileSize;
-							} else if (neighbourKey.indexOf('north')!=-1) {
-								neighbourInfo.offsetY = -pageHeight*Env.tileSize;
-							} else {
-								neighbourInfo.offsetY = 0;
-							}
-
-							if (neighbourKey.indexOf('west')!=-1) {
-								neighbourInfo.offsetX = -pageWidth*Env.tileSize;
-							} else if (neighbourKey.indexOf('east')!=-1) {
-								neighbourInfo.offsetX = pageWidth*Env.tileSize;
-							} else {
-								neighbourInfo.offsetX = 0;
-							}
-
-							neighbours.push(neighbourInfo);
-						}
-
-
-						// Draw sprites
-						for(var i=0; i<neighbours.length; ++i) {
-							var neighbourInfo = neighbours[i],
-								neighbour = neighbourInfo.neighbour,
-								offX = neighbourInfo.offsetX,
-								offY = neighbourInfo.offsetY;
-
-							for (var coord in neighbour.sprites) {
-								var spriteObj=neighbour.sprites[coord],
-									sprite=(spriteObj?spriteObj.sprite-1:-1),
-									tilesPerRow=20, // TODO: find this: Spritesheet tiles per row
-									scale=Env.tileScale,
-									iy = Math.floor(coord / Env.pageWidth),
-									ix = coord % Env.pageWidth,
-									sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-									sx=Math.max(-1,sprite%tilesPerRow),
-									tileSize = Env.tileSize,
-									py=(iy*tileSize+The.camera.offsetY+offY)*scale,
-									px=(ix*tileSize-The.camera.offsetX+offX)*scale;
-
-								try {
-									if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
-										if (sheetData.floating !== 'undefined' &&
-											sheetData.floating.indexOf(sprite) >= 0) {
-
-											floatingSprites.push({
-												sprite: sprite,
-												sx: sx,
-												sy: sy,
-												px: px,
-												py: py
-											});
-										} else {
-											ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-										}
-									}
-								} catch(e) {
-									console.log("Error!");
-								}
-							}
-
-						}
-
-						// Draw Movables
-						{
-							for (var id in page.movables) {
-								var movable = page.movables[id],
-									tileSize = movable.sprite.tileSize,
-									movableSheet = movable.sprite.sheet.image,
-									customSheet = false,
-									scale=Env.tileScale,
-									offsetY = The.camera.offsetY,
-									offsetX = The.camera.offsetX,
-									// TODO: fix sprite centering with sheet offset
-									movableOffX = movable.sprite.tileSize/4,// - movable.sprite.offset_x, //movable.sprite.tileSize/4, // Center the entity
-									movableOffY = movable.sprite.tileSize/2;// - movable.sprite.offset_y; //movable.sprite.tileSize/2;
-								if (movable.sprite.state.sheet) {
-									customSheet = true;
-									movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet
-								}
-
-								ctxEntities.drawImage(
-										movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.posX-offsetX-movableOffX), scale*(movable.posY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
-							}
-						}
-
-
-						// draw floating sprites
-						for (var i=0; i<floatingSprites.length; ++i) {
-							var floatingSprite = floatingSprites[i],
-								tileSize = Env.tileSize,
-								scale = Env.tileScale,
-								sx = floatingSprite.sx,
-								sy = floatingSprite.sy,
-								px = floatingSprite.px,
-								py = floatingSprite.py;
-							ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-						}
-
-						// -------------------------------------------------------------------------- //
-						// -------------------------------------------------------------------------- //
+						renderer.render();
+						
 
 						// requestAnimationFrame(gameLoop);
 						setTimeout(gameLoop, speed);
@@ -1012,6 +675,8 @@ try{
 					The.player.posX = player.posX;
 					The.camera.updated = true;
 
+					renderer.setMap( The.map );
+
 				};
 
 
@@ -1028,71 +693,57 @@ try{
 			// Event Listeners
 			// TODO: abstract event listeners to call "tryPath" or "hoverMap"
 
-			canvasEntities.addEventListener('mousemove', function(evt) {
-				bounds = canvasEntities.getBoundingClientRect();
-				var scale = Env.tileScale,
-					x     = (evt.clientX - bounds.left)/scale,
-					y     = (evt.clientY - bounds.top)/scale,
-					xTile = parseInt(x/tileSize),
-					yTile = parseInt(y/tileSize);
-				activeX = xTile;
-				activeY = yTile;
+			ui.onMouseMove = function(mouse){
 
 				try {
-					tileHover = new Tile(activeY, activeX);
 
-					hoveringEntity = false;
+					ui.tileHover = new Tile(mouse.y, mouse.x);
+
+					ui.hoveringEntity = false;
 					for (var movableID in The.map.curPage.movables) {
 						var movable = The.map.curPage.movables[movableID];
 						if (movable.npc.killable) {
 							if (movable.playerID) continue;
-							if (x >= movable.posX && x <= movable.posX + 32 &&
-								y >= movable.posY && y <= movable.posY + 32) {
+							if (mouse.canvasX >= movable.posX && mouse.canvasX <= movable.posX + 32 &&
+								mouse.canvasY >= movable.posY && mouse.canvasY <= movable.posY + 32) {
 									// Hovering movable
-									hoveringEntity = movable;
+									ui.hoveringEntity = movable;
 									break;
 							}
 						}
 					}
 
-					if (hoveringEntity) {
-						canvasEntities.style.cursor = 'crosshair'; // TODO: custom cursors
-					} else {
-						canvasEntities.style.cursor = '';
-					}
+					ui.updateCursor();
+
 				} catch(e) {
-					tileHover = null;
+					ui.tileHover = null;
 				}
-			});
 
-			canvasEntities.addEventListener('mousedown', function(evt) {
+			};
 
+			ui.onMouseDown = function(mouse){
 
-				if (hoveringEntity) {
-
-					server.attackEntity(hoveringEntity)
-						.then(function(){
-							The.player.brain.setTarget(hoveringEntity);
-						});
-
+				// Attack the enemy we're currently hovering
+				if (ui.hoveringEntity) {
+					server.attackEntity(ui.hoveringEntity)
+						  .then(function(){
+							  The.player.brain.setTarget(ui.hoveringEntity);
+						  });
 					return;
 				}
 
-				walkToX = activeX + (The.camera.offsetX/tileSize);
-				walkToY = activeY - (The.camera.offsetY/tileSize);
-
-				console.log("Mouse clicked (move): ("+walkToY+","+walkToX+")");
-
 				// 	click to move player creates path for player
-				var playerY      = The.map.curPage.y * Env.tileSize + The.player.posY,
+				var walkTo       = { x: mouse.x + parseInt(The.camera.offsetX/Env.tileSize),
+									 y: mouse.y - parseInt(The.camera.offsetY/Env.tileSize) },
+					playerY      = The.map.curPage.y * Env.tileSize + The.player.posY,
 					playerX      = The.map.curPage.x * Env.tileSize + The.player.posX,
 					nearestTiles = The.map.findNearestTiles(playerY, playerX),
-					toTile       = The.map.tileFromLocalCoordinates(walkToY, walkToX),
+					toTile       = The.map.tileFromLocalCoordinates(walkTo.y, walkTo.x),
 					time         = now(),
 					path         = The.map.findPath(nearestTiles, [toTile]);
 
 				if (path) {
-					console.log("Path TO: ("+walkToY+","+walkToX+") FROM ("+(The.player.posY/Env.tileSize)+","+(The.player.posX/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
+					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.posY/Env.tileSize)+","+(The.player.posX/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
 					console.group();
 					console.log(path);
 					if (The.player.brain.target) {
@@ -1143,15 +794,16 @@ try{
 						The.player.addPath(path, true);
 					}
 
-					tilePathHighlight = toTile;
+					ui.tilePathHighlight = toTile;
 
 					The.player.addEventListener(EVT_FINISHED_PATH, this, function(player, walk){
-						tilePathHighlight = null;
+						ui.tilePathHighlight = null;
 					});
 				} else {
 					console.log("Bad path :(");
 				}
-			});
+
+			};
 
 			// Load testing tools
 			//////////////////////

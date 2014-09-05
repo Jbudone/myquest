@@ -116,7 +116,7 @@
 
                     },
                  "rotation":0,
-                 "type":"deathknight",
+                 "type":"goblin",
                  "visible":true,
                  "width":16,
                  "x":160,
@@ -148,6 +148,7 @@
     {
 
     },
+ "renderorder":"right-down",
  "tileheight":16,
  "tilesets":[
         {

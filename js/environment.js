@@ -29,6 +29,8 @@ define(function(){
 			'AI': (logVerbose),
 			'Movable': (logVerbose),
 			'Connection': (logVerbose),
+			'Renderer': (logVerbose),
+			'UI': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};

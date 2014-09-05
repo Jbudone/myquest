@@ -5,7 +5,10 @@
 		<link rel="stylesheet" type="text/css" href="main.css">
 
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-		<script src="main.js"></script>
+		<script src="scripts/main.js"></script>
+		<script src="scripts/assets.js"></script>
+		<script src="scripts/editor.js"></script>
+		<script src="scripts/sheet.js"></script>
 
 		<!-- Bootstrap -->
 		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
@@ -17,19 +20,147 @@
 
 		<h1><a id="save" href="#">Tilesheet</a> Editor</h1>
 
-		<canvas id="sheet">
 
-		</canvas>
+		<div id="editArea" class="">
+			<canvas id="sheet">
 
-		<div id="controls">
-			<div class="btn-group">
-				<button id="ctrl-collision" type="button" class="btn btn-default">Collision</button>
-				<button id="ctrl-floating" type="button" class="btn btn-default">Floating</button>
+			</canvas>
+
+			<div id="controls">
+				<div id="buttons" class="">
+
+					<div id="buttons_tilesheets" class="btn-group hidden">
+						<button id="ctrl-collision" type="button" class="btn btn-default">Collision</button>
+						<button id="ctrl-floating" type="button" class="btn btn-default">Floating</button>
+					</div>
+
+					<div id="buttons_spritesheets" class="btn-group hidden">
+						<button id="ctrl-collision" type="button" class="btn btn-default">Avatar</button>
+						<button id="ctrl-floating" type="button" class="btn btn-default">New Animation</button>
+					</div>
+
+					<div id="buttons_npcs" class="hidden">
+					</div>
+				</div>
+
+				<div id="settings">
+
+
+					<div id="settings_tilesheet" class="hidden">
+						<div class="settings_component">
+							<input type="text" id="tilesheet_id" class="form-control" placeholder="Tilesheet id" />
+						</div>
+						<div class="settings_component">
+							<input type="range" id="tilesheet_tilesize" value="16" />
+							<span class="form-label">Tilesize: </span><span class="form-label-value" id="tilesheet_tilesize_value">16</span>
+							<input type="checkbox" id="tilesheet_showgrid" class="right" />
+						</div>
+						<div class="settings_component">
+							<input type="number" id="tilesheet_offset_y" min="0" max="0" value="0" />
+							<span class="form-label">Offset Y </span>
+							<br/>
+							<input type="number" id="tilesheet_offset_x" min="0" max="0" value="0" />
+							<span class="form-label">Offset X </span>
+						</div>
+					</div>
+
+					<div id="settings_spritesheet" class="hidden">
+						<div class="settings_component">
+							<input type="text" id="spritesheet_id" class="form-control" placeholder="Spritesheet id" />
+						</div>
+						<div class="settings_component">
+							<input type="range" id="spritesheet_tilesize" />
+							<span class="form-label">Tilesize: </span><span class="form-label-value" id="spritesheet_tilesize_value">16</span>
+							<input type="checkbox" id="spritesheet_showgrid" class="right" />
+						</div>
+						<div class="settings_component">
+							<input type="number" id="spritesheet_offset_y" min="0" max="0" value="0" />
+							<span class="form-label">Offset Y </span>
+							<br/>
+							<input type="number" id="spritesheet_offset_x" min="0" max="0" value="0" />
+							<span class="form-label">Offset X </span>
+						</div>
+						<hr/>
+
+						<div class="animation_list">
+							<div class="animation_settings">
+								<input type="text" id="animation_id" class="form-control" placeholder="Animation id" />
+								<br/>
+								<input type="checkbox" class="animation_flipX" />
+								<span class="animation_setting_label">flipX</span>
+							</div>
+							<div class="animation">
+								<a class="animation_title" href="">Walk Left</a>
+								<a class="animation_remove" href="">X</a>
+							</div>
+							<div class="animation">
+								<a class="animation_title" href="">Walk Up</a>
+								<a class="animation_remove" href="">X</a>
+							</div>
+							<div class="animation">
+								<a class="animation_title" href="">Walk Down</a>
+								<a class="animation_remove" href="">X</a>
+							</div>
+						</div>
+
+					</div>
+
+					<div id="settings_npcs" class="hidden">
+						<div class="settings_component">
+							<input type="text" id="npc_id" class="form-control" placeholder="NPC id" />
+						</div>
+						<div class="settings_component">
+							<input type="text" id="npc_name" class="form-control" placeholder="NPC name" />
+						</div>
+						<div class="settings_component">
+							<input type="number" id="npc_health" min="1" max="1000" value="10" />
+							<span class="form-label">Health</span>
+							<br/>
+							<input type="number" id="npc_damage" min="1" max="100" value="5" />
+							<span class="form-label">Damage</span>
+							<br/>
+							<input type="number" id="npc_speed" min="1" max="100" value="12" />
+							<span class="form-label">Speed</span>
+							<br/>
+							<input type="number" id="npc_spawn" min="1" max="60000" value="8000" />
+							<span class="form-label">Respawn Time</span>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+
+
+		<div id="assetsArea">
+			<div id="assets">
+
+			</div>
+
+			<a id="assetsSave" href="">
+				SAVE
+			</a>
+
+			<div id="assetsControls">
+				<a class="assetButton" href="">Add Tilesheet</a>
+				<a class="assetButton" href="">Add Spritesheet</a>
+				<a class="assetButton" href="">Add NPC</a>
 			</div>
 		</div>
 		
+		
 		<!--
 			TODO
+				> editor.js: load/switch between views (tilesheet/spritesheet/npc/intro); editing (tilesheet drag/drop, edit settings, hook buttons/settings)
+				> main.js: hook/handle events between editor & assets; prompt before leavePage (unsaved changes)
+				> assets.php: save assets
+				> animation editor
+				> sprite avatar editor (saves to avatar sheet)
+
+
+
+
 				> different selections: collisions, floaters
 				> filter selections
 				> add/remove animation

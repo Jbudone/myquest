@@ -1,6 +1,7 @@
 
 #sheet { 
 	width:100%;
+	max-width: 400px;
 	height:100%;
 	float:left;
 	margin-right:50px;
@@ -10,6 +11,181 @@
 	background: #DDD;
 }
 
+
+
+
+/***********************************************
+ ******            Controls              ******/
+
 #controls {
+	width: 300px;
+	position: absolute;
+	right: 420px;
+}
+
+#settings {
+	width: 100%;
+	min-height: 100px;
+	border: thin solid black;
+	margin-top: 15px;
+	background: #FEFEFF;
+	border-radius: 6px;
+	padding-top: 10px;
+	padding-bottom: 5px;
+}
+
+.settings_component {
+	width: 90%;
+	margin-left: 5%;
+	margin-top: 8px;
+}
+
+.settings_component[type="range"] {
+	width: 50%;
 	float: left;
+	margin-right: 10px;
+}
+
+.form-label {
+	margin-left: 8px;
+	font-weight: bold;
+	font-family: serif;
+	font-size: medium;
+}
+
+.animation_settings {
+	background-color: #F5F5FF;
+	padding-bottom: 4px;
+}
+
+.animation_settings .form-control {
+	border-radius: 0px;
+	width: 90%;
+	margin-left: 5%;
+	margin-top: -20px;
+}
+
+.animation_settings .animation_flipX {
+	margin-left: 30px;
+	margin-top: -15px;
+	display: block;
+}
+
+.animation_settings .animation_setting_label {
+	display: block;
+	margin-left: 50px;
+	margin-top: -16px;
+}
+
+.animation {
+	border-top: thin dashed #DDD;
+	border-bottom: thin dashed #DDD;
+	padding-left: 15px;
+}
+
+.animation_title:hover {
+	text-decoration: none;
+}
+
+
+.animation_remove {
+	float: right;
+	margin-right: 15px;
+}
+
+.animation_remove:hover {
+	text-decoration: none;
+	font-weight: bold;
+}
+
+
+/***********************************************
+ ******         Assets Manager           ******/
+
+#assetsArea {
+	position: absolute;
+	right: 50px;
+}
+
+#assets {
+	border: thin solid #000;
+	width: 300px;
+	height: 400px;
+	background: #FDFDFD;
+	padding: 10px;
+	float: left;
+}
+
+.assetContainer {
+	margin-bottom: 20px;
+}
+
+.assetContainer .assetTitle {
+	width: 100%;
+	display: block;
+}
+
+.assetContainer .asset {
+	width: 100%;
+	display: block;
+	margin-left: 35px;
+}
+
+#assetsSave {
+	float: left;
+	background-color: #000;
+	height: 400px;
+	width: 50px;
+	font-size: 40px;
+	word-wrap: break-word;
+	padding-left: 10px;
+	font-weight: bold;
+	padding-top: 60px;
+
+	color: white;
+	border-top-right-radius: 4px;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+	background: rgb(66, 184, 221);
+	text-decoration: none;
+}
+
+#assetsSave:hover {
+	color: #F5F5F5;
+}
+
+#assetsControls {
+	background-color: #000;
+	width: 100%;
+	float: left;
+	clear: both;
+}
+
+.assetButton {
+	width: 100%;
+	display: block;
+	text-align: center;
+	font-weight: bold;
+}
+
+
+
+
+
+/***********************************************
+ ******            Utilities             ******/
+
+.hidden {
+	display: none;
+}
+
+.form-control {
+	height: 28px;
+}
+
+.right {
+	float: right;
+}
+
+input[type="number"] {
+	width: 80px;
 }
