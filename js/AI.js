@@ -323,7 +323,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 					// TODO: if same map, check if within range & hate level
 					this.stopListeningTo(target);
 					this.attackList[target.id].flee = 0;
-					this.brain.setTarget(this.target);
+					this.brain.setTarget(target);
 					this.setTarget(target);
 					this.state.transition(STATE_ATTACKING);
 				}, HIGH_PRIORITY);

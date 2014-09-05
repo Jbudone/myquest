@@ -621,12 +621,13 @@ try{
 				server.onEntityDied = function(page, deadEntity){
 
 					// TODO: set die physical state, die animation, remove entity
-					var entity = The.map.getEntityFromPage(deadEntity.page, deadEntity.id);
+					Log("Entity "+deadEntity+" died");
+					var entity = The.map.curPage.movables[deadEntity];
 					// NOTE: the entity may have already died if we've already received the killing blow event (client side noticed their health went below 0)
-					// TODO: will this ever occur? Do we need to set the dying process somewhere else?
+					// NOTE: This may mean that our entity health/hurt is out of sync with the server; we should
+					// have seen them die locally before receiving this (unless attacked/dead were both apart
+					// of the same page event buffer)
 					if (entity) {
-						Log("EVT_DIED OCCURRED!! Make note that this actually happened in main.js", LOG_ERROR);
-						Log(entity, LOG_ERROR);
 						entity.triggerEvent(EVT_DIED);
 					}
 
