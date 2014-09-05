@@ -40,17 +40,17 @@ var Sheet = function(canvas){
 				if (hover) {
 					ctx.save();
 					ctx.globalAlpha = settings.hoverAlpha;
-					ctx.strokeRect(sheetData.tilesize*hover.x - (settings.lineWidth/2), sheetData.tilesize*hover.y - (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2));
+					ctx.strokeRect(sheetData.data.tilesize*hover.x - (settings.lineWidth/2), sheetData.data.tilesize*hover.y - (settings.lineWidth/2), sheetData.data.tilesize + (settings.lineWidth/2), sheetData.data.tilesize + (settings.lineWidth/2));
 					ctx.restore();
 				}
 
 			   // draw grid
 			   if (showGrid) {
 				   ctx.save();
-				   for (var y=sheetData.offset.y; y<sheetData.image.height; y+=sheetData.tilesize) {
-					   for (var x=sheetData.offset.x; x<sheetData.image.width; x+=sheetData.tilesize) {
+				   for (var y=sheetData.data.offset.y; y<sheetData.image.height; y+=sheetData.data.tilesize) {
+					   for (var x=sheetData.data.offset.x; x<sheetData.image.width; x+=sheetData.data.tilesize) {
 						   ctx.globalAlpha = settings.gridAlpha;
-						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2));
+						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.data.tilesize + (settings.gridLineWidth/2), sheetData.data.tilesize + (settings.gridLineWidth/2));
 					   }
 				   }
 				   ctx.restore();
@@ -84,12 +84,12 @@ var Sheet = function(canvas){
 	interface.loadSheet = function(sheet){
 		sheetData.image = new Image();
 		sheetData.image.onload = function(){
-			sheetData.tilesize = parseInt(sheet.data.tilesize);
-			sheetData.columns = parseInt( (sheetData.image.width - parseInt(sheet.data.offset_x)) / sheet.data.tilesize );
-			sheetData.rows = parseInt( (sheetData.image.height - parseInt(sheet.data.offset_y)) / sheet.data.tilesize );
-			sheetData.offset.y = parseInt(sheet.data.offset_y);
-			sheetData.offset.x = parseInt(sheet.data.offset_x);
 			sheetData.data = sheet.data;
+			sheetData.data.tilesize = parseInt(sheet.data.tilesize);
+			sheetData.data.columns = parseInt( (sheetData.image.width - parseInt(sheet.data.offset.x)) / sheet.data.tilesize );
+			sheetData.data.rows = parseInt( (sheetData.image.height - parseInt(sheet.data.offset.y)) / sheet.data.tilesize );
+			// sheetData.data.offset.y = parseInt(sheet.data.offset.y);
+			// sheetData.data.offset.x = parseInt(sheet.data.offset.x);
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -100,8 +100,8 @@ var Sheet = function(canvas){
 
 				for (var i=0; i<sheet.data.floating.length; ++i) {
 					var _floating = sheet.data.floating[i],
-						tx = parseInt(_floating % sheetData.columns),
-						ty = parseInt(_floating / sheetData.columns),
+						tx = parseInt(_floating % sheetData.data.columns),
+						ty = parseInt(_floating / sheetData.data.columns),
 						tile = new Tile( ty, tx );
 
 					selections.floating.selection.tiles.push( tile );
@@ -117,8 +117,8 @@ var Sheet = function(canvas){
 
 				for (var i=0; i<sheet.data.collisions.length; ++i) {
 					var _collision = sheet.data.collisions[i],
-						tx = parseInt(_collision % sheetData.columns),
-						ty = parseInt(_collision / sheetData.columns),
+						tx = parseInt(_collision % sheetData.data.columns),
+						ty = parseInt(_collision / sheetData.data.columns),
 						tile = new Tile( ty, tx );
 
 					selections.collisions.selection.tiles.push( tile );
@@ -168,7 +168,7 @@ var Sheet = function(canvas){
 
 	var Tile = function(y,x) {
 		if (y < 0 || x < 0) throw new RangeError("Bad tile: ("+y+","+x+")");
-		if (y >= sheetData.rows || x >= sheetData.columns) throw new RangeError("Bad tile: ("+y+","+x+")");
+		if (y >= sheetData.data.rows || x >= sheetData.data.columns) throw new RangeError("Bad tile: ("+y+","+x+")");
 		this.y = y;
 		this.x = x;
 	};
@@ -200,8 +200,8 @@ var Sheet = function(canvas){
 		if (ready) {
 			var y  = evt.pageY - this.offsetTop,
 				x  = evt.pageX - this.offsetLeft,
-				ty = Math.floor(y/sheetData.tilesize),
-				tx = Math.floor(x/sheetData.tilesize);
+				ty = Math.floor(y/sheetData.data.tilesize),
+				tx = Math.floor(x/sheetData.data.tilesize);
 
 			hover = new Tile(ty, tx);
 		}
@@ -254,14 +254,14 @@ var Sheet = function(canvas){
 					canvas.width  = tilesheet.width;
 					canvas.height = tilesheet.height;
 
-					if (tilesheet.width % 16 != 0 ||
-						tilesheet.height % 16 != 0) {
-						throw new RangeError("Tilesheet bad dimensions: ("+tilesheet.height+"x"+tilesheet.width+")");
-					}
+					// if (tilesheet.width % 16 != 0 ||
+					// 	tilesheet.height % 16 != 0) {
+					// 	throw new RangeError("Tilesheet bad dimensions: ("+tilesheet.height+"x"+tilesheet.width+")");
+					// }
 
 					sheetData.image = tilesheet;
-					sheetData.rows = tilesheet.height / 16;
-					sheetData.columns = tilesheet.width / 16;
+					sheetData.data.rows = parseInt(tilesheet.height / 16);
+					sheetData.data.columns = parseInt(tilesheet.width / 16);
 					ready = true;
 
 				// }

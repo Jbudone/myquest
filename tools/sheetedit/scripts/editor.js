@@ -104,12 +104,12 @@ var Editor = function(container, sheet){
 					floats = modified.selection.tiles;
 				for (var i=0; i<floats.length; ++i) {
 					var float = floats[i],
-						_float = float.y * parseInt(view_tilesheet.data.data.tilesPerRow) + float.x;
+						_float = float.y * parseInt(view_tilesheet.data.data.columns) + float.x;
 					_floats.push( _float );
 				}
 				view_tilesheet.data.data.floating = _floats;
 			}
-			linkEl.data('modify')();
+			linkEl.data('modify')( linkEl );
 		};
 	};
 

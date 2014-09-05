@@ -41,12 +41,12 @@ var AssetsManager = function(assets, container){
 				return false;
 			});
 
-			assetEl.data('modify', function(){
+			assetEl.data('modify', function(me){
 				for (var i=0; i<modifiedList.length; ++i) {
-					if ($(this) == modifiedList[i]) return;
+					if (me == modifiedList[i]) return;
 				}
-				modifiedList.push( $(this) );
-				$(this).addClass('modified');
+				modifiedList.push( me );
+				me.addClass('modified');
 				$('#assetsArea').addClass('modified');
 				$('#assetsSave').addClass('modified');
 			});
