@@ -101,6 +101,9 @@ var Editor = function(container, sheet){
 	view_tilesheet.loadData = function(data, linkEl){
 
 		this.data = data;
+		if (!data.data) data.data = {};
+		if (!data.data.floating) data.data.floating = [];
+		if (!data.data.collisions) data.data.collisions = [];
 
 		view_tilesheet.components.id.val( data.id );
 		view_tilesheet.components.tilesize.input.val( parseInt(data.tilesize) );
@@ -133,6 +136,10 @@ var Editor = function(container, sheet){
 				}
 				view_tilesheet.data.data.collisions = _collisions;
 			}
+			view_tilesheet.modified();
+		};
+		sheet.onSheetChanged = function(src){
+			data.image = src;
 			view_tilesheet.modified();
 		};
 	};
@@ -252,6 +259,8 @@ var Editor = function(container, sheet){
 	view_spritesheet.loadData = function(data, linkEl){
 
 		this.data = data;
+		if (!data.data) data.data = {};
+		if (!data.data.animations) data.data.animations = [];
 
 		view_spritesheet.components.id.val( data.id );
 		view_spritesheet.components.tilesize.input.val( parseInt(data.tilesize) );
@@ -278,6 +287,10 @@ var Editor = function(container, sheet){
 				// }
 				// view_tilesheet.data.data.floating = _floats;
 			}
+			view_spritesheet.modified();
+		};
+		sheet.onSheetChanged = function(src){
+			data.image = src;
 			view_spritesheet.modified();
 		};
 	};

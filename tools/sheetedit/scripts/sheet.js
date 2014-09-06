@@ -21,6 +21,7 @@ var Sheet = function(canvas){
 		showGrid = false,
 		dragDropEnabled = false,
 		ready = false,
+		tilesheet = null,
 		settings = {
 			lineWidth: 2,
 			gridLineWidth: 2,
@@ -34,7 +35,7 @@ var Sheet = function(canvas){
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			if (ready) {
 
-				ctx.drawImage(sheetData.image, 0, 0, sheetData.image.width, sheetData.image.height, 0, 0, sheetData.image.width, sheetData.image.height);
+				ctx.drawImage(tilesheet, 0, 0, tilesheet.width, tilesheet.height, 0, 0, tilesheet.width, tilesheet.height);
 
 				// draw hover
 				if (hover) {
@@ -47,8 +48,8 @@ var Sheet = function(canvas){
 			   // draw grid
 			   if (showGrid) {
 				   ctx.save();
-				   for (var y=sheetData.sheet_offset.y; y<sheetData.image.height; y+=sheetData.tilesize) {
-					   for (var x=sheetData.sheet_offset.x; x<sheetData.image.width; x+=sheetData.tilesize) {
+				   for (var y=sheetData.sheet_offset.y; y<tilesheet.height; y+=sheetData.tilesize) {
+					   for (var x=sheetData.sheet_offset.x; x<tilesheet.width; x+=sheetData.tilesize) {
 						   ctx.globalAlpha = settings.gridAlpha;
 						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2));
 					   }
@@ -100,16 +101,33 @@ var Sheet = function(canvas){
 		hover = null;
 	};
 
-	interface.loadSheet = function(sheet){
+	interface.loadSheet = function(sheet, copy){
 		interface.clearSheet();
-		sheetData.image = new Image();
-		sheetData.image.onload = function(){
-			sheetData.data = sheet.data;
-			sheetData.tilesize = parseInt(sheet.tilesize) || 16;
-			sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
-			sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
-			sheetData.columns = parseInt( (sheetData.image.width - parseInt(sheet.sheet_offset.x)) / sheet.tilesize );
-			sheetData.rows = parseInt( (sheetData.image.height - parseInt(sheet.sheet_offset.y)) / sheet.tilesize );
+		interface.setDragDropMode(true);
+		tilesheet = new Image();
+		tilesheet.onload = function(){
+
+			if (copy) {
+
+				if (sheet.data.floating) sheetData.data.floating = sheet.data.floating;
+				if (sheet.data.collisions) sheetData.data.collisions = sheet.data.collisions;
+				if (sheet.data.animations) sheetData.data.animations = sheet.data.animations;
+				sheetData.tilesize = sheet.tilesize;
+				sheetData.sheet_offset.x = sheet.sheet_offset.x;
+				sheetData.sheet_offset.y = sheet.sheet_offset.y;
+				sheetData.columns = sheet.columns;
+				sheetData.rows = sheet.rows;
+
+			} else {
+
+				sheetData.data = sheet.data;
+				sheetData.tilesize = parseInt(sheet.tilesize) || 16;
+				sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
+				sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
+				sheetData.columns = parseInt( (tilesheet.width - parseInt(sheet.sheet_offset.x)) / sheet.tilesize );
+				sheetData.rows = parseInt( (tilesheet.height - parseInt(sheet.sheet_offset.y)) / sheet.tilesize );
+
+			}
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -169,7 +187,7 @@ var Sheet = function(canvas){
 
 			ready = true;
 		};
-		sheetData.image.src = sheet.image;
+		tilesheet.src = sheet.image;
 	};
 
 	interface.setMode = function(selectionType){
@@ -284,10 +302,27 @@ var Sheet = function(canvas){
 
 			// event is an image OR a json file?
 			if (isTilesheet) {
-				tilesheet = new Image();
-				sheetName = file.name;
-				tilesheet.src = event.target.result;
-				// tilesheet.onload = function() { 
+				// interface.clearSheet();
+				// tilesheet = new Image();
+				var sheetName = "/sprites/" + file.name;
+				interface.loadSheet({
+					id:"New Tilesheet",
+					image: sheetName,
+					tilesize: 16,
+					columns: 0,
+					rows: 0,
+					sheet_offset: {
+						x: 0,
+						y: 0
+					},
+					data: {
+						collisions: [],
+						floating: []
+					}
+				}, true);
+				interface.onSheetChanged( sheetName );
+				/*
+				tilesheet.onload = function() { 
 					canvas.style.width  = tilesheet.width;
 					canvas.style.height = tilesheet.height;
 					canvas.width  = tilesheet.width;
@@ -298,12 +333,15 @@ var Sheet = function(canvas){
 					// 	throw new RangeError("Tilesheet bad dimensions: ("+tilesheet.height+"x"+tilesheet.width+")");
 					// }
 
-					sheetData.image = tilesheet;
-					sheetData.rows = parseInt(tilesheet.height / 16);
-					sheetData.columns = parseInt(tilesheet.width / 16);
+					sheetData.image = "/sprites/" + file.name; // NOTE: this is the best we can do, ONLY to get the filename
+					sheetData.rows = parseInt(tilesheet.height / sheetData.tilesize);
+					sheetData.columns = parseInt(tilesheet.width / sheetData.tilesize);
+					interface.onSheetChanged( sheetData.image );
 					ready = true;
 
-				// }
+				}
+				tilesheet.src = event.target.result;
+				*/
 			}
 		};
 

@@ -29,6 +29,12 @@ $(document).ready(function(){
 				console.log(data);
 				editor.loadView('npc', data, linkEl);
 			};
+
+			assetsMgr.onAddTilesheet = function(data, linkEl){
+				console.log('Tilesheet');
+				console.log(data);
+				editor.loadView('tilesheet', data, linkEl);
+			};
 		}
 	});
 
