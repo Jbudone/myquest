@@ -35,8 +35,8 @@
 					</div>
 
 					<div id="buttons_spritesheets" class="btn-group hidden">
-						<button id="ctrl-collision" type="button" class="btn btn-default">Avatar</button>
-						<button id="ctrl-floating" type="button" class="btn btn-default">New Animation</button>
+						<button id="ctrl-avatar" type="button" class="btn btn-default">Avatar</button>
+						<button id="ctrl-animation" type="button" class="btn btn-default">New Animation</button>
 					</div>
 
 					<div id="buttons_npcs" class="hidden">
@@ -56,10 +56,10 @@
 							<input type="checkbox" id="tilesheet_showgrid" class="right" />
 						</div>
 						<div class="settings_component">
-							<input type="number" id="tilesheet_offset_y" min="0" max="0" value="0" />
+							<input type="number" id="tilesheet_offset_y" min="-256" max="256" value="0" />
 							<span class="form-label">Offset Y </span>
 							<br/>
-							<input type="number" id="tilesheet_offset_x" min="0" max="0" value="0" />
+							<input type="number" id="tilesheet_offset_x" min="-256" max="256" value="0" />
 							<span class="form-label">Offset X </span>
 						</div>
 					</div>
@@ -74,10 +74,10 @@
 							<input type="checkbox" id="spritesheet_showgrid" class="right" />
 						</div>
 						<div class="settings_component">
-							<input type="number" id="spritesheet_offset_y" min="0" max="0" value="0" />
+							<input type="number" id="spritesheet_offset_y" min="-256" max="256" value="0" />
 							<span class="form-label">Offset Y </span>
 							<br/>
-							<input type="number" id="spritesheet_offset_x" min="0" max="0" value="0" />
+							<input type="number" id="spritesheet_offset_x" min="-256" max="256" value="0" />
 							<span class="form-label">Offset X </span>
 						</div>
 						<hr/>
@@ -152,11 +152,17 @@
 		
 		<!--
 			TODO
-				> sheet.js: change gridsize + offset; 
-				> editor.js: load/switch/save spritesheet, animations
+				> Tilesheets: edit id
+				> sheet.js: offset (canvas offset / sprite offset); add/change/remove sheet
+				> editor.js: load/switch/save spritesheet, npc; unload
 				> main.js: prompt before leavePage (unsaved changes)
+				> load NPCs
+				> load animations
 				> animation editor
+				> add tilesheet/spritesheet/npc, add animation
 				> sprite avatar editor (saves to avatar sheet)
+				> sprite states
+				> show which tilesheet/spritesheet/npc is currently being edited
 
 
 

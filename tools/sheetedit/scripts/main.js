@@ -21,7 +21,7 @@ $(document).ready(function(){
 			assetsMgr.onClickSpritesheet = function(data, linkEl){
 				console.log('Spritesheet');
 				console.log(data);
-				editor.loadView('spritesheet', data, linkEL);
+				editor.loadView('spritesheet', data, linkEl);
 			};
 
 			assetsMgr.onClickNPC = function(data, linkEl){

@@ -50,16 +50,6 @@ var AssetsManager = function(assets, container){
 				$('#assetsArea').addClass('modified');
 				$('#assetsSave').addClass('modified');
 			});
-			// assetEl.click((function(){
-			// 	var clickType = null; 
-			// 	if (assetType == 'tilesheets') clickType = interface.onClickTilesheet;
-			// 	else if (assetType == 'spritesheets') clickType == interface.onClickSpritesheet;
-			// 	else clickType == interface.onClickNPC;
-
-			// 	return function(){ clickType(asset); return false; };
-			// }()));
-			// TODO: event handling (select, deselect, hover, unhover)
-			// TODO: ajax loading, ajax saving, promises
 		}
 
 		_el.append( assetContainer );

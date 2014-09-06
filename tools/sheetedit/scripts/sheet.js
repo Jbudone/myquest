@@ -40,17 +40,17 @@ var Sheet = function(canvas){
 				if (hover) {
 					ctx.save();
 					ctx.globalAlpha = settings.hoverAlpha;
-					ctx.strokeRect(sheetData.data.tilesize*hover.x - (settings.lineWidth/2), sheetData.data.tilesize*hover.y - (settings.lineWidth/2), sheetData.data.tilesize + (settings.lineWidth/2), sheetData.data.tilesize + (settings.lineWidth/2));
+					ctx.strokeRect(sheetData.tilesize*hover.x - (settings.lineWidth/2), sheetData.tilesize*hover.y - (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2));
 					ctx.restore();
 				}
 
 			   // draw grid
 			   if (showGrid) {
 				   ctx.save();
-				   for (var y=sheetData.data.offset.y; y<sheetData.image.height; y+=sheetData.data.tilesize) {
-					   for (var x=sheetData.data.offset.x; x<sheetData.image.width; x+=sheetData.data.tilesize) {
+				   for (var y=sheetData.offset.y; y<sheetData.image.height; y+=sheetData.tilesize) {
+					   for (var x=sheetData.offset.x; x<sheetData.image.width; x+=sheetData.tilesize) {
 						   ctx.globalAlpha = settings.gridAlpha;
-						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.data.tilesize + (settings.gridLineWidth/2), sheetData.data.tilesize + (settings.gridLineWidth/2));
+						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2));
 					   }
 				   }
 				   ctx.restore();
@@ -80,16 +80,36 @@ var Sheet = function(canvas){
 		activeSelection = { type: null, selection: null },
 		hover = null;
 			
+	interface.adjustSheet = function(sheet){
+		sheetData.tilesize = parseInt(sheet.tilesize);
+		sheetData.offset.x = parseInt(sheet.offset.x);
+		sheetData.offset.y = parseInt(sheet.offset.y);
+	};
+
+	interface.clearSheet = function(){
+		sheetData = {
+			image: null,
+			tilesize: 16,
+			columns: 0,
+			rows: 0,
+			offset: { y:0, x:0 },
+			data: {}
+		};
+		selections = {};
+		activeSelection = { type: null, selection: null };
+		hover = null;
+	};
 
 	interface.loadSheet = function(sheet){
+		interface.clearSheet();
 		sheetData.image = new Image();
 		sheetData.image.onload = function(){
 			sheetData.data = sheet.data;
-			sheetData.data.tilesize = parseInt(sheet.data.tilesize);
-			sheetData.data.columns = parseInt( (sheetData.image.width - parseInt(sheet.data.offset.x)) / sheet.data.tilesize );
-			sheetData.data.rows = parseInt( (sheetData.image.height - parseInt(sheet.data.offset.y)) / sheet.data.tilesize );
-			// sheetData.data.offset.y = parseInt(sheet.data.offset.y);
-			// sheetData.data.offset.x = parseInt(sheet.data.offset.x);
+			sheetData.tilesize = parseInt(sheet.tilesize) || 16;
+			sheetData.offset.x = parseInt(sheet.offset.x);
+			sheetData.offset.y = parseInt(sheet.offset.y);
+			sheetData.columns = parseInt( (sheetData.image.width - parseInt(sheet.offset.x)) / sheet.tilesize );
+			sheetData.rows = parseInt( (sheetData.image.height - parseInt(sheet.offset.y)) / sheet.tilesize );
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -100,8 +120,8 @@ var Sheet = function(canvas){
 
 				for (var i=0; i<sheet.data.floating.length; ++i) {
 					var _floating = sheet.data.floating[i],
-						tx = parseInt(_floating % sheetData.data.columns),
-						ty = parseInt(_floating / sheetData.data.columns),
+						tx = parseInt(_floating % sheetData.columns),
+						ty = parseInt(_floating / sheetData.columns),
 						tile = new Tile( ty, tx );
 
 					selections.floating.selection.tiles.push( tile );
@@ -117,11 +137,28 @@ var Sheet = function(canvas){
 
 				for (var i=0; i<sheet.data.collisions.length; ++i) {
 					var _collision = sheet.data.collisions[i],
-						tx = parseInt(_collision % sheetData.data.columns),
-						ty = parseInt(_collision / sheetData.data.columns),
+						tx = parseInt(_collision % sheetData.columns),
+						ty = parseInt(_collision / sheetData.columns),
 						tile = new Tile( ty, tx );
 
 					selections.collisions.selection.tiles.push( tile );
+				}
+			}
+
+			if (sheet.data.animations) {
+				selections.animations = {
+					selection: new TilesSelection(),
+					color: '#CC00CC',
+					opacity: 0.6
+				}
+
+				for (var i=0; i<sheet.data.animations.length; ++i) {
+					var _animation = sheet.data.animations[i],
+						tx = parseInt(_animation % sheetData.columns),
+						ty = parseInt(_animation / sheetData.columns),
+						tile = new Tile( ty, tx );
+
+					selections.animations.selection.tiles.push( tile );
 				}
 			}
 
@@ -139,9 +176,11 @@ var Sheet = function(canvas){
 		if (selectionType == 'floating') {
 			activeSelection = { type: 'floating', selection: selections.floating.selection };
 		} else if (selectionType == 'collision') {
-			activeSelection = { type: 'collision', selection: selections.collision.selection };
+			activeSelection = { type: 'collision', selection: selections.collisions.selection };
 		} else if (selectionType == 'animation') {
-			activeSelection = { type: 'animation', selection: selections.animation.selection };
+			activeSelection = { type: 'animation', selection: selections.animations.selection };
+		} else if (selectionType == 'avatar') {
+			activeSelection = { type: 'avatar', selection: selections.avatar.selection };
 		} else {
 			activeSelection = null;
 		}
@@ -168,7 +207,7 @@ var Sheet = function(canvas){
 
 	var Tile = function(y,x) {
 		if (y < 0 || x < 0) throw new RangeError("Bad tile: ("+y+","+x+")");
-		if (y >= sheetData.data.rows || x >= sheetData.data.columns) throw new RangeError("Bad tile: ("+y+","+x+")");
+		if (y >= sheetData.rows || x >= sheetData.columns) throw new RangeError("Bad tile: ("+y+","+x+")");
 		this.y = y;
 		this.x = x;
 	};
@@ -200,8 +239,8 @@ var Sheet = function(canvas){
 		if (ready) {
 			var y  = evt.pageY - this.offsetTop,
 				x  = evt.pageX - this.offsetLeft,
-				ty = Math.floor(y/sheetData.data.tilesize),
-				tx = Math.floor(x/sheetData.data.tilesize);
+				ty = Math.floor(y/sheetData.tilesize),
+				tx = Math.floor(x/sheetData.tilesize);
 
 			hover = new Tile(ty, tx);
 		}
@@ -260,8 +299,8 @@ var Sheet = function(canvas){
 					// }
 
 					sheetData.image = tilesheet;
-					sheetData.data.rows = parseInt(tilesheet.height / 16);
-					sheetData.data.columns = parseInt(tilesheet.width / 16);
+					sheetData.rows = parseInt(tilesheet.height / 16);
+					sheetData.columns = parseInt(tilesheet.width / 16);
 					ready = true;
 
 				// }
