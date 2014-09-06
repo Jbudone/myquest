@@ -15,7 +15,7 @@ var Sheet = function(canvas){
 			tilesize: 16,
 			columns: 0,
 			rows: 0,
-			offset: { y:0, x:0 },
+			sheet_offset: { y:0, x:0 },
 			data: {}
 	},  ctx = canvas.getContext('2d'),
 		showGrid = false,
@@ -47,8 +47,8 @@ var Sheet = function(canvas){
 			   // draw grid
 			   if (showGrid) {
 				   ctx.save();
-				   for (var y=sheetData.offset.y; y<sheetData.image.height; y+=sheetData.tilesize) {
-					   for (var x=sheetData.offset.x; x<sheetData.image.width; x+=sheetData.tilesize) {
+				   for (var y=sheetData.sheet_offset.y; y<sheetData.image.height; y+=sheetData.tilesize) {
+					   for (var x=sheetData.sheet_offset.x; x<sheetData.image.width; x+=sheetData.tilesize) {
 						   ctx.globalAlpha = settings.gridAlpha;
 						   ctx.strokeRect(x - (settings.gridLineWidth/2), y - (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2), sheetData.tilesize + (settings.gridLineWidth/2));
 					   }
@@ -82,8 +82,8 @@ var Sheet = function(canvas){
 			
 	interface.adjustSheet = function(sheet){
 		sheetData.tilesize = parseInt(sheet.tilesize);
-		sheetData.offset.x = parseInt(sheet.offset.x);
-		sheetData.offset.y = parseInt(sheet.offset.y);
+		sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
+		sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
 	};
 
 	interface.clearSheet = function(){
@@ -92,7 +92,7 @@ var Sheet = function(canvas){
 			tilesize: 16,
 			columns: 0,
 			rows: 0,
-			offset: { y:0, x:0 },
+			sheet_offset: { y:0, x:0 },
 			data: {}
 		};
 		selections = {};
@@ -106,10 +106,10 @@ var Sheet = function(canvas){
 		sheetData.image.onload = function(){
 			sheetData.data = sheet.data;
 			sheetData.tilesize = parseInt(sheet.tilesize) || 16;
-			sheetData.offset.x = parseInt(sheet.offset.x);
-			sheetData.offset.y = parseInt(sheet.offset.y);
-			sheetData.columns = parseInt( (sheetData.image.width - parseInt(sheet.offset.x)) / sheet.tilesize );
-			sheetData.rows = parseInt( (sheetData.image.height - parseInt(sheet.offset.y)) / sheet.tilesize );
+			sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
+			sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
+			sheetData.columns = parseInt( (sheetData.image.width - parseInt(sheet.sheet_offset.x)) / sheet.tilesize );
+			sheetData.rows = parseInt( (sheetData.image.height - parseInt(sheet.sheet_offset.y)) / sheet.tilesize );
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -251,7 +251,7 @@ var Sheet = function(canvas){
 	canvas.addEventListener('mousedown', function(evt) {
 		evt.preventDefault();
 		if (ready) {
-			if (hover && activeSelection) {
+			if (hover && activeSelection && activeSelection.selection) {
 				activeSelection.selection.addTile(hover);
 				interface.onModified(activeSelection);
 			}

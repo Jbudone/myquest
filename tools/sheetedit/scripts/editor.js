@@ -39,9 +39,9 @@ var Editor = function(container, sheet){
 			value: $('#tilesheet_tilesize_value')
 		},
 		showgrid: $('#tilesheet_showgrid'),
-		offset: {
-			y: $('#tilesheet_offset_y'),
-			x: $('#tilesheet_offset_x')
+		sheet_offset: {
+			y: $('#tilesheet_sheet_offset_y'),
+			x: $('#tilesheet_sheet_offset_x')
 		},
 		setCollision: $('#ctrl-collision'),
 		setFloating: $('#ctrl-floating')
@@ -69,17 +69,17 @@ var Editor = function(container, sheet){
 		sheet.gridMode( showgrid );
 	};
 
-	view_tilesheet.components.offset.y.bind('change input mousedown', function(){
+	view_tilesheet.components.sheet_offset.y.bind('change input mousedown', function(){
 		var offset = parseInt(this.value);
-		view_tilesheet.data.offset.y = offset;
+		view_tilesheet.data.sheet_offset.y = offset;
 		sheet.adjustSheet( view_tilesheet.data );
 		interface.onModified();
 		view_tilesheet.modified();
 	});
 
-	view_tilesheet.components.offset.x.bind('change input mousedown', function(){
+	view_tilesheet.components.sheet_offset.x.bind('change input mousedown', function(){
 		var offset = parseInt(this.value);
-		view_tilesheet.data.offset.x = offset;
+		view_tilesheet.data.sheet_offset.x = offset;
 		sheet.adjustSheet( view_tilesheet.data );
 		interface.onModified();
 		view_tilesheet.modified();
@@ -105,8 +105,8 @@ var Editor = function(container, sheet){
 		view_tilesheet.components.id.val( data.id );
 		view_tilesheet.components.tilesize.input.val( parseInt(data.tilesize) );
 		view_tilesheet.components.tilesize.value.text( parseInt(data.tilesize) );
-		view_tilesheet.components.offset.x.val( parseInt(data.offset.x) );
-		view_tilesheet.components.offset.y.val( parseInt(data.offset.y) );
+		view_tilesheet.components.sheet_offset.x.val( parseInt(data.sheet_offset.x) );
+		view_tilesheet.components.sheet_offset.y.val( parseInt(data.sheet_offset.y) );
 
 		view_tilesheet.modified = function(){
 			linkEl.data('modify')( linkEl );
@@ -163,9 +163,13 @@ var Editor = function(container, sheet){
 			value: $('#spritesheet_tilesize_value')
 		},
 		showgrid: $('#spritesheet_showgrid'),
-		offset: {
-			y: $('#spritesheet_offset_y'),
-			x: $('#spritesheet_offset_x')
+		sheet_offset: {
+			y: $('#spritesheet_sheet_offset_y'),
+			x: $('#spritesheet_sheet_offset_x')
+		},
+		sprite_offset: {
+			y: $('#spritesheet_sprite_offset_y'),
+			x: $('#spritesheet_sprite_offset_x')
 		},
 		animations: {
 			settings: {
@@ -200,17 +204,33 @@ var Editor = function(container, sheet){
 		sheet.gridMode( showgrid );
 	};
 
-	view_spritesheet.components.offset.y.bind('change input mousedown', function(){
+	view_spritesheet.components.sheet_offset.y.bind('change input mousedown', function(){
 		var offset = parseInt(this.value);
-		view_spritesheet.data.offset.y = offset;
+		view_spritesheet.data.sheet_offset.y = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
 	});
 
-	view_spritesheet.components.offset.x.bind('change input mousedown', function(){
+	view_spritesheet.components.sheet_offset.x.bind('change input mousedown', function(){
 		var offset = parseInt(this.value);
-		view_spritesheet.data.offset.x = offset;
+		view_spritesheet.data.sheet_offset.x = offset;
+		sheet.adjustSheet( view_spritesheet.data );
+		interface.onModified();
+		view_spritesheet.modified();
+	});
+
+	view_spritesheet.components.sprite_offset.y.bind('change input mousedown', function(){
+		var offset = parseInt(this.value);
+		view_spritesheet.data.sprite_offset.y = offset;
+		sheet.adjustSheet( view_spritesheet.data );
+		interface.onModified();
+		view_spritesheet.modified();
+	});
+
+	view_spritesheet.components.sprite_offset.x.bind('change input mousedown', function(){
+		var offset = parseInt(this.value);
+		view_spritesheet.data.sprite_offset.x = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
@@ -236,8 +256,10 @@ var Editor = function(container, sheet){
 		view_spritesheet.components.id.val( data.id );
 		view_spritesheet.components.tilesize.input.val( parseInt(data.tilesize) );
 		view_spritesheet.components.tilesize.value.text( parseInt(data.tilesize) );
-		view_spritesheet.components.offset.x.val( parseInt(data.offset.x) );
-		view_spritesheet.components.offset.y.val( parseInt(data.offset.y) );
+		view_spritesheet.components.sheet_offset.x.val( parseInt(data.sheet_offset.x) );
+		view_spritesheet.components.sheet_offset.y.val( parseInt(data.sheet_offset.y) );
+		view_spritesheet.components.sprite_offset.x.val( parseInt(data.sprite_offset.x) );
+		view_spritesheet.components.sprite_offset.y.val( parseInt(data.sprite_offset.y) );
 
 		view_spritesheet.modified = function(){
 			linkEl.data('modify')( linkEl );
