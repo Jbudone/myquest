@@ -394,6 +394,7 @@ try{
 
 			ui = new UI();
 			ui.initialize( document.getElementById('entities') );
+			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
 
 			renderer = new Renderer();
 			renderer.canvasEntities    = document.getElementById('entities');

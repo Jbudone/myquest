@@ -11,35 +11,24 @@
 	<title>Web-based RPG Game -- HEAVY DEVELOPMENT</title>
 
 	<!-- Stylesheets -->
-	<style>
-		canvas {
-			position: absolute;
-			margin-left: auto;
-			margin-right: auto;
-			left: 0;
-			right: 0;
-		}
-
-		#warnings {
-			position: absolute;
-			top:520px;
-		}
-
-		h3 {
-			margin-top: 0px;
-			margin-bottom: 0px;
-		}
-	</style>
+	<link rel="stylesheet" type="text/css" href="styles.css">
 
 	<!-- Scripts -->
 	<script src="js/lib/modernizr.js"></script>
 	<script src="js/lib/require.js"></script>
+
+
 </head>
 <body>
 
-	<canvas id="background" width="2000px" height="2000px"></canvas>
-	<canvas id="entities" width="2000px" height="2000px"></canvas>
+	<div id="game">
+		<div id="canvas">
+			<canvas id="background" width="2000px" height="2000px"></canvas>
+			<canvas id="entities" width="2000px" height="2000px"></canvas>
+		</div>
 
+		<div id="messages"> </div>
+	</div>
 	<div id="warnings">
 		<h1><b>Warning: </b>Heavy Development</h1>
 	

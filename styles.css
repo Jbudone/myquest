@@ -1,0 +1,40 @@
+canvas {
+	position: absolute;
+	margin-left: auto;
+	margin-right: auto;
+	left: 0;
+	right: 0;
+}
+
+#warnings {
+	margin-top: 50px;
+}
+
+h3 {
+	margin-top: 0px;
+	margin-bottom: 0px;
+}
+
+#game {
+	width: 1024px;
+	margin-left: calc((100% - 1024px)/2);
+}
+
+#canvas {
+	height: 512px;
+}
+
+#messages {
+	background: #F5F5F5;
+	padding: 24px 10px 10px 10px;
+	height: 250px;
+	overflow-y: scroll;
+}
+
+.message {
+	display: block;
+}
+
+.message-program {
+	color: red;
+}

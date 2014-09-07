@@ -13,6 +13,8 @@ define(['loggable'], function(Loggable){
 		this.tileHover = null;
 		this.hoveringEntity = null;
 
+		this.messageBox = null;
+
 		this.updateCursor = function(){
 			if (this.hoveringEntity) this.canvas.style.cursor = 'crosshair'; // TODO: custom cursors
 			else this.canvas.style.cursor = '';
@@ -33,6 +35,7 @@ define(['loggable'], function(Loggable){
 		this.initialize = function(canvas){
 
 			this.canvas = canvas;
+			this.messageBox = $('#messages');
 
 			var ui = this;
 
@@ -43,6 +46,11 @@ define(['loggable'], function(Loggable){
 			this.canvas.addEventListener('mousedown', function(evt){
 				ui.onMouseDown( ui.positionFromMouse(evt) );
 			});
+		};
+
+		this.postMessage = function(message, messageType){
+			this.messageBox.append( $('<span/>').addClass('message').addClass('message-' + messageType).text(message) );
+			this.messageBox[0].scrollTop = this.messageBox.height();
 		};
 
 	};
