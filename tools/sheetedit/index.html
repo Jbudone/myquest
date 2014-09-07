@@ -93,20 +93,16 @@
 							<div class="animation_settings">
 								<input type="text" id="animation_id" class="form-control" placeholder="Animation id" />
 								<br/>
-								<input type="checkbox" class="animation_flipX" />
+								<input type="number" id="animation_row" min="0" max="256" value="0" />
+								<span class="form-label">Row</span>
+								<br/>
+								<input type="number" id="animation_length" min="0" max="256" value="0" />
+								<span class="form-label">Length</span>
+								<br/>
+								<br/>
+								<br/>
+								<input type="checkbox" id="animation_flipX" />
 								<span class="animation_setting_label">flipX</span>
-							</div>
-							<div class="animation">
-								<a class="animation_title" href="">Walk Left</a>
-								<a class="animation_remove" href="">X</a>
-							</div>
-							<div class="animation">
-								<a class="animation_title" href="">Walk Up</a>
-								<a class="animation_remove" href="">X</a>
-							</div>
-							<div class="animation">
-								<a class="animation_title" href="">Walk Down</a>
-								<a class="animation_remove" href="">X</a>
 							</div>
 						</div>
 
@@ -161,27 +157,19 @@
 			TODO
 				> Tilesheets: edit id
 				> editor.js: load/switch/save npc; unload
-				> add spritesheet/npc, add animation; remove tilesheet/spritesheet/npc, remove animation
-				> main.js: prompt before leavePage (unsaved changes)
+				> add spritesheet/npc; remove tilesheet/spritesheet/npc, remove animation
 				> tilesize: x/y
-				> load animations
-				> animation editor
 				> sprite avatar editor (saves to avatar sheet)
+				> Game Changes: assets.json; tilesPerRow/columns; sprite_offset/sheet_offset; tilesize.xy
+				> Map Changes: use sprite avatar sheet
+
+
+
+				> don't allow saving unless all required fields are filled
+				> main.js: prompt before leavePage (unsaved changes)
 				> sprite states
 				> show which tilesheet/spritesheet/npc is currently being edited
-				> Game Changes: assets.json; tilesPerRow/columns; sprite_offset/sheet_offset
-
-
-
-
-				> different selections: collisions, floaters
-				> filter selections
-				> add/remove animation
-				> default load: tileset
-
-				> save json file: prompt download rather than new window
-				> drag rect selection
-				> more noticable collision rect
+				> display selected animation (animating)
 		-->
 	</body>
 </html>
