@@ -10,7 +10,8 @@ var Sheet = function(canvas){
 			gridMode: new Function(),
 			onModified: new Function(),
 			onSheetChanged: new Function(),
-			modifyAnimation: new Function()
+			modifyAnimation: new Function(),
+			removeAnimation: new Function()
 	},  sheetData = {
 			image: null,
 			tilesize: 16,
@@ -295,6 +296,7 @@ var Sheet = function(canvas){
 					}
 					selections.animations.setAnimationTiles();
 				};
+
 			}
 		} else if (selectionType == 'avatar') {
 			activeSelection = { type: 'avatar', selection: selections.avatar.selection };
@@ -310,6 +312,18 @@ var Sheet = function(canvas){
 	interface.setDragDropMode = function(allow){
 		dragDropEnabled = allow;
 	}
+
+	interface.removeAnimation = function(animationName){
+		var tileSet = null;
+		for (var i=0; i<selections.animations.tileSets.length; ++i) {
+			var _tileSet = selections.animations.tileSets[i];
+			if (_tileSet.name == animationName) {
+				selections.animations.tileSets.splice(i, 1);
+				break;
+			}
+		}
+		selections.animations.setAnimationTiles();
+	};
 
 
 

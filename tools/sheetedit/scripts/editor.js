@@ -328,8 +328,22 @@ var Editor = function(container, sheet){
 					sheet.setMode('animation', name);
 
 					return false;
-				}, clearAnimation = function(name, animation){
+				}, clearAnimation = function(el){
+					// var animationList = view_spritesheet.components.animations.list,
+					var name = $(el).data('animationName');
+					// for (var i=0; i<animationList.length; ++i) {
+					// 	var _animation = animationList[i];
+					// 	if (_animation.name == name) {
+					// 		animationList.splice(i, 1);
+					// 		break;
+					// 	}
+					// }
+					delete view_spritesheet.data.data.animations[name];
 
+					sheet.removeAnimation(name);
+					$(el).parent().remove();
+					interface.onModified();
+					view_spritesheet.modified();
 				}, animationEl = $('<div/>')
 								.addClass('animation')
 								.append( $('<a/>')
@@ -355,7 +369,7 @@ var Editor = function(container, sheet){
 
 
 				view_spritesheet.components.animations.container.append( animationEl );
-				view_spritesheet.components.animations.list.push( data );
+				// view_spritesheet.components.animations.list.push( data );
 
 				return animationEl;
 			};
