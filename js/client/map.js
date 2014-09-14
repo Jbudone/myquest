@@ -146,6 +146,7 @@ define(['resources','page','movable'], function(Resources,Page,Movable){
 				if (!newPage.neighbours.west) borderX=0;
 				if (!newPage.neighbours.north) borderY=0;
 				console.log("Zoning: "+direction);
+				var oldPage = this.curPage;
 				this.curPage=newPage;
 
 				this.triggerEvent(EVT_ZONE, direction);
@@ -159,6 +160,18 @@ define(['resources','page','movable'], function(Resources,Page,Movable){
 						this.zoning = false;
 						this.stopListeningTo(The.player, EVT_FINISHED_WALK);
 				});
+
+
+				// Clear old movables from old page
+				// NOTE: this is an important step since those old movables will be replaced with new movables
+				// upon zoning in; and could otherwise cause conflicts/issues with other event listeners upon
+				// zoning between pages (eg. the UI)
+				if (oldPage) {
+					for (var movableID in oldPage.movables) {
+						oldPage.stopListeningTo( oldPage.movables[ movableID ] );
+						delete oldPage.movables[ movableID ];
+					}
+				}
 			}
 		},
 
