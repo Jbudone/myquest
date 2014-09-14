@@ -149,6 +149,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 								this.tileY = tile;
 							} else {
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+								console.log("("+this.id+") am moving..");
 							}
 						}
 						this.posY = posK;
@@ -162,6 +163,7 @@ define(['resources','entity','animable'], function(Resources, Entity, Animable) 
 								this.tileX = tile;
 							} else {
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+								console.log("("+this.id+") am moving..");
 							}
 						}
 						this.posX = posK;

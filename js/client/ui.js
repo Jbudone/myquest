@@ -18,6 +18,55 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 		this.curPage = null;
 
+		this.components = {
+
+
+			// UI attached to a movable
+			// Includes: name, health bar
+			MovableUI: function(movable){
+
+				this.movable = movable;
+				this.update = function(){
+					var left = Env.tileScale * movable.posX + // game left
+								movable.sprite.tileSize / 2 + // centered UI
+								-1 * movable.sprite.offset_x + // offset sprite
+								$('#game').offset().left, // canvas offset
+
+						top = Env.tileScale * movable.posY + // game top
+								movable.sprite.offset_y + // offset sprite
+								$('#game').offset().top; // canvas offset
+
+					this.ui.css('left', left + 'px');
+					this.ui.css('top', top + 'px');
+				};
+				this.clear = function(){
+					this.ui.remove();
+				};
+
+				this.ui = $('<div/>')
+							.addClass('movable-ui');
+				this.ui_name = $('<div/>')
+									.addClass('movable-name')
+									.text( movable.spriteID )
+									.appendTo( this.ui );
+				this.ui_healthbar = $('<div/>')
+										.addClass('movable-healthbar')
+										.appendTo( this.ui );
+				this.ui_healthbar_health = $('<div/>')
+											.addClass('movable-health')
+											.appendTo( this.ui_healthbar );
+
+
+				$('#game').append( this.ui );
+				this.update();
+
+			}
+		};
+
+		this.step = function(time){
+			this.handlePendingEvents();
+		};
+
 		this.updateCursor = function(){
 			if (this.hoveringEntity) this.canvas.style.cursor = 'crosshair'; // TODO: custom cursors
 			else this.canvas.style.cursor = '';
@@ -57,44 +106,87 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			this.messageBox[0].scrollTop = this.messageBox.height();
 		};
 
+		// Movables list
+		// NOTE: upon zoning into a new page, EVT_ADDED_ENTITY is triggered for each entity; however, we may
+		// have not setPage for the new page just yet (event handling races). So we may or may not retrieve
+		// the list of entities through EVT_ADDED_ENTITY of the page. Hence we can load the entities from 2
+		// places (the list of movables of the page, and also EVT_ADDED_ENTITY). The list of movables which
+		// are currently being listened to can be kept track here to avoid conflicts.
+		this.movables = {};
+
+		// FIXME: on respawn doesn't remove / re-add entity (listen to death?)
+		// FIXME: on move to new page, doesn't ui.update
+
+		this.attachMovable = function(entity){
+			this.postMessage("Added entity ("+entity.id+")");
+			this.postMessage(entity);
+
+			this.movables[ entity.id ] = {
+				entity: entity,
+				ui: new this.components.MovableUI( entity )
+			};
+			var movableDetails = this.movables[ entity.id ];
+
+			this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
+				this.postMessage("Entity " + entity.id + " MOVED to new tile..");
+				movableDetails.ui.update();
+			});
+
+			this.listenTo(entity, EVT_MOVING_TO_NEW_TILE, function(entity){
+				this.postMessage("Entity " + entity.id + " MOVING to new tile..");
+				movableDetails.ui.update();
+			});
+		};
+
+		this.detachMovable = function(entity){
+			var movableDetails = this.movables[ entity.id ];
+			if (!movableDetails) return;
+
+			this.stopListeningTo( movableDetails.movable );
+			movableDetails.ui.clear();
+			delete movableDetails.ui;
+			delete this.movables[ entity.id ];
+		};
+
 		this.setPage = function(page){ 
 
 			if (this.curPage) {
 				this.stopListeningTo( this.curPage );
+
+				for (var movableID in this.curPage.movables) {
+					var movable = this.curPage.movables[movableID].movable;
+					this.detachMovable( movable );
+				}
 			}
 			this.curPage = page;
 
 			if (page) {
 
+				this.postMessage("Zoned into page ("+page.index+")");
+
 				for (var movableID in page.movables) {
+					if (this.movables[ movableID ]) continue;
 					var movable = page.movables[movableID];
 					this.postMessage("Attaching UI to entity ("+movable.id+")");
+					this.attachMovable( movable );
 				}
 
-				var postMessage = this.postMessage;
-				this.curPage.listenTo(page, EVT_ADDED_ENTITY, function(page, entity){
-					postMessage("New entity");
-					postMessage(entity);
+				// NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
+				this.listenTo(this.curPage, EVT_ADDED_ENTITY, function(page, entity){
+					if (this.movables[ entity.id ]) {
+						this.postMessage("Removed entity first.. ("+entity.id+")");
+						this.detachMovable( entity );
+					}
+					this.postMessage("Adding entity and attaching UI ("+entity.id+")");
+					this.attachMovable( entity );
 				});
 
-				this.curPage.listenTo(page, EVT_REMOVED_ENTITY, function(page, entity){
-					postMessage("Removed entity");
-					postMessage(entity);
-				});
-
-				this.curPage.listenTo(page, EVT_MOVED_TO_NEW_TILE, function(entity){
-					postMessage("Entity " + entity.id + " MOVED to new tile..");
-				});
-
-				this.curPage.listenTo(page, EVT_MOVING_TO_NEW_TILE, function(entity){
-					postMessage("Entity " + entity.id + " MOVING to new tile..");
+				this.listenTo(this.curPage, EVT_REMOVED_ENTITY, function(page, entity){
+					this.postMessage("Removed entity");
+					this.detachMovable( entity );
 				});
 			}
 		};
-
-		// TODO: hook evt NEW_PAGE
-		// TODO: hook evt ADDED_ENTITY, REMOVED_ENTITY
-		// TODO: hook evt ENTITY_MOVED
 
 	};
 

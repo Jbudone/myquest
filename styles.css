@@ -38,3 +38,11 @@ h3 {
 .message-program {
 	color: red;
 }
+
+
+.movable-ui {
+	width: 10px;
+	height: 10px;
+	background: #000;
+	position: absolute;
+}

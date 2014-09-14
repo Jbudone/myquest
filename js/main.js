@@ -426,6 +426,7 @@ try{
 
 						The.map.step(time);
 						The.camera.step(time);
+						renderer.ui.step(time);
 						renderer.render();
 						
 
