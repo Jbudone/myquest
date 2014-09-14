@@ -57,6 +57,7 @@ define(function(){
 		PAGE_SERIALIZE_MOVABLES:2,
 
 		MESSAGE_PROGRAM: 'program',
+		MESSAGE_INFO: 'info',
 	};
 
 	var keyValue = 0,

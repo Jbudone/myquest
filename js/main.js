@@ -392,9 +392,15 @@ try{
 
 			The.map.curPage.addEntity( The.player );
 
+			Log("Initializing UI");
 			ui = new UI();
 			ui.initialize( document.getElementById('entities') );
 			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
+			ui.setPage( The.map.curPage );
+			The.player.addEventListener(EVT_ZONE, ui, function(player, newPage, direction){
+				this.setPage( newPage );
+			});
+
 
 			renderer = new Renderer();
 			renderer.canvasEntities    = document.getElementById('entities');
@@ -672,6 +678,7 @@ try{
 					oldMap.stopAllEventsAndListeners();
 					The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
+					ui.setPage( The.map.curPage );
 
 					The.player.posY = player.posY;
 					The.player.posX = player.posX;
@@ -875,6 +882,7 @@ try{
 					The.player.path = null;
 					// The.player.lastMoved = null;
 					The.player.sprite.idle();
+					ui.setPage( The.map.curPage );
 				});
 
 			});

@@ -1,6 +1,7 @@
-define(['loggable'], function(Loggable){
+define(['eventful','loggable'], function(Eventful, Loggable){
 
 	var UI = function(){
+		extendClass(this).with(Eventful);
 		extendClass(this).with(Loggable);
 		this.setLogGroup('UI');
 		this.setLogPrefix('(UI) ');
@@ -14,6 +15,8 @@ define(['loggable'], function(Loggable){
 		this.hoveringEntity = null;
 
 		this.messageBox = null;
+
+		this.curPage = null;
 
 		this.updateCursor = function(){
 			if (this.hoveringEntity) this.canvas.style.cursor = 'crosshair'; // TODO: custom cursors
@@ -49,9 +52,49 @@ define(['loggable'], function(Loggable){
 		};
 
 		this.postMessage = function(message, messageType){
+			messageType = messageType || MESSAGE_INFO;
 			this.messageBox.append( $('<span/>').addClass('message').addClass('message-' + messageType).text(message) );
 			this.messageBox[0].scrollTop = this.messageBox.height();
 		};
+
+		this.setPage = function(page){ 
+
+			if (this.curPage) {
+				this.stopListeningTo( this.curPage );
+			}
+			this.curPage = page;
+
+			if (page) {
+
+				for (var movableID in page.movables) {
+					var movable = page.movables[movableID];
+					this.postMessage("Attaching UI to entity ("+movable.id+")");
+				}
+
+				var postMessage = this.postMessage;
+				this.curPage.listenTo(page, EVT_ADDED_ENTITY, function(page, entity){
+					postMessage("New entity");
+					postMessage(entity);
+				});
+
+				this.curPage.listenTo(page, EVT_REMOVED_ENTITY, function(page, entity){
+					postMessage("Removed entity");
+					postMessage(entity);
+				});
+
+				this.curPage.listenTo(page, EVT_MOVED_TO_NEW_TILE, function(entity){
+					postMessage("Entity " + entity.id + " MOVED to new tile..");
+				});
+
+				this.curPage.listenTo(page, EVT_MOVING_TO_NEW_TILE, function(entity){
+					postMessage("Entity " + entity.id + " MOVING to new tile..");
+				});
+			}
+		};
+
+		// TODO: hook evt NEW_PAGE
+		// TODO: hook evt ADDED_ENTITY, REMOVED_ENTITY
+		// TODO: hook evt ENTITY_MOVED
 
 	};
 
