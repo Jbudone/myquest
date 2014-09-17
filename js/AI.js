@@ -216,7 +216,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				}
 
 				if (!this.target) {
-					this.brain.setTarget(target);
+					this.brain.setTarget(target); // FIXME: brain will say EVT_REMOVED_TARGET which downstreams to AI.combat and called nextTarget in turn if brain already has a target
 					this.state.transition(STATE_ATTACKING);
 					this.target = target;
 					this.setTarget(target);
@@ -445,6 +445,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.Log("RESPAWNING");
 				this.entity.posY = this.respawnPoint.y * Env.tileSize;
 				this.entity.posX = this.respawnPoint.x * Env.tileSize;
+				this.entity.page = this.respawnPoint.page;
 				this.entity.physicalState.transition(STATE_ALIVE);
 				this.entity.path = null;
 				this.entity.zoning = false;
