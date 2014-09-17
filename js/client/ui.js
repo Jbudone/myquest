@@ -123,16 +123,23 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 			this.movables[ entity.id ] = {
 				entity: entity,
+				attached: true,
 				ui: new this.components.MovableUI( entity )
 			};
 			var movableDetails = this.movables[ entity.id ];
 
+			// NOTE: sometimes events are triggered and stored for callbacks before the another event is
+			// triggered which detaches the movable. Hence its necessary for the callbacks here to check if
+			// the movable instance still exists
+
 			this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
+				if (!movableDetails.attached) return; // event leftover from before entity was cleared
 				this.postMessage("Entity " + entity.id + " MOVED to new tile..");
 				movableDetails.ui.update();
 			});
 
 			this.listenTo(entity, EVT_MOVING_TO_NEW_TILE, function(entity){
+				if (!movableDetails.attached) return; // event leftover from before entity was cleared
 				this.postMessage("Entity " + entity.id + " MOVING to new tile..");
 				movableDetails.ui.update();
 			});
@@ -142,7 +149,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			var movableDetails = this.movables[ entity.id ];
 			if (!movableDetails) return;
 
-			this.stopListeningTo( movableDetails.movable );
+			movableDetails.attached = false;
+			this.stopListeningTo( movableDetails.entity );
 			movableDetails.ui.clear();
 			delete movableDetails.ui;
 			delete this.movables[ entity.id ];
@@ -151,10 +159,14 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 		this.setPage = function(page){ 
 
 			if (this.curPage) {
+				// FIXME: what if EVT_ADDED_ENTITY or EVT_REMOVED_ENTITY is triggered and the callbacks are
+				// stored for later handling before setPage is called for a new page
 				this.stopListeningTo( this.curPage );
 
-				for (var movableID in this.curPage.movables) {
-					var movable = this.curPage.movables[movableID].movable;
+				// NOTE: movables from curPage are probably already removed
+				for (var movableID in this.movables) {
+					if ( page.movables[movableID] ) continue; // don't remove ui from movable thats in this page
+					var movable = this.movables[movableID].entity;
 					this.detachMovable( movable );
 				}
 			}

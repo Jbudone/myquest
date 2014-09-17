@@ -603,6 +603,7 @@ try{
 					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id),
 						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
 
+					console.log("New Target for entity");
 					if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
 
 				};
