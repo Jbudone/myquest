@@ -372,7 +372,7 @@ var Editor = function(container, sheet){
 				// view_spritesheet.components.animations.list.push( data );
 
 				return animationEl;
-			};
+		};
 
 		for (var animationName in data.data.animations) {
 			var animation = data.data.animations[animationName],

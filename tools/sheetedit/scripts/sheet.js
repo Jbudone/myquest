@@ -129,29 +129,7 @@ var Sheet = function(canvas){
 		interface.clearSheet();
 		interface.setDragDropMode(true);
 		tilesheet = new Image();
-		tilesheet.onload = function(){
-
-			if (copy) {
-
-				if (sheet.data.floating) sheetData.data.floating = sheet.data.floating;
-				if (sheet.data.collisions) sheetData.data.collisions = sheet.data.collisions;
-				if (sheet.data.animations) sheetData.data.animations = sheet.data.animations;
-				sheetData.tilesize = sheet.tilesize;
-				sheetData.sheet_offset.x = sheet.sheet_offset.x;
-				sheetData.sheet_offset.y = sheet.sheet_offset.y;
-				sheetData.columns = sheet.columns;
-				sheetData.rows = sheet.rows;
-
-			} else {
-
-				sheetData.data = sheet.data;
-				sheetData.tilesize = parseInt(sheet.tilesize) || 16;
-				sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
-				sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
-				sheetData.columns = parseInt( (tilesheet.width - parseInt(sheet.sheet_offset.x)) / sheet.tilesize );
-				sheetData.rows = parseInt( (tilesheet.height - parseInt(sheet.sheet_offset.y)) / sheet.tilesize );
-
-			}
+		var sheetDataSetup = function(){
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -235,6 +213,33 @@ var Sheet = function(canvas){
 				selections.animations.setAnimationTiles();
 			}
 
+		};
+		tilesheet.onload = function(){
+
+			if (copy) {
+
+				if (sheet.data.floating) sheetData.data.floating = sheet.data.floating;
+				if (sheet.data.collisions) sheetData.data.collisions = sheet.data.collisions;
+				if (sheet.data.animations) sheetData.data.animations = sheet.data.animations;
+				sheetData.tilesize = sheet.tilesize;
+				sheetData.sheet_offset.x = sheet.sheet_offset.x;
+				sheetData.sheet_offset.y = sheet.sheet_offset.y;
+				sheetData.columns = sheet.columns;
+				sheetData.rows = sheet.rows;
+
+			} else {
+
+				sheetData.data = sheet.data;
+				sheetData.tilesize = parseInt(sheet.tilesize) || 16;
+				sheetData.sheet_offset.x = parseInt(sheet.sheet_offset.x);
+				sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
+				sheetData.columns = parseInt( (tilesheet.width - parseInt(sheet.sheet_offset.x)) / sheet.tilesize );
+				sheetData.rows = parseInt( (tilesheet.height - parseInt(sheet.sheet_offset.y)) / sheet.tilesize );
+
+			}
+
+			sheetDataSetup();
+
 			canvas.style.width  = this.width;
 			canvas.style.height = this.height;
 			canvas.width        = this.width;
@@ -243,6 +248,7 @@ var Sheet = function(canvas){
 			ready = true;
 		};
 		tilesheet.src = sheet.image;
+		if (sheet.image == "") sheetDataSetup();
 	};
 
 	interface.setMode = function(selectionType, highlightAnimation){

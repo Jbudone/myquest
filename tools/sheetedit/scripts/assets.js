@@ -101,6 +101,33 @@ var AssetsManager = function(assets, container){
 		return false;
 	});
 
+	$('#addSpritesheet').click(function(){
+		var asset = {
+				id:"New Spritesheet",
+				image: "",
+				tilesize: 16,
+				columns: 0,
+				rows: 0,
+				sheet_offset: {
+					x: 0,
+					y: 0
+				},
+				sprite_offset: {
+					x: 0,
+					y: 0
+				},
+				data: {
+					animations: {},
+				}
+			}, assetEl = addAsset( 'spritesheets', asset );
+		assetEl.addClass('modified');
+
+		assets.spritesheets.list.push( asset );
+		interface.onAddSpritesheet( asset, assetEl );
+
+		return false;
+	});
+
 	$('#assetsSave').data('assets', assets).click(function(){
 
 		$.post('assets.php', { assets: assets }, function(data){

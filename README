@@ -1,0 +1,4 @@
+
+====== Map/Page
+
+	* Upon loading into the page/map, any existing movables are deleted, and then the current set of movables are added in

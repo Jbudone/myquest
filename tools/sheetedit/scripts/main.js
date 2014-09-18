@@ -35,6 +35,12 @@ $(document).ready(function(){
 				console.log(data);
 				editor.loadView('tilesheet', data, linkEl);
 			};
+
+			assetsMgr.onAddSpritesheet = function(data, linkEl){ 
+				console.log('Spritesheet');
+				console.log(data);
+				editor.loadView('spritesheet', data, linkEl);
+			};
 		}
 	});
 
