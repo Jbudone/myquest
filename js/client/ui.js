@@ -45,6 +45,9 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 					this.ui.css('left', left + 'px');
 					this.ui.css('top', top + 'px');
+
+					var health = 100 * this.movable.health / this.movable.npc.health;
+					this.ui_healthbar_health.css('width', health + '%');
 				};
 				this.clear = function(){
 					this.ui.remove();
@@ -142,13 +145,16 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 			this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
 				if (!movableDetails.attached) return; // event leftover from before entity was cleared
-				this.postMessage("Entity " + entity.id + " MOVED to new tile..");
 				movableDetails.ui.update();
 			});
 
 			this.listenTo(entity, EVT_MOVING_TO_NEW_TILE, function(entity){
 				if (!movableDetails.attached) return; // event leftover from before entity was cleared
-				this.postMessage("Entity " + entity.id + " MOVING to new tile..");
+				movableDetails.ui.update();
+			});
+
+			this.listenTo(entity, EVT_ATTACKED, function(entity){
+				if (!movableDetails.attached) return; // event leftover from before entity was cleared
 				movableDetails.ui.update();
 			});
 		};

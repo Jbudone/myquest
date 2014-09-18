@@ -50,3 +50,30 @@ h3 {
 	font-weight: bold;
 	font-size: 16px;
 }
+
+.movable-healthbar {
+	width: 100%;
+	background: black;
+	height: 8px;
+	border-radius: 4px;
+	border: 1px solid #999;
+	overflow: hidden;
+}
+
+.movable-health {
+	width: 100%;
+	background: #F00;
+	height: 100%;
+
+
+
+	background: #9a291e; /* Old browsers */
+	background: -moz-linear-gradient(-45deg,  #9a291e 0%, #d82a2a 73%, #ca2320 100%, #e87e80 100%, #ca2320 101%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,#9a291e), color-stop(73%,#d82a2a), color-stop(100%,#ca2320), color-stop(100%,#e87e80), color-stop(101%,#ca2320)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(-45deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(-45deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(-45deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* IE10+ */
+	background: linear-gradient(135deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#9a291e', endColorstr='#ca2320',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
+
+}
