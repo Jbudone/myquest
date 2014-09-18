@@ -396,6 +396,7 @@ try{
 			ui = new UI();
 			ui.initialize( document.getElementById('entities') );
 			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
+			ui.camera = The.camera;
 			ui.setPage( The.map.curPage );
 			The.player.addEventListener(EVT_ZONE, ui, function(player, newPage, direction){
 				this.setPage( newPage );

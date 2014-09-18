@@ -17,7 +17,9 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 		this.messageBox = null;
 
 		this.curPage = null;
+		this.camera  = null;
 
+		var _UI = this;
 		this.components = {
 
 
@@ -28,12 +30,17 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.movable = movable;
 				this.update = function(){
 					var left = Env.tileScale * movable.posX + // game left
-								movable.sprite.tileSize / 2 + // centered UI
-								-1 * movable.sprite.offset_x + // offset sprite
+								Env.tileScale * movable.sprite.tileSize / 2 + // centered UI
+								-1 * Env.tileScale * movable.sprite.offset_x + // offset sprite
+								-1 * Env.tileScale * _UI.camera.offsetX + // camera offset
+								-1 * this.ui.width() + // centered
 								$('#game').offset().left, // canvas offset
 
 						top = Env.tileScale * movable.posY + // game top
 								movable.sprite.offset_y + // offset sprite
+								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
+								-1 * Env.tileScale * _UI.camera.offsetY + // camera offset
+								-1 * this.ui.height() + // floating above head
 								$('#game').offset().top; // canvas offset
 
 					this.ui.css('left', left + 'px');
@@ -65,6 +72,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 		this.step = function(time){
 			this.handlePendingEvents();
+			if (this.camera.updated) this.updateAllMovables();
 		};
 
 		this.updateCursor = function(){
@@ -143,6 +151,15 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.postMessage("Entity " + entity.id + " MOVING to new tile..");
 				movableDetails.ui.update();
 			});
+		};
+
+		this.updateAllMovables = function(){
+
+			for (var movableID in this.movables) {
+				var movableDetails = this.movables[ movableID ];
+				if (movableDetails.attached) movableDetails.ui.update();
+			}
+
 		};
 
 		this.detachMovable = function(entity){
