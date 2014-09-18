@@ -125,9 +125,6 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 		// are currently being listened to can be kept track here to avoid conflicts.
 		this.movables = {};
 
-		// FIXME: on respawn doesn't remove / re-add entity (listen to death?)
-		// FIXME: on move to new page, doesn't ui.update
-
 		this.attachMovable = function(entity){
 			this.postMessage("Added entity ("+entity.id+")");
 			this.postMessage(entity);
@@ -157,6 +154,11 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				if (!movableDetails.attached) return; // event leftover from before entity was cleared
 				movableDetails.ui.update();
 			});
+
+			this.listenTo(entity, EVT_DIED, function(entity){
+				_UI.detachMovable(entity);
+			});
+
 		};
 
 		this.updateAllMovables = function(){
