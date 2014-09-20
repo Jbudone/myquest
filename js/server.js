@@ -15,7 +15,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		$ = require('jquery'),
 		fs=require('fs'),
 		Promise = require('es6-promise').Promise,
-		mongo=require('mongodb').MongoClient,
+		// mongo=require('mongodb').MongoClient,
 		http = require('http'), // TODO: need this?
 		WebSocketServer = require('ws').Server;
 
@@ -49,7 +49,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	}
 
 
-	requirejs(['resources','movable','world','map'], function(Resources,Movable,World,Map) {
+	requirejs(['resources','movable','world','map','server/db'], function(Resources,Movable,World,Map,DB) {
 
 		var modulesToLoad={},
 			ready=false,
@@ -73,15 +73,23 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				}
 			};
 
-		loading('database');
-		mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, db){
-			if (err) {
-				console.log(err);
-				throw new Error(err);
-			}
+		// loading('database');
+		// mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, db){
+		// 	if (err) {
+		// 		console.log(err);
+		// 		throw new Error(err);
+		// 	}
 
-			GLOBAL['db'] = db;
+		// 	GLOBAL['db'] = db;
+		// 	loaded('database');
+		// });
+		loading('database');
+		var db = new DB();
+		db.connect().then(function(){
 			loaded('database');
+		}, function(){
+			console.error("Cannot startup server..");
+			process.exit();
 		});
 
 		// Load game resources
@@ -141,7 +149,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			loaded('extensions');
 		}, function(){
 			// error loading extensions..
-			console.log("Error loading extensions..");
+			console.error("Error loading extensions..");
 			process.exit();
 		});
 
@@ -213,7 +221,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   }
 
 			   console.log("Closing database connection");
-			   db.close();
+			   db.disconnect();
 
 			   console.log("Closing server, goodbye.");
 			   process.exit();
@@ -264,159 +272,134 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   if (evt.evtType==EVT_NEW_CHARACTER) {
 						   var id = parseInt(evt.data.id);
 						   console.log("User requesting a new character..");
-						   db
-						   	.collection('players')
-							.find({}, {sort:{'id':-1}, limit:1}).toArray(function(err, res){
-								if (err) {
-									console.log("Error retrieving id from server db..");
-									console.log(err);
-								} else {
+						   db.createNewPlayer({map:'main', position:{y:20, x:14}}).then(function(newID){
 
-									console.log(res);
-									var maxID = res[0].id,
-										id = maxID + 1;
-									console.log("Creating new character ["+id+"] for user..");
-									if (isNaN(id)) process.exit();
-									db
-									 .collection('players')
-									 .insert([{ id: id, position:{y:20, x:14}, map:'main' }], function(res){
-
-										 var response = new Response(evt.id);
-										 response.success = true;
-										 response.newCharacter={
-											 id: id,
-										 };
-										 client.send(response.serialize());
-									 });
-								}
-							});
-						   // db.players.find().sort({"id":-1}).limit(1)
+							   var response = new Response(evt.id);
+							   response.success = true;
+							   response.newCharacter={
+								   id: id,
+							   };
+							   client.send(response.serialize());
+						   }, function(){
+							   Log("Could not create new player..", LOG_ERROR);
+							   // TODO: tell user
+						   });
 					   } else if (evt.evtType==EVT_LOGIN) {
 						   var id = parseInt(evt.data.id);
 						   console.log("User logging in as ["+id+"]");
-						   db
-							.collection('players')
-							.findOne({id:id}, function(err, player) {
-								if (err) {
-									console.log(err);
+						   db.loginPlayer(id).then(function(player){
+							   Log("Logged in player ["+player.id+"]");
+							   Log(player);
 
-									var response = new Response(evt.id);
-									response.success = false;
-									client.send(response.serialize());
-									you.responseArchive.addEvent(response);
-								} else if (!player) {
-									console.log("Could not find player ["+id+"]");
+							   your.id = player.id;
+							   try {
+								   if (!The.world.maps[player.map]) throw UnexpectedError( "Map ("+player.map+") not found in world!" );
+								   your.map = The.world.maps[player.map];
+							   } catch(err) {
+								   Log("Could not find map for player ("+player.map+")", LOG_ERROR);
+								   Log(e, LOG_ERROR);
 
-									var response = new Response(evt.id);
-									response.success = false;
-									client.send(response.serialize());
-									you.responseArchive.addEvent(response);
-								}  else {
-									console.log("Successfully found player: ");
-									console.log(player);
+								   var response = new Response(evt.id);
+								   response.success = false;
+								   client.send(response.serialize());
+								   your.responseArchive.addEvent(response);
+							   }
+							   var playerPosition = your.map.localFromGlobalCoordinates(player.position.y, player.position.x);
 
-									your.id = player.id;
-									try {
-										if (!The.world.maps[player.map]) throw UnexpectedError( "Map ("+player.map+") not found in world!" );
-										your.map = The.world.maps[player.map];
-									} catch(e) {
-										console.log("ERROR! Cannot find map for player ("+player.map+")");
-										console.log(e);
+							   your.page = playerPosition.page;
+							   your.player = new Movable('player', your.page);
+							   your.player.playerID = player.id;
+							   your.player.posY = playerPosition.y*Env.tileSize;
+							   your.player.posX = playerPosition.x*Env.tileSize;
 
-										var response = new Response(evt.id);
-										response.success = false;
-										client.send(response.serialize());
-										your.responseArchive.addEvent(response);
-										return;
-									}
-									var playerPosition = your.map.localFromGlobalCoordinates(player.position.y, player.position.x);
-									
-									your.page = playerPosition.page;
-									your.player = new Movable('player', your.page);
-									console.log("PLAYER ADDED ("+your.player.spriteID+")");
-									your.player.playerID = player.id;
-									your.player.posY = playerPosition.y*Env.tileSize;
-									your.player.posX = playerPosition.x*Env.tileSize;
+							   clients[your.id]=you;
 
-									clients[your.id]=you;
-
-									your.page.addEntity(your.player);
-									your.player.addEventListener(EVT_ZONE, this, function(player, page) {
-										console.log("Zoned player from ("+ your.page.index +") to ("+ page.index +")");
-										var oldPage = you.page,
-											oldNeighbours = {};
-
-										for (var neighbour in oldPage.neighbours) {
-											if (oldPage.neighbours[neighbour]) {
-												oldNeighbours[oldPage.neighbours[neighbour].index]  = oldPage.neighbours[neighbour];
-											}
-										}
-
-										your.page = page;
-										console.log("	Sending zoned page..");
-										var initialization = {
-											zone:true,
-											pages:{}
-										};
+							   your.page.addEntity(your.player);
 
 
-										// Send new page & neighbours as necessary
-										// If neighbour page was sent previously then don't send again
-										initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-										for (var neighbour in page.neighbours) {
-											var npage = page.neighbours[neighbour];
-											if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
-												initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
-											}
-										}
+							   your.player.addEventListener(EVT_ZONE, this, function(player, page) {
+								   Log("Zoned player from ("+ your.page.index +") to ("+ page.index +")");
+								   var oldPage = you.page,
+									   oldNeighbours = {};
 
-										client.send(JSON.stringify(initialization));
-									});
-									your.player.addEventListener(EVT_ZONE_OUT, this, function(player, map, page) {
-										console.log("Zoned player from ("+your.map.id+") to ["+map.id+"]");
-										your.map  = map;
-										your.page = page;
+								   for (var neighbour in oldPage.neighbours) {
+									   if (oldPage.neighbours[neighbour]) {
+										   oldNeighbours[oldPage.neighbours[neighbour].index]  = oldPage.neighbours[neighbour];
+									   }
+								   }
 
-										console.log("	Sending zoned map..");
-										var initialization = {
-											zoneMap:true,
-											map:{
-												id: your.map.id,
-												pagesPerRow: your.map.pagesPerRow,
-												mapWidth: your.map.map.properties.width,
-												mapHeight: your.map.map.properties.height,
-												tileset: your.map.map.properties.tileset,
-											},
-											player:{
-												posY: your.player.posY,
-												posX: your.player.posX,
-												page: your.page.index
-											},
-											pages:{}
-										}, page = your.page;
+								   your.page = page;
+								   var initialization = {
+									   zone:true,
+									   pages:{}
+								   };
 
-										initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-										for (var neighbour in page.neighbours) {
-											var npage = page.neighbours[neighbour];
-											if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
-										}
 
-										client.send(JSON.stringify(initialization));
+								   // Send new page & neighbours as necessary
+								   // If neighbour page was sent previously then don't send again
+								   initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+								   for (var neighbour in page.neighbours) {
+									   var npage = page.neighbours[neighbour];
+									   if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
+										   initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+									   }
+								   }
 
-									});
+								   client.send(JSON.stringify(initialization));
+							   });
 
-									var response = new Response(evt.id);
-									response.success = true;
-									response.login=true;
-									response.player = {
-										position: player.position,
-										playerID: player.id,
-										id: your.player.id,
-									};
-									client.send(response.serialize());
-									your.responseArchive.addEvent(response);
-								}
-							});
+							   your.player.addEventListener(EVT_ZONE_OUT, this, function(player, map, page) {
+								   Log("Zoned player from ("+your.map.id+") to ["+map.id+"]");
+								   your.map  = map;
+								   your.page = page;
+
+								   Log("	Sending zoned map..");
+								   var initialization = {
+										   zoneMap:true,
+										   map:{
+											   id: your.map.id,
+											   pagesPerRow: your.map.pagesPerRow,
+											   mapWidth: your.map.map.properties.width,
+											   mapHeight: your.map.map.properties.height,
+											   tileset: your.map.map.properties.tileset,
+										   },
+										   player:{
+											   posY: your.player.posY,
+											   posX: your.player.posX,
+											   page: your.page.index
+										   },
+										   pages:{}
+									   }, page = your.page;
+
+								   initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+								   for (var neighbour in page.neighbours) {
+									   var npage = page.neighbours[neighbour];
+									   if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+								   }
+
+								   client.send(JSON.stringify(initialization));
+
+							   });
+
+							   var response = new Response(evt.id);
+							   response.success = true;
+							   response.login=true;
+							   response.player = {
+								   position: player.position,
+								   playerID: player.id,
+								   id: your.player.id,
+							   };
+							   client.send(response.serialize());
+							   your.responseArchive.addEvent(response);
+
+						   }, function(){
+							   Log("Could not login player..", LOG_ERROR);
+
+							   var response = new Response(evt.id);
+							   response.success = false;
+							   client.send(response.serialize());
+							   you.responseArchive.addEvent(response);
+						   });
 
 					   }
 
