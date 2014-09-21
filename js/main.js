@@ -10,6 +10,7 @@
 				// 		- server/db.js: (create like client/serverHandler.js); connect, loadPlayer, savePlayer
 				// 		- server/player.js: create/load/save, player.onDisconnected(..), player.onReconnected(..), player.onZoneOut(..), ...
 				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
+				// 		- clean requirejs (should only require once); define?
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
 				//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
@@ -97,6 +98,7 @@
 				//	> CLEAN: multiple target types (NPC, Tile)
 				//	> CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
 				//	> CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages
+				//	> CLEAN: adopt .bind() as much as possible (callbacks, promises, etc.)
 				//
 				//
 				//	

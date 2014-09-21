@@ -14,6 +14,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	var _ = require('underscore'),
 		$ = require('jquery'),
 		fs=require('fs'),
+		// Promise = require('promise'),
 		Promise = require('es6-promise').Promise,
 		// mongo=require('mongodb').MongoClient,
 		http = require('http'), // TODO: need this?
@@ -49,7 +50,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	}
 
 
-	requirejs(['resources','movable','world','map','server/db'], function(Resources,Movable,World,Map,DB) {
+	requirejs(['resources','movable','world','map','server/db','loggable'], function(Resources,Movable,World,Map,DB,Loggable) {
+		extendClass(this).with(Loggable);
 
 		var modulesToLoad={},
 			ready=false,
@@ -73,16 +75,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				}
 			};
 
-		// loading('database');
-		// mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, db){
-		// 	if (err) {
-		// 		console.log(err);
-		// 		throw new Error(err);
-		// 	}
-
-		// 	GLOBAL['db'] = db;
-		// 	loaded('database');
-		// });
 		loading('database');
 		var db = new DB();
 		db.connect().then(function(){
@@ -270,14 +262,14 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   if (you.id==null) {
 					   if (evt.evtType==EVT_NEW_CHARACTER) {
-						   var id = parseInt(evt.data.id);
+						   // var id = parseInt(evt.data.id);
 						   console.log("User requesting a new character..");
 						   db.createNewPlayer({map:'main', position:{y:20, x:14}}).then(function(newID){
 
 							   var response = new Response(evt.id);
 							   response.success = true;
 							   response.newCharacter={
-								   id: id,
+								   id: newID,
 							   };
 							   client.send(response.serialize());
 						   }, function(){
@@ -286,7 +278,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   });
 					   } else if (evt.evtType==EVT_LOGIN) {
 						   var id = parseInt(evt.data.id);
-						   console.log("User logging in as ["+id+"]");
+						   Log("User logging in as ["+id+"]");
 						   db.loginPlayer(id).then(function(player){
 							   Log("Logged in player ["+player.id+"]");
 							   Log(player);
@@ -352,6 +344,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 								   Log("Zoned player from ("+your.map.id+") to ["+map.id+"]");
 								   your.map  = map;
 								   your.page = page;
+								   your.player.page = page;
 
 								   Log("	Sending zoned map..");
 								   var initialization = {
@@ -662,18 +655,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   });
 
 					   console.log("REMOVED PLAYER: "+you.player.playerID);
-
-					   var y = Math.round((you.player.posY + you.page.y*Env.tileSize)/Env.tileSize),
-						   x = Math.round((you.player.posX + you.page.x*Env.tileSize)/Env.tileSize),
-						   mapID = your.map.id;
-
-					   db
-					   .collection('players')
-					   .update({id:you.player.playerID}, {"$set": {position:{y:y,x:x}, map:mapID}}, function(err){
-						   if (err) console.log(err);
-						   console.log("Successfully updated player ("+you.player.playerID+") position.. ("+y+","+x+")");
-					   });
-
+					   db.savePlayer(you.player);
 					   delete clients[you.id];
 
 				   } else if (action.evtType == EVT_ATTACKED) {

@@ -5,51 +5,57 @@ define(['loggable'], function(Loggable){
 		this.setLogGroup('DB');
 		this.setLogPrefix('(DB) ');
 
-		var db = null;
+		var mongo = null,
+			db    = null;
 
 		this.connect = function(){
 
+			var me = this;
 			return new Promise(function(loaded, failed) {
 
 				// Setup our mongo connection
-				db = require('mongodb').MongoClient;
-				db.connect('mongodb://127.0.0.1:27017/myquest', function(err, db){
+				mongo = require('mongodb').MongoClient;
+				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _db){
+					db = _db;
 					if (err) {
-						Log("Failed to connect", LOG_ERROR);
-						Log(err, LOG_ERROR);
+						this.Log("Failed to connect", LOG_ERROR);
+						this.Log(err, LOG_ERROR);
 						failed(err);
 					}
 
-					Log("Connected and ready to go");
+					this.Log("Connected and ready to go");
 					loaded();
 				});
 
 			});
 		};
+		
 
 		this.disconnect = function(){
 			db.close();
 		};
 
-		/*
 
 		this.loginPlayer = function(loginID){
 
-			return new Promise(succeeded, failed){
+			return new Promise((function(resolved, failed){
 
-			   db
+				db
 				.collection('players')
-				.findOne({id:id}, function(err, player) {
+				.findOne({id:loginID}, (function(err, player) {
 
 					if (err || !player) {
-						Log("Could not login player", LOG_ERROR);
+						this.Log("Could not find player ("+loginID+")", LOG_ERROR);
 						failed();
 					}  else {
-						succeeded(player);
+						this.Log("Found player ("+loginID+")");
+						this.Log(player);
+						resolved(player);
 					}
-				});
+				}).bind(this));
 
-			};
+
+			}).bind(this));
 		};
 
 
@@ -57,18 +63,18 @@ define(['loggable'], function(Loggable){
 		// Attempt to create a new player in the db
 		this.createNewPlayer = function(playerAttributes){
 
-			return new Promise(succeeded, failed){
+			return new Promise((function(succeeded, failed){
 				db
 				.collection('players')
-				.find({}, {sort:{'id':-1}, limit:1}).toArray(function(err, res){
+				.find({}, {sort:{'id':-1}, limit:1}).toArray((function(err, res){
 					if (err) {
-						Log("Error retrieving player ID's", LOG_ERROR);
-						Log(err, LOG_ERROR);
+						this.Log("Error retrieving player ID's", LOG_ERROR);
+						this.Log(err, LOG_ERROR);
 					} else {
 						var maxID = res[0].id,
 							id    = maxID + 1;
 						if (isNaN(id)) {
-							Log("Bad id ("+id+") retrieved..", LOG_ERROR);
+							this.Log("Bad id ("+id+") retrieved..", LOG_ERROR);
 							failed();
 						}
 
@@ -87,17 +93,29 @@ define(['loggable'], function(Loggable){
 
 						db
 						.collection('players')
-						.insert([ player ], function(err, res){
-							Log("Created new character ["+id+"] for user..");
+						.insert([ player ], (function(err, res){
+							this.Log("Created new character ["+id+"] for user..");
 							succeeded( id );
-						});
+						}).bind(this));
 					}
-				});
+				}).bind(this));
 
-			};
+			}).bind(this));
 		};
 
-	*/
+		this.savePlayer = function(player){
+
+		   var y     = Math.round((player.posY + player.page.y*Env.tileSize)/Env.tileSize),
+			   x     = Math.round((player.posX + player.page.x*Env.tileSize)/Env.tileSize),
+			   mapID = player.page.map.id;
+
+			db
+			.collection('players')
+			.update({id:player.playerID}, {"$set": {position:{y:y,x:x}, map:mapID}}, function(err){
+				if (err) Log(err, LOG_ERROR);
+				Log("Successfully updated player ("+player.playerID+") position.. ("+y+","+x+") in map("+mapID+")");
+			});
+		};
 
 	};
 

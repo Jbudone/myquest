@@ -31,6 +31,7 @@ define(function(){
 			'Connection': (logVerbose),
 			'Renderer': (logVerbose),
 			'UI': (logVerbose),
+			'DB': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};
