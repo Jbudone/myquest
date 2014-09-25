@@ -343,6 +343,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   var client = players[clientID].client,
 					   page   = players[clientID].movable.page.index;
 				       mapID  = players[clientID].movable.page.map.id;
+				   players[clientID].step(time);
 				   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
 					   client.send(JSON.stringify({
 						   evtType: EVT_PAGE_EVENTS,

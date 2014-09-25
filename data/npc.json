@@ -26,7 +26,7 @@
 		"spawn":1500,
 		"killable":true,
 		"speed":12,
-		"health":50,
+		"health":750,
 		"damage":5,
 		"AI":true
 	},

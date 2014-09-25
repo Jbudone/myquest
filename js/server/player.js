@@ -405,6 +405,12 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				this.onSomeEvent(evt);
 			}
 		}).bind(this));
+
+
+
+		this.step = function(time) {
+			this.handlePendingEvents();
+		};
 	};
 
 	return Player;
