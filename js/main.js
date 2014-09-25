@@ -10,7 +10,7 @@
 				// 		- server/db.js: (create like client/serverHandler.js); connect, loadPlayer, savePlayer
 				// 		- server/player.js: create/load/save, player.onDisconnected(..), player.onReconnected(..), player.onZoneOut(..), ...
 				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
-				// 		- clean requirejs (should only require once); define?
+				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
 				//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob

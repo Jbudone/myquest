@@ -14,9 +14,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	var _ = require('underscore'),
 		$ = require('jquery'),
 		fs=require('fs'),
-		// Promise = require('promise'),
-		Promise = require('es6-promise').Promise,
-		// mongo=require('mongodb').MongoClient,
+		Promise = require('promise'), // TODO: which promise driver is more preferable?
+		// Promise = require('es6-promise').Promise,
 		http = require('http'), // TODO: need this?
 		WebSocketServer = require('ws').Server;
 
@@ -50,7 +49,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	}
 
 
-	requirejs(['resources','movable','world','map','server/db','loggable'], function(Resources,Movable,World,Map,DB,Loggable) {
+	requirejs(['resources','movable','world','map','server/db','loggable','server/player'], function(Resources,Movable,World,Map,DB,Loggable,Player) {
 		extendClass(this).with(Loggable);
 
 		var modulesToLoad={},
@@ -156,8 +155,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				}
 
 				var json = JSON.parse(data);
-				world = new World();
-				The.world = world;
+					world = new World();
+					The.world = world;
 				_.each(json.maps, function(mapFile, mapID) {
 					loading('map ('+mapID+')');
 					fs.readFile('data/'+mapFile, function(err, data) {
@@ -186,36 +185,23 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 		   var requestBuffer = new BufferQueue(),
 			   eventsArchive = new EventsArchive();
-			   clients = {},
-			   Client=function(client){
-				   this.id=null;
-				   this.player=null;
-				   this.lastActionId=0;
-				   this.client=client;
-				   this.responseArchive = new EventsArchive();
-				   this.pathArchive = new EventsArchive();
-				   this.map=null;
-				   this.page=null;
-			   };
-
+			   players = {};
 
 		   var exitGame = function(e) {
 
-
-
-			   console.log("Stopping Game, saving state");
+			   Log("Stopping Game, saving state");
 			   if (e) {
-				   console.log(e);
-				   console.log(e.stack);
+				   Log(e, LOG_ERROR);
+				   Log(e.stack, LOG_ERROR);
 			   }
-			   for (var clientID in clients) {
-
+			   for (var clientID in players) {
+				   // TODO: save players & D/C
 			   }
 
-			   console.log("Closing database connection");
+			   Log("Closing database connection");
 			   db.disconnect();
 
-			   console.log("Closing server, goodbye.");
+			   Log("Closing server, goodbye.");
 			   process.exit();
 		   };
 
@@ -228,218 +214,60 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			   console.log('websocket connection open');
 
-			   var you = new Client(client),
-			       your = you;
-			   you.responseArchive.pushArchive();
-			   you.pathArchive.pushArchive();
+			   var you  = new Player(client),
+				   your = you;
 
-			   client.on('close', function() {
-
-				   requestBuffer.queue({
-					   you:you,
-					   action: { evtType: EVT_DISCONNECTED }
+			   you.onDisconnected = function(){
+				   return new Promise(function(resolved){
+					   requestBuffer.queue({
+						   you:you,
+						   action: { evtType: EVT_DISCONNECTED }
+					   });
+					   resolved();
 				   });
+			   };
 
-				   console.log('websocket connection close ['+you.id+']');
-			   });
+			   you.onRequestNewCharacter = function(){
+				   return new Promise(function(resolved, failed){
+					   db.createNewPlayer({map:'main', position:{y:20, x:14}}).then(function(newID){
+						   resolved(newID);
+					   }, function(){
+						   failed();
+					   });
+				   });
+			   };
 
-
-			   client.on('message', function(evt) {
-				   console.log(evt);
-				   var evt=JSON.parse(evt);
-				   if (!evt) {
-					   console.log("			BAD MESSAGE!? Weird..");
-					   // TODO: tell client that the message was misunderstood?
-					   return;
-				   }
-				   if (evt.id!=you.lastActionId+1) {
-					   console.log("			Sorry user("+you.id+")..we may have missed some of your messages..  "+evt.id+"!="+(you.lastActionId+1));
-					   // TODO: tell client we're missing some messages..
-					   return;
-				   }
-				   you.lastActionId++; // note: this may be safer (async) than lastActionId=evt.id
-
-
-				   if (you.id==null) {
-					   if (evt.evtType==EVT_NEW_CHARACTER) {
-						   // var id = parseInt(evt.data.id);
-						   console.log("User requesting a new character..");
-						   db.createNewPlayer({map:'main', position:{y:20, x:14}}).then(function(newID){
-
-							   var response = new Response(evt.id);
-							   response.success = true;
-							   response.newCharacter={
-								   id: newID,
-							   };
-							   client.send(response.serialize());
-						   }, function(){
-							   Log("Could not create new player..", LOG_ERROR);
-							   // TODO: tell user
-						   });
-					   } else if (evt.evtType==EVT_LOGIN) {
-						   var id = parseInt(evt.data.id);
-						   Log("User logging in as ["+id+"]");
-						   db.loginPlayer(id).then(function(player){
-							   Log("Logged in player ["+player.id+"]");
-							   Log(player);
-
-							   your.id = player.id;
-							   try {
-								   if (!The.world.maps[player.map]) throw UnexpectedError( "Map ("+player.map+") not found in world!" );
-								   your.map = The.world.maps[player.map];
-							   } catch(err) {
-								   Log("Could not find map for player ("+player.map+")", LOG_ERROR);
-								   Log(e, LOG_ERROR);
-
-								   var response = new Response(evt.id);
-								   response.success = false;
-								   client.send(response.serialize());
-								   your.responseArchive.addEvent(response);
+			   you.onLogin = function(id){
+				   return new Promise(function(resolved, failed){
+					   db.loginPlayer(id).then(function(savedState){
+						   resolved({
+							   savedState: savedState,
+							   callback: function(){
+								   players[savedState.id] = you;
 							   }
-							   var playerPosition = your.map.localFromGlobalCoordinates(player.position.y, player.position.x);
-
-							   your.page = playerPosition.page;
-							   your.player = new Movable('player', your.page);
-							   your.player.playerID = player.id;
-							   your.player.posY = playerPosition.y*Env.tileSize;
-							   your.player.posX = playerPosition.x*Env.tileSize;
-
-							   clients[your.id]=you;
-
-							   your.page.addEntity(your.player);
-
-
-							   your.player.addEventListener(EVT_ZONE, this, function(player, page) {
-								   Log("Zoned player from ("+ your.page.index +") to ("+ page.index +")");
-								   var oldPage = you.page,
-									   oldNeighbours = {};
-
-								   for (var neighbour in oldPage.neighbours) {
-									   if (oldPage.neighbours[neighbour]) {
-										   oldNeighbours[oldPage.neighbours[neighbour].index]  = oldPage.neighbours[neighbour];
-									   }
-								   }
-
-								   your.page = page;
-								   var initialization = {
-									   zone:true,
-									   pages:{}
-								   };
-
-
-								   // Send new page & neighbours as necessary
-								   // If neighbour page was sent previously then don't send again
-								   initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-								   for (var neighbour in page.neighbours) {
-									   var npage = page.neighbours[neighbour];
-									   if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
-										   initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
-									   }
-								   }
-
-								   client.send(JSON.stringify(initialization));
-							   });
-
-							   your.player.addEventListener(EVT_ZONE_OUT, this, function(player, map, page) {
-								   Log("Zoned player from ("+your.map.id+") to ["+map.id+"]");
-								   your.map  = map;
-								   your.page = page;
-								   your.player.page = page;
-
-								   Log("	Sending zoned map..");
-								   var initialization = {
-										   zoneMap:true,
-										   map:{
-											   id: your.map.id,
-											   pagesPerRow: your.map.pagesPerRow,
-											   mapWidth: your.map.map.properties.width,
-											   mapHeight: your.map.map.properties.height,
-											   tileset: your.map.map.properties.tileset,
-										   },
-										   player:{
-											   posY: your.player.posY,
-											   posX: your.player.posX,
-											   page: your.page.index
-										   },
-										   pages:{}
-									   }, page = your.page;
-
-								   initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-								   for (var neighbour in page.neighbours) {
-									   var npage = page.neighbours[neighbour];
-									   if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
-								   }
-
-								   client.send(JSON.stringify(initialization));
-
-							   });
-
-							   var response = new Response(evt.id);
-							   response.success = true;
-							   response.login=true;
-							   response.player = {
-								   position: player.position,
-								   playerID: player.id,
-								   id: your.player.id,
-							   };
-							   client.send(response.serialize());
-							   your.responseArchive.addEvent(response);
-
-						   }, function(){
-							   Log("Could not login player..", LOG_ERROR);
-
-							   var response = new Response(evt.id);
-							   response.success = false;
-							   client.send(response.serialize());
-							   you.responseArchive.addEvent(response);
 						   });
-
-					   }
-
-					   return;
-				   }
-
-
-				   if (evt.evtType==EVT_REQUEST_MAP) {
-
-					   console.log("Sending requested map..");
-					   var initialization = {
-						   initialization:true,
-						   map:{
-							   id: your.map.id,
-							   pagesPerRow: your.map.pagesPerRow,
-							   mapWidth: your.map.map.properties.width,
-							   mapHeight: your.map.map.properties.height,
-							   tileset: your.map.map.properties.tileset,
-						   },
-						   pages:{}
-					   }, page = your.page;
-
-					   initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-					   for (var neighbour in page.neighbours) {
-						   var npage = page.neighbours[neighbour];
-						   if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
-					   }
-
-					   client.send(JSON.stringify(initialization));
-
-
-				   } else if (evt.evtType==EVT_PREPARING_WALK) {
-					   console.log("new message from user.. FROM ("+evt.state.posY+", "+evt.state.posX+") ----> "+evt.data.distance);
-					   requestBuffer.queue({
-						   you:you,
-						   action:evt
+					   }, function(){
+						   failed();
 					   });
-				   } else {
-					   requestBuffer.queue({
-						   you:you,
-						   action:evt
-					   });
-				   }
-			   });
+				   });
+			   };
+
+			   // TODO: clean this!
+			   you.onPreparingToWalk = function(evt){
+				   requestBuffer.queue({
+					   you:this,
+					   action:evt
+				   });
+			   };
+			   you.onSomeEvent = function(evt){
+				   requestBuffer.queue({
+					   you:this,
+					   action:evt
+				   });
+			   };
 
 		   });
-		   console.log('Server running at http://127.0.0.1:1337/');
+		   Log('Server running at http://127.0.0.1:1337/');
 
 		   var stepTimer=10,
 		   step=function(){
@@ -451,7 +279,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			   var buffer=requestBuffer.read();
 			   if (buffer.length) {
-				   console.log("----Reading request buffer----");
+				   Log("----Reading request buffer----");
 			   }
 			   for (i=0; i<buffer.length; ++i) {
 
@@ -459,7 +287,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   // Check if request & client still here
 				   var request=buffer[i];
 				   if (!request) continue; 
-				   if (!clients[request.you.player.playerID]) continue;
+				   if (!players[request.you.id]) continue;
 
 				   // TODO: handle events through a better abstraction structure
 				   var you = request.you,
@@ -474,207 +302,31 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   // console.log(action);
 
 				   if (action.evtType==EVT_PREPARING_WALK) {
-					   // New path
-					   // console.log("EVT_PREPARING_WALK");
 
-
-
-					   // 	> create path from request
-					   ////////////////////////////////////
-
-					   var path = new Path(),
-						   walk = new Walk(),
-						   player = your.player,
-						   map = your.map,
-						   reqState = request.action.state,
-						   maxWalk = 1500/your.player.moveSpeed; // 5*Env.tileSize; // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
-
-					   walk.fromJSON(action.data);
-					   walk.walked = 0;
-					   path.walks.push(walk);
-
-					   if (path.length() > maxWalk) {
-						   console.log(path);
-						   throw new RangeError("Path longer than maxwalk..");
-					   }
-
-
-					   // 
-					   // Check path is safe (no collisions)
-					   //
-					   ////////////////////////////////////////
-
-					   var start = new Tile(reqState.globalY, reqState.globalX),
-						   vert  = (walk.direction == NORTH || walk.direction == SOUTH),
-						   positive = (walk.direction == SOUTH || walk.direction == EAST),
-						   walked = 0,
-						   tiles = [],
-						   k     = (vert ? player.posY : player.posX),
-						   kT    = (vert ? start.globalY : start.globalX),
-						   dist  = walk.distance,
-						   safePath = true,
-						   nextTile = start;
-
-
-					   if (!map.isTileInRange(start)) {
-						   throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
-					   }
-
-					   k += (vert?your.page.y:your.page.x)*16;
-					   // console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
-					   var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x),
-						   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-						   isSafe           = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-					   if (!isSafe) safePath = false;
-					   if (isSafe) {
-						   while (walked<walk.distance) {
-							   var distanceToTile = (positive? (kT+1)*16 - k : k - ((kT)*16 - 1));
-							   try {
-								   if (vert) {
-									   nextTile = nextTile.offset((positive?1:-1), 0);
-								   }  else {
-									   nextTile = nextTile.offset(0, (positive?1:-1));
-								   }
-
-								   // check tile
-								   // console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
-
-								   if (!your.map.isTileInRange(nextTile)) {
-									   throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
-								   }
-
-								   var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x),
-									   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-									   isSafe           = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-								   if (!isSafe) {
-									   safePath = false;
-									   break;
-								   }
-
-								   walked += distanceToTile;
-								   k += distanceToTile;
-								   kT += (positive?1:-1);
-							   } catch(e) {
-								   safePath = false;
-								   break;
-							   }
-						   }
-
-					   }
-
-					   var movableState = {
-							   y: your.player.posY + your.page.y * Env.tileSize, // NOTE: global real coordinates
-							   x: your.player.posX + your.page.x * Env.tileSize,
-							   localY: your.player.posY,
-							   localX: your.player.posX,
-							   globalY: Math.floor(your.player.posY/Env.tileSize) + your.page.y,
-							   globalX: Math.floor(your.player.posX/Env.tileSize) + your.page.x },
-						   pathState = {
-							   y: reqState.y,
-							   x: reqState.x,
-							   localY: reqState.posY,
-							   localX: reqState.posX,
-							   globalY: reqState.globalY,
-							   globalX: reqState.globalX
-						   };
-
-					   if (!safePath) {
-						   console.log("Path is not safe for user... cancelling!");
-
-						   var response = new Response(action.id),
-						   client   = your.client;
-						   response.success = false;
-						   response.state = { x: movableState.x, y: movableState.y, posX: movableState.localX, posY: movableState.localY };
-						   client.send(response.serialize());
-						   your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-						   continue;
-					   }
-
-					   var success = map.recalibratePath(movableState, pathState, path, maxWalk);
-
-					   if (success) {
-
-						   // var pathCpy = extendClass({}).with(path);
-						   // pathCpy.time = action.time;
-						   // pathCpy.state = action.state;
-						   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
-
-						   your.player.path=null;
-						   your.player.addPath(path);
-
-						   try {
-							   var response = new Response(action.id),
-								   client   = your.client;
-							   response.success = true;
-							   client.send(response.serialize());
-							   your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-						   } catch(e) {
-							   console.log("Player not even here..");
-						   }
-						   continue;
-					   } else {
-
-						   try {
-							   var response = new Response(action.id),
-								   client   = your.client;
-							   response.success = false;
-							   response.state = { x: movableState.x, y: movableState.y };
-							   client.send(response.serialize());
-							   your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-						   } catch(e) {
-							   console.log("Player not even here..");
-						   }
-						   continue;
-					   }
-
-
-					   var response = new Response(action.id),
-					   client   = your.client;
-					   response.success = false;
-					   client.send(response.serialize());
-					   your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-					   continue;
+					   you.handleWalkRequest(action);
 
 				   } else if (action.evtType == EVT_DISCONNECTED) {
 
-					   console.log("Disconnecting player..");
-					   you.player.stopAllEventsAndListeners();
-
-					   var page = you.page;
-					   delete page.movables[you.player.id];
-					   for (var i=0; i<page.updateList.length; ++i) {
-						   if (page.updateList[i].id == you.player.id) {
-							   page.updateList.splice(i,1);
-							   break;
-						   }
-					   }
-
+					   var page = you.movable.page;
+					   you.disconnectPlayer();
 					   page.eventsBuffer.push({
 						   evtType: EVT_REMOVED_ENTITY,
-						   entity: { id: you.player.id }
+						   entity: { id: you.movable.id }
 					   });
 
-					   console.log("REMOVED PLAYER: "+you.player.playerID);
-					   db.savePlayer(you.player);
-					   delete clients[you.id];
+					   Log("REMOVED PLAYER: "+you.id);
+					   db.savePlayer(you.movable);
+					   delete players[you.id];
 
 				   } else if (action.evtType == EVT_ATTACKED) {
-					   console.log("Player requesting to attack entity["+action.data.id+"]..");
-					   try {
-						   var target = you.page.movables[action.data.id];
-						   if (target.playerID) {
-							   console.log('	NO Player Killing!!');
-							   continue; // NO player killing!
-						   }
-						   you.player.triggerEvent(EVT_AGGRO, you.page.movables[action.data.id]);
-					   } catch(e){
-						   console.log("Error: "+e.message);
-					   }
+
+					   you.attackTarget(action.data.id);
+
 				   } else if (action.evtType == EVT_DISTRACTED) {
 					   // TODO: need to confirm same as current target?
 					   // you.player.brain.setTarget(null);
-					   console.log("["+you.player.id+"] Is Distracted..");
-					   you.player.triggerEvent(EVT_DISTRACTED);
+					   Log("["+you.movable.id+"] Is Distracted..");
+					   you.movable.triggerEvent(EVT_DISTRACTED);
 				   } else {
 					   console.log("			Some strange unheard of event ("+action.evtType+") ??");
 				   }
@@ -687,10 +339,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			   // Timestep the world
 			   var eventsBuffer = The.world.step(time);
-			   for (var clientID in clients) {
-				   var client = clients[clientID].client,
-				       mapID = clients[clientID].map.id,
-					   page = clients[clientID].page.index;
+			   for (var clientID in players) {
+				   var client = players[clientID].client,
+					   page   = players[clientID].movable.page.index;
+				       mapID  = players[clientID].movable.page.map.id;
 				   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
 					   client.send(JSON.stringify({
 						   evtType: EVT_PAGE_EVENTS,

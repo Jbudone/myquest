@@ -32,6 +32,7 @@ define(function(){
 			'Renderer': (logVerbose),
 			'UI': (logVerbose),
 			'DB': (logVerbose),
+			'Player': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};
