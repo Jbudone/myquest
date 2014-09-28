@@ -11,7 +11,7 @@ define(['resources','sprite','eventful'], function(Resources, Sprite, Eventful){
 		extendClass(this).with(Eventful);
 
 		this.listenTo(this, EVT_ZONE, function(me, newPage){
-			this.page = newPage;
+			// this.page = newPage; // TODO: WHY WHY WHY IS THIS HERE?! FIXME FIXME FIXME
 		}, HIGH_PRIORITY);
 
 		this.sprite=Resources.sprites[this.npc.sheet];

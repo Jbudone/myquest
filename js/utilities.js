@@ -76,6 +76,22 @@ define(['serializable'], function(Serializable){
 			if (y < 0 || x < 0) throw new RangeError("Bad offset from tile.."); // TODO: check y/x too far?
 			return new Tile(y, x);
 		};
+		this.localizeTile=function(){
+			if (!this.page) return false;
+			if (this.page.y <= this.y &&
+				this.page.x <= this.x) {
+
+					console.log("Localizing tile: from ("+this.y+", "+this.x+")");
+					this.y -= this.page.y;
+					this.x -= this.page.x;
+					console.log("		to ("+this.y+", "+this.x+")");
+			} else {
+				console.log("COULD NOT LOCALIZE TILE!");
+				console.log("Page: "+this.page.y+", "+this.page.x);
+				console.log("Tile: "+this.y+", "+this.x);
+				return false;
+			}
+		};
 	}, Walk=function(direction, distance, destination){
 		extendClass(this).with(Serializable);
 		this.direction   = direction;

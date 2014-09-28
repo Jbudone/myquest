@@ -40,10 +40,10 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 			var map            = The.world.maps[player.map],
 				playerPosition = map.localFromGlobalCoordinates(player.position.y, player.position.x);
 
-			this.movable          = new Movable('player', playerPosition.page);
+			this.movable          = new Movable('player', playerPosition.page, {
+												posY: playerPosition.y * Env.tileSize,
+												posX: playerPosition.x * Env.tileSize });
 			this.movable.playerID = player.id;
-			this.movable.posY     = playerPosition.y*Env.tileSize;
-			this.movable.posX     = playerPosition.x*Env.tileSize;
 
 			this.movable.page.addEntity(this.movable);
 
@@ -71,6 +71,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				};
 
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				debugger;
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
 					if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {

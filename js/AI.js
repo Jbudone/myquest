@@ -427,6 +427,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			this.setLogPrefix('[' + this.entity.id + '](Respawn) ');
 
 			this.respawnPoint = params.respawnPoint;
+			this.respawnPoint.localizeTile();
 
 			this.listenTo(this.brain, EVT_BORED, function(brain){
 				console.log("Moving to respawn point..");
@@ -457,6 +458,50 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.pendingEvents=[];
 				this.Log("RESPAWNED");
 				this.respawnPoint.page.addEntity(this.entity);
+			}, HIGH_PRIORITY);
+		},
+		"PlayerRespawn": function(character, params){
+
+			var STATE_IDLE = 0;
+
+			this.base = AIComponent;
+			this.base(character, STATE_IDLE);
+
+			this.setLogPrefix('[' + this.entity.id + '](Respawn) ');
+
+			this.respawnPoint = params.respawnPoint;
+			this.respawnPoint.localizeTile();
+
+			this.listenTo(this.brain, EVT_BORED, function(brain){
+				console.log("Moving to respawn point..");
+				this.brain.setTarget(this.respawnPoint); // TODO: what if brain already has a target ??
+			});
+
+			this.step = function(time){
+				this.handlePendingEvents();
+			};
+
+			this.reset = function(){
+				
+			};
+
+			this.listenTo(this.brain, EVT_RESPAWNING, function(brain){
+				this.Log("RESPAWNING");
+				this.entity.posY = this.respawnPoint.y * Env.tileSize;
+				this.entity.posX = this.respawnPoint.x * Env.tileSize;
+				this.entity.page = this.respawnPoint.page;
+				this.entity.physicalState.transition(STATE_ALIVE);
+				this.entity.path = null;
+				this.entity.zoning = false;
+				this.entity.lastMoved=now();
+				this.entity.health=this.entity.npc.health;
+				this.entity.lastStep=0;
+				this.entity.sprite.idle();
+				this.entity.brain.reset();
+				this.entity.pendingEvents=[];
+				this.Log("RESPAWNED");
+				this.respawnPoint.page.addEntity(this.entity);
+				// TODO: tell player about respawning (send all map & page info)
 			}, HIGH_PRIORITY);
 		}
 	};

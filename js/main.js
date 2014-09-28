@@ -7,8 +7,7 @@
 				// 		- pathfinding.js
 				//
 				// 	> server.js (refactoring)
-				// 		- server/db.js: (create like client/serverHandler.js); connect, loadPlayer, savePlayer
-				// 		- server/player.js: create/load/save, player.onDisconnected(..), player.onReconnected(..), player.onZoneOut(..), ...
+				// 		FIXME: error sending pages on page zone
 				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
 				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
 				//
@@ -32,6 +31,12 @@
 				// 		- Set Recordable components: Movable, AI components, World, Map, Pages
 				// 		- on D/C flush Recording
 				// 		- Allow starting up from a Recording table (each table represents EITHER a date/startup_instance OR a snapshot/multiple_tables_per_game_startup); load everything in order, allow easy debugging (stopping at a certain point)
+				//
+				//	> player dying
+				//		- AI: player_respawn
+				//		- server uses player_respawn
+				//		- client on my death, go black and wait for a response from server
+				//		- db save respawn point
 				//
 				// 	> player D/C
 				// 		EVT_PLAYER_DISCONNECTING, EVT_PLAYER_DISCONNECTED
@@ -99,6 +104,7 @@
 				//	> CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
 				//	> CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages
 				//	> CLEAN: adopt .bind() as much as possible (callbacks, promises, etc.)
+				//	> CLEAN: tile (global/local???)
 				//
 				//
 				//	
