@@ -11,9 +11,13 @@ define(['AI'], function(AI){
 					this.brain.step(time);
 				});
 
-				this.listenTo(this, EVT_DIED, function(){
-					this.stopAllEventsAndListeners();
-				});
+				// NOTE: when we die, we will follow our player upon respawn, and would like to have all of
+				// our event listeners (walking, zoning, UI, dying, etc.) to persist
+				if (The.player !== true) {
+					this.listenTo(this, EVT_DIED, function(){
+						this.stopAllEventsAndListeners();
+					});
+				}
 			}
 		}
 	};

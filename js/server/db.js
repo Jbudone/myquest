@@ -88,6 +88,12 @@ define(['loggable'], function(Loggable){
 							position: {
 								y: 20, x: 14
 							},
+							respawn: {
+								map: "main",
+								position: {
+									y: 20, x: 14
+								},
+							},
 							map: "main"
 						});
 

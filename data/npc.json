@@ -3,8 +3,9 @@
 		"id":"player",
 		"name":"player",
 		"sheet":"firefox",
+		"spawn":1500,
 		"speed":15,
-		"health":50,
+		"health":150,
 		"damage":5,
 		"AI":true
 	},
@@ -26,7 +27,7 @@
 		"spawn":1500,
 		"killable":true,
 		"speed":12,
-		"health":750,
+		"health":70,
 		"damage":5,
 		"AI":true
 	},

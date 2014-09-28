@@ -181,6 +181,7 @@ define(['resources','movable'], function(Resources,Movable){
 							state: entity.sprite.state,
 							zoning: entity.zoning,
 							path: (entity.path? entity.path.serialize() : null),
+							health: entity.health,
 					};
 
 					if (entity.path) {

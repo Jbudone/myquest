@@ -78,6 +78,8 @@ define(['loggable'],function(Loggable){
 						server.onZone( evt.pages );
 					} else if (evt.zoneMap) {
 						server.onLoadedMap( evt.map, evt.pages, evt.player );
+					} else if (evt.respawn) {
+						server.onRespawn( evt.map, evt.pages, evt.player );
 					} else if (evt.id) {
 						// INTENTIONALLY BLANK (success/fail response to request)
 					} else {
@@ -88,23 +90,24 @@ define(['loggable'],function(Loggable){
 			});
 		};
 
-		this.onDisconnect = new Function();
-		this.onLogin = new Function();
-		this.onLoginFailed = new Function();
-		this.onNewCharacter = new Function();
-		this.onNewCharacterFailed = new Function();
-		this.onInitialization = new Function();
-		this.onLoadedMap = new Function();
-		this.onZone = new Function();
-		this.onEntityAdded = new Function();
-		this.onEntityRemoved = new Function();
-		this.onEntityWalking = new Function();
-		this.onEntityHurt = new Function();
+		this.onDisconnect           = new Function();
+		this.onLogin                = new Function();
+		this.onLoginFailed          = new Function();
+		this.onNewCharacter         = new Function();
+		this.onNewCharacterFailed   = new Function();
+		this.onInitialization       = new Function();
+		this.onRespawn              = new Function();
+		this.onLoadedMap            = new Function();
+		this.onZone                 = new Function();
+		this.onEntityAdded          = new Function();
+		this.onEntityRemoved        = new Function();
+		this.onEntityWalking        = new Function();
+		this.onEntityHurt           = new Function();
 		this.onEntityAttackedTarget = new Function();
-		this.onEntityNewTarget = new Function();
-		this.onEntityRemovedTarget = new Function();
-		this.onEntityDied = new Function();
-		this.onFinishedMoving = new Function(); // TODO: is this one necessary?
+		this.onEntityNewTarget      = new Function();
+		this.onEntityRemovedTarget  = new Function();
+		this.onEntityDied           = new Function();
+		this.onFinishedMoving       = new Function(); // TODO: is this one necessary?
 
 
 

@@ -67,6 +67,7 @@ define(['resources','page','movable'], function(Resources,Page,Movable){
 							entity.posX         = movable.posX;
 							entity.sprite.state = movable.state;
 							entity.zoning       = movable.zoning;
+							entity.health       = movable.health;
 
 							if (movable.path) {
 								var path = JSON.parse(movable.path);

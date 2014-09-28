@@ -7,7 +7,6 @@
 				// 		- pathfinding.js
 				//
 				// 	> server.js (refactoring)
-				// 		FIXME: error sending pages on page zone
 				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
 				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
 				//
@@ -32,11 +31,6 @@
 				// 		- on D/C flush Recording
 				// 		- Allow starting up from a Recording table (each table represents EITHER a date/startup_instance OR a snapshot/multiple_tables_per_game_startup); load everything in order, allow easy debugging (stopping at a certain point)
 				//
-				//	> player dying
-				//		- AI: player_respawn
-				//		- server uses player_respawn
-				//		- client on my death, go black and wait for a response from server
-				//		- db save respawn point
 				//
 				// 	> player D/C
 				// 		EVT_PLAYER_DISCONNECTING, EVT_PLAYER_DISCONNECTED
@@ -66,6 +60,7 @@
 				//	> BUG: both players attack NPC; NPC chases other player to next page; the remaining player doesn't receive page change of NPC and thinks its in the same page
 				//	> BUG: player doesn't receive movement update of other player
 				//	> BUG: in circle attack after 1 NPC dies, the other player can't choose to attack the previous NPC (already in attackList and not re-added?)
+				// 	> BUG: UI slow to update when entity zones out
 				//
 				//
 				//
@@ -227,6 +222,7 @@ try{
 			server.onLogin = function(player){
 
 				Log("Logged in as player "+player.id);
+				The.player      = true; // NOTE: this is used to help the initiatilization of Movable below to determine that it is our player (The.player === true)
 				The.player      = new Movable('player');
 				The.player.id   = player.id;
 				The.player.position = player.position; // TODO: remove this quickfix
@@ -304,8 +300,8 @@ try{
 
 				loaded('map');
 
-
 			};
+
 
 			server.connect(link).then(function(){
 				// Connected
@@ -649,6 +645,10 @@ try{
 						entity.triggerEvent(EVT_DIED);
 					}
 
+					// Is it us who died?
+					if (deadEntity == The.player.id) {
+						ui.fadeToBlack();
+					}
 				};
 
 				server.onZone = function(pages){
@@ -698,6 +698,36 @@ try{
 					renderer.setMap( The.map );
 
 				};
+
+				server.onRespawn = function(map, pages, player){
+
+					Log("Respawning..");
+					The.player.health = player.health;
+					The.player.physicalState.transition( STATE_ALIVE );
+
+					var oldMap = The.map;
+
+					The.map = new Map();
+					The.map.loadMap(map);
+					The.map.addPages(pages);
+
+					oldMap.copyEventsAndListeners(The.map);
+					oldMap.stopAllEventsAndListeners();
+					The.player.changeListeners(oldMap, The.map);
+					The.map.curPage    = The.map.pages[player.page];
+					ui.setPage( The.map.curPage );
+
+					The.player.posY = player.posY;
+					The.player.posX = player.posX;
+					The.camera.updated = true;
+
+					renderer.setMap( The.map );
+					ui.updateAllMovables();
+					ui.showMovable( The.player );
+					ui.fadeIn();
+
+				};
+
 
 
 				// Start gameloop
@@ -859,6 +889,7 @@ try{
 
 			The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
 
+				Log("Preparing to walk..");
 				var playerPosition = { y: The.player.posY + The.map.curPage.y * Env.tileSize,
 									   x: The.player.posX + The.map.curPage.x * Env.tileSize,
 									   globalY: Math.floor(The.player.posY / Env.tileSize) + The.map.curPage.y,

@@ -12,10 +12,7 @@ define(['AI'], function(AI){
 							this.posX/Env.tileSize + this.page.x,
 							this.page.map)});
 				} else {
-					this.brain.addComponent(AI.Components['PlayerRespawn'], {respawnPoint: new Tile(
-							this.posY/Env.tileSize + this.page.y,
-							this.posX/Env.tileSize + this.page.x,
-							this.page.map)});
+					this.brain.addComponent(AI.Components['PlayerRespawn'], {respawnPoint: this.respawnPoint});				
 				}
 				this.brain.addComponent(AI.Components['Combat']);
 

@@ -52,6 +52,12 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.clear = function(){
 					this.ui.remove();
 				};
+				this.hide = function(){
+					this.ui.hide();
+				};
+				this.show = function(){
+					this.ui.show();
+				};
 
 				this.ui = $('<div/>')
 							.addClass('movable-ui');
@@ -67,7 +73,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 											.appendTo( this.ui_healthbar );
 
 
-				$('#game').append( this.ui );
+				$('#canvas').append( this.ui );
 				this.update();
 
 			}
@@ -155,9 +161,19 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				movableDetails.ui.update();
 			});
 
-			this.listenTo(entity, EVT_DIED, function(entity){
-				_UI.detachMovable(entity);
-			});
+			if (entity != The.player) {
+				this.listenTo(entity, EVT_DIED, function(entity){
+					_UI.detachMovable(entity);
+				});
+
+				this.listenTo(entity, EVT_ZONE, function(entity){
+					_UI.detachMovable(entity);
+				});
+			} else {
+				this.listenTo(entity, EVT_DIED, function(entity){
+					_UI.hideMovable(entity);
+				});
+			}
 
 		};
 
@@ -179,6 +195,20 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			movableDetails.ui.clear();
 			delete movableDetails.ui;
 			delete this.movables[ entity.id ];
+		};
+
+		this.hideMovable = function(entity){
+			var movableDetails = this.movables[ entity.id ];
+			if (!movableDetails) return;
+
+			movableDetails.ui.hide();
+		};
+
+		this.showMovable = function(entity){
+			var movableDetails = this.movables[ entity.id ];
+			if (!movableDetails) return;
+
+			movableDetails.ui.show();
 		};
 
 		this.setPage = function(page){ 
@@ -223,6 +253,14 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 					this.detachMovable( entity );
 				});
 			}
+		};
+
+		this.fadeToBlack = function(){
+			$('#canvas').animate({ opacity: 0.0 }, 800);
+		};
+
+		this.fadeIn = function(){
+			$('#canvas').animate({ opacity: 1.0 }, 800);
 		};
 
 	};

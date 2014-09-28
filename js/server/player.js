@@ -38,11 +38,15 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				return false;
 			}
 			var map            = The.world.maps[player.map],
-				playerPosition = map.localFromGlobalCoordinates(player.position.y, player.position.x);
+				playerPosition = map.localFromGlobalCoordinates(player.position.y, player.position.x),
+				respawnPoint   = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.y, player.respawn.position.x);
 
 			this.movable          = new Movable('player', playerPosition.page, {
 												posY: playerPosition.y * Env.tileSize,
-												posX: playerPosition.x * Env.tileSize });
+												posX: playerPosition.x * Env.tileSize,
+												respawnPoint: new Tile( respawnPoint.y + respawnPoint.page.y,
+																		respawnPoint.x + respawnPoint.page.x,
+																		respawnPoint.page.map ) });
 			this.movable.playerID = player.id;
 
 			this.movable.page.addEntity(this.movable);
@@ -71,7 +75,6 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				};
 
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				debugger;
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
 					if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
@@ -86,8 +89,8 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				this.Log("Zoned player from ("+this.movable.page.map.id+") to ["+map.id+"]");
 				this.movable.page = page;
 
-				var oldMap = this.movable.page.map;
-				var initialization = {
+				var oldMap = this.movable.page.map,
+					initialization = {
 					zoneMap:true,
 					map:{
 						id: oldMap.id,
@@ -112,6 +115,38 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 
 				this.client.send(JSON.stringify(initialization));
 			});
+
+			this.movable.brain.addEventListener(EVT_RESPAWNED, this, function(player){
+				this.Log("Player respawned");
+
+				var page = this.movable.page,
+					map = page.map,
+					initialization = {
+						respawn:true,
+						map:{
+							id: map.id,
+							pagesPerRow: map.pagesPerRow,
+							mapWidth: map.map.properties.width,
+							mapHeight: map.map.properties.height,
+							tileset: map.map.properties.tileset,
+						},
+						player:{
+							posY: this.movable.posY,
+							posX: this.movable.posX,
+							page: this.movable.page.index,
+							health: this.movable.health
+						},
+						pages:{}
+				};
+
+				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				for (var neighbour in page.neighbours) {
+					var npage = page.neighbours[neighbour];
+					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+				}
+
+				this.client.send(JSON.stringify(initialization));
+			}, HIGH_PRIORITY);
 
 			return true;
 		};
@@ -290,7 +325,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 		this.attackTarget = function(targetID){
 			this.Log("Player requesting to attack entity["+targetID+"]..");
 			var target = this.movable.page.movables[targetID];
-			if (target.playerID) {
+			if (target && target.playerID) {
 				console.log('	NO Player Killing!!');
 				return; // NO player killing!
 			}

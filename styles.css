@@ -18,6 +18,7 @@ h3 {
 #game {
 	width: 1024px;
 	margin-left: calc((100% - 1024px)/2);
+	background: #000;
 }
 
 #canvas {

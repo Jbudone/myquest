@@ -472,11 +472,6 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 			this.respawnPoint = params.respawnPoint;
 			this.respawnPoint.localizeTile();
 
-			this.listenTo(this.brain, EVT_BORED, function(brain){
-				console.log("Moving to respawn point..");
-				this.brain.setTarget(this.respawnPoint); // TODO: what if brain already has a target ??
-			});
-
 			this.step = function(time){
 				this.handlePendingEvents();
 			};
@@ -501,7 +496,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.pendingEvents=[];
 				this.Log("RESPAWNED");
 				this.respawnPoint.page.addEntity(this.entity);
-				// TODO: tell player about respawning (send all map & page info)
+				this.brain.triggerEvent(EVT_RESPAWNED);
 			}, HIGH_PRIORITY);
 		}
 	};
