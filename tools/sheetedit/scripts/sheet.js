@@ -11,7 +11,8 @@ var Sheet = function(canvas){
 			onModified: new Function(),
 			onSheetChanged: new Function(),
 			modifyAnimation: new Function(),
-			removeAnimation: new Function()
+			removeAnimation: new Function(),
+			prepareSheet: new Function()
 	},  sheetData = {
 			image: null,
 			tilesize: 16,
@@ -24,6 +25,7 @@ var Sheet = function(canvas){
 		dragDropEnabled = false,
 		ready = false,
 		tilesheet = null,
+		preparedSheetData = { },
 		settings = {
 			lineWidth: 2,
 			gridLineWidth: 2,
@@ -110,16 +112,39 @@ var Sheet = function(canvas){
 		sheetData.sheet_offset.y = parseInt(sheet.sheet_offset.y);
 	};
 
-	interface.clearSheet = function(){
-		sheetData = {
-			image: null,
-			tilesize: 16,
-			columns: 0,
-			rows: 0,
-			sheet_offset: { y:0, x:0 },
-			data: {}
-		};
-		selections = {};
+	interface.getSheetData = function(){
+		return sheetData;
+	};
+
+	interface.clearSheet = function(shallowClean){
+
+		if (shallowClean) {
+			sheetData.image = null;
+			sheetData.tilesize = 16;
+			sheetData.columns = 0;
+			sheetData.rows = 0;
+			sheetData.sheet_offset.y = 0;
+			sheetData.sheet_offset.x = 0;
+
+			if (sheetData.data.animations) sheetData.data.animations = {};
+			if (sheetData.data.floating) sheetData.data.floating = {};
+			if (sheetData.data.collisions) sheetData.data.collisions = {};
+
+			if (!selections.data) selections.data = {};
+			if (selections.data.floating) sheet.data.floating.selections.tiles = [];
+			if (selections.data.collisions) sheet.data.collisions.selections.tiles = [];
+			if (selections.data.animations) sheet.data.animations.selections.tiles = [];
+		} else {
+			sheetData = {
+				image: null,
+				tilesize: 16,
+				columns: 0,
+				rows: 0,
+				sheet_offset: { y:0, x:0 },
+				data: {}
+			};
+			selections = {};
+		}
 		activeSelection = { type: null, selection: null };
 		highlightedAnimation = null;
 		hover = null;
@@ -331,6 +356,20 @@ var Sheet = function(canvas){
 		selections.animations.setAnimationTiles();
 	};
 
+	interface.prepareSheet = function(sheetType){
+		if (sheetType == 'tilesheet') {
+			preparedSheetData = {
+				floating: [],
+				collisions: []
+			};
+		} else if (sheetType == 'spritesheet') {
+			preparedSheetData = {
+				animations: [],
+			};
+		} else {
+
+		}
+	};
 
 
 	// ========================================================== //
@@ -421,10 +460,10 @@ var Sheet = function(canvas){
 
 			// event is an image OR a json file?
 			if (isTilesheet) {
-				// interface.clearSheet();
+				interface.clearSheet(true);
 				// tilesheet = new Image();
-				var sheetName = "/sprites/" + file.name;
-				interface.loadSheet({
+				var sheetName = "/sprites/" + file.name,
+					sheet = {
 					id:"New Tilesheet",
 					image: sheetName,
 					tilesize: 16,
@@ -434,11 +473,15 @@ var Sheet = function(canvas){
 						x: 0,
 						y: 0
 					},
-					data: {
-						collisions: [],
-						floating: []
-					}
-				}, true);
+					data: {}
+				};
+
+				if (sheetData && sheetData.data && !_.isEmpty(sheetData.data)) {
+					sheet.data = sheetData;
+				} else {
+					sheet.data = preparedSheetData;
+				}
+				interface.loadSheet(sheet, true);
 				interface.onSheetChanged( sheetName );
 				/*
 				tilesheet.onload = function() { 

@@ -48,6 +48,7 @@ var Editor = function(container, sheet){
 	};
 
 
+	view_tilesheet.components.tilesize.input[0].oninput = null;
 	view_tilesheet.components.tilesize.input[0].oninput = function(){
 		var newTilesize = parseInt(this.value);
 		view_tilesheet.data.tilesize = newTilesize;
@@ -57,39 +58,46 @@ var Editor = function(container, sheet){
 		view_tilesheet.modified();
 	};
 
-	view_tilesheet.components.id[0].onchange = function(){
+	view_tilesheet.components.id[0].oninput = null;
+	view_tilesheet.components.id[0].oninput = function(){
 		var newID = this.value;
 		view_tilesheet.data.id = newID;
+		view_tilesheet.linkEl.text( newID );
 		interface.onModified();
 		view_tilesheet.modified();
 	};
 
+	view_tilesheet.components.showgrid[0].onchange = null;
 	view_tilesheet.components.showgrid[0].onchange = function(){
 		var showgrid = this.checked;
 		sheet.gridMode( showgrid );
 	};
 
-	view_tilesheet.components.sheet_offset.y.bind('change input mousedown', function(){
+	view_tilesheet.components.sheet_offset.y[0].oninput = null;
+	view_tilesheet.components.sheet_offset.y[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_tilesheet.data.sheet_offset.y = offset;
 		sheet.adjustSheet( view_tilesheet.data );
 		interface.onModified();
 		view_tilesheet.modified();
-	});
+	};
 
-	view_tilesheet.components.sheet_offset.x.bind('change input mousedown', function(){
+	view_tilesheet.components.sheet_offset.x[0].oninput = null;
+	view_tilesheet.components.sheet_offset.x[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_tilesheet.data.sheet_offset.x = offset;
 		sheet.adjustSheet( view_tilesheet.data );
 		interface.onModified();
 		view_tilesheet.modified();
-	});
+	};
 
+	view_tilesheet.components.setCollision[0].onclick = null;
 	view_tilesheet.components.setCollision[0].onclick = function(){
 		sheet.setMode('collision');
 		return false;
 	};
 
+	view_tilesheet.components.setFloating[0].onclick = null;
 	view_tilesheet.components.setFloating[0].onclick = function(){
 		sheet.setMode('floating');
 		return false;
@@ -114,6 +122,8 @@ var Editor = function(container, sheet){
 		view_tilesheet.modified = function(){
 			linkEl.data('modify')( linkEl );
 		};
+
+		view_tilesheet.linkEl = linkEl;
 
 		sheet.loadSheet( data );
 		sheet.onModified = function(modified){
@@ -193,6 +203,7 @@ var Editor = function(container, sheet){
 	};
 
 
+	view_spritesheet.components.tilesize.input[0].oninput = null;
 	view_spritesheet.components.tilesize.input[0].oninput = function(){
 		var newTilesize = parseInt(this.value);
 		view_spritesheet.data.tilesize = newTilesize;
@@ -202,55 +213,64 @@ var Editor = function(container, sheet){
 		view_spritesheet.modified();
 	};
 
-	view_spritesheet.components.id[0].onchange = function(){
+	view_spritesheet.components.id[0].oninput = null;
+	view_spritesheet.components.id[0].oninput = function(){
 		var newID = this.value;
-		view_tilesheet.data.id = newID;
+		view_spritesheet.data.id = newID;
+		view_spritesheet.linkEl.text( newID );
 		interface.onModified();
 		view_spritesheet.modified();
 	};
 
+	view_spritesheet.components.showgrid[0].onchange = null;
 	view_spritesheet.components.showgrid[0].onchange = function(){
 		var showgrid = this.checked;
 		sheet.gridMode( showgrid );
 	};
 
-	view_spritesheet.components.sheet_offset.y.bind('change input mousedown', function(){
+	view_spritesheet.components.sheet_offset.y[0].oninput = null;
+	view_spritesheet.components.sheet_offset.y[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_spritesheet.data.sheet_offset.y = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
-	});
+	};
 
-	view_spritesheet.components.sheet_offset.x.bind('change input mousedown', function(){
+	view_spritesheet.components.sheet_offset.x[0].oninput = null;
+	view_spritesheet.components.sheet_offset.x[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_spritesheet.data.sheet_offset.x = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
-	});
+	};
 
-	view_spritesheet.components.sprite_offset.y.bind('change input mousedown', function(){
+	view_spritesheet.components.sprite_offset.y[0].oninput = null;
+	view_spritesheet.components.sprite_offset.y[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_spritesheet.data.sprite_offset.y = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
-	});
+	};
 
-	view_spritesheet.components.sprite_offset.x.bind('change input mousedown', function(){
+	view_spritesheet.components.sprite_offset.x[0].oninput = null;
+	view_spritesheet.components.sprite_offset.x[0].oninput = function(){
 		var offset = parseInt(this.value);
 		view_spritesheet.data.sprite_offset.x = offset;
 		sheet.adjustSheet( view_spritesheet.data );
 		interface.onModified();
 		view_spritesheet.modified();
-	});
+	};
 
+	view_spritesheet.components.setAvatar[0].onclick = null;
 	view_spritesheet.components.setAvatar[0].onclick = function(){
 		sheet.setMode('avatar');
 		return false;
 	};
 
+	view_spritesheet.components.setAnimation[0].onclick = null;
 	view_spritesheet.components.setAnimation[0].onclick = function(){
 		// sheet.setMode('animation');
 		return false;
@@ -273,6 +293,10 @@ var Editor = function(container, sheet){
 		view_spritesheet.components.sprite_offset.x.val( parseInt(data.sprite_offset.x) );
 		view_spritesheet.components.sprite_offset.y.val( parseInt(data.sprite_offset.y) );
 
+		$('.animation', view_spritesheet.components.animations.container).remove();
+
+		view_spritesheet.linkEl = linkEl;
+
 		view_spritesheet.components.setAnimation[0].onclick = function(){
 			var animationName = 'New Animation',
 				animation = {
@@ -288,7 +312,7 @@ var Editor = function(container, sheet){
 			return false;
 		};
 
-		var addAnimation = function(name, data){
+		var addAnimation = function(name, animData){
 
 				var loadAnimation = function(el){
 
@@ -300,20 +324,37 @@ var Editor = function(container, sheet){
 					view_spritesheet.components.animations.settings.length.val( animation.length );
 					view_spritesheet.components.animations.settings.flipX.prop('checked', !!animation.flipX );
 
-					view_spritesheet.components.animations.settings.row.bind('change input mousedown', function(){
-						animation.row = parseInt($(this).val());
+					view_spritesheet.components.animations.settings.id[0].oninput = null;
+					view_spritesheet.components.animations.settings.id[0].oninput = function(){
+						var newID = this.value;
+						delete data.data.animations[ name ];
+						name = newID;
+						$(el).data('animationName', name);
+						$('.animation_remove', $(el).parent()).data('animationName', name);
+						data.data.animations[ name ] = animation;
+						$(el).text( newID );
+						sheet.setMode('animation', name); // update sheet animation ptr since name has changed
+						interface.onModified();
+						view_spritesheet.modified();
+					};
+
+					view_spritesheet.components.animations.settings.row[0].oninput = null;
+					view_spritesheet.components.animations.settings.row[0].oninput = function(){
+						animation.row = parseInt(this.value);
 						sheet.modifyAnimation(animation);
 						interface.onModified();
 						view_spritesheet.modified();
-					});
+					};
 
-					view_spritesheet.components.animations.settings.length.bind('change input mousedown', function(){
-						animation.length = parseInt($(this).val());
+					view_spritesheet.components.animations.settings.length[0].oninput = null;
+					view_spritesheet.components.animations.settings.length[0].oninput = function(){
+						animation.length = parseInt(this.value);
 						sheet.modifyAnimation(animation);
 						interface.onModified();
 						view_spritesheet.modified();
-					});
+					};
 
+					view_spritesheet.components.animations.settings.flipX[0].onclick = null;
 					view_spritesheet.components.animations.settings.flipX[0].onclick = function(){
 						var flipX = this.checked;
 						if (flipX) {
@@ -350,36 +391,37 @@ var Editor = function(container, sheet){
 										.addClass('animation_title')
 										.attr('href','')
 										.text( name )
-										.data('animation', data)
+										.data('animation', animData)
 										.data('animationName', name)
 										.click(function(){
-											loadAnimation(this);
+											loadAnimation($(this));
 											return false;
 										}) )
 								.append( $('<a/>')
 										.addClass('animation_remove')
 										.attr('href','')
 										.text('X')
-										.data('animation', data)
+										.data('animation', animData)
 										.data('animationName', name)
 										.click(function(){
-											clearAnimation(this);
+											clearAnimation($(this));
 											return false;
 										}) );
 
 
 				view_spritesheet.components.animations.container.append( animationEl );
-				// view_spritesheet.components.animations.list.push( data );
+				// view_spritesheet.components.animations.list.push( animData );
 
 				return animationEl;
 		};
 
-		for (var animationName in data.data.animations) {
-			var animation = data.data.animations[animationName],
-				animationEl = addAnimation(animationName, animation);
-		
-		
-		}
+		_.each(data.data.animations, function(animation, animationName){
+			var animationEl = addAnimation(animationName, animation);
+		});
+		// for (var animationName in data.data.animations) {
+		// 	var animation = data.data.animations[animationName],
+		// 		animationEl = addAnimation(animationName, animation);
+		// }
 
 		view_spritesheet.modified = function(){
 			linkEl.data('modify')( linkEl );
@@ -436,10 +478,16 @@ var Editor = function(container, sheet){
 			view.hide();
 		}
 
-		if (viewType == 'tilesheet') view = view_tilesheet;
-		else if (viewType == 'spritesheet') view = view_spritesheet;
-		else if (viewType == 'npc') view = view_npc;
-		else {
+		if (viewType == 'tilesheet') {
+			view = view_tilesheet;
+			sheet.prepareSheet('tilesheet');
+		} else if (viewType == 'spritesheet') {
+			view = view_spritesheet;
+			sheet.prepareSheet('spritesheet');
+		} else if (viewType == 'npc') {
+			view = view_npc;
+			sheet.prepareSheet('npc');
+		} else {
 			console.error("Bad view: "+viewType);
 			return;
 		}

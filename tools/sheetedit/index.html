@@ -5,6 +5,7 @@
 		<link rel="stylesheet" type="text/css" href="main.css">
 
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore.js"></script>
 		<script src="scripts/main.js"></script>
 		<script src="scripts/assets.js"></script>
 		<script src="scripts/editor.js"></script>
@@ -155,14 +156,22 @@
 		
 		<!--
 			TODO
-				> Tilesheets: edit id
-				> editor.js: load/switch/save npc; unload
-				> add spritesheet/npc; remove tilesheet/spritesheet/npc
-				> tilesize: x/y
+				> editor.js: load/switch/save npc; add npc; unload
+				> remove tilesheet/spritesheet/npc
+				> assets.json structure plans (all in 1 file?)
+
 				> sprite avatar editor (saves to avatar sheet)
 				> Game Changes: assets.json; tilesPerRow/columns; sprite_offset/sheet_offset; tilesize.xy
 				> Map Changes: use sprite avatar sheet
 
+				> tile highlight w/ sheet offset
+				> sprite preview (for offset, animation, etc.)
+				> tilesize: x/y
+
+
+
+				> BUG: mouse hover on large tiles
+				> BUG: new spritesheet -> new animation
 
 
 				> don't allow saving unless all required fields are filled
