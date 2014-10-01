@@ -487,6 +487,11 @@ var Editor = function(container, sheet){
 		} else if (viewType == 'npc') {
 			view = view_npc;
 			sheet.prepareSheet('npc');
+		} else if (viewType == 'none') {
+			view = null;
+			sheet.clearSheet(true);
+			sheet.clearTilesheet();
+			return;
 		} else {
 			console.error("Bad view: "+viewType);
 			return;

@@ -5,6 +5,7 @@ var AssetsManager = function(assets, container){
 		onClickTilesheet: new Function(),
 		onClickSpritesheet: new Function(),
 		onClickNPC: new Function(),
+		onRemovedItem: new Function(),
 
 		onAddTilesheet: new Function(),
 		onAddSpritesheet: new Function(),
@@ -19,16 +20,25 @@ var AssetsManager = function(assets, container){
 	_el = $('<div/>').addClass('assets');
 
 	addAsset = function(assetType, asset){
-		var assetEl = $('<a/>')
+		var assetContainer = $('<div/>').addClass('asset-container'),
+			assetEl = $('<a/>')
 						.attr('href', true)
 						.addClass('asset')
 						.data( 'type', assetType )
 						.data( 'asset', asset )
-						.text( asset.id );
+						.text( asset.id ),
+			assetRemove = $('<a/>')
+							.attr('href', true)
+							.addClass('asset-remove')
+							.data( 'type', assetType )
+							.data( 'asset', asset )
+							.text( "X" );
 
-		containers[assetType].element.append( assetEl );
+		assetContainer.append( assetRemove ).append( assetEl );
+
+		containers[assetType].element.append( assetContainer );
 		containers[assetType].list.push({
-			element: assetEl,
+			element: assetContainer,
 			asset: asset
 		});
 
@@ -50,6 +60,55 @@ var AssetsManager = function(assets, container){
 			me.addClass('modified');
 			$('#assetsArea').addClass('modified');
 			$('#assetsSave').addClass('modified');
+		});
+
+		assetRemove.click(function(){
+
+			// Remove Asset from assets list
+			/////////////////////////
+			var indexOfAsset = -1,
+				assetType    = $(this).data('type'),
+				asset        = $(this).data('asset'),
+				assetList    = assets[ assetType ].list;
+			for (var i=0; i<assetList.length; ++i) {
+				if (assetList[i] == asset) {
+					indexOfAsset = i;
+					break;
+				}
+			}
+
+			if (indexOfAsset == -1) {
+				console.error("Could not find asset in asset list?!");
+				return false;
+			}
+
+			assetList.splice( indexOfAsset, 1 );
+
+
+
+			// Remove Asset from container
+			/////////////////////////
+			indexOfAsset = -1;
+			assetList = containers[assetType].list;
+			for (var i=0; i<assetList.length; ++i) {
+				if (assetList[i].asset == asset) {
+					indexOfAsset = i;
+					break;
+				}
+			}
+
+			if (indexOfAsset == -1) {
+				console.error("Could not find asset in asset-container list?!");
+				return false;
+			}
+
+			assetList.splice( indexOfAsset, 1 );
+
+			$(this).parent().remove();
+			interface.onRemovedItem(asset);
+			$('#assetsArea').addClass('modified');
+			$('#assetsSave').addClass('modified');
+			return false;
 		});
 
 

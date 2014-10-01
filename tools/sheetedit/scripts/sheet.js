@@ -4,6 +4,7 @@ var Sheet = function(canvas){
 	var interface = {
 			loadSheet: new Function(),
 			clearSheet: new Function(),
+			clearTilesheet: new Function(),
 			adjustSheet: new Function(),
 			setMode: new Function(),
 			setDragDropMode: new Function(),
@@ -114,6 +115,11 @@ var Sheet = function(canvas){
 
 	interface.getSheetData = function(){
 		return sheetData;
+	};
+
+	interface.clearTilesheet = function(){
+		ready = false;
+		tilesheet = null;
 	};
 
 	interface.clearSheet = function(shallowClean){
