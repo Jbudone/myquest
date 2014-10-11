@@ -7,7 +7,8 @@ define(function(){
 		extensions={
 			movable:(CLIENT|SERVER),
 			map:(CLIENT|SERVER),
-			page:(CLIENT|SERVER)
+			page:(CLIENT|SERVER),
+			resources:(CLIENT|SERVER)
 		}, ready=function(environment){
 			return new Promise(function(loaded, failed) {
 				var envPath = (environment==CLIENT?'client/':'server/'),

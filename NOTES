@@ -111,3 +111,17 @@ LEARN THESE
  > Animation, Canvas
  > Exceptions, Promises
  > WebEncryption, WebP images
+ 
+
+SERVER
+	* Updating server
+		- major update:
+		  	git branch vX
+			git checkout vX
+			git pull origin master
+
+			kill processes (ps -ef)
+			(update db)
+
+			nohup ./runserver &
+			(update jbud.me)

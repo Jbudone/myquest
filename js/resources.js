@@ -1,6 +1,66 @@
 
-define(['jquery'], function($){
+define(['jquery', 'loggable'], function($, Loggable){
 
+
+	var Resources = (function(){
+
+		Ext.extend(this,'resources');
+		extendClass(this).with(Loggable);
+		this.setLogGroup('Resources');
+		this.setLogPrefix('(Resources) ');
+
+		var interface = {
+
+			sprites: {},
+			animations: {},
+			sheets: {},
+			maps: {},
+			npcs: {},
+
+			initialize: new Function(),
+
+		}, initialize = (function(loadingResources){
+
+			return new Promise(function(loaded, failed){
+
+				this.read('data/resources.new.json').then((function(data){
+					var resources = JSON.parse(data),
+						assets    = { },
+						loading   = loadingResources.length;
+
+
+					for (var i=0; i<loadingResources.length; ++i) {
+						var resourceID = loadingResources[i];
+						if (!resources[resourceID]) {
+							this.Log("Resource ("+resourceID+") not found", LOG_ERROR);
+							failed();
+						}
+
+						this.Log("Loading resource: " + resourceID + "("+resources[resourceID]+")");
+						this.read('data/' + resources[resourceID]).then((function(data){
+							for (var j=0; j<100; ++j) console.log(data[j]);
+							assets[resourceID] = data;
+							if (--loading == 0) {
+								this.Log("Loaded resource assets");
+								loaded(assets);
+							}
+						}.bind(this)), failed);
+					}
+
+				}.bind(this)), failed);
+
+			}.bind(this));
+		}.bind(this));
+
+
+		interface.initialize = initialize;
+
+		return interface;
+	});
+
+	return Resources;
+
+	/*
 	var sprites={},
 		animations={},
 		sheets={},
@@ -155,4 +215,5 @@ define(['jquery'], function($){
 		npcs:npcs,
 		findSheetFromFile:findSheetFromFile
 	};
+	*/
 });

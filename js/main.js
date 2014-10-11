@@ -1,4 +1,10 @@
 				// TODO:
+				// 	
+				// 	resources.js
+				// 		- client/server: loading methods
+				// 		- read resources.json -> read world, npcs, sheets
+				// 		- sprite_offset, sheet_offset, link to sheets properly (json architecture changes), tilesPerRow/columns?
+				//
 				//
 				// 	> main.js (refactoring)
 				// 		- remove try/catch; return error objects from functions
@@ -70,7 +76,7 @@
 				//
 				//
 				//
-				//	> Loggable output to file
+				//	> Loggable output to file? to UI?
 				//	> physical state machine
 				//	> player dying: animation, corpse, respawn -- death message; respawn to safe spot, remove corpse after some time
 				//	> experience, level up; level up notification

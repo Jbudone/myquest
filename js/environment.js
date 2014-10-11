@@ -33,6 +33,7 @@ define(function(){
 			'UI': (logVerbose),
 			'DB': (logVerbose),
 			'Player': (logVerbose),
+			'Resources': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};
