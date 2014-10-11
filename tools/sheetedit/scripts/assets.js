@@ -1,5 +1,5 @@
 
-var AssetsManager = function(assets, container){
+var AssetsManager = function(assets, container, files){
 
 	var interface = {
 		onClickTilesheet: new Function(),
@@ -11,7 +11,8 @@ var AssetsManager = function(assets, container){
 		onAddSpritesheet: new Function(),
 		onAddNPC: new Function()
 	},  _el = null,
-		assets = assets,
+		avatars = assets.avatars,
+		assets = assets.sheets, // TODO: change 'assets' to 'sheets'
 		containers = {},
 		modifiedList = [],
 		addAsset = null;
@@ -177,6 +178,7 @@ var AssetsManager = function(assets, container){
 				},
 				data: {
 					animations: {},
+					avatar: 0
 				}
 			}, assetEl = addAsset( 'spritesheets', asset );
 		assetEl.addClass('modified');
@@ -189,24 +191,120 @@ var AssetsManager = function(assets, container){
 
 	$('#assetsSave').data('assets', assets).click(function(){
 
-		$.post('assets.php', { assets: assets }, function(data){
-			var json = JSON.parse(data),
-				success = !!json.success;
-			console.log('success: '+(success?'true':'false'));
 
-			if (success) {
-				for (var i=0; i<modifiedList.length; ++i) {
-					modifiedList[i].removeClass('modified');
+		var saveSheets = function(){
+
+			var sheetsFile = files.sheets;
+			$.post('assets.php', { request: "sheets", assets: assets, file: sheetsFile }, function(data){
+				var json = JSON.parse(data),
+					success = !!json.success;
+				console.log('saved sheets: '+(success?'true':'false'));
+
+				if (success) {
+					saveAvatars();
 				}
-				modifiedList = [];
-				$('#assetsArea').removeClass('modified');
-				$('#assetsSave').removeClass('modified');
-				// TODO: effects to show that save was successful
+			});
+
+		}, saveAvatars = function(){
+
+			/*
+{
+"image": {
+	"file": "avatars.png",
+	"size": 16
+}, "avatars": {
+	"firefox": 0,
+	"goblin": 1
+}
+}
+*/
+
+			var imageDetails = avatars.image,
+				canvas = document.createElement('canvas'),
+				ctx = canvas.getContext('2d'),
+				tilesize = parseInt(imageDetails.size),
+				columns = parseInt(imageDetails.columns),
+				rows = parseInt( assets.spritesheets.list.length / columns ) + 1;
+
+			// setup our canvas
+			canvas.width = columns * tilesize;
+			canvas.height = rows * tilesize;
+
+
+			// make avatars list
+			avatars.avatars = [];
+			var waitingOn = assets.spritesheets.list.length,
+				toDraw = { },
+				checkReadyToDraw = function(){
+					if (waitingOn != 0) return;
+					for (var i=0; i<assets.spritesheets.list.length; ++i) {
+						var sprite = assets.spritesheets.list[i],
+							details = toDraw[sprite.id],
+							source = {
+								tilesize: parseInt(sprite.tilesize),
+								columns: parseInt(details.image.width / sprite.tilesize),
+								rows: parseInt(details.image.height / sprite.tilesize),
+							},
+							dx = (i % columns) * tilesize,
+							dy = parseInt(i / columns) * tilesize;
+							source.sx = (details.avatar % source.columns) * source.tilesize;
+							source.sy = parseInt(details.avatar / source.columns) * source.tilesize;
+							
+						avatars.avatars[ i ] = sprite.id;
+						ctx.drawImage( details.image,
+									  source.sx, source.sy, source.tilesize, source.tilesize,
+									  dx, dy, tilesize, tilesize );
+					}
+
+
+
+					// Save image + data
+					var avatarsFile = files.avatars,
+						avatarsImageFile = imageDetails.file;
+					$.post('assets.php', { request: "avatars", avatars: avatars, image: canvas.toDataURL('image/png'), file: avatarsFile, file_image: avatarsImageFile }, function(data){
+						var json = JSON.parse(data),
+							success = !!json.success;
+						console.log('saved avatars: '+(success?'true':'false'));
+
+						if (success) {
+							finishedSaving();
+						}
+					});
+
+
+				};
+
+			_.each(assets.spritesheets.list, function(sprite, i){
+				var sheet = new Image();
+				sheet.onload = function(){
+					toDraw[ sprite.id ] = {
+						image: sheet,
+						sprite: sprite,
+						avatar: parseInt(sprite.data.avatar)
+					};
+					--waitingOn;
+					checkReadyToDraw();
+				};
+				sheet.src = sprite.image;
+			});
+
+		}, finishedSaving = function(){
+
+			for (var i=0; i<modifiedList.length; ++i) {
+				modifiedList[i].removeClass('modified');
 			}
-		});
+			modifiedList = [];
+			$('#assetsArea').removeClass('modified');
+			$('#assetsSave').removeClass('modified');
+			// TODO: effects to show that save was successful
+
+		};
+
+		saveSheets();
 
 		return false;
 	});
+
 
 	return interface;
 };

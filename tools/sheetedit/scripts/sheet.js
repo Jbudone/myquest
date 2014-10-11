@@ -196,6 +196,24 @@ var Sheet = function(canvas){
 				}
 			}
 
+			if (sheet.data.hasOwnProperty("avatar")) {
+				selections.avatar = {
+					selection: new TilesSelection(),
+					color: '#CCAACC',
+					opacity: 0.7,
+				}
+
+				var tx = parseInt(sheet.data.avatar % sheetData.columns),
+					ty = parseInt(sheet.data.avatar / sheetData.columns),
+					tile = new Tile( ty, tx );
+
+				selections.avatar.selection.tiles = [ tile ];
+				selections.avatar.selection.addTile = function(tile) {
+					this.tiles = [ tile ];
+					sheet.data.avatar = tile.x + tile.y * sheetData.columns;
+				};
+			}
+
 			if (sheet.data.animations) {
 				selections.animations = {
 					selection: new TilesSelection(),

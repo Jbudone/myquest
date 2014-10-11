@@ -1,0 +1,8 @@
+{
+	"sheets": "sheets.new.json",
+	"avatars": "avatars.new.json",
+	"npcs": "npcs.new.json",
+	"world": "world.json",
+	"items": "items.new.json",
+	"scripts": "scripts.new.json"
+}

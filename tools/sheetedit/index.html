@@ -157,15 +157,42 @@
 		<!--
 			TODO
 				> editor.js: load/switch/save npc; add npc; remove npc; unload
-				> assets.json structure plans (all in 1 file?)
+				> assets
+					* resources: { Sheets: ..., NPCs: ..., ... }; keep track of which resources have changed
+					* save each modified resource to their appropriate files
+					* load resources.json initially
+					* load each resource from specified files
 
-				> sprite avatar editor (saves to avatar sheet)
+					resources.json
+						Sheets: sheets.json
+						NPC's: npcs.json
+						Items: items.json
+						Scripts: scripts.json
+					sheets.json
+						Tilesheets, Spritesheets
+					npcs.json
+						NPCs
+					items.json
+					scripts.json
+					avatars.json
+						{
+							image: {
+								file: "img.png",
+								size: 16
+							},
+							avatars: {
+								"firefox": 0,
+								"goblin": 1
+							}
+						}
+
+
 				> Game Changes: assets.json; tilesPerRow/columns; sprite_offset/sheet_offset; tilesize.xy
-				> Map Changes: use sprite avatar sheet
 
 				> tile highlight w/ sheet offset
 				> sprite preview (for offset, animation, etc.)
 				> tilesize: x/y
+				> write JSON in prettify'd format; and unprettified for .min
 
 
 

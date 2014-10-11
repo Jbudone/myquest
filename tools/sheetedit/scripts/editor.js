@@ -284,6 +284,7 @@ var Editor = function(container, sheet){
 		this.data = data;
 		if (!data.data) data.data = {};
 		if (!data.data.animations) data.data.animations = {};
+		if (!data.data.avatar) data.data.avatar = 0;
 
 		view_spritesheet.components.id.val( data.id );
 		view_spritesheet.components.tilesize.input.val( parseInt(data.tilesize) );
@@ -297,6 +298,7 @@ var Editor = function(container, sheet){
 
 		view_spritesheet.linkEl = linkEl;
 
+		view_spritesheet.components.setAnimation[0].onclick = null;
 		view_spritesheet.components.setAnimation[0].onclick = function(){
 			var animationName = 'New Animation',
 				animation = {
