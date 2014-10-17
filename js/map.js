@@ -1,6 +1,4 @@
-
-
-define(['resources','eventful','page','loggable'], function(Resources,Eventful,Page,Loggable){
+define(['eventful','page','loggable'], function(Eventful,Page,Loggable){
 	
 	/* Map
 	 *

@@ -1,5 +1,4 @@
-
-define(['resources','eventful'], function(Resources,Eventful){
+define(['eventful'], function(Eventful){
 
 
 

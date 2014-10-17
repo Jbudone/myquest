@@ -1,5 +1,4 @@
-
-define(['resources'], function(Resources){
+define(function(){
 
 
 	var Sprite = function(spriteID){
@@ -7,8 +6,7 @@ define(['resources'], function(Resources){
 
 		// Load Sprite
 		// ID of Sprite given..find and use sprite from sprites
-		this.states=Resources.sprites[spriteID].states;
-		this.sheet=Resources.sprites[spriteID].sheet;
+		this.sheet=Resources.sprites[spriteID];
 		this.spriteID=spriteID;
 
 		this.tileSize=this.sheet.tileSize.width;

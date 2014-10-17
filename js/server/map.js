@@ -1,4 +1,4 @@
-define(['resources','page'], function(Resources,Page){
+define(['page'], function(Page){
 
 	var Map={
 		_init: function(){
@@ -84,13 +84,13 @@ define(['resources','page'], function(Resources,Page){
 									};
 
 									// set collision mask if necessary
-									if (this.sheet.collisions !== undefined && this.sheet.collisions.indexOf(sprite-1) >= 0) {
+									if (this.sheet.data.collisions !== undefined && this.sheet.data.collisions.indexOf(sprite-1) >= 0) {
 										page.collidables[iy] |= 1<<ix;
 										page.sprites[index].collidable = true;
 									}
 
 									// set floating details
-									if (this.sheet.floating !== undefined && this.sheet.floating.indexOf(sprite-1) >= 0) {
+									if (this.sheet.data.floating !== undefined && this.sheet.data.floating.indexOf(sprite-1) >= 0) {
 										page.sprites[index].floating = true;
 									}
 

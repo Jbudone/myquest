@@ -1,5 +1,4 @@
-
-define(['resources','sprite','eventful'], function(Resources, Sprite, Eventful){
+define(['sprite','eventful'], function(Sprite, Eventful){
 
 	var entities = 0;
 

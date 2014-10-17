@@ -1,4 +1,4 @@
-define(['resources','eventful','map'], function(Resources,Eventful,Map){
+define(['eventful','map'], function(Eventful,Map){
 
 	var World = function(){
 		Ext.extend(this,'world');

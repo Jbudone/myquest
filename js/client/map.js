@@ -1,5 +1,4 @@
-
-define(['resources','page','movable'], function(Resources,Page,Movable){
+define(['page','movable'], function(Page,Movable){
 
 	var Map={
 

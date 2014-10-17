@@ -1,5 +1,5 @@
 
-define(['resources','sprite'], function(Resources,Sprite){
+define(['sprite'], function(Sprite){
 
 
 	var Animable = function(spriteID){
@@ -7,7 +7,7 @@ define(['resources','sprite'], function(Resources,Sprite){
 		this.base = Sprite;
 		this.base(spriteID);
 
-		this.animations=Resources.animations[spriteID].animations;
+		this.animations=Resources.sprites[spriteID].data.animations;
 		this.animation=null;
 		this.repeating=null;
 
@@ -22,8 +22,8 @@ define(['resources','sprite'], function(Resources,Sprite){
 				this.repeating=repeat;
 				this.state.y = this.animation.row*this.tileSize;
 				this.state.x = 0;
-				if (this.animation.sheet) this.state.sheet = this.animation.sheet;
-				else delete this.state.sheet;
+				// if (this.animation.sheet) this.state.sheet = this.animation.sheet;
+				// else delete this.state.sheet;
 			}
 		};
 		this.dirAnimate=function(spriteID, direction, repeat){

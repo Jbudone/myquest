@@ -1,5 +1,4 @@
-
-define(['resources','entity','animable'], function(Resources, Entity, Animable) {
+define(['entity','animable'], function(Entity, Animable) {
 
 	var Movable = function(spriteID, page, params) {
 		console.log("new Movable("+spriteID+")");

@@ -1,4 +1,3 @@
-
 define(['AI'], function(AI){
 	var Movable={
 		_init: function() {

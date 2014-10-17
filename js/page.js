@@ -1,4 +1,4 @@
-define(['resources','eventful','movable'], function(Resources,Eventful,Movable){
+define(['eventful','movable'], function(Eventful,Movable){
 
 
 

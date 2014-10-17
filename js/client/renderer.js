@@ -65,8 +65,10 @@ define(['loggable'], function(Loggable){
 
 			// Redraw the entities every frame
 			this.ctxEntities.clearRect(0, 0, this.canvasEntities.width, this.canvasEntities.height);
-			var sheetData = this.tilesheet;
-				sheet     = sheetData.image;
+			var sheetData   = this.tilesheet,
+				sheet       = sheetData.image,
+				floating    = this.tilesheet.data.floating,
+				collisions  = this.tilesheet.data.collisions;
 
 			// Only redraw the background if the camera has moved
 			if (this.camera.updated) {
@@ -199,8 +201,8 @@ define(['loggable'], function(Loggable){
 					px=(ix*tileSize-this.camera.offsetX)*scale;
 				try {
 					if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
-						if (sheetData.floating !== 'undefined' &&
-							sheetData.floating.indexOf(sprite) >= 0) {
+						if (floating !== 'undefined' &&
+							floating.indexOf(sprite) >= 0) {
 							floatingSprites.push({
 								sprite: sprite,
 								sx: sx,
@@ -278,8 +280,8 @@ define(['loggable'], function(Loggable){
 
 					try {
 						if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
-							if (sheetData.floating !== 'undefined' &&
-								sheetData.floating.indexOf(sprite) >= 0) {
+							if (floating !== 'undefined' &&
+								floating.indexOf(sprite) >= 0) {
 
 								floatingSprites.push({
 									sprite: sprite,

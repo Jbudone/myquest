@@ -1,19 +1,11 @@
 				// TODO:
-				// 	
-				// 	resources.js
-				// 		- client/server: loading methods
-				// 		- read resources.json -> read world, npcs, sheets
-				// 		- sprite_offset, sheet_offset, link to sheets properly (json architecture changes), tilesPerRow/columns?
-				//
 				//
 				// 	> main.js (refactoring)
 				// 		- remove try/catch; return error objects from functions
-				// 		- client/resources.js: fetch (ajax/cache), load(resources.json, npc.json)
 				// 		- debug.js, client/debug.js, server/debug.js: various debugging things,  window['TheOtherPlayer'] = ...
 				// 		- pathfinding.js
 				//
 				// 	> server.js (refactoring)
-				// 		- server/resources.js: read(resources.json, npc.json, world.json, maps); DONT add animations
 				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
@@ -106,6 +98,8 @@
 				//	> CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages
 				//	> CLEAN: adopt .bind() as much as possible (callbacks, promises, etc.)
 				//	> CLEAN: tile (global/local???)
+				//	> CLEAN: for(...){ ... } where functions perform chaining to variables within the for loop (errors)
+				//	> CLEAN: resources initialization routine (in client/server resources.js?)
 				//
 				//
 				//	
@@ -154,6 +148,7 @@
 				//	> death animation
 				//	> debugging: monitor events -- in case the same object listens to the same event more than once
 				//	> debugging: keep track of all events, and periodic snapshots of the game output to a logfile -- that logfile could be read back to re-animate the game and show step-by-step what happened and where things went wrong
+				//	> sprite offset
 				//
 				//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
 				//
@@ -177,11 +172,12 @@ try{
 
 	var modulesToLoad          = {},
 		ready                  = false,
-		LOADING_RESOURCES      = 1,
-		LOADING_CONNECTION     = 2,
-		LOADING_INITIALIZATION = 3,
-		LOADING_FINISHED       = 4,
-		loadingPhase           = LOADING_RESOURCES,
+		LOADING_CORE           = 1,
+		LOADING_RESOURCES      = 2,
+		LOADING_CONNECTION     = 3,
+		LOADING_INITIALIZATION = 4,
+		LOADING_FINISHED       = 5,
+		loadingPhase           = LOADING_CORE,
 		loading                = function(module){ modulesToLoad[module] = false; },
 		initializeGame         = null,
 		startGame              = null,
@@ -196,7 +192,8 @@ try{
 			}
 			if (ready && _.size(modulesToLoad)==0) {
 				++loadingPhase;
-				if (loadingPhase==LOADING_CONNECTION) connectToServer();
+				if (loadingPhase==LOADING_RESOURCES) loadResources();
+				else if (loadingPhase==LOADING_CONNECTION) connectToServer();
 				else if (loadingPhase==LOADING_INITIALIZATION) initializeGame();
 				else if (loadingPhase==LOADING_FINISHED) startGame();
 			}
@@ -324,55 +321,170 @@ try{
 		// Load game resources
 		/////////////////////////
 
-		loading('resources');
-		$.ajax('data/resources.json', {
-			cache: false,
-			dataType: 'text'
-		}).done(function(res){
-			res = JSON.parse(res);
+		loadResources = function(){
+			loading('resources');
 
-			// Load Sheets
-			for (i=0; i<res.sheets.length; ++i) {
-				var sheet = res.sheets[i];
-				Resources.addSheet(sheet);
-			}
+			Resources = (new Resources());
+			window['Resources'] = Resources;
+			// FIXME: initialize with array of resources? Shouldn't this be apart of client/server specific Resources.js?
+			Resources.initialize(['sheets', 'npcs']).then(function(assets){
 
-			// Load Sprites
-			for (i=0; i<res.sprites.length; ++i) {
-				var sprite = res.sprites[i];
-				Resources.addSprite(sprite);
-				if (sprite.animations) {
-					Resources.addAnimation({
-						id:sprite.id,
-						sheet:sprite.sheet,
-						animations:sprite.animations
-					});
+
+				var res = JSON.parse(assets.sheets),
+					makeSheet = function(_sheet){
+						var sheet = {
+							file: _sheet.image,
+							offset: {
+								x: parseInt(_sheet.sheet_offset.x),
+								y: parseInt(_sheet.sheet_offset.y),
+							},
+							tileSize: {
+								width: parseInt(_sheet.tilesize),
+								height: parseInt(_sheet.tilesize),
+							},
+							image: (new Image()),
+							tilesPerRow: parseInt(_sheet.columns),
+							data: { }
+						};
+
+						sheet.image.src = location.origin + location.pathname + sheet.file;
+						return sheet;
+					};
+				for (var i=0; i<res.tilesheets.list.length; ++i) {
+					var _sheet = res.tilesheets.list[i],
+						sheet  = makeSheet( _sheet );
+
+					sheet.data.collisions = [];
+					for (var j=0; j<_sheet.data.collisions.length; ++j) {
+						sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
+					}
+
+					sheet.data.floating = [];
+					for (var j=0; j<_sheet.data.floating.length; ++j) {
+						sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+					}
+					Resources.sheets[_sheet.id] = sheet;
 				}
-			}
 
-			loaded('resources');
-		}).fail(function(reason){
-			console.log(reason);
-		});
+				for (var i=0; i<res.spritesheets.list.length; ++i) {
+					var _sheet = res.spritesheets.list[i],
+						sheet  = makeSheet( _sheet );
 
-		loading('npc_list');
-		$.ajax('data/npc.json', {
-			cache: false,
-			dataType: 'text'
-		}).done(function(res){
-		
-			res = JSON.parse(res).npcs;
+					sheet.data.animations = {};
 
-			// Load NPC's
-			for (var i=0; i<res.length; ++i) {
-				var npc = res[i];
-				Resources.addNPC(npc);
-			}
+					var env = {
+						animations: _sheet.data.animations,
+						_sheet: _sheet,
+						sheet: sheet
+					};
 
-			loaded('npc_list');
-		}).fail(function(reason){
-			console.log(reason);
-		});
+					var NOFLIPX = 1<<0,
+						FLIPX   = 1<<1;
+					var prepareImage = (function(){
+
+						var animations = this.animations,
+							_sheet     = this._sheet,
+							sheet      = this.sheet;
+
+
+						// Figure out the dimensions of our spritesheet
+						var canvas  = document.createElement('canvas'),
+							ctx     = canvas.getContext('2d'),
+							allRows = {},
+							rows    = 0,
+							cols    = 0,
+							tWidth  = sheet.tileSize.width,
+							tHeight = sheet.tileSize.height;
+						for (var key in animations){
+							var ani   = animations[key],
+								row   = parseInt(ani.row),
+								len   = parseInt(ani.length),
+								flipX = (ani.hasOwnProperty('flipX') && ani.flipX == "true");
+							if (!allRows[row]) {
+								allRows[row] = { flipX: (ani.flipX?FLIPX:NOFLIPX) };
+								++rows;
+							} else if (!(allRows[row].flipX & (flipX?FLIPX:NOFLIPX))) {
+								allRows[row].flipX |= (flipX?FLIPX:NOFLIPX);
+								++rows;
+							}
+
+							if (len > cols) {
+								cols = len;
+							}
+						}
+
+						canvas.height = tHeight * rows;
+						canvas.width  = tWidth  * cols;
+
+						// Draw animations to sheet
+						var iRow = 0;
+						for(var key in animations){
+							var ani = animations[key],
+								row   = parseInt(ani.row),
+								len   = parseInt(ani.length);
+							if (ani.flipX) {
+
+
+								try {
+									// For Chrome
+									ctx.save();
+									ctx.scale(-1,1);
+									for(var i=len-1, j=0; i>=0; --i, ++j) {
+										ctx.drawImage(sheet.image, i*tWidth - sheet.offset.x, row*tHeight - sheet.offset.y, tWidth, tHeight, -i*tWidth, iRow*tHeight, -tWidth, tHeight);
+									}
+									ctx.restore();
+								} catch(e) {
+									// For Firefox
+									// ctx.scale(-1,1);
+									for(var i=len-1, j=0; i>=0; --i, ++j) {
+										ctx.drawImage(sheet.image, j*tWidth, row*tHeight, tWidth, tHeight, -(j+1)*tWidth, iRow*tHeight, tWidth, tHeight);
+									}
+									// for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
+									// 	ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, j*32, 0, 32, 32);
+									// }
+									// ctx.transform(-1,0,0,1,0,0);  
+								}
+
+							} else {
+								ctx.drawImage(sheet.image, -sheet.offset.x, row*tHeight - sheet.offset.y, tWidth*len, tHeight, 0, iRow*tHeight, tWidth*len, tHeight);
+							}
+
+							ani.row = (iRow++);
+							ani.length = len;
+							delete ani.flipX;
+							sheet.data.animations[key] = ani;
+						}
+
+						sheet.image = new Image();
+						sheet.image.src = canvas.toDataURL("image/png");
+
+					}.bind(env));
+
+					sheet.image.onload = prepareImage;
+					if (sheet.image.complete) prepareImage(); // In case its already loaded
+
+					Resources.sprites[_sheet.id] = sheet;
+				}
+
+
+
+
+
+
+				res = JSON.parse(assets.npcs).npcs;
+
+				// Load NPC's
+				for (var i=0; i<res.length; ++i) {
+					var npc = res[i];
+					Resources.npcs[npc.id]=npc;
+				}
+
+
+
+				loaded('resources');
+			});
+		};
+
 
 
 		loading('extensions');

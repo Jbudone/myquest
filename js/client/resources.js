@@ -4,7 +4,7 @@ define(function(Resources){
 
 		},
 
-		ready: function(file){
+		read: function(file){
 			return new Promise(function(succeeded, failed){
 				$.ajax(file, {
 					cache: false,

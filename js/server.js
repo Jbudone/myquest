@@ -101,51 +101,68 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				loading('resources');
 				Resources = (new Resources());
+				GLOBAL['Resources'] = Resources;
 				Resources.initialize(['world', 'sheets', 'npcs']).then(function(assets){
 
 					// TODO: include map loading with world
 					// TODO: handle sheets, sprites, npcs, world/maps internally in resource mgr
 
-					console.log(assets);
 
 
 					var res = JSON.parse(assets.sheets);
 
-					console.log('here');
-					// Load Sheets
-					for (i=0; i<res.sheets.length; ++i) {
-						var sheet = res.sheets[i];
-						Resources.addSheet(sheet);
-					}
+					var makeSheet = function(_sheet){
+						var sheet = {
+							file: _sheet.image,
+							offset: {
+								x: parseInt(_sheet.sheet_offset.x),
+								y: parseInt(_sheet.sheet_offset.y),
+							},
+							tileSize: {
+								width: parseInt(_sheet.tilesize),
+								height: parseInt(_sheet.tilesize),
+							},
+							image: null,
+							tilesPerRow: parseInt(_sheet.columns),
+							data: { }
+						};
 
-					console.log('here');
-					// Load Sprites
-					for (var i=0; i<res.sprites.length; ++i) {
-						var sprite = res.sprites[i];
-						Resources.addSprite(sprite);
-						if (sprite.animations) {
-							Resources.addAnimation({
-								id:sprite.id,
-								sheet:sprite.sheet,
-								animations:sprite.animations
-							});
+						return sheet;
+					};
+					for (var i=0; i<res.tilesheets.list.length; ++i) {
+						var _sheet = res.tilesheets.list[i],
+						sheet  = makeSheet( _sheet );
+
+						sheet.data.collisions = [];
+						for (var j=0; j<_sheet.data.collisions.length; ++j) {
+							sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
 						}
+
+						sheet.data.floating = [];
+						for (var j=0; j<_sheet.data.floating.length; ++j) {
+							sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+						}
+						Resources.sheets[_sheet.id] = sheet;
 					}
 
-					console.log('here');
+					for (var i=0; i<res.spritesheets.list.length; ++i) {
+						var _sheet = res.spritesheets.list[i],
+							sheet  = makeSheet( _sheet );
+
+						sheet.data.animations = {};
+						Resources.sprites[_sheet.id] = sheet;
+					}
+
+
 					// NPCS
+					res = JSON.parse(assets.npcs).npcs;
 
-					res = assets.npcs;
-					res = JSON.parse(res).npcs;
-
-					console.log('here');
 					// Load NPC's
 					for (var i=0; i<res.length; ++i) {
 						var npc = res[i];
-						Resources.addNPC(npc);
+						Resources.npcs[npc.id]=npc;
 					}
 
-					console.log('here');
 
 					// Load World
 					var data = assets.world;
@@ -161,8 +178,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 								return;
 							}
 
-							var json = JSON.parse(data);
-							Resources.addMap(json.MapFile);
+							var json = JSON.parse(data),
+								data = json.MapFile;
+							Resources.maps[data.Map.id]={
+								data:data.Map,
+								properties:data.properties
+							};
 							world.addMap(mapID);
 							loaded('map ('+mapID+')');
 						});

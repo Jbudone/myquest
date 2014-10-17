@@ -1,4 +1,4 @@
-define(['resources','movable'], function(Resources,Movable){
+define(['movable'], function(Movable){
 
 	var Page = {
 
