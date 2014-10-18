@@ -42,6 +42,11 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				respawnPoint   = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.y, player.respawn.position.x);
 
 			this.movable          = new Movable('player', playerPosition.page, {
+												position: {
+													tile: new Tile(player.position.y, player.position.x),
+													global: { y: player.position.y, x: player.position.x },
+													local: playerPosition
+												},
 												posY: playerPosition.y * Env.tileSize,
 												posX: playerPosition.x * Env.tileSize,
 												respawnPoint: new Tile( respawnPoint.y + respawnPoint.page.y,

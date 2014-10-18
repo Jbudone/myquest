@@ -228,7 +228,12 @@ try{
 				The.player      = true; // NOTE: this is used to help the initiatilization of Movable below to determine that it is our player (The.player === true)
 				The.player      = new Movable('player');
 				The.player.id   = player.id;
-				The.player.position = player.position; // TODO: remove this quickfix
+
+				The.player.position = {
+					tile: new Tile(player.position.y, player.position.x),
+					global: { y: player.position.y, x: player.position.x },
+					local: null,
+				};
 
 				// Setup basic AI (following target)
 				Log("Giving AI to player", LOG_DEBUG);
@@ -506,11 +511,10 @@ try{
 		// Game Initialization
 		initializeGame = function(){
 
-			var playerPosition = The.map.localFromGlobalCoordinates(The.player.position.y, The.player.position.x);
+			var playerPosition = The.map.localFromGlobalCoordinates(The.player.position.global.y, The.player.position.global.x);
 			The.map.curPage = playerPosition.page;
 			The.player.page = The.map.curPage;
-			// The.player.posY = playerPosition.y*Env.tileSize;
-			// The.player.posX = playerPosition.x*Env.tileSize;
+			The.player.position.local = playerPosition;
 
 			The.map.curPage.addEntity( The.player );
 

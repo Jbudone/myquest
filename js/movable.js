@@ -146,11 +146,15 @@ define(['entity','animable'], function(Entity, Animable) {
 								// Moved to new tile
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 								this.tileY = tile;
+
+								this.position.tile.y = this.tileY + this.page.y;
 							} else {
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
 						}
 						this.posY = posK;
+						this.position.local.y = this.posY;
+						this.position.global.y = this.posY + this.page.y * Env.tileSize;
 					} else {
 						var tile = posK / Env.tileSize;
 						if (Math.floor(tile) != this.tileX || Math.ceil(tile) != this.tileX) {
@@ -159,11 +163,14 @@ define(['entity','animable'], function(Entity, Animable) {
 								// Moved to new tile
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 								this.tileX = tile;
+								this.position.tile.x = this.tileX + this.page.x;
 							} else {
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
 						}
 						this.posX = posK;
+						this.position.local.x = this.posX;
+						this.position.global.x = this.posX + this.page.x * Env.tileSize;
 					}
 
 					if (finishedWalk) {
@@ -173,6 +180,10 @@ define(['entity','animable'], function(Entity, Animable) {
 						this.posX = Env.tileSize*Math.round(this.posX/Env.tileSize);
 						this.posY = Env.tileSize*Math.round(this.posY/Env.tileSize);
 						// console.log("["+this.id+"] Finished paths! ("+this.posY+","+this.posX+")["+this.posY/16+","+this.posX/16+"] from ("+oldY+","+oldX+")");
+						this.position.global.y = this.posY + this.page.y * Env.tileSize;
+						this.position.global.x = this.posX + this.page.x * Env.tileSize;
+						this.position.local.y = this.posY;
+						this.position.local.x = this.posX;
 					}
 					
 
