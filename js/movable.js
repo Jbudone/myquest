@@ -41,6 +41,16 @@ define(['entity','animable'], function(Entity, Animable) {
 			}
 		};
 
+		this.updatePosition = function(localX, localY){
+			this.posX = localX;
+			this.posY = localY;
+			this.position.local.x = localX;
+			this.position.local.y = localY;
+			this.position.global.x = localX + this.page.x * Env.tileSize;
+			this.position.global.y = localY + this.page.y * Env.tileSize;
+			this.position.tile.x = parseInt(this.position.global.x / Env.tileSize)
+			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize)
+		};
 
 
 		this.lastStep=0;
@@ -144,33 +154,32 @@ define(['entity','animable'], function(Entity, Animable) {
 							// Moving to new tile
 							if (Math.floor(tile) == Math.ceil(tile)) {
 								// Moved to new tile
-								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 								this.tileY = tile;
-
-								this.position.tile.y = this.tileY + this.page.y;
+								this.updatePosition(this.posX, posK);
+								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
+								this.updatePosition(this.posX, posK);
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
+						} else {
+							this.posY = posK;
 						}
-						this.posY = posK;
-						this.position.local.y = this.posY;
-						this.position.global.y = this.posY + this.page.y * Env.tileSize;
 					} else {
 						var tile = posK / Env.tileSize;
 						if (Math.floor(tile) != this.tileX || Math.ceil(tile) != this.tileX) {
 							// Moving to new tile
 							if (Math.floor(tile) == Math.ceil(tile)) {
 								// Moved to new tile
-								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 								this.tileX = tile;
-								this.position.tile.x = this.tileX + this.page.x;
+								this.updatePosition(posK, this.posY);
+								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
+								this.updatePosition(posK, this.posY);
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
+						} else {
+							this.posX = posK;
 						}
-						this.posX = posK;
-						this.position.local.x = this.posX;
-						this.position.global.x = this.posX + this.page.x * Env.tileSize;
 					}
 
 					if (finishedWalk) {
@@ -180,10 +189,7 @@ define(['entity','animable'], function(Entity, Animable) {
 						this.posX = Env.tileSize*Math.round(this.posX/Env.tileSize);
 						this.posY = Env.tileSize*Math.round(this.posY/Env.tileSize);
 						// console.log("["+this.id+"] Finished paths! ("+this.posY+","+this.posX+")["+this.posY/16+","+this.posX/16+"] from ("+oldY+","+oldX+")");
-						this.position.global.y = this.posY + this.page.y * Env.tileSize;
-						this.position.global.x = this.posX + this.page.x * Env.tileSize;
-						this.position.local.y = this.posY;
-						this.position.local.x = this.posX;
+						this.updatePosition(this.posX, this.posY);
 					}
 					
 
