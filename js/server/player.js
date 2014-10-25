@@ -18,6 +18,8 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 		this.onPreparingToWalk = new Function();
 		this.onSomeEvent = new Function();
 
+		this.pages = { }; // Visible pages
+
 		// TODO: add archiving later?
 		// this.responseArchive = new EventsArchive();
 		// this.pathArchive = new EventsArchive();
@@ -44,8 +46,8 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 			this.movable          = new Movable('player', playerPosition.page, {
 												position: {
 													tile: new Tile(player.position.y, player.position.x),
-													global: { y: player.position.y, x: player.position.x },
-													local: playerPosition
+													global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
+													local: { y: playerPosition.y * Env.tileSize, x: playerPosition.x * Env.tileSize }
 												},
 												posY: playerPosition.y * Env.tileSize,
 												posX: playerPosition.x * Env.tileSize,
@@ -55,11 +57,20 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 			this.movable.playerID = player.id;
 
 			this.movable.page.addEntity(this.movable);
+			map.watchEntity(this.movable);
+
+			this.pages = { };
+			this.pages[this.movable.page.index] = this.movable.page;
+			for (var neighbour in this.movable.page.neighbours) {
+				var npage = this.movable.page.neighbours[neighbour];
+				if (npage) this.pages[npage.index] = npage;
+			}
 
 
-			this.movable.addEventListener(EVT_ZONE, this, function(player, page){
+
+			this.movable.addEventListener(EVT_ZONE, this, function(player, oldPage, page){
 				this.Log("Zoned player from ("+ this.movable.page.index +") to ("+ page.index +")");
-				var oldPage       = this.movable.page,
+				var oldPage       = oldPage,
 					oldNeighbours = {};
 
 				for (var neighbour in oldPage.neighbours) {
@@ -69,6 +80,8 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				}
 
 				this.movable.page = page;
+				this.pages = { };
+				this.pages[page.index] = page;
 
 
 
@@ -82,40 +95,44 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
+					if (npage) this.pages[npage.index] = npage;
 					if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
-						initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+						initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 					}
 				}
 
 				this.client.send(JSON.stringify(initialization));
 			});
 
-			this.movable.addEventListener(EVT_ZONE_OUT, this, function(player, map, page) {
-				this.Log("Zoned player from ("+this.movable.page.map.id+") to ["+map.id+"]");
-				this.movable.page = page;
+			this.movable.addEventListener(EVT_ZONE_OUT, this, function(player, oldMap, oldPage, map, page, zone) {
+				this.Log("Zoned player from ("+oldMap.id+")["+oldPage.index+"] to ("+map.id+")["+page.index+"]");
+				map.zoneIn(player, zone);
+				player.page = page;
+				this.pages = { };
+				this.pages[page.index] = page;
 
-				var oldMap = this.movable.page.map,
-					initialization = {
-					zoneMap:true,
-					map:{
-						id: oldMap.id,
-						pagesPerRow: oldMap.pagesPerRow,
-						mapWidth: oldMap.map.properties.width,
-						mapHeight: oldMap.map.properties.height,
-						tileset: oldMap.map.properties.tileset,
-					},
-					player:{
-						posY: this.movable.posY,
-						posX: this.movable.posX,
-						page: this.movable.page.index
-					},
-					pages:{}
-				};
+				var initialization = {
+						zoneMap:true,
+						map:{
+							id: map.id,
+							pagesPerRow: map.pagesPerRow,
+							mapWidth: map.map.properties.width,
+							mapHeight: map.map.properties.height,
+							tileset: map.map.properties.tileset,
+						},
+						player:{
+							posY: this.movable.posY,
+							posX: this.movable.posX,
+							page: this.movable.page.index
+						},
+						pages:{}
+					};
 
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+					if (npage) this.pages[npage.index] = npage;
+					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				}
 
 				this.client.send(JSON.stringify(initialization));
@@ -124,6 +141,8 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 			this.movable.brain.addEventListener(EVT_RESPAWNED, this, function(player){
 				this.Log("Player respawned");
 
+				this.pages = { };
+				this.pages[this.movable.page.index] = this.movable.page;
 				var page = this.movable.page,
 					map = page.map,
 					initialization = {
@@ -147,8 +166,10 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+					if (npage) this.pages[npage.index] = npage;
+					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				}
+
 
 				this.client.send(JSON.stringify(initialization));
 			}, HIGH_PRIORITY);
@@ -318,6 +339,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 
 			// TODO: find better way to remove movable from page
 			var page = this.movable.page;
+			page.map.unwatchEntity(this.movable);
 			delete page.movables[this.movable.id];
 			for (var i=0; i<page.updateList.length; ++i) {
 				if (page.updateList[i].id == this.movable.id) {
@@ -334,7 +356,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				console.log('	NO Player Killing!!');
 				return; // NO player killing!
 			}
-			this.movable.triggerEvent(EVT_AGGRO, this.movable.page.movables[targetID]);
+			this.movable.triggerEvent(EVT_AGGRO, this.movable.page.map.movables[targetID]);
 		};
 
 		client.on('close', (function() {
@@ -434,7 +456,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE);
+					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
 				}
 
 				this.client.send(JSON.stringify(initialization));

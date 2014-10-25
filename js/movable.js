@@ -22,6 +22,11 @@ define(['entity','animable'], function(Entity, Animable) {
 		this.lastMoved=now();
 		this.path=null;
 		this.zoning=false;
+		this.position = {
+			tile:   { x: 0, y: 0 },
+			local:  { x: 0, y: 0 },
+			global: { x: 0, y: 0 }
+		};
 
 		this.stepsToX=null;
 		this.stepsToY=null;

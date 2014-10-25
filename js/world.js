@@ -11,19 +11,25 @@ define(['eventful','map'], function(Eventful,Map){
 				var map = new Map(id);
 				this.maps[id] = map;
 
-				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, entity, zone) {
+				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {
 					try {
 						console.log(zone);
 						console.log("World zoning out");
-						var map  = this.maps[zone.map],
-							page = map.zoneIn(entity, zone);
-						entity.triggerEvent(EVT_ZONE_OUT, map, page);
+						debugger;
+						var oldPage = oldPage,
+							oldMap  = oldMap,
+							map     = this.maps[zone.map],
+							page    = map.zoneIn(entity, zone);
+						console.log("Zoning user ["+entity.id+"] to new map..");
+						oldPage.zoneEntity(null, entity);
+						oldMap.unwatchEntity(entity);
+						entity.triggerEvent(EVT_ZONE_OUT, oldMap, oldPage, map, page, zone);
 					} catch(e) {
 						console.log("Error zoning entity..");
 						console.log(e);
 						// TODO: send entity to safe spot
 					}
-				});
+				}, HIGH_PRIORITY);
 			}
 		};
 

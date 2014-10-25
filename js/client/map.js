@@ -2,6 +2,9 @@ define(['page','movable'], function(Page,Movable){
 
 	var Map={
 
+		_init: function(){
+		},
+
 		curPage:null,
 
 		loadMap: function(map){
@@ -14,6 +17,19 @@ define(['page','movable'], function(Page,Movable){
 				this.sheet       = Resources.findSheetFromFile(map.tileset);
 			}
 
+			for (var entID in this.movables) {
+				var movable = this.movables[entID];
+				if (entID == The.player.id) continue;
+				delete this.movables[entID];
+				this.unwatch(movable);
+			}
+
+			this.stopListeningTo(this, EVT_ZONE);
+			this.listenTo(this, EVT_ZONE, function(map, entity, oldPage, newPage){
+				if (!newPage) {
+					this.unwatchEntity(entity);
+				}
+			});
 		},
 
 		addPages: function(addedPages, isZoning){
@@ -49,15 +65,27 @@ define(['page','movable'], function(Page,Movable){
 						var movable = evtPage.movables[entityID];
 
 						if (isZoning && The.map.pages[pageI].movables[entityID]) continue; // incase zoned in as we received this
-						if (!isZoning && (entityID == The.player.id)) {
+						if (entityID == The.player.id) {
+							if (!isZoning) {
 
-							this.Log("	Adding player (me) to page");
-							The.player.posY         = movable.posY;
-							The.player.posX         = movable.posX;
-							The.player.sprite.state = movable.state;
-							The.player.zoning       = false;
-							this.pages[pageI].addEntity(The.player);
+								this.Log("	Adding player (me) to page");
+								The.player.posY         = movable.posY;
+								The.player.posX         = movable.posX;
+								The.player.sprite.state = movable.state;
+								The.player.zoning       = false;
+								//The.player.page         = this.pages[pageI];
+								this.pages[pageI].addEntity(The.player);
+								if (!this.movables[entityID]) this.watchEntity(The.player);
 
+							} else {
+
+								// FIXME: is this necessary here ??
+								// The.player.posY         = movable.posY;
+								// The.player.posX         = movable.posX;
+								// The.player.page.zoneEntity(this.pages[pageI], The.player);
+								// The.map.curPage = this.pages[pageI];
+
+							}
 						} else {
 							this.Log("	Adding movable to page");
 							var entity = new Movable(movable.spriteID, page);
@@ -67,6 +95,8 @@ define(['page','movable'], function(Page,Movable){
 							entity.sprite.state = movable.state;
 							entity.zoning       = movable.zoning;
 							entity.health       = movable.health;
+							entity.page         = this.pages[pageI];
+							entity.updatePosition(entity.posX, entity.posY);
 
 							if (movable.path) {
 								var path = JSON.parse(movable.path);
@@ -78,6 +108,7 @@ define(['page','movable'], function(Page,Movable){
 							}
 
 							this.pages[pageI].addEntity(entity);
+							if (!this.movables[entityID]) this.watchEntity(entity);
 						}
 
 					}
@@ -131,7 +162,10 @@ define(['page','movable'], function(Page,Movable){
 		},
 
 		zoning: false,
-		zone: function(direction) {
+		zone: function(newPage) {
+			this.curPage = newPage;
+		// zone: function(direction) {
+			/*
 			var newPage=null;
 			     if (direction=='n') newPage=this.curPage.neighbours.north;
 			else if (direction=='w') newPage=this.curPage.neighbours.west;
@@ -173,6 +207,7 @@ define(['page','movable'], function(Page,Movable){
 					}
 				}
 			}
+			*/
 		},
 
 		step: function(time) {

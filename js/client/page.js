@@ -18,6 +18,7 @@ define(function(){
 
 		unload: function(){
 			console.warn("Unloading Page ["+this.index+"]");
+			this.stopAllEventsAndListeners();
 		}
 	};
 

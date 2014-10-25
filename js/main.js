@@ -59,6 +59,7 @@
 				//	> BUG: player doesn't receive movement update of other player
 				//	> BUG: in circle attack after 1 NPC dies, the other player can't choose to attack the previous NPC (already in attackList and not re-added?)
 				// 	> BUG: UI slow to update when entity zones out
+				//	> BUG: server broadcast player.pages: old pages still stored in their list of pages!?
 				//
 				//
 				//
@@ -231,7 +232,7 @@ try{
 
 				The.player.position = {
 					tile: new Tile(player.position.y, player.position.x),
-					global: { y: player.position.y, x: player.position.x },
+					global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
 					local: null,
 				};
 
@@ -275,8 +276,10 @@ try{
 				window['Entity'] = Entity;
 				window['resources'] = Resources;
 
-				The.player.addEventListener(EVT_ZONE, The.map, function(player, newPage, direction){
-					this.zone(direction);
+				The.player.addEventListener(EVT_ZONE, The.map, function(player, oldPage, newPage, direction){
+					// this.zone(direction);
+					console.log("Zone to "+newPage.index);
+					this.zone(newPage);
 				});
 
 				// TODO: debugging commands should be placed elsewhere
@@ -511,7 +514,7 @@ try{
 		// Game Initialization
 		initializeGame = function(){
 
-			var playerPosition = The.map.localFromGlobalCoordinates(The.player.position.global.y, The.player.position.global.x);
+			var playerPosition = The.map.coordinates.localFromGlobal(The.player.position.global.x, The.player.position.global.y, true);
 			The.map.curPage = playerPosition.page;
 			The.player.page = The.map.curPage;
 			The.player.position.local = playerPosition;
@@ -524,7 +527,7 @@ try{
 			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
 			ui.camera = The.camera;
 			ui.setPage( The.map.curPage );
-			The.player.addEventListener(EVT_ZONE, ui, function(player, newPage, direction){
+			The.player.addEventListener(EVT_ZONE, ui, function(player, oldPage, newPage, direction){
 				this.setPage( newPage );
 			});
 
@@ -571,10 +574,38 @@ try{
 
 				server.onEntityAdded = function(page, addedEntity){
 
+					if (The.map.movables[addedEntity.id]) {
+						// NOTE: its possible that our local entity position
+						// hasn't updated to the servers entity position, and
+						// hence the entity is stuck in another page. As a just
+						// in case, update this entity to the current
+						// page/position
+						if (addedEntity.id != The.player.id) {
+							var entity = The.map.movables[addedEntity.id];
+							entity.page.zoneEntity(The.map.pages[page], entity);
+							entity.page = The.map.pages[page];
+							if (entity.page) {
+								// TODO: abstract pathfinding & recalibration to not have to do this..
+								addedEntity.state = {
+									globalY: entity.page.y + parseInt(addedEntity.posY/Env.tileSize),
+									globalX: entity.page.x + parseInt(addedEntity.posX/Env.tileSize),
+									posY: addedEntity.posY,
+									posX: addedEntity.posX,
+									y: entity.page.y*Env.tileSize + addedEntity.posY,
+									x: entity.page.x*Env.tileSize + addedEntity.posX,
+								};
+								server.onEntityWalking(page, addedEntity);
+							} else {
+								entity.page.zoneEntity(null, entity);
+								The.map.unwatchEntity(entity);
+							}
+						}
+						return; // Already have this entity loaded
+					}
 					if (addedEntity.id == The.player.id) {
 
 					} else {
-						var entity = new Movable(addedEntity.spriteID, The.map.pages[page]);
+						var entity = new Movable(addedEntity.spriteID, The.map.pages[page], { id: addedEntity.id });
 						Log("Adding Entity: "+addedEntity.id);
 						entity.id           = addedEntity.id;
 						entity.posY         = addedEntity.posY;
@@ -587,13 +618,17 @@ try{
 							entity.addPath(path);
 						}
 
+						The.map.watchEntity(entity);
 						The.map.pages[page].addEntity(entity);
+						entity.page = The.map.pages[page];
+						entity.updatePosition(entity.posX, entity.posY);
 					}
 
 				};
 
 				server.onEntityRemoved = function(page, removedEntity){
 
+					if (removedEntity.id == The.player.id) return;
 					Log("Removing Entity: "+removedEntity.id);
 
 					var page   = The.map.pages[page],
@@ -606,6 +641,7 @@ try{
 						}
 					}
 
+					The.map.unwatchEntity(entity);
 					// TODO: stopListeningTo everything?
 					page.stopListeningTo(entity, EVT_FINISHED_WALK);
 					page.stopListeningTo(entity, EVT_STEP);
@@ -706,16 +742,16 @@ try{
 
 				server.onEntityHurt = function(page, hurtEntity, targetEntity, amount){
 
-					var entity = The.map.getEntityFromPage(hurtEntity.page, hurtEntity.id),
-						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
+					var entity = The.map.movables[hurtEntity.id],
+						target = The.map.movables[targetEntity.id];
 					if (entity && target) entity.hurt(amount, target);
 
 				};
 
 				server.onEntityAttackedTarget = function(page, attackerEntity, targetEntity){
 
-					var entity = The.map.getEntityFromPage(attackerEntity.page, attackerEntity.id),
-						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
+					var entity = The.map.movables[attackerEntity.id],
+						target = The.map.movables[targetEntity.id];
 
 					if (entity && target) {
 						// entity.faceDirection(direction);
@@ -727,8 +763,8 @@ try{
 
 				server.onEntityNewTarget = function(page, eventEntity, targetEntity){
 
-					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id),
-						target = The.map.getEntityFromPage(targetEntity.page, targetEntity.id);
+					var entity = The.map.movables[eventEntity.id],
+						target = The.map.movables[targetEntity.id];
 
 					console.log("New Target for entity");
 					if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
@@ -785,13 +821,20 @@ try{
 
 					for (var pageI in pages) {
 						delete existingPages[pageI];
+					}
 
-						// TODO: is neighbour?
+					delete existingPages[The.map.curPage.index];
+					var neighbours = The.map.curPage.neighbours;
+					for (var neighbourI in neighbours) {
+						var neighbour = neighbours[neighbourI];
+						if (neighbour && existingPages[neighbour.index]) {
+							delete existingPages[neighbours[neighbourI].index];
+						}
 					}
 
 					for (var pageI in existingPages) {
-						// The.map.pages[pageI].unload();
-						// delete The.map.pages[pageI];
+						The.map.pages[pageI].unload();
+						delete The.map.pages[pageI];
 					}
 
 					The.map.addPages(pages, true); // Zoning into one of the new pages
@@ -815,6 +858,17 @@ try{
 
 					The.player.posY = player.posY;
 					The.player.posX = player.posX;
+					The.player.page = The.map.curPage;
+
+
+					The.player.position = {
+						tile: new Tile( parseInt(player.posY/Env.tileSize) + The.map.curPage.y, parseInt(player.posX/Env.tileSize) + The.map.curPage.x ),
+						global: { y: player.posY + The.map.curPage.y * Env.tileSize, x: player.posX + The.map.curPage.x * Env.tileSize },
+						local: { y: player.posY, x: player.posX },
+					};
+
+
+
 					The.camera.updated = true;
 
 					renderer.setMap( The.map );
@@ -841,6 +895,20 @@ try{
 
 					The.player.posY = player.posY;
 					The.player.posX = player.posX;
+					The.player.page = The.map.curPage;
+
+					The.player.addEventListener(EVT_ZONE, The.map, function(player, newPage, direction){
+						console.log("Zone to "+newPage.index);
+						this.zone(newPage);
+					});
+
+
+					The.player.position = {
+						tile: new Tile( parseInt(player.posY/Env.tileSize) + The.map.curPage.y, parseInt(player.posX/Env.tileSize) + The.map.curPage.x ),
+						global: { y: player.posY + The.map.curPage.y * Env.tileSize, x: player.posX + The.map.curPage.x * Env.tileSize },
+						local: { y: player.posY, x: player.posX },
+					};
+
 					The.camera.updated = true;
 
 					renderer.setMap( The.map );
@@ -872,15 +940,22 @@ try{
 					ui.tileHover = new Tile(mouse.y, mouse.x);
 
 					ui.hoveringEntity = false;
-					for (var movableID in The.map.curPage.movables) {
-						var movable = The.map.curPage.movables[movableID];
-						if (movable.npc.killable) {
-							if (movable.playerID) continue;
-							if (mouse.canvasX >= movable.posX && mouse.canvasX <= movable.posX + 32 &&
-								mouse.canvasY >= movable.posY && mouse.canvasY <= movable.posY + 32) {
-									// Hovering movable
-									ui.hoveringEntity = movable;
-									break;
+					for (var pageID in The.map.pages) {
+						var page = The.map.pages[pageID],
+							offY = (The.map.curPage.y - page.y)*Env.tileSize - The.camera.offsetY,
+							offX = (The.map.curPage.x - page.x)*Env.tileSize - The.camera.offsetX;
+						for (var movableID in page.movables) {
+							var movable = page.movables[movableID],
+								px      = movable.posX + offX,
+								py      = movable.posY - offY;
+							if (movable.npc.killable) {
+								if (movable.playerID) continue;
+								if (mouse.canvasX >= px && mouse.canvasX <= px + 16 &&
+									mouse.canvasY >= py && mouse.canvasY <= py + 16) {
+										// Hovering movable
+										ui.hoveringEntity = movable;
+										break;
+								}
 							}
 						}
 					}

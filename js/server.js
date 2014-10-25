@@ -360,16 +360,27 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   // Timestep the world
 				   var eventsBuffer = The.world.step(time);
 				   for (var clientID in players) {
-					   var client = players[clientID].client,
-						   page   = players[clientID].movable.page.index;
-						   mapID  = players[clientID].movable.page.map.id;
-					   players[clientID].step(time);
-					   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
-						   client.send(JSON.stringify({
-							   evtType: EVT_PAGE_EVENTS,
-							   page: page,
-							   events: eventsBuffer[mapID][page]
-						   }));
+					   var player = players[clientID],
+							client = player.client;
+					   for (var pageID in player.pages){
+						   var page   = pageID;
+
+						   // FIXME: for some reason old pages are still stored in player.pages.. this could
+						   // potentially be a BIG problem with bugs laying around the program. Make sure to
+						   // check why this is occuring and if its occuring elsewhere too!
+						   if (!player.pages[pageID]) {
+							   console.log("Bad page:"+pageID);
+							   continue;
+						   }
+						   var mapID  = player.pages[pageID].map.id;
+						   players[clientID].step(time);
+						   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
+							   client.send(JSON.stringify({
+								   evtType: EVT_PAGE_EVENTS,
+								   page: page,
+								   events: eventsBuffer[mapID][page]
+							   }));
+						   }
 					   }
 				   }
 

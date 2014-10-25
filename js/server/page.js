@@ -106,6 +106,13 @@ define(['movable'], function(Movable){
 					this.stopListeningTo(entity);
 					delete this.movables[entity.id];
 				}, HIGH_PRIORITY);
+
+				this.listenTo(entity, EVT_ZONE, function(entity, oldPage, page){
+					// this.eventsBuffer.push({
+					// 	evtType: EVT_REMOVED_ENTITY,
+					// 	entity: { id: entity.id }
+					// });
+				});
 			});
 
 			this.listenTo(this, EVT_ZONE_OUT, function(page, entity){
@@ -131,6 +138,7 @@ define(['movable'], function(Movable){
 							posX: localX*Env.tileSize});
 					console.log("Entity["+entity.id+"]");
 					if (entity.AI) entity.AI.map = page.map; // Give intelligible beings a sense of whats around them
+					page.map.watchEntity(entity);
 					page.addEntity(entity);
 					// TODO: listen to entity for stuff
 				});

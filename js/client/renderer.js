@@ -322,6 +322,34 @@ define(['loggable'], function(Loggable){
 					this.ctxEntities.drawImage(
 							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.posX-offsetX-movableOffX), scale*(movable.posY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 				}
+
+				// Draw sprites
+				for(var i=0; i<neighbours.length; ++i) {
+					var neighbourInfo = neighbours[i],
+						neighbour = neighbourInfo.neighbour,
+						offX = neighbourInfo.offsetX,
+						offY = neighbourInfo.offsetY;
+
+					for (var id in neighbour.movables) {
+						var movable = neighbour.movables[id],
+							tileSize = movable.sprite.tileSize,
+							movableSheet = movable.sprite.sheet.image,
+							customSheet = false,
+							scale=Env.tileScale,
+							offsetY = this.camera.offsetY + offY,
+							offsetX = this.camera.offsetX - offX,
+							// TODO: fix sprite centering with sheet offset
+							movableOffX = movable.sprite.tileSize/4,// - movable.sprite.offset_x, //movable.sprite.tileSize/4, // Center the entity
+							movableOffY = movable.sprite.tileSize/2;// - movable.sprite.offset_y; //movable.sprite.tileSize/2;
+						if (movable.sprite.state.sheet) {
+							customSheet = true;
+							movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet
+						}
+
+						this.ctxEntities.drawImage(
+								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.posX-offsetX-movableOffX), scale*(movable.posY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+					}
+				}
 			}
 
 

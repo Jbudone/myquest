@@ -2,6 +2,7 @@ define(['page'], function(Page){
 
 	var Map={
 		_init: function(){
+			
 		},
 
 		clients: {},
@@ -127,11 +128,11 @@ define(['page'], function(Page){
 				if (!pagesWithZones[tile.page.index]) pagesWithZones[tile.page.index] = tile.page;
 			}
 
-			for (var pageI in pagesWithZones) {
-				this.listenTo(pagesWithZones[pageI], EVT_ZONE_OUT, function(page, entity, zone) {
-					this.triggerEvent(EVT_ZONE_OUT, entity, zone);
-				});
-			}
+			// for (var pageI in pagesWithZones) {
+			// 	this.listenTo(pagesWithZones[pageI], EVT_ZONE_OUT, function(page, entity, zone) {
+			// 		this.triggerEvent(EVT_ZONE_OUT, entity, zone);
+			// 	});
+			// }
 
 			this.spawns = map.spawns;
 			console.log("Spawns: ");
@@ -228,7 +229,7 @@ define(['page'], function(Page){
 			}
 		},
 
-		zoneIn: function(entity, zone) {
+		zoneIn: function(entity, zone){
 			var tile = null;
 			for (var i=0; i<this.zones.in.length; ++i) {
 				var localZone = this.zones.in[i];
@@ -244,7 +245,14 @@ define(['page'], function(Page){
 				entity.path = null;
 				entity.posY = tile.y*Env.tileSize;
 				entity.posX = tile.x*Env.tileSize;
+				entity.position = {
+					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),
+					global: null,
+					local: { y: entity.posY, x: entity.posX }
+				};
+				entity.position.global = this.coordinates.globalFromLocal( entity.posX, entity.posY, tile.page, true );
 				tile.page.addEntity(entity);
+				if (!this.movables[entity.id]) this.watchEntity(entity);
 				entity.zoning = false;
 				return tile.page;
 			} else {

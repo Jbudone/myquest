@@ -19,6 +19,12 @@ define(['eventful'], function(Eventful){
 		this.moveSpeed=75;
 		this.lastUpdated=now();
 
+		// FIXME: fix the camera so that it doesn't need this
+		this.centerCamera = function(){
+			The.camera.offsetY = -The.player.posY + Env.pageHeight * Env.tileSize / 2
+			The.camera.offsetX = The.player.posX - Env.pageWidth * Env.tileSize / 2;
+		};
+
 		this.listenTo(The.map, EVT_ZONE, function(map,direction){
 			console.log("CAMERA ZONING: "+direction);
 
@@ -59,6 +65,8 @@ define(['eventful'], function(Eventful){
 				this.updated = true; // Use this as a just in case for background redraws
 				this.lastUpdated = time;
 			}
+
+			this.centerCamera();
 		};
 	};
 

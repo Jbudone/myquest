@@ -32,7 +32,7 @@ define(function(){
 			'Renderer': (logVerbose),
 			'UI': (logVerbose),
 			'DB': (logVerbose),
-			'Player': (logVerbose),
+			'Player': (logImportant | LOG_INFO),
 			'Resources': (logVerbose),
 			'Default': (logVerbose)
 		};

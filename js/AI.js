@@ -69,6 +69,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 					// Reconsider route??
 					if (!this.state.hasOwnProperty('reconsideredRoute') ||
 						(time - this.state.reconsideredRoute) > 200) {
+						this.Log("I'm at ("+this.entity.page.index+") chasing you at ("+this.target.page.index+")");
 
 						// TODO: different maps? skip this.. continue using same route
 						var me            = this,
@@ -444,6 +445,18 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 			this.listenTo(this.brain, EVT_RESPAWNING, function(brain){
 				this.Log("RESPAWNING");
+				var page   = this.entity.page;
+				delete page.movables[this.entity.id];
+				for (var i=0; i<page.updateList.length; ++i) {
+					if (page.updateList[i] == this.entity) {
+						page.updateList.splice(i,1);
+						break;
+					}
+				}
+
+				page.stopListeningTo(this.entity);
+				page.map.unwatchEntity(this.entity);
+
 				this.entity.posY = this.respawnPoint.y * Env.tileSize;
 				this.entity.posX = this.respawnPoint.x * Env.tileSize;
 				this.entity.page = this.respawnPoint.page;
@@ -457,6 +470,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.brain.reset();
 				this.entity.pendingEvents=[];
 				this.Log("RESPAWNED");
+				this.respawnPoint.page.map.watchEntity(this.entity);
 				this.respawnPoint.page.addEntity(this.entity);
 			}, HIGH_PRIORITY);
 		},
@@ -482,6 +496,18 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 			this.listenTo(this.brain, EVT_RESPAWNING, function(brain){
 				this.Log("RESPAWNING");
+				var page   = this.entity.page;
+				delete page.movables[this.entity.id];
+				for (var i=0; i<page.updateList.length; ++i) {
+					if (page.updateList[i] == this.entity) {
+						page.updateList.splice(i,1);
+						break;
+					}
+				}
+
+				page.stopListeningTo(this.entity);
+				page.map.unwatchEntity(this.entity);
+
 				this.entity.posY = this.respawnPoint.y * Env.tileSize;
 				this.entity.posX = this.respawnPoint.x * Env.tileSize;
 				this.entity.page = this.respawnPoint.page;
@@ -495,6 +521,7 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				this.entity.brain.reset();
 				this.entity.pendingEvents=[];
 				this.Log("RESPAWNED");
+				this.respawnPoint.page.map.watchEntity(this.entity);
 				this.respawnPoint.page.addEntity(this.entity);
 				this.brain.triggerEvent(EVT_RESPAWNED);
 			}, HIGH_PRIORITY);

@@ -47,6 +47,28 @@ define(['eventful','movable'], function(Eventful,Movable){
 			southwest:null
 		};
 
+		this.zoneEntity = function(newPage, entity){
+
+			// Remove from this page
+			delete this.movables[entity.id];
+			for (var i=0; i<this.updateList.length; ++i) {
+				if (this.updateList[i] == entity) {
+					this.updateList.splice(i,1);
+					break;
+				}
+			}
+
+			this.stopListeningTo(entity);
+
+			// Add to new page
+			if (newPage) newPage.addEntity(entity);
+
+			// FIXME: WHY IS THIS NOT ENABLED FOR SERVER?!
+			// if (!Env.isServer) {
+				entity.page = newPage;
+			// }
+		};
+
 		this.addEntity = function(entity) {
 			if (entity.step) {
 				this.updateList.push(entity);
@@ -56,6 +78,16 @@ define(['eventful','movable'], function(Eventful,Movable){
 				if (entity instanceof Movable) {
 					this.triggerEvent(EVT_ADDED_ENTITY, entity);
 					console.log("Adding Entity["+entity.id+"] to page: "+this.index);
+
+					/*
+					this.listenTo(entity, EVT_ZONE, function(entity, newPage, dir){
+						this.zoneEntity(newPage, entity);
+					});
+					this.listenTo(entity, EVT_ZONE_OUT, function(entity, newPage){
+						this.zoneEntity(newPage, entity);
+					});
+					*/
+					/*
 					if (!(Env.isServer || entity.id == The.player.id)) {
 						// TODO: what if the entity has already zoned in by the time we get here? (already
 						// finished walk, not zoning ?)
@@ -156,6 +188,7 @@ define(['eventful','movable'], function(Eventful,Movable){
 							}
 						}
 					});
+					*/
 
 				}
 				// TODO: if wakable/sleepable? add listener for wakeup/sleep

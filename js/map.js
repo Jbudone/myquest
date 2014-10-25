@@ -1,4 +1,4 @@
-define(['eventful','page','loggable'], function(Eventful,Page,Loggable){
+define(['eventful','page','movable','loggable'], function(Eventful,Page,Movable,Loggable){
 	
 	/* Map
 	 *
@@ -40,13 +40,121 @@ define(['eventful','page','loggable'], function(Eventful,Page,Loggable){
 
 		this.sheet = null;// Resources.findSheetFromFile('tilesheet.png');
 
-		this.loadMap();
-
 		this.getEntityFromPage = function(page, entityID){
 			if (!isNaN(page)) page = this.pages[page];
 			if (!page) return null;
 			return page.movables[entityID];
 		};
+
+
+		/************************************************************************************************
+		 **************************
+
+
+		 								 MOVABLE EVENT HANDLING
+
+
+																	 ************************************
+		 ***********************************************************************************************/
+
+		this.movables = {};
+
+		// Watch Entity
+		//
+		// Listen to an entity within the map, whenever its moving and needs to be switched between pages
+		this.watchEntity = function(entity){
+
+			if (entity.step) {
+				if (entity instanceof Movable) {
+					if (this.movables[entity.id]) return; // Movable already being watched
+					this.Log("Adding Entity["+entity.id+"] to map");
+					this.movables[entity.id] = entity;
+
+					// Listen to the entity moving to new pages
+					this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
+						console.log("Moving to tile..");
+						// Check if entity in new page
+						var pageY = parseInt(entity.position.global.y / (Env.tileSize*Env.pageHeight)),
+							pageX = parseInt(entity.position.global.x / (Env.tileSize*Env.pageWidth)),
+							pageI = this.pageIndex(pageY, pageX),
+							oldPage = null,
+							newPage = null;
+						if (pageI != entity.page.index) {
+							newPage = this.pages[ pageI ];
+
+							entity.position.local = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
+							entity.posX = entity.position.local.x;
+							entity.posY = entity.position.local.y;
+						}
+
+						
+						// Zoned to new map?
+						var tY = parseInt(entity.position.local.y / Env.tileSize),
+							tX = parseInt(entity.position.local.x / Env.tileSize),
+							zoning = (newPage || entity.page).checkZoningTile(tY, tX);
+
+						if (zoning) {
+							newPage = zoning;
+						}
+
+		//console.log("Player at: ["+this.position.tile.x+", "+this.position.tile.y+"]");
+						if (newPage) {
+							oldPage = entity.page;
+							if (zoning) {
+								oldPage.triggerEvent(EVT_ZONE_OUT, entity, zoning);
+								this.triggerEvent(EVT_ZONE_OUT, oldPage, entity, zoning);
+							} else {
+								this.Log("Zoning user ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
+								entity.page.zoneEntity(newPage, entity);
+								entity.triggerEvent(EVT_ZONE, oldPage, newPage);
+								this.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
+							}
+						}
+					});
+
+					this.listenTo(entity, EVT_DIED, function(entity){
+
+						/* NOTE: doing this would prevent any stepping for the dead entity. Better to keep
+						 * them in the page updateList and simply store them as dead (not sending any updates)
+						var page   = entity.page;
+						delete page.movables[entity.id];
+						for (var i=0; i<page.updateList.length; ++i) {
+							if (page.updateList[i] == entity) {
+								page.updateList.splice(i,1);
+								break;
+							}
+						}
+
+						page.stopListeningTo(entity);
+						this.unwatchEntity(entity);
+						*/
+					});
+				}
+			}
+		};
+
+		this.unwatchEntity = function(entity){
+			this.stopListeningTo(entity);
+			delete this.movables[entity.id];
+		};
+
+
+
+
+
+
+		/************************************************************************************************
+		 **************************
+
+
+		 								 PATHFINDING OPERATIONS
+
+
+																	 ************************************
+		 ***********************************************************************************************/
+
+
+
 
 		this.recalibratePath=function(state, pathState, path, maxWalk){
 
@@ -707,6 +815,108 @@ define(['eventful','page','loggable'], function(Eventful,Page,Loggable){
 		 ***********************************************************************************************/
 
 
+		this.coordinates = (function(){
+
+			return {
+			globalFromLocal: (function(x, y, page, isReal){
+
+				if (!isReal) {
+					x *= Env.tileSize;
+					y *= Env.tileSize;
+				}
+
+				var pageY   = page.y * Env.tileSize,
+					pageX   = page.x * Env.tileSize,
+					globalY = y+pageY,
+					globalX = x+pageX;
+
+				return {
+					y: globalY,
+					x: globalX
+				};
+
+			}.bind(this)),
+
+			globalTileFromLocal: (function(x, y, page, isReal){
+
+				if (isReal) {
+					x /= Env.tileSize;
+					y /= Env.tileSize;
+				}
+
+				var pageY   = page.y,
+					pageX   = page.x,
+					globalY = y+pageY,
+					globalX = x+pageX;
+
+				return {
+					y: globalY,
+					x: globalX
+				};
+
+			}.bind(this)),
+
+			localFromGlobal: (function(x, y, isReal){
+
+				var localTileX = (isReal? x/Env.tileSize : x),
+					localTileY = (isReal? y/Env.tileSize : y);
+				if (!isReal) {
+					x *= Env.tileSize;
+					y *= Env.tileSize;
+				}
+
+				var pageY  = parseInt( localTileY/Env.pageHeight ),
+					pageX  = parseInt( localTileX/Env.pageWidth ),
+					pageI  = this.pageIndex(pageY, pageX),
+					page   = null,
+					localY = y % (Env.tileSize*Env.pageHeight),
+					localX = x % (Env.tileSize*Env.pageWidth);
+
+				if (pageI<0 || !this.pages[pageI]) {
+					this.Log("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]", LOG_ERROR);
+				} else {
+					page = this.pages[pageI];
+
+					if (page.y != pageY*Env.pageHeight ||
+							page.x != pageX*Env.pageWidth) throw new MismatchError("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]");
+				}
+
+				return {
+					y: localY,
+					x: localX,
+					page: page
+				};
+			}.bind(this)),
+
+			localTileFromGlobal: (function(x, y, isReal){
+
+				if (isReal) {
+					x /= Env.tileSize;
+					y /= Env.tileSize;
+				}
+
+				var pageY  = parseInt( y/Env.pageHeight ),
+					pageX  = parseInt( x/Env.pageWidth ),
+					pageI  = this.pageIndex(pageY, pageX),
+					page   = null,
+					localY = y % (Env.pageHeight),
+					localX = x % (Env.pageWidth);
+
+				if (pageI<0 || !this.pages[pageI]) throw new RangeError("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
+				page = this.pages[pageI];
+
+				if (page.y != pageY*Env.pageHeight ||
+					page.x != pageX*Env.pageWidth) throw new MismatchError("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]");
+
+				return {
+					y: localY,
+					x: localX,
+					page: page
+				};
+			}.bind(this))
+			};
+		}.bind(this)());
+
 
 		this.localFromGlobalCoordinates=function(y, x) {
 			var pageY  = parseInt( y/Env.pageHeight ),
@@ -878,6 +1088,19 @@ define(['eventful','page','loggable'], function(Eventful,Page,Loggable){
 			return tiles;
 		};
 
+
+		/************************************************************************************************
+		 **************************
+
+
+		 								 Startup
+
+
+																	 ************************************
+		 ***********************************************************************************************/
+
+
+		this.loadMap();
 	};
 
 	return Map;
