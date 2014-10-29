@@ -34,9 +34,10 @@
 	
 		<h2> Currently working on..</h2>
 		<ul>
-			<li>Combat system: <b>Resurrection</b>, <b>Player death</b>, <b>Player autoattack</b>, <b>Player flee</b>, <b>Multiple Combat</b></li>
+			<li>Combat system: <b>Player d/c in combat</b></li>
+			<li>Paging</li>
 			<li>Fault taulerance</li>
-			<li>Multiplayer components</li>
+			<li>Gameplay Scripting</li>
 		</ul>
 		<h3> Being tested on Google Chrome</h3>
 	</div>
