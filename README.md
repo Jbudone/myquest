@@ -11,7 +11,7 @@ For lack of a better name, this is my RPG game. Its a web-based, scalable, multi
 Play now
 ------------
 
-The game is under heavy active development, and will not be playable until the end of summer 2014. However you are free to test the current functionality of the game over at, [myquest](/playground/myquest)
+The game is under heavy active development, and will not be playable until the end of summer 2014. However you are free to test the current functionality of the game over at, [myquest](http://jbud.me/playground/myquest)
 
 
 Client/Server
