@@ -126,3 +126,12 @@ SERVER
 
 			nohup ./runserver &
 			(update jbud.me)
+
+====== Promises
+
+	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
+
+====== Eventful
+
+	* triggeredEvents will append the event callback to the CONTEXT's event_callback_queue
+

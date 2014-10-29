@@ -71,8 +71,13 @@ define(['loggable'], function(Loggable){
 						this.Log("Error retrieving player ID's", LOG_ERROR);
 						this.Log(err, LOG_ERROR);
 					} else {
-						var maxID = res[0].id,
-							id    = maxID + 1;
+						var id;
+						if (res.length) {
+							var maxID = res[0].id;
+							id = maxID + 1;
+						} else {
+							id = 1;
+						}
 						if (isNaN(id)) {
 							this.Log("Bad id ("+id+") retrieved..", LOG_ERROR);
 							failed();

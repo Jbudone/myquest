@@ -82,6 +82,25 @@ define(['loggable'],function(Loggable){
 						server.onRespawn( evt.map, evt.pages, evt.player );
 					} else if (evt.id) {
 						// INTENTIONALLY BLANK (success/fail response to request)
+						var event = null;
+						for (var j=0; j<server.requestBuffer.archives.length; ++j) {
+							var archive = server.requestBuffer.archives[j];
+							for (var k=0; k<archive.archive.length; ++k) {
+								var stored_event = archive.archive[k];
+								if (stored_event.id == evt.id) {
+									event = stored_event;
+									break;
+								}
+							}
+							if (event) break;
+						}
+
+						if (event) {
+							event.callback(evt);
+						} else {
+							server.Log("Error finding event in which to respond", LOG_ERROR);
+							server.Log(evt, LOG_ERROR);
+						}
 					} else {
 						server.Log("Unknown event received from server", LOG_ERROR);
 						server.Log(evt, LOG_ERROR);
@@ -117,7 +136,7 @@ define(['loggable'],function(Loggable){
 			var event;
 			if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { id: playerID }, null);
 			else          event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
-			return this.request(event);
+			return this.request(event).then(function(){}, this.onLoginFailed);;
 		};
 
 		this.requestMap = function(){
@@ -140,7 +159,7 @@ define(['loggable'],function(Loggable){
 		this.walkTo = function(walk, state){
 			this.Log("Sending path request..", LOG_DEBUG);
 			// this.LogGroup();
-			this.Log(walk, LOG_DEBUG);
+			// this.Log(walk, LOG_DEBUG);
 			// this.LogGroupEnd();
 			event = new Event((++this.requestsId), EVT_PREPARING_WALK, walk.toJSON(), state);
 			if (walk.time) event.time = walk.time;
