@@ -73,6 +73,8 @@ define(['eventful','movable'], function(Eventful,Movable){
 			if (entity.step) {
 				this.updateList.push(entity);
 				this.movables[entity.id] = entity;
+				// FIXME: don't add the entity if he's already listed in movables....check that this doesn't
+				// break anything (NOTE: this avoids listening twice or adding to updateList multiple times)
 
 				// TODO: check if movable before checking zone_out
 				if (entity instanceof Movable) {

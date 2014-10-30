@@ -73,6 +73,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				var oldPage       = oldPage,
 					oldNeighbours = {};
 
+				oldNeighbours[oldPage.index] = oldPage;
 				for (var neighbour in oldPage.neighbours) {
 					if (oldPage.neighbours[neighbour]) {
 						oldNeighbours[oldPage.neighbours[neighbour].index]  = oldPage.neighbours[neighbour];
@@ -92,7 +93,9 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 					pages:{}
 				};
 
-				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				if (!oldNeighbours[page.index]) {
+					initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				}
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
 					if (npage) this.pages[npage.index] = npage;

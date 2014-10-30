@@ -108,7 +108,7 @@ define(['page','movable'], function(Page,Movable){
 							}
 
 							this.pages[pageI].addEntity(entity);
-							if (!this.movables[entityID]) this.watchEntity(entity);
+							this.watchEntity(entity);
 						}
 
 					}

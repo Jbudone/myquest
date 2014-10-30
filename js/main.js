@@ -810,8 +810,14 @@ try{
 				};
 
 				server.onZone = function(pages){
-
 					// Zoning information (new pages)
+
+					for (var pageI in pages) {
+						if (The.map.pages[pageI]) {
+							console.error("SERVER GAVE US A PAGE WHICH WE ALREADY HAVE!! WHAT A WASTE OF LATENCY");
+							delete pages[pageI];
+						}
+					}
 
 					// unload previous pages which are NOT neighbours to this page
 					var existingPages = {};
