@@ -423,6 +423,7 @@ try{
 
 						canvas.height = tHeight * rows;
 						canvas.width  = tWidth  * cols;
+						$('body').append(canvas);
 
 						// Draw animations to sheet
 						var iRow = 0;
@@ -430,7 +431,7 @@ try{
 							var ani = animations[key],
 								row   = parseInt(ani.row),
 								len   = parseInt(ani.length);
-							if (ani.flipX) {
+							if (ani.hasOwnProperty('flipX')) {
 
 
 								try {
@@ -444,9 +445,13 @@ try{
 								} catch(e) {
 									// For Firefox
 									// ctx.scale(-1,1);
+									ctx.restore();
+									ctx.save();
+									ctx.scale(-1,1);
 									for(var i=len-1, j=0; i>=0; --i, ++j) {
 										ctx.drawImage(sheet.image, j*tWidth, row*tHeight, tWidth, tHeight, -(j+1)*tWidth, iRow*tHeight, tWidth, tHeight);
 									}
+									ctx.restore();
 									// for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
 									// 	ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, j*32, 0, 32, 32);
 									// }
