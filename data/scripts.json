@@ -1,0 +1,11 @@
+{
+	"game": {
+		"script": "game.js",
+		"server": {
+			"components": []
+		},
+		"client": {
+			"components": ["game.zoning.js"]
+		}
+	}
+}

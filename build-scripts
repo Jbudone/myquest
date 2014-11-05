@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# inject INJECT.SCRIPT into all scripts
+for f in js/scripts/*.js; do
+	out="js/scripts/ready/$(basename $f)"
+	sed '/\s*define\s*(.*function\s*(.*)\s*{/r js/SCRIPT.INJECTION.js' $f > $out
+	echo "$f > $out"
+done
+# TODO: preprocess keys (some keys file?)

@@ -58,14 +58,15 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 	var loadedEnvironment = function(){
 
-		requirejs(['resources','movable','world','map','server/db','loggable','server/player'], function(Resources,Movable,World,Map,DB,Loggable,Player) {
+		requirejs(['resources','movable','world','map','server/db','loggable','server/player','scriptmgr'], function(Resources,Movable,World,Map,DB,Loggable,Player,ScriptMgr) {
 			extendClass(this).with(Loggable);
 
 			var modulesToLoad={},
 				ready=false,
 				LOADING_CORE=1,
 				LOADING_RESOURCES=2,
-				LOADING_FINISHED=3,
+				LOADING_SCRIPTS=3,
+				LOADING_FINISHED=4,
 				loadingPhase=LOADING_CORE,
 				loading=function(module){ modulesToLoad[module]=false; },
 				loadResources=null,
@@ -79,6 +80,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					if (ready && _.size(modulesToLoad)==0) {
 						++loadingPhase;
 						if (loadingPhase==LOADING_RESOURCES) loadResources();
+						if (loadingPhase==LOADING_SCRIPTS)   loadScripts();
 						if (loadingPhase==LOADING_FINISHED)  startGame();
 					}
 				};
@@ -102,7 +104,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				loading('resources');
 				Resources = (new Resources());
 				GLOBAL['Resources'] = Resources;
-				Resources.initialize(['world', 'sheets', 'npcs']).then(function(assets){
+				Resources.initialize(['world', 'sheets', 'npcs', 'scripts']).then(function(assets){
 
 					// TODO: include map loading with world
 					// TODO: handle sheets, sprites, npcs, world/maps internally in resource mgr
@@ -164,11 +166,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 
+
 					// Load World
 					var data = assets.world;
-					var json = JSON.parse(data);
+					var json = JSON.parse(data),
 						world = new World();
-						The.world = world;
+					The.world = world;
 					_.each(json.maps, function(mapFile, mapID) {
 						loading('map ('+mapID+')');
 						fs.readFile('data/'+mapFile, function(err, data) {
@@ -188,7 +191,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							loaded('map ('+mapID+')');
 						});
 					});
-					console.log('here');
 
 					loaded('resources');
 				}, function(err){
@@ -199,6 +201,23 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			};
 
 
+
+			loadScripts = function(){
+
+				loading('scripts');
+
+				// Scripts
+				The.scripting.world = The.world;
+				Resources.loadScripts(Resources._scriptRes).then(function(){
+					delete Resources._scriptRes;
+					The.scriptmgr = new ScriptMgr();
+
+					loaded('scripts');
+				}, function(){
+					console.error("Could not load scripts!");
+				});
+
+			};
 
 
 		   startGame = function(){
@@ -359,6 +378,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   // Timestep the world
 				   var eventsBuffer = The.world.step(time);
+				   The.scriptmgr.step(time);
 				   for (var clientID in players) {
 					   var player = players[clientID],
 							client = player.client;

@@ -34,6 +34,8 @@ define(function(){
 			'DB': (logVerbose),
 			'Player': (logImportant | LOG_INFO),
 			'Resources': (logVerbose),
+			'ScriptMgr': (logVerbose),
+			'Script': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};

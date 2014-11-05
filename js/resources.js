@@ -15,9 +15,11 @@ define(['jquery', 'loggable'], function($, Loggable){
 			sheets: {},
 			maps: {},
 			npcs: {},
+			scripts: {},
 
 			initialize: new Function(),
 			findSheetFromFile: new Function(),
+			loadScript: new Function(),
 
 		}, initialize = (function(loadingResources){
 
@@ -60,11 +62,63 @@ define(['jquery', 'loggable'], function($, Loggable){
 				}
 			}
 			return false;
-		}.bind(interface));
+		}.bind(interface)),
+
+		loadScripts = (function(scripts){
+			return new Promise(function(succeeded, failed){
+				this.Log("Loading scripts..");
+				var scriptsToLoad = 0,
+					ready = false,
+					Log = this.Log.bind(this);
+				for (var scriptName in scripts) {
+					++scriptsToLoad;
+					var script = scripts[scriptName],
+						scriptFile = "js/scripts/"+script.script;
+					script.name = scriptName;
+					require([scriptFile], function(script){
+						--scriptsToLoad;
+
+						interface.scripts[this.name] = new script();
+						Log("Loaded "+this.name);
+
+						// Load components
+						var components = [];
+						if (Env.isServer && this.server) {
+							components = this.server.components;
+						} else if (!Env.isServer && this.client) {
+							components = this.client.components;
+						}
+						for (var i=0; i<components.length; ++i) {
+							++scriptsToLoad;
+							var component = components[i];
+							require(["js/scripts/ready/"+component], function(component){
+								--scriptsToLoad;
+								Log("Loaded "+this.name+"."+component.name);
+								interface.scripts[this.name].components[component.name] = component;
+
+								if (scriptsToLoad==0 && ready) {
+									succeeded();
+								}
+							}.bind(this));
+						}
+
+						if (scriptsToLoad==0 && ready) {
+							succeeded();
+						}
+					}.bind(script));
+				}
+				ready = true;
+				if (scriptsToLoad==0) {
+					// Wow! That sure loaded fast..
+					succeeded();
+				}
+			}.bind(this));
+		}.bind(this));
 
 
 		interface.initialize = initialize;
 		interface.findSheetFromFile = findSheetFromFile;
+		interface.loadScripts = loadScripts;
 
 		return interface;
 	});

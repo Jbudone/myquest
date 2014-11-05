@@ -159,7 +159,7 @@
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
 
-define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI) {
+define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI,ScriptMgr) {
 try{
 
 	extendClass(this).with(Loggable);
@@ -335,7 +335,7 @@ try{
 			Resources = (new Resources());
 			window['Resources'] = Resources;
 			// FIXME: initialize with array of resources? Shouldn't this be apart of client/server specific Resources.js?
-			Resources.initialize(['sheets', 'npcs']).then(function(assets){
+			Resources.initialize(['sheets', 'npcs', 'scripts']).then(function(assets){
 
 
 				var res = JSON.parse(assets.sheets),
@@ -493,6 +493,10 @@ try{
 				}
 
 
+				// Scripts
+				var scripts = JSON.parse(assets.scripts);
+				Resources._scriptRes = scripts;
+				// NOTE: save script loading/initialization until we've setup the scripting environment
 
 				loaded('resources');
 			});
@@ -553,6 +557,10 @@ try{
 
 
 
+
+
+
+
 			startGame = function() {
 				var speed = 30,
 					gameLoop = function() {
@@ -560,6 +568,7 @@ try{
 						time = new Date().getTime();
 
 						The.map.step(time);
+						The.scriptmgr.step(time);
 						The.camera.step(time);
 						renderer.ui.step(time);
 						renderer.render();
@@ -935,8 +944,20 @@ try{
 				gameLoop();
 			}
 
+
+
+			// TODO: setup The.scripting interface
+			The.scripting.player = The.player;
+			Resources.loadScripts(Resources._scriptRes).then(function(){
+				delete Resources._scriptRes;
+
+				The.scriptmgr = new ScriptMgr();
+				loaded();
+			}, function(){
+				console.error("Could not load scripts!");
+			});
+
 			ready=true;
-			loaded();
 
 
 			// -------------------------------------------------------
