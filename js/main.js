@@ -150,10 +150,13 @@
 				//	> debugging: monitor events -- in case the same object listens to the same event more than once
 				//	> debugging: keep track of all events, and periodic snapshots of the game output to a logfile -- that logfile could be read back to re-animate the game and show step-by-step what happened and where things went wrong
 				//	> sprite offset
+				//	> Patches: warn users of upcoming patch -> start countdown -> shutdown & restart & wait for reply from server to start  ;;  bash script to send signal to server after countdown -> shutdown server & load new files -> restart server
+				//	> Testing: use various test scripts; server runs test script (each script has the testing environment injected into it, just like the script/scriptmgr), sample shown below: (includes time-since-startup of each event to run). Use test clients to connect to the server too & send input. Allow simulating lag, bad inputs, DNS attacks from users, etc.
+				//				0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
+				//				0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
 				//
 				//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
 				//
-				// 	> testing (grunt/jasmine? simulated lag, simulated players)
 				// 	> WebRTC UDP approach ( && archive events)
 				// 	> Webworkers for maps/pages on server & Transferable objects
 				// 	> Db sharding
@@ -948,6 +951,7 @@ try{
 
 			// TODO: setup The.scripting interface
 			The.scripting.player = The.player;
+			The.scripting.UI = ui;
 			Resources.loadScripts(Resources._scriptRes).then(function(){
 				delete Resources._scriptRes;
 

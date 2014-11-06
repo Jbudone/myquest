@@ -28,6 +28,7 @@
 		</div>
 
 		<div id="messages"> </div>
+		<input id="input" type="text" />
 	</div>
 	<div id="warnings">
 		<h1><b>Warning: </b>Heavy Development</h1>

@@ -5,7 +5,10 @@
 			"components": []
 		},
 		"client": {
-			"components": ["game.zoning.js"]
+			"components": {
+				"chat": "game.chat.js",
+				"zoning": "game.zoning.js"
+			}
 		}
 	}
 }

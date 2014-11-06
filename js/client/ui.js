@@ -1,7 +1,8 @@
-define(['eventful','loggable'], function(Eventful, Loggable){
+define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable){
 
 	var UI = function(){
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Hookable);
 		extendClass(this).with(Loggable);
 		this.setLogGroup('UI');
 		this.setLogPrefix('(UI) ');
@@ -114,6 +115,17 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 
 			this.canvas.addEventListener('mousedown', function(evt){
 				ui.onMouseDown( ui.positionFromMouse(evt) );
+			});
+
+			var that = this;
+			this.registerHook('input')
+			$('#input').on('input', function(){
+				var msg = $(this).val();
+				if (!that.doHook('input').pre(msg)) return;
+
+				console.log("Message: "+msg);
+
+				that.doHook('input').post(msg);
 			});
 		};
 

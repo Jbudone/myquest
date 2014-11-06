@@ -82,25 +82,27 @@ define(['jquery', 'loggable'], function($, Loggable){
 						Log("Loaded "+this.name);
 
 						// Load components
-						var components = [];
+						var components = {};
 						if (Env.isServer && this.server) {
 							components = this.server.components;
 						} else if (!Env.isServer && this.client) {
 							components = this.client.components;
 						}
-						for (var i=0; i<components.length; ++i) {
+						ready = false;
+						if (isObjectEmpty(components)) ready = true;
+						_.each(components, function(componentFile, componentName){
 							++scriptsToLoad;
-							var component = components[i];
-							require(["js/scripts/ready/"+component], function(component){
+							require(["js/scripts/ready/"+componentFile], function(component){
 								--scriptsToLoad;
-								Log("Loaded "+this.name+"."+component.name);
-								interface.scripts[this.name].components[component.name] = component;
+								Log("Loaded "+this.name+"."+componentName);
+								interface.scripts[this.name].components[componentName] = component;
 
 								if (scriptsToLoad==0 && ready) {
 									succeeded();
 								}
 							}.bind(this));
-						}
+							ready = true;
+						}.bind(this));
 
 						if (scriptsToLoad==0 && ready) {
 							succeeded();
