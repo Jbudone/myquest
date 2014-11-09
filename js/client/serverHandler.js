@@ -1,7 +1,7 @@
-define(['loggable'],function(Loggable){
+define(['dynamic','loggable'],function(Dynamic, Loggable){
 
 	var ServerHandler = function(){
-
+		extendClass(this).with(Dynamic);
 		extendClass(this).with(Loggable);
 		this.setLogGroup('Connection');
 		this.setLogPrefix('(Connection) ');
@@ -70,8 +70,13 @@ define(['loggable'],function(Loggable){
 							else if (evtType == EVT_REMOVED_TARGET) server.onEntityRemovedTarget( page, event.data.entity, event.data.target );
 							else if (evtType == EVT_DIED) server.onEntityDied( page, event.data.entity );
 							else {
-								server.Log("Unknown event received from server", LOG_ERROR);
-								server.Log(evt, LOG_ERROR);
+								var dynamicHandler = server.handler(evtType);
+								if (dynamicHandler) {
+									dynamicHandler.call(event, event.data);
+								} else {
+									server.Log("Unknown event received from server", LOG_ERROR);
+									server.Log(evt, LOG_ERROR);
+								}
 							}
 						}
 					} else if (evt.zone) {
@@ -102,8 +107,13 @@ define(['loggable'],function(Loggable){
 							server.Log(evt, LOG_ERROR);
 						}
 					} else {
-						server.Log("Unknown event received from server", LOG_ERROR);
-						server.Log(evt, LOG_ERROR);
+						var dynamicHandler = server.handler(evt.evtType);
+						if (dynamicHandler) {
+							dynamicHandler.call(evt, evt.data);
+						} else {
+							server.Log("Unknown event received from server", LOG_ERROR);
+							server.Log(evt, LOG_ERROR);
+						}
 					}
 				};
 			});
@@ -163,6 +173,12 @@ define(['loggable'],function(Loggable){
 			// this.LogGroupEnd();
 			event = new Event((++this.requestsId), EVT_PREPARING_WALK, walk.toJSON(), state);
 			if (walk.time) event.time = walk.time;
+			return this.request(event);
+		};
+
+		this.makeRequest = function(id, args){
+			this.Log("Sending a request.. "+id, LOG_DEBUG);
+			var event = new Event((++this.requestsId), id, args);
 			return this.request(event);
 		};
 

@@ -952,6 +952,11 @@ try{
 			// TODO: setup The.scripting interface
 			The.scripting.player = The.player;
 			The.scripting.UI = ui;
+			The.scripting.server = {
+				request: server.makeRequest.bind(server),
+				registerHandler: server.registerHandler.bind(server),
+				handler: server.handler.bind(server)
+			};
 			Resources.loadScripts(Resources._scriptRes).then(function(){
 				delete Resources._scriptRes;
 

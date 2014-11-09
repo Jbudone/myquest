@@ -166,6 +166,11 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 
+					// Scripts
+					var scripts = JSON.parse(assets.scripts);
+					Resources._scriptRes = scripts;
+					// NOTE: save script loading/initialization until we've setup the scripting environment
+
 
 					// Load World
 					var data = assets.world;

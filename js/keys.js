@@ -48,6 +48,10 @@ define(function(){
 		SOUTH:3,
 		WEST:4,
 
+		EVT_TESTJB:40,
+
+		HOOK_INTO_MAP:1,
+
 		LOG_CRITICAL:1<<0,
 		LOG_ERROR:1<<1,
 		LOG_WARNING:1<<2,

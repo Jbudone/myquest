@@ -140,6 +140,14 @@ define(['loggable'], function(Loggable){
 
 		};
 
+		this.ancestor = function(name){
+			var _this = this;
+			while (_this.parent){
+				if (_this.parent.name == name) return _this.parent;
+				_this = _this.parent;
+			}
+		};
+
 		if (scriptRes) {
 			// load script from script resource
 			this._script = scriptRes;

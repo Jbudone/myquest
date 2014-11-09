@@ -1,4 +1,4 @@
-define(['eventful','page','movable','loggable'], function(Eventful,Page,Movable,Loggable){
+define(['eventful','hookable','page','movable','loggable'], function(Eventful,Hookable,Page,Movable,Loggable){
 	
 	/* Map
 	 *
@@ -20,6 +20,7 @@ define(['eventful','page','movable','loggable'], function(Eventful,Page,Movable,
 	var Map = function(id){
 		Ext.extend(this,'map');
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Hookable);
 		extendClass(this).with(Loggable);
 
 		this.Log("Loading map..");
@@ -62,11 +63,13 @@ define(['eventful','page','movable','loggable'], function(Eventful,Page,Movable,
 		// Watch Entity
 		//
 		// Listen to an entity within the map, whenever its moving and needs to be switched between pages
+		this.registerHook('addedentity');
 		this.watchEntity = function(entity){
 
 			if (entity.step) {
 				if (entity instanceof Movable) {
 					if (this.movables[entity.id]) return; // Movable already being watched
+					if (!this.doHook('addedentity').pre(entity)) return;
 					this.Log("Adding Entity["+entity.id+"] to map");
 					this.movables[entity.id] = entity;
 
@@ -129,13 +132,19 @@ define(['eventful','page','movable','loggable'], function(Eventful,Page,Movable,
 						this.unwatchEntity(entity);
 						*/
 					});
+					this.doHook('addedentity').post(entity);
 				}
 			}
 		};
 
+		this.registerHook('removedentity');
 		this.unwatchEntity = function(entity){
+			if (!this.doHook('removedentity').pre(entity)) return;
+
 			this.stopListeningTo(entity);
 			delete this.movables[entity.id];
+
+			this.doHook('removedentity').post(entity);
 		};
 
 

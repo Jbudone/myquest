@@ -145,6 +145,13 @@ define(['movable'], function(Movable){
 			}
 		},
 
+		broadcast: function(evtID, args){
+			this.eventsBuffer.push({
+				evtType: evtID,
+				data: args
+			});
+		},
+
 		fetchEventsBuffer: function(){
 
 			if (!this.eventsBuffer.length) return null;

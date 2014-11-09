@@ -1,8 +1,9 @@
-define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable, Movable, Event){
+define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventful, Dynamic, Loggable, Movable, Event){
 
 	var Player = function(client){
 		extendClass(this).with(Loggable);
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Dynamic);
 		this.setLogGroup('Player');
 		this.setLogPrefix('(Player)[null] ');
 
@@ -55,6 +56,7 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 																		respawnPoint.x + respawnPoint.page.x,
 																		respawnPoint.page.map ) });
 			this.movable.playerID = player.id;
+			this.movable.player = this;
 
 			this.movable.page.addEntity(this.movable);
 			map.watchEntity(this.movable);
@@ -468,10 +470,23 @@ define(['eventful', 'loggable', 'movable', 'event'], function(Eventful, Loggable
 				this.Log("new message from user.. FROM ("+evt.state.posY+", "+evt.state.posX+") ----> "+evt.data.distance, LOG_DEBUG);
 				this.onPreparingToWalk(evt);
 			} else {
-				this.onSomeEvent(evt);
+				var dynamicHandler = this.handler(evt.evtType);
+				if (dynamicHandler) {
+					dynamicHandler.call(evt, evt.data);
+				} else {
+					this.onSomeEvent(evt);
+				}
 			}
 		}).bind(this));
 
+		this.respond = function(id, success, args){
+			var response = new Response(id);
+			response.success = success;
+			if (args) {
+				_.extend(response, args);
+			}
+			this.client.send(response.serialize());
+		};
 
 
 		this.step = function(time) {

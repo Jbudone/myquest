@@ -2,7 +2,9 @@
 	"game": {
 		"script": "game.js",
 		"server": {
-			"components": []
+			"components": {
+				"chat": "game.chat.js"
+			}
 		},
 		"client": {
 			"components": {

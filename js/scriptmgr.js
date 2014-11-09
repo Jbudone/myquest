@@ -9,11 +9,37 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 		var Base = new Script();
 		Base.parent = this;
 
+		this.buildScript = function(scriptData){
+			var script = new scriptData.script();
+			for (var componentID in scriptData.components) {
+				script.components[componentID] = scriptData.components[componentID];
+			}
+
+			return new Script(script);
+		};
+
 		// Build script-tree
 		for (var scriptKey in Resources.scripts) {
 			var scriptRes = Resources.scripts[scriptKey],
-				script = new Script(scriptRes);
-			Base.addScript(script);
+				_script   = this.buildScript(scriptRes),
+				hookInto  = _script._script.hookInto;
+
+			if (hookInto == HOOK_INTO_MAP) {
+
+				if (Env.isServer) {
+					for (var mapID in The.scripting.world.maps) {
+						var script = this.buildScript(scriptRes);
+						script.hookInto = The.scripting.world.maps[mapID];
+						Base.addScript(script);
+					}
+				} else {
+					Base.addScript(_script);
+				}
+
+			} else {
+				Base.addScript(_script);
+			}
+
 		}
 
 		this.step = function(time){

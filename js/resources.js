@@ -73,12 +73,15 @@ define(['jquery', 'loggable'], function($, Loggable){
 				for (var scriptName in scripts) {
 					++scriptsToLoad;
 					var script = scripts[scriptName],
-						scriptFile = "js/scripts/"+script.script;
+						scriptFile = "js/scripts/ready/"+script.script;
 					script.name = scriptName;
 					require([scriptFile], function(script){
 						--scriptsToLoad;
 
-						interface.scripts[this.name] = new script();
+						interface.scripts[this.name] = {
+							script: script,
+							components: {}
+						};
 						Log("Loaded "+this.name);
 
 						// Load components
