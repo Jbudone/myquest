@@ -76,8 +76,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 							you           = this.target,
 							page          = this.entity.page,
 							map           = page.map,
-							myY           = page.y * Env.tileSize + this.entity.posY,
-							myX           = page.x * Env.tileSize + this.entity.posX,
+							myY           = page.y * Env.tileSize + this.entity.position.local.y,
+							myX           = page.x * Env.tileSize + this.entity.position.local.x,
 							nearestTiles  = map.findNearestTiles(myY, myX),
 							yourNearTiles = null,
 							toTiles       = null;
@@ -85,8 +85,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 							toTiles = [this.target];
 						} else {
 							var yourPage      = you.page,
-								yourY         = yourPage.y * Env.tileSize + you.posY,
-								yourX         = yourPage.x * Env.tileSize + you.posX,
+								yourY         = yourPage.y * Env.tileSize + you.position.local.y,
+								yourX         = yourPage.x * Env.tileSize + you.position.local.x,
 								yourNearTiles = map.findNearestTiles(yourY, yourX);
 
 						toTiles = map.getTilesInRange( yourNearTiles, 1, true );
@@ -106,8 +106,8 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 									recalibrateY = false,
 									recalibrateX = false,
 									path = path.path;
-								if (this.entity.posY / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
-								if (this.entity.posX / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
+								if (this.entity.position.local.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
+								if (this.entity.position.local.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
 								if (myY - startTile.y * Env.tileSize != 0) recalibrateY = true;
 								if (myX - startTile.x * Env.tileSize != 0) recalibrateX = true;
 
@@ -457,9 +457,10 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				page.stopListeningTo(this.entity);
 				page.map.unwatchEntity(this.entity);
 
-				this.entity.posY = this.respawnPoint.y * Env.tileSize;
-				this.entity.posX = this.respawnPoint.x * Env.tileSize;
+				this.entity.position.local.y = this.respawnPoint.y * Env.tileSize;
+				this.entity.position.local.x = this.respawnPoint.x * Env.tileSize;
 				this.entity.page = this.respawnPoint.page;
+				this.entity.updatePosition();
 				this.entity.physicalState.transition(STATE_ALIVE);
 				this.entity.path = null;
 				this.entity.zoning = false;
@@ -508,9 +509,10 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 				page.stopListeningTo(this.entity);
 				page.map.unwatchEntity(this.entity);
 
-				this.entity.posY = this.respawnPoint.y * Env.tileSize;
-				this.entity.posX = this.respawnPoint.x * Env.tileSize;
+				this.entity.position.local.y = this.respawnPoint.y * Env.tileSize;
+				this.entity.position.local.x = this.respawnPoint.x * Env.tileSize;
 				this.entity.page = this.respawnPoint.page;
+				this.entity.updatePosition();
 				this.entity.physicalState.transition(STATE_ALIVE);
 				this.entity.path = null;
 				this.entity.zoning = false;

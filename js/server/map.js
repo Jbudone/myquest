@@ -243,14 +243,13 @@ define(['page'], function(Page){
 
 			if (tile) {
 				entity.path = null;
-				entity.posY = tile.y*Env.tileSize;
-				entity.posX = tile.x*Env.tileSize;
 				entity.position = {
 					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),
 					global: null,
-					local: { y: entity.posY, x: entity.posX }
+					local: null
 				};
-				entity.position.global = this.coordinates.globalFromLocal( entity.posX, entity.posY, tile.page, true );
+				entity.position.local  = { x: tile.x * Env.tileSize, y: tile.y * Env.tileSize };
+				entity.position.global = this.coordinates.globalFromLocal( entity.position.local.x, entity.position.local.x, tile.page, true );
 				tile.page.addEntity(entity);
 				if (!this.movables[entity.id]) this.watchEntity(entity);
 				entity.zoning = false;

@@ -9,13 +9,6 @@ define(['sprite','eventful'], function(Sprite, Eventful){
 		this.page = page;
 		extendClass(this).with(Eventful);
 
-		// NOTE: player zoning handled in server/player.js file
-		// if (!(Env.isServer && spriteID == 'player')) {
-		// 	this.listenTo(this, EVT_ZONE, function(me, newPage){
-		// 		this.page = newPage;
-		// 	}, HIGH_PRIORITY);
-		// }
-
 		this.sprite=Resources.sprites[this.npc.sheet];
 		this.posX=32*2;
 		this.posY=32*2;

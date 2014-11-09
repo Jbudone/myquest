@@ -9,8 +9,8 @@ define(['movable'], function(Movable){
 			this.listenTo(this, EVT_ADDED_ENTITY, function(page, entity){
 				var ent = {
 					id: entity.id,
-					posY: entity.posY,
-					posX: entity.posX,
+					localY: entity.position.local.y,
+					localX: entity.position.local.x,
 					spriteID: entity.spriteID,
 					state: entity.sprite.state,
 					zoning: entity.zoning,
@@ -25,14 +25,14 @@ define(['movable'], function(Movable){
 				console.log("Added entity["+entity.id+"]("+entity.spriteID+") to page ("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
 					// console.log("Entity ["+entity.id+"] preparing walk");
-					var movablePosition = { y: entity.posY + this.y * Env.tileSize,
-										   x: entity.posX + this.x * Env.tileSize,
-										   globalY: Math.floor(entity.posY / Env.tileSize) + this.y,
-										   globalX: Math.floor(entity.posX / Env.tileSize) + this.x},
+					var movablePosition = { y: entity.position.local.y + this.y * Env.tileSize,
+										   x: entity.position.local.x + this.x * Env.tileSize,
+										   globalY: Math.floor(entity.position.local.y / Env.tileSize) + this.y,
+										   globalX: Math.floor(entity.position.local.x / Env.tileSize) + this.x},
 					state = {
 						page: this.index,
-						posY: entity.posY,
-						posX: entity.posX,
+						localY: entity.position.local.y,
+						localX: entity.position.local.x,
 						y: movablePosition.y,
 						x: movablePosition.x,
 						globalY: movablePosition.globalY,
@@ -44,7 +44,7 @@ define(['movable'], function(Movable){
 						path: walk.toJSON(), //(entity.path? entity.path.serialize() : null),
 					};
 
-					console.log("("+now()+") Sending walk of user ["+entity.id+"] on page ("+this.index+") :: ("+state.posY+","+state.posX+")");
+					console.log("("+now()+") Sending walk of user ["+entity.id+"] on page ("+this.index+") :: ("+state.localY+","+state.localX+")");
 					this.eventsBuffer.push({
 						evtType: EVT_PREPARING_WALK,
 						data: data
@@ -134,8 +134,13 @@ define(['movable'], function(Movable){
 
 					var npc = Resources.npcs[spawn.id],
 						entity = new Movable(npc.sheet, page, {
-							posY: localY*Env.tileSize,
-							posX: localX*Env.tileSize});
+							position: {
+								local: {
+									y: localY * Env.tileSize,
+									x: localX * Env.tileSize,
+								}
+							}
+						});
 					console.log("Entity["+entity.id+"]");
 					if (entity.AI) entity.AI.map = page.map; // Give intelligible beings a sense of whats around them
 					page.map.watchEntity(entity);
@@ -190,8 +195,8 @@ define(['movable'], function(Movable){
 					var entity = this.movables[entityID],
 						ent = {
 							id: entity.id,
-							posY: entity.posY,
-							posX: entity.posX,
+							localY: entity.position.local.y,
+							localX: entity.position.local.x,
 							spriteID: entity.spriteID,
 							state: entity.sprite.state,
 							zoning: entity.zoning,
@@ -205,10 +210,10 @@ define(['movable'], function(Movable){
 							var walk = entity.path.walks[j];
 							if (walk.steps==0) break;
 							
-							     if (walk.direction==NORTH) ent.posY -= walk.steps;
-							else if (walk.direction==SOUTH) ent.posY += walk.steps;
-							else if (walk.direction==WEST)  ent.posX -= walk.steps;
-							else if (walk.direction==EAST)  ent.posX += walk.steps;
+							     if (walk.direction==NORTH) ent.localY -= walk.steps;
+							else if (walk.direction==SOUTH) ent.localY += walk.steps;
+							else if (walk.direction==WEST)  ent.localX -= walk.steps;
+							else if (walk.direction==EAST)  ent.localX += walk.steps;
 						}
 					}
 

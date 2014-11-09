@@ -320,7 +320,7 @@ define(['loggable'], function(Loggable){
 					}
 
 					this.ctxEntities.drawImage(
-							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.posX-offsetX-movableOffX), scale*(movable.posY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 				}
 
 				// Draw sprites
@@ -347,7 +347,7 @@ define(['loggable'], function(Loggable){
 						}
 
 						this.ctxEntities.drawImage(
-								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.posX-offsetX-movableOffX), scale*(movable.posY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 					}
 				}
 			}

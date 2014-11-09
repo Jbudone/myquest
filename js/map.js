@@ -82,12 +82,12 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 							pageI = this.pageIndex(pageY, pageX),
 							oldPage = null,
 							newPage = null;
+
+						// Moved to a new pages, need to set the proper local position
 						if (pageI != entity.page.index) {
 							newPage = this.pages[ pageI ];
 
 							entity.position.local = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
-							entity.posX = entity.position.local.x;
-							entity.posY = entity.position.local.y;
 						}
 
 						
@@ -285,8 +285,8 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 
 					   if (startTiles.length == 0) {
 						   console.log("	No startTiles found.."+now());
-						   console.log(player.posY);
-						   console.log(player.posX);
+						   console.log(player.position.local.y);
+						   console.log(player.position.local.x);
 						   return false;
 					   } else {
 						   startPath  = findShortestPath( startTiles, endTiles );

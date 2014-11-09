@@ -1,3 +1,4 @@
+try{
 	var requirejs = require('requirejs');
 
 	requirejs.config({
@@ -8,6 +9,16 @@
 			"underscore": "http://underscorejs.org/underscore",
 		},
 	});
+
+	var couldNotStartup = function(e){
+	   Log("Could not startup server");
+	   if (e) {
+		   Log(e, LOG_ERROR);
+		   Log(e.stack, LOG_ERROR);
+	   }
+	   process.exit();
+	};
+	process.on('uncaughtException', couldNotStartup);
 
 requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
 
@@ -423,3 +434,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	};
 
 });
+}catch(e){
+	console.error(e);
+}

@@ -604,12 +604,12 @@ try{
 							if (entity.page) {
 								// TODO: abstract pathfinding & recalibration to not have to do this..
 								addedEntity.state = {
-									globalY: entity.page.y + parseInt(addedEntity.posY/Env.tileSize),
-									globalX: entity.page.x + parseInt(addedEntity.posX/Env.tileSize),
-									posY: addedEntity.posY,
-									posX: addedEntity.posX,
-									y: entity.page.y*Env.tileSize + addedEntity.posY,
-									x: entity.page.x*Env.tileSize + addedEntity.posX,
+									globalY: entity.page.y + parseInt(addedEntity.localY/Env.tileSize),
+									globalX: entity.page.x + parseInt(addedEntity.localX/Env.tileSize),
+									localY: addedEntity.localY,
+									localX: addedEntity.localX,
+									y: entity.page.y*Env.tileSize + addedEntity.localY,
+									x: entity.page.x*Env.tileSize + addedEntity.localX,
 								};
 								server.onEntityWalking(page, addedEntity);
 							} else {
@@ -624,11 +624,11 @@ try{
 					} else {
 						var entity = new Movable(addedEntity.spriteID, The.map.pages[page], { id: addedEntity.id });
 						Log("Adding Entity: "+addedEntity.id);
-						entity.id           = addedEntity.id;
-						entity.posY         = addedEntity.posY;
-						entity.posX         = addedEntity.posX;
-						entity.sprite.state = addedEntity.state;
-						entity.zoning       = addedEntity.zoning;
+						entity.id               = addedEntity.id;
+						entity.position.local.y = addedEntity.localY;
+						entity.position.local.x = addedEntity.localX;
+						entity.sprite.state     = addedEntity.state;
+						entity.zoning           = addedEntity.zoning;
 
 						if (addedEntity.path) {
 							var path = JSON.parse(addedEntity.path);
@@ -638,7 +638,7 @@ try{
 						The.map.watchEntity(entity);
 						The.map.pages[page].addEntity(entity);
 						entity.page = The.map.pages[page];
-						entity.updatePosition(entity.posX, entity.posY);
+						entity.updatePosition();
 					}
 
 				};
@@ -685,17 +685,17 @@ try{
 						Log(event.path, LOG_DEBUG);
 
 						var movableState = {
-								y: entity.posY + entPage.y * Env.tileSize,
-								x: entity.posX + entPage.x * Env.tileSize,
-								localY: entity.posY,
-								localX: entity.posX,
-								globalY: Math.floor(entity.posY/Env.tileSize) + entPage.y,
-								globalX: Math.floor(entity.posX/Env.tileSize) + entPage.x },
+								y: entity.position.local.y + entPage.y * Env.tileSize,
+								x: entity.position.local.x + entPage.x * Env.tileSize,
+								localY: entity.position.local.y,
+								localX: entity.position.local.x,
+								globalY: Math.floor(entity.position.local.y/Env.tileSize) + entPage.y,
+								globalX: Math.floor(entity.position.local.x/Env.tileSize) + entPage.x },
 							pathState = {
 								y: reqState.y,
 								x: reqState.x,
-								localY: reqState.posY,
-								localX: reqState.posX,
+								localY: reqState.localY,
+								localX: reqState.localX,
 								globalY: reqState.globalY,
 								globalX: reqState.globalX
 							},
@@ -747,8 +747,8 @@ try{
 								y -= page.y*Env.tileSize;
 								x -= page.x*Env.tileSize;
 
-								entity.posY = y;
-								entity.posX = x;
+								entity.position.local.y = y;
+								entity.position.local.x = x;
 								entity.sprite.idle();
 							}
 
@@ -879,15 +879,13 @@ try{
 					The.map.curPage    = The.map.pages[player.page];
 					ui.setPage( The.map.curPage );
 
-					The.player.posY = player.posY;
-					The.player.posX = player.posX;
 					The.player.page = The.map.curPage;
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.posY/Env.tileSize) + The.map.curPage.y, parseInt(player.posX/Env.tileSize) + The.map.curPage.x ),
-						global: { y: player.posY + The.map.curPage.y * Env.tileSize, x: player.posX + The.map.curPage.x * Env.tileSize },
-						local: { y: player.posY, x: player.posX },
+						tile: new Tile( parseInt(player.position.local.y/Env.tileSize) + The.map.curPage.y, parseInt(player.position.local.x/Env.tileSize) + The.map.curPage.x ),
+						global: { y: player.position.local.y + The.map.curPage.y * Env.tileSize, x: player.position.local.x + The.map.curPage.x * Env.tileSize },
+						local: { y: player.position.local.y, x: player.position.local.x },
 					};
 
 
@@ -916,20 +914,19 @@ try{
 					The.map.curPage    = The.map.pages[player.page];
 					ui.setPage( The.map.curPage );
 
-					The.player.posY = player.posY;
-					The.player.posX = player.posX;
 					The.player.page = The.map.curPage;
 
-					The.player.addEventListener(EVT_ZONE, The.map, function(player, newPage, direction){
-						console.log("Zone to "+newPage.index);
-						this.zone(newPage);
-					});
+					// FIXME: is this necessary?
+					// The.player.addEventListener(EVT_ZONE, The.map, function(player, newPage, direction){
+					// 	console.log("Zone to "+newPage.index);
+					// 	this.zone(newPage);
+					// });
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.posY/Env.tileSize) + The.map.curPage.y, parseInt(player.posX/Env.tileSize) + The.map.curPage.x ),
-						global: { y: player.posY + The.map.curPage.y * Env.tileSize, x: player.posX + The.map.curPage.x * Env.tileSize },
-						local: { y: player.posY, x: player.posX },
+						tile: new Tile( parseInt(player.localY/Env.tileSize) + The.map.curPage.y, parseInt(player.localX/Env.tileSize) + The.map.curPage.x ),
+						global: { y: player.localY + The.map.curPage.y * Env.tileSize, x: player.localX + The.map.curPage.x * Env.tileSize },
+						local: { y: player.localY, x: player.localX },
 					};
 
 					The.camera.updated = true;
@@ -987,8 +984,8 @@ try{
 							offX = (The.map.curPage.x - page.x)*Env.tileSize - The.camera.offsetX;
 						for (var movableID in page.movables) {
 							var movable = page.movables[movableID],
-								px      = movable.posX + offX,
-								py      = movable.posY - offY;
+								px      = movable.position.local.x + offX,
+								py      = movable.position.local.y - offY;
 							if (movable.npc.killable) {
 								if (movable.playerID) continue;
 								if (mouse.canvasX >= px && mouse.canvasX <= px + 16 &&
@@ -1023,15 +1020,15 @@ try{
 				// 	click to move player creates path for player
 				var walkTo       = { x: mouse.x + parseInt(The.camera.offsetX/Env.tileSize),
 									 y: mouse.y - parseInt(The.camera.offsetY/Env.tileSize) },
-					playerY      = The.map.curPage.y * Env.tileSize + The.player.posY,
-					playerX      = The.map.curPage.x * Env.tileSize + The.player.posX,
+					playerY      = The.map.curPage.y * Env.tileSize + The.player.position.local.y,
+					playerX      = The.map.curPage.x * Env.tileSize + The.player.position.local.x,
 					nearestTiles = The.map.findNearestTiles(playerY, playerX),
 					toTile       = The.map.tileFromLocalCoordinates(walkTo.y, walkTo.x),
 					time         = now(),
 					path         = The.map.findPath(nearestTiles, [toTile]);
 
-				if (path) {
-					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.posY/Env.tileSize)+","+(The.player.posX/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
+				if (path && path.path) {
+					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
 					console.group();
 					console.log(path);
 					if (The.player.brain.target) {
@@ -1045,10 +1042,10 @@ try{
 						recalibrateY = false,
 						recalibrateX = false,
 						path = path.path,
-						playerPosition = { y: The.player.posY + The.map.curPage.y * Env.tileSize,
-										   x: The.player.posX + The.map.curPage.x * Env.tileSize };
-					if (The.player.posY / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
-					if (The.player.posX / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
+						playerPosition = { y: The.player.position.local.y + The.map.curPage.y * Env.tileSize,
+										   x: The.player.position.local.x + The.map.curPage.x * Env.tileSize };
+					if (The.player.position.local.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
+					if (The.player.position.local.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
 					if (playerPosition.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
 					if (playerPosition.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
 
@@ -1067,7 +1064,7 @@ try{
 						var distance    = -1*(playerPosition.x - startTile.x * Env.tileSize),
 							walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
 						console.log("Recalibrating Walk (X): ");
-						console.log("	steps: "+distance+" FROM ("+The.player.posX+") TO ("+startTile.x*Env.tileSize+")");
+						console.log("	steps: "+distance+" FROM ("+The.player.position.local.x+") TO ("+startTile.x*Env.tileSize+")");
 						path.walks.unshift(walk);
 					}
 					path.walks[0].time = time;
@@ -1128,14 +1125,14 @@ try{
 			The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
 
 				Log("Preparing to walk..");
-				var playerPosition = { y: The.player.posY + The.map.curPage.y * Env.tileSize,
-									   x: The.player.posX + The.map.curPage.x * Env.tileSize,
-									   globalY: Math.floor(The.player.posY / Env.tileSize) + The.map.curPage.y,
-									   globalX: Math.floor(The.player.posX / Env.tileSize) + The.map.curPage.x },
+				var playerPosition = { y: The.player.position.local.y + The.map.curPage.y * Env.tileSize,
+									   x: The.player.position.local.x + The.map.curPage.x * Env.tileSize,
+									   globalY: Math.floor(The.player.position.local.y / Env.tileSize) + The.map.curPage.y,
+									   globalX: Math.floor(The.player.position.local.x / Env.tileSize) + The.map.curPage.x },
 					state = {
 						page: The.map.curPage.index,
-						posY: The.player.posY,
-						posX: The.player.posX,
+						localY: The.player.position.local.y,
+						localX: The.player.position.local.x,
 						y: playerPosition.y,
 						x: playerPosition.x,
 						globalY: playerPosition.globalY,
@@ -1153,11 +1150,11 @@ try{
 
 					The.map.curPage = The.map.pages[state.page];
 					if (response.state) {
-						The.player.posY = response.state.posY;
-						The.player.posX = response.state.posX;
+						The.player.position.local.y = response.state.localY;
+						The.player.position.local.x = response.state.localX;
 					} else {
-						The.player.posY = state.posY;
-						The.player.posX = state.posX;
+						The.player.position.local.y = state.localY;
+						The.player.position.local.x = state.localX;
 					}
 					The.player.path = null;
 					// The.player.lastMoved = null;

@@ -69,8 +69,10 @@ define(['page','movable'], function(Page,Movable){
 							if (!isZoning) {
 
 								this.Log("	Adding player (me) to page");
-								The.player.posY         = movable.posY;
-								The.player.posX         = movable.posX;
+								The.player.position.local = {
+									y: movable.localY,
+									x: movable.localX
+								};
 								The.player.sprite.state = movable.state;
 								The.player.zoning       = false;
 								//The.player.page         = this.pages[pageI];
@@ -90,13 +92,13 @@ define(['page','movable'], function(Page,Movable){
 							this.Log("	Adding movable to page");
 							var entity = new Movable(movable.spriteID, page);
 							entity.id           = movable.id;
-							entity.posY         = movable.posY;
-							entity.posX         = movable.posX;
+							entity.position.local.y         = movable.localY;
+							entity.position.local.x         = movable.localX;
 							entity.sprite.state = movable.state;
 							entity.zoning       = movable.zoning;
 							entity.health       = movable.health;
 							entity.page         = this.pages[pageI];
-							entity.updatePosition(entity.posX, entity.posY);
+							entity.updatePosition();
 
 							if (movable.path) {
 								var path = JSON.parse(movable.path);

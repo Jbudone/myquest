@@ -8,8 +8,8 @@ define(['AI'], function(AI){
 				if (this.npc.name!=='player') {
 					this.brain.addComponent(AI.Components['Follow']);
 					this.brain.addComponent(AI.Components['Respawn'], {respawnPoint: new Tile(
-							this.posY/Env.tileSize + this.page.y,
-							this.posX/Env.tileSize + this.page.x,
+							this.position.local.y/Env.tileSize + this.page.y,
+							this.position.local.x/Env.tileSize + this.page.x,
 							this.page.map)});
 				} else {
 					this.brain.addComponent(AI.Components['PlayerRespawn'], {respawnPoint: this.respawnPoint});				

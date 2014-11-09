@@ -5,9 +5,52 @@ define(['entity','animable'], function(Entity, Animable) {
 		this.base = Entity;
 		this.base(spriteID, page);
 
+		// Position will always accurately reflect the movables position in the
+		// map. It is split up between local and global position; local refers
+		// to the offset within the current page, global refers to the offset
+		// within the map. 
+		//
+		// Tile is the global discrete tile position within the map. Global &
+		// local are both continuous values (eg. as you move between tile 0 and
+		// tile 1, your local.x goes from (tileSize/2) to ((1+tileSize)/2))
+		//
+		// This variable should be updated with updatePosition() immediately
+		// after the movable has moved somewhere (eg. moving, zoning,
+		// respawning)
+		//
+		// FIXME: posX == position.posX == position.local.x
+		this.position = {
+			tile:   { x: 0, y: 0 },
+			local:  { x: 0, y: 0 },
+			global: { x: 0, y: 0 }
+		};
+
+		this.updatePosition = function(localX, localY){
+
+			if (localX && localY) {
+				this.position.local.x = localX;
+				this.position.local.y = localY;
+			} else {
+				localX = this.position.local.x;
+				localY = this.position.local.y;
+			}
+
+			this.position.global.x = localX + this.page.x * Env.tileSize;
+			this.position.global.y = localY + this.page.y * Env.tileSize;
+			this.position.tile.x = parseInt(this.position.global.x / Env.tileSize)
+			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize)
+		};
+
 		if (params) {
 			for (var param in params) {
 				this[param] = params[param];
+
+				if (param == 'position') {
+					if (!this.position.tile)   this.position.tile = {};
+					if (!this.position.local)  this.position.local = {};
+					if (!this.position.global) this.position.global = {};
+					this.updatePosition();
+				}
 			}
 		}
 
@@ -22,11 +65,6 @@ define(['entity','animable'], function(Entity, Animable) {
 		this.lastMoved=now();
 		this.path=null;
 		this.zoning=false;
-		this.position = {
-			tile:   { x: 0, y: 0 },
-			local:  { x: 0, y: 0 },
-			global: { x: 0, y: 0 }
-		};
 
 		this.stepsToX=null;
 		this.stepsToY=null;
@@ -44,17 +82,6 @@ define(['entity','animable'], function(Entity, Animable) {
 				this.physicalState.transition(STATE_DEAD);
 				this.triggerEvent(EVT_DIED);
 			}
-		};
-
-		this.updatePosition = function(localX, localY){
-			this.posX = localX;
-			this.posY = localY;
-			this.position.local.x = localX;
-			this.position.local.y = localY;
-			this.position.global.x = localX + this.page.x * Env.tileSize;
-			this.position.global.y = localY + this.page.y * Env.tileSize;
-			this.position.tile.x = parseInt(this.position.global.x / Env.tileSize)
-			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize)
 		};
 
 
@@ -91,7 +118,7 @@ define(['entity','animable'], function(Entity, Animable) {
 						deltaSteps        = Math.floor(delta/this.moveSpeed),
 						deltaTaken        = null,
 						direction         = walk.direction,
-						posK              = (walk.direction==NORTH||walk.direction==SOUTH?this.posY:this.posX),
+						posK              = (walk.direction==NORTH||walk.direction==SOUTH?this.position.local.y:this.position.local.x),
 						finishedWalk      = false;
 
 					if (deltaSteps > steps) {
@@ -109,14 +136,13 @@ define(['entity','animable'], function(Entity, Animable) {
 						finishedWalk = true;
 						this.triggerEvent(EVT_FINISHED_WALK, direction);
 						path.walks.splice(0,1);
-						var pY=this.posY,
-							pX=this.posX;
+						var pY=this.position.local.y,
+							pX=this.position.local.x;
 						// console.log("["+this.id+"] Finished walk! ("+walk.distance+") -> ("+pY+","+pX+")"); // TODO: why does this show as different on server/client?
 						if (!path.walks.length) {
 							// Finished path
 							this.triggerEvent(EVT_FINISHED_PATH, path.id);
 							this.path = null;
-							// console.log("["+this.id+"] Finished path! ("+this.posY+","+this.posX+")");
 
 							// Finished moving
 							this.moving = false; // TODO: necessary?
@@ -145,57 +171,61 @@ define(['entity','animable'], function(Entity, Animable) {
 					if (direction==EAST || direction==SOUTH) posK += deltaSteps;
 					else                                     posK -= deltaSteps;
 
+
+					// Movement calculation
+					//
+					// tile is a real number (not an int). We can compare tile
+					// to our current tile to determine where we're moving. If
+					// tile rounds down to less than our current tile, we're
+					// moving down; likewise if tile rounds up to more than our
+					// current tile, we're moving up. Note that these are the
+					// only two possible rounding cases. If tile rounded down
+					// and rounded are the same, and not equal to our current
+					// tile, then we've finished moving to this new tile
+					var tile = posK / Env.tileSize;
 					if (direction==NORTH || direction==SOUTH) {
-						// floor[ posX ] !== floor[ posK ] --> moved tiles (left first)
-						// ceil[ posX ]  !== ceil[ posK ]  --> moved tiles (right first)
-						//
-						// store tileX, tileY
-						// cur: tileX, tileY
-						//
-						// if floor[tileX] == ceil[tileX] !== tileX --> moved to new tile
-						// if (floor[tileX] !== tileX || ceil[tileX] !== tileX) --> moving to new tile
-						var tile = posK / Env.tileSize;
 						if (Math.floor(tile) != this.tileY || Math.ceil(tile) != this.tileY) {
-							// Moving to new tile
 							if (Math.floor(tile) == Math.ceil(tile)) {
 								// Moved to new tile
 								this.tileY = tile;
-								this.updatePosition(this.posX, posK);
+								this.updatePosition(this.position.local.x, posK);
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
-								this.updatePosition(this.posX, posK);
+								// Moving to new tile
+								this.updatePosition(this.position.local.x, posK);
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
 						} else {
-							this.posY = posK;
+							// Moved back to center of current tile (changed direction of path)
+							this.position.local.y = posK;
 						}
 					} else {
-						var tile = posK / Env.tileSize;
 						if (Math.floor(tile) != this.tileX || Math.ceil(tile) != this.tileX) {
-							// Moving to new tile
 							if (Math.floor(tile) == Math.ceil(tile)) {
 								// Moved to new tile
 								this.tileX = tile;
-								this.updatePosition(posK, this.posY);
+								this.updatePosition(posK, this.position.local.y);
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
-								this.updatePosition(posK, this.posY);
+								// Moving to new tile
+								this.updatePosition(posK, this.position.local.y);
 								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
 							}
 						} else {
-							this.posX = posK;
+							// Moved back to center of current tile (changed direction of path)
+							this.position.local.x = posK;
 						}
 					}
 
+
+					// Movable has finished the walk. This is only a final step
+					// to calibrate the user to the center of the tile
 					if (finishedWalk) {
 						// TODO: might need to change lastMoved to reflect this recalibration
-						var oldY = this.posY,
-							oldX = this.posX;
-						this.posX = Env.tileSize*Math.round(this.posX/Env.tileSize);
-						this.posY = Env.tileSize*Math.round(this.posY/Env.tileSize);
-						// console.log("["+this.id+"] Finished paths! ("+this.posY+","+this.posX+")["+this.posY/16+","+this.posX/16+"] from ("+oldY+","+oldX+")");
-						this.updatePosition(this.posX, this.posY);
+						this.position.local.x = Env.tileSize*Math.round(this.position.local.x/Env.tileSize);
+						this.position.local.y = Env.tileSize*Math.round(this.position.local.y/Env.tileSize);
 					}
+					this.updatePosition();
 					
 
 
@@ -204,7 +234,6 @@ define(['entity','animable'], function(Entity, Animable) {
 			} else {
 				this.lastMoved = time;
 			}
-			// this.base.step(time); // NOTE: base class already stepped
 			this.sprite.step(time);
 
 			return stepResults;
@@ -240,14 +269,11 @@ define(['entity','animable'], function(Entity, Animable) {
 				   if (walk.started) console.log("			WALK ALREADY STARTED!!!");
 			   }, logPath = function(path) {
 				   console.log("	Path:");
-				   console.log("		FROM ("+mov.posY+","+mov.posX+")");
+				   console.log("		FROM ("+mov.position.local.y+","+mov.position.local.x+")");
 				   for (var j=0; j<path.walks.length; ++j) {
 					   logWalk(path.walks[j]);
 				   }
 			   }
-
-			// console.log("Added path to entity ["+this.id+"] at ("+this.posY+","+this.posX+")");
-			// logPath(path);
 		};
 
 
@@ -258,8 +284,8 @@ define(['entity','animable'], function(Entity, Animable) {
 
 				var _this         = this,
 					range         = range || 1,
-					myY           = this.page.y * Env.tileSize + this.posY,
-					myX           = this.page.x * Env.tileSize + this.posX,
+					myY           = this.page.y * Env.tileSize + this.position.local.y,
+					myX           = this.page.x * Env.tileSize + this.position.local.x,
 					myNearTiles   = this.page.map.findNearestTiles( myY, myX );
 				
 				for (var i=0; i<myNearTiles.length; ++i) {
@@ -275,11 +301,11 @@ define(['entity','animable'], function(Entity, Animable) {
 				// TODO: optimize this...
 				var _this         = this,
 					range         = range || 1,
-					myY           = this.page.y * Env.tileSize + this.posY,
-					myX           = this.page.x * Env.tileSize + this.posX,
+					myY           = this.page.y * Env.tileSize + this.position.local.y,
+					myX           = this.page.x * Env.tileSize + this.position.local.x,
 					yourPage      = target.page,
-					yourY         = yourPage.y * Env.tileSize + target.posY,
-					yourX         = yourPage.x * Env.tileSize + target.posX,
+					yourY         = yourPage.y * Env.tileSize + target.position.local.y,
+					yourX         = yourPage.x * Env.tileSize + target.position.local.x,
 					yourNearTiles = this.page.map.findNearestTiles( yourY, yourX ),
 					myNearTiles   = this.page.map.findNearestTiles( myY, myX ),
 					tiles         = this.page.map.getTilesInRange( myNearTiles, range, true ),
@@ -308,8 +334,8 @@ define(['entity','animable'], function(Entity, Animable) {
 
 		this.tileAdjacentTo = function(tile, target){
 			var	yourPage     = target.page,
-				yourY        = yourPage.y * Env.tileSize + target.posY,
-				yourX        = yourPage.x * Env.tileSize + target.posX,
+				yourY        = yourPage.y * Env.tileSize + target.position.local.y,
+				yourX        = yourPage.x * Env.tileSize + target.position.local.x,
 				tY           = tile.y * Env.tileSize,
 				tX           = tile.x * Env.tileSize;
 			if (Math.abs(yourY - tY) < 2*Env.tileSize && yourX == tX) {
@@ -323,11 +349,11 @@ define(['entity','animable'], function(Entity, Animable) {
 
 		this.directionOfTarget = function(target){
 			var page         = this.page,
-				myY          = page.y * Env.tileSize + this.posY,
-				myX          = page.x * Env.tileSize + this.posX,
+				myY          = page.y * Env.tileSize + this.position.local.y,
+				myX          = page.x * Env.tileSize + this.position.local.x,
 				yourPage     = target.page,
-				yourY        = yourPage.y * Env.tileSize + target.posY,
-				yourX        = yourPage.x * Env.tileSize + target.posX,
+				yourY        = yourPage.y * Env.tileSize + target.position.local.y,
+				yourX        = yourPage.x * Env.tileSize + target.position.local.x,
 				direction    = null;
 
 			     if (myY > yourY) direction = NORTH;

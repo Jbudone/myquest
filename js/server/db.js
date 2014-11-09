@@ -116,8 +116,8 @@ define(['loggable'], function(Loggable){
 
 		this.savePlayer = function(player){
 
-		   var y     = Math.round((player.posY + player.page.y*Env.tileSize)/Env.tileSize),
-			   x     = Math.round((player.posX + player.page.x*Env.tileSize)/Env.tileSize),
+		   var y     = Math.round((player.position.local.y + player.page.y*Env.tileSize)/Env.tileSize),
+			   x     = Math.round((player.position.local.x + player.page.x*Env.tileSize)/Env.tileSize),
 			   mapID = player.page.map.id;
 
 			db

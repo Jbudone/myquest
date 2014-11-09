@@ -50,8 +50,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 													global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
 													local: { y: playerPosition.y * Env.tileSize, x: playerPosition.x * Env.tileSize }
 												},
-												posY: playerPosition.y * Env.tileSize,
-												posX: playerPosition.x * Env.tileSize,
 												respawnPoint: new Tile( respawnPoint.y + respawnPoint.page.y,
 																		respawnPoint.x + respawnPoint.page.x,
 																		respawnPoint.page.map ) });
@@ -126,8 +124,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							tileset: map.map.properties.tileset,
 						},
 						player:{
-							posY: this.movable.posY,
-							posX: this.movable.posX,
+							position: this.movable.position,
 							page: this.movable.page.index
 						},
 						pages:{}
@@ -160,8 +157,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							tileset: map.map.properties.tileset,
 						},
 						player:{
-							posY: this.movable.posY,
-							posX: this.movable.posX,
+							localY: this.movable.position.local.y,
+							localX: this.movable.position.local.x,
 							page: this.movable.page.index,
 							health: this.movable.health
 						},
@@ -216,7 +213,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				positive  = (walk.direction == SOUTH || walk.direction == EAST),
 				walked    = 0,
 				tiles     = [],
-				k         = (vert ? player.posY : player.posX),
+				k         = (vert ? player.position.local.y : player.position.local.x),
 				kT        = (vert ? start.globalY : start.globalX),
 				dist      = walk.distance,
 				safePath  = true,
@@ -271,17 +268,17 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			}
 
 			var movableState = {
-					y: player.posY + player.page.y * Env.tileSize, // NOTE: global real coordinates
-					x: player.posX + player.page.x * Env.tileSize,
-					localY: player.posY,
-					localX: player.posX,
-					globalY: Math.floor(player.posY/Env.tileSize) + player.page.y,
-					globalX: Math.floor(player.posX/Env.tileSize) + player.page.x },
+					y: player.position.local.y + player.page.y * Env.tileSize, // NOTE: global real coordinates
+					x: player.position.local.x + player.page.x * Env.tileSize,
+					localY: player.position.local.y,
+					localX: player.position.local.x,
+					globalY: Math.floor(player.position.local.y/Env.tileSize) + player.page.y,
+					globalX: Math.floor(player.position.local.x/Env.tileSize) + player.page.x },
 				pathState = {
 					y: reqState.y,
 					x: reqState.x,
-					localY: reqState.posY,
-					localX: reqState.posX,
+					localY: reqState.localY,
+					localX: reqState.localX,
 					globalY: reqState.globalY,
 					globalX: reqState.globalX
 				};
@@ -291,7 +288,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 				var response     = new Response(action.id);
 				response.success = false;
-				response.state   = { x: movableState.x, y: movableState.y, posX: movableState.localX, posY: movableState.localY };
+				response.state   = { x: movableState.x, y: movableState.y, localX: movableState.localX, localY: movableState.localY };
 				this.client.send(response.serialize());
 				return;
 			}
@@ -467,7 +464,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				this.client.send(JSON.stringify(initialization));
 
 			} else if (evt.evtType==EVT_PREPARING_WALK) {
-				this.Log("new message from user.. FROM ("+evt.state.posY+", "+evt.state.posX+") ----> "+evt.data.distance, LOG_DEBUG);
+				this.Log("new message from user.. FROM ("+evt.state.localY+", "+evt.state.localX+") ----> "+evt.data.distance, LOG_DEBUG);
 				this.onPreparingToWalk(evt);
 			} else {
 				var dynamicHandler = this.handler(evt.evtType);

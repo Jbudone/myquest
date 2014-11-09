@@ -30,14 +30,14 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 				this.movable = movable;
 				this.update = function(){
-					var left = Env.tileScale * movable.posX + // game left
+					var left = Env.tileScale * movable.position.local.x + // game left
 								Env.tileScale * movable.sprite.tileSize / 2 + // centered UI
 								-1 * Env.tileScale * movable.sprite.offset_x + // offset sprite
 								-1 * Env.tileScale * _UI.camera.offsetX + // camera offset
 								-1 * this.ui.width() + // centered
 								$('#game').offset().left, // canvas offset
 
-						top = Env.tileScale * movable.posY + // game top
+						top = Env.tileScale * movable.position.local.y + // game top
 								movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * _UI.camera.offsetY + // camera offset

@@ -21,8 +21,8 @@ define(['eventful'], function(Eventful){
 
 		// FIXME: fix the camera so that it doesn't need this
 		this.centerCamera = function(){
-			The.camera.offsetY = -The.player.posY + Env.pageHeight * Env.tileSize / 2
-			The.camera.offsetX = The.player.posX - Env.pageWidth * Env.tileSize / 2;
+			The.camera.offsetY = -The.player.position.local.y + Env.pageHeight * Env.tileSize / 2
+			The.camera.offsetX = The.player.position.local.x - Env.pageWidth * Env.tileSize / 2;
 		};
 
 		this.listenTo(The.map, EVT_ZONE, function(map,direction){

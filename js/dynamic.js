@@ -28,7 +28,6 @@ define(function(){
 					postHandle(arguments);
 				}
 			};
-			console.log(this);
 			this._dynamicHandles[id] = _dynamicHandler;
 		},
 
