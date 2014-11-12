@@ -12,6 +12,7 @@ var Sheet = function(canvas){
 			onModified: new Function(),
 			onSheetChanged: new Function(),
 			modifyAnimation: new Function(),
+			removeObject: new Function(),
 			removeAnimation: new Function(),
 			prepareSheet: new Function()
 	},  sheetData = {
@@ -135,8 +136,10 @@ var Sheet = function(canvas){
 			if (sheetData.data.animations) sheetData.data.animations = {};
 			if (sheetData.data.floating) sheetData.data.floating = {};
 			if (sheetData.data.collisions) sheetData.data.collisions = {};
+			if (sheetData.data.objects) sheetData.data.objects = {};
 
 			if (!selections.data) selections.data = {};
+			if (selections.data.objects) sheet.data.objects.selections.tiles = [];
 			if (selections.data.floating) sheet.data.floating.selections.tiles = [];
 			if (selections.data.collisions) sheet.data.collisions.selections.tiles = [];
 			if (selections.data.animations) sheet.data.animations.selections.tiles = [];
@@ -161,6 +164,24 @@ var Sheet = function(canvas){
 		interface.setDragDropMode(true);
 		tilesheet = new Image();
 		var sheetDataSetup = function(){
+
+			if (sheet.data.objects) {
+				selections.objects = {
+					selection: new TilesSelection(),
+					color: '#CCCC00',
+					opacity: 0.4
+				}
+
+				for (var t in sheet.data.objects) {
+					var objectName = sheet.data.objects[t],
+						tx = parseInt(t % sheetData.columns),
+						ty = parseInt(t / sheetData.columns),
+						tile = new Tile( ty, tx );
+
+					selections.objects.selection.tiles.push( tile );
+				}
+			}
+
 
 			if (sheet.data.floating) {
 				selections.floating = {
@@ -267,6 +288,7 @@ var Sheet = function(canvas){
 
 			if (copy) {
 
+				if (sheet.data.objects) sheetData.data.objects = sheet.data.objects;
 				if (sheet.data.floating) sheetData.data.floating = sheet.data.floating;
 				if (sheet.data.collisions) sheetData.data.collisions = sheet.data.collisions;
 				if (sheet.data.animations) sheetData.data.animations = sheet.data.animations;
@@ -301,7 +323,9 @@ var Sheet = function(canvas){
 	};
 
 	interface.setMode = function(selectionType, highlightAnimation){
-		if (selectionType == 'floating') {
+		if (selectionType == 'objects') {
+			activeSelection = { type: 'objects', selection: selections.objects.selection };
+		} else if (selectionType == 'floating') {
 			activeSelection = { type: 'floating', selection: selections.floating.selection };
 		} else if (selectionType == 'collision') {
 			activeSelection = { type: 'collision', selection: selections.collisions.selection };
@@ -368,6 +392,19 @@ var Sheet = function(canvas){
 		dragDropEnabled = allow;
 	}
 
+	interface.removeObject = function(coord){
+		var tileSet = null;
+		for (var i=0; i<selections.objects.selection.tiles.length; ++i) {
+			var _tile = selections.objects.selection.tiles[i],
+				tx    = _tile.x,
+				ty    = _tile.y;
+			if (parseInt(coord) == (ty*sheetData.rows + tx)) {
+				selections.objects.selection.tiles.splice(i, 1);
+				break;
+			}
+		}
+	};
+
 	interface.removeAnimation = function(animationName){
 		var tileSet = null;
 		for (var i=0; i<selections.animations.tileSets.length; ++i) {
@@ -383,6 +420,7 @@ var Sheet = function(canvas){
 	interface.prepareSheet = function(sheetType){
 		if (sheetType == 'tilesheet') {
 			preparedSheetData = {
+				objects: [],
 				floating: [],
 				collisions: []
 			};
@@ -505,7 +543,7 @@ var Sheet = function(canvas){
 				} else {
 					sheet.data = preparedSheetData;
 				}
-				interface.loadSheet(sheet, true);
+				interface.loadSheet(sheet, false); // FIXME: this was set to true, why?
 				interface.onSheetChanged( sheetName );
 				/*
 				tilesheet.onload = function() { 

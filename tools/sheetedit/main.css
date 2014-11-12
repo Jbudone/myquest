@@ -53,6 +53,10 @@
 	font-size: medium;
 }
 
+.object_title {
+	border: none;
+}
+
 .animation_settings {
 	background-color: #F5F5FF;
 	padding-bottom: 4px;

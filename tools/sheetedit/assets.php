@@ -22,6 +22,6 @@ $image = str_replace(' ', '+', $image);
 if ($success) {
 	echo '{ "success": true }';
 } else {
-	echo '{ "success": false }';
+	echo '{ "success": false, "data": "'.$data.'" }';
 }
 

@@ -150,7 +150,8 @@ var AssetsManager = function(assets, container, files){
 				},
 				data: {
 					collisions: [],
-					floating: []
+					floating: [],
+					objects: {}
 				}
 			}, assetEl = addAsset( 'tilesheets', asset );
 		assetEl.addClass('modified');

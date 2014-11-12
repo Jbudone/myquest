@@ -43,8 +43,12 @@ var Editor = function(container, sheet){
 			y: $('#tilesheet_sheet_offset_y'),
 			x: $('#tilesheet_sheet_offset_x')
 		},
+		objects: {
+			container: $('.objects_list')
+		},
 		setCollision: $('#ctrl-collision'),
-		setFloating: $('#ctrl-floating')
+		setFloating: $('#ctrl-floating'),
+		setObjects: $('#ctrl-objects')
 	};
 
 
@@ -103,6 +107,12 @@ var Editor = function(container, sheet){
 		return false;
 	};
 
+	view_tilesheet.components.setObjects[0].onclick = null;
+	view_tilesheet.components.setObjects[0].onclick = function(){
+		sheet.setMode('objects');
+		return false;
+	};
+
 
 	// ------------ Loading/Unloading ------------ //
 
@@ -110,6 +120,7 @@ var Editor = function(container, sheet){
 
 		this.data = data;
 		if (!data.data) data.data = {};
+		if (!data.data.objects) data.data.objects = [];
 		if (!data.data.floating) data.data.floating = [];
 		if (!data.data.collisions) data.data.collisions = [];
 
@@ -127,7 +138,32 @@ var Editor = function(container, sheet){
 
 		sheet.loadSheet( data );
 		sheet.onModified = function(modified){
-			if (modified.type == 'floating') {
+			if (modified.type == 'objects') {
+
+				var itemName = 'itm_id';
+
+				// Transpose the objects
+				var objectsByName = {},
+					idNum = 0;
+				for (var objCoord in view_tilesheet.data.data.objects) {
+					objectsByName[ view_tilesheet.data.data.objects[objCoord] ] = objCoord;
+					++idNum;
+				}
+
+				var objects = modified.selection.tiles;
+				for (var i=0; i<objects.length; ++i) {
+					var object = objects[i],
+						_object = object.y * parseInt(view_tilesheet.data.columns) + object.x;
+					if (!view_tilesheet.data.data.objects[_object]) {
+						// This is a new object
+						++idNum;
+						while (objectsByName[ itemName + idNum ]) ++idNum;
+						view_tilesheet.data.data.objects[ _object ] = itemName + idNum;
+						objectsByName[ itemName + idNum ] = _object;
+						addObject(itemName + idNum, _object);
+					}
+				}
+			} else if (modified.type == 'floating') {
 				var _floats = [],
 					floats = modified.selection.tiles;
 				for (var i=0; i<floats.length; ++i) {
@@ -152,6 +188,63 @@ var Editor = function(container, sheet){
 			data.image = src;
 			view_tilesheet.modified();
 		};
+
+		var addObject = function(name, coord) {
+
+			var loadObject = function(el){
+
+			}, clearObject = function(el){
+
+				var name = $(el).data('objectName'),
+					coord = $(el).data('objectCoord');
+				delete view_tilesheet.data.data.objects[coord];
+
+				sheet.removeObject(coord);
+				$(el).parent().remove();
+				interface.onModified();
+				view_tilesheet.modified();
+			
+			}, renameObject = function(el){
+
+				var coord = $(this).data('objectCoord');
+				view_tilesheet.data.data.objects[coord] = $(this).val();
+				interface.onModified();
+				view_tilesheet.modified();
+
+			}, objectEl = $('<div/>')
+							.addClass('object')
+							.append( $('<a/>').append(
+										$('<input/>')
+										.addClass('object_title')
+										.val( name )
+										.data('objectName', name)
+										.data('objectCoord', coord)
+										.on('input', renameObject) )
+									.attr('href','')
+								    .on('click', function(){
+									   return false;
+									}) )
+							.append( $('<a/>')
+									.addClass('object_remove')
+									.attr('href','')
+									.text('X')
+									.data('objectName', name)
+									.data('objectCoord', coord)
+									.click(function(){
+										clearObject($(this));
+										return false;
+									}) );
+
+
+			view_tilesheet.components.objects.container.append( objectEl );
+
+			return objectEl;
+
+		};
+
+		_.each(data.data.objects, function(objectName, objectCoordinate){
+			var objectEl = addObject(objectName, objectCoordinate);
+		});
 	};
 
 	view_tilesheet.unload = function(){
