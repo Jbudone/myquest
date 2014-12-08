@@ -42,7 +42,21 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			}
 			var map            = The.world.maps[player.map],
 				playerPosition = map.localFromGlobalCoordinates(player.position.y, player.position.x),
-				respawnPoint   = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.y, player.respawn.position.x);
+				respawnPoint   = null;
+
+			if (playerPosition instanceof Error) {
+				this.Log("Could not get correct position for player..", LOG_ERROR);
+				playerPosition.print();
+				return false;
+			}
+
+			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.y, player.respawn.position.x);
+
+			if (respawnPoint instanceof Error) {
+				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
+				respawnPoint.print();
+				return false;
+			}
 
 			this.movable          = new Movable('player', playerPosition.page, {
 												position: {
@@ -140,6 +154,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				this.client.send(JSON.stringify(initialization));
 			});
 
+
+			// FIXME: clean this (brain)
+			/*
 			this.movable.brain.addEventListener(EVT_RESPAWNED, this, function(player){
 				this.Log("Player respawned");
 
@@ -175,8 +192,44 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 				this.client.send(JSON.stringify(initialization));
 			}, HIGH_PRIORITY);
+			*/
 
 			return true;
+		};
+
+		this.respawn = function(){
+
+			this.pages = { };
+			this.pages[this.movable.page.index] = this.movable.page;
+			var page = this.movable.page,
+				map = page.map,
+				initialization = {
+					respawn:true,
+					map:{
+						id: map.id,
+						pagesPerRow: map.pagesPerRow,
+						mapWidth: map.map.properties.width,
+						mapHeight: map.map.properties.height,
+						tileset: map.map.properties.tileset,
+					},
+					player:{
+						localY: this.movable.position.local.y,
+						localX: this.movable.position.local.x,
+						page: this.movable.page.index,
+						health: this.movable.health
+					},
+					pages:{}
+			};
+
+			initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+			for (var neighbour in page.neighbours) {
+				var npage = page.neighbours[neighbour];
+				if (npage) this.pages[npage.index] = npage;
+				if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+			}
+
+
+			this.client.send(JSON.stringify(initialization));
 		};
 
 		this.handleWalkRequest = function(action){
@@ -227,9 +280,18 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			k += (vert?your.page.y:your.page.x)*16;
 			// this.Log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
-			var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x),
-				index            = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-				isSafe           = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+			var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x);
+				index            = null;
+				isSafe           = null;
+
+			if (localCoordinates instanceof Error) {
+				this.Log("Error finding tile for coordinates", LOG_ERROR);
+				localCoordinates.print();
+				return false;
+			}
+
+			index  = localCoordinates.y*Env.pageWidth + localCoordinates.x,
+			isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 			if (!isSafe) safePath = false;
 			if (isSafe) {
 				while (walked<walk.distance) {
@@ -248,9 +310,17 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
 						}
 
-						var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x),
-							index            = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-							isSafe           = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+						var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x);
+							index            = null;
+							isSafe           = null;
+
+						if (localCoordinates instanceof Error) {
+							safePath = false;
+							break;
+						}
+
+						index = localCoordinates.y*Env.pageWidth + localCoordinates.x,
+						isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 						if (!isSafe) {
 							safePath = false;
 							break;
@@ -282,6 +352,13 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					globalY: reqState.globalY,
 					globalX: reqState.globalX
 				};
+
+			if (_.isUndefined(movableState.localY)) {
+				// FIXME: an issue seems to occur when local.x/local.y < 0 (haven't moved to next page yet)
+				// and later causes local.x and local.y to be undefined
+				debugger;
+				console.error("POSITION PROBLEM: Player position has become undefined..");
+			}
 
 			if (!safePath) {
 				this.Log("Path is not safe for user... cancelling!");

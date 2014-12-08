@@ -20,8 +20,10 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 
 		// Build script-tree
 		for (var scriptKey in Resources.scripts) {
-			var scriptRes = Resources.scripts[scriptKey],
-				_script   = this.buildScript(scriptRes),
+			var scriptRes = Resources.scripts[scriptKey];
+			if (!scriptRes.script) continue;
+
+			var _script   = this.buildScript(scriptRes),
 				hookInto  = _script._script.hookInto;
 
 			if (hookInto == HOOK_INTO_MAP) {
@@ -33,6 +35,7 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 						Base.addScript(script);
 					}
 				} else {
+					_script.hookInto = The.scripting.map;
 					Base.addScript(_script);
 				}
 
@@ -82,6 +85,13 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 			}
 
 			this.stopListeningTo(obj, id);
+		};
+
+		this.unload = function(){
+			Base.unload();
+			delete Base;
+
+			this.stopAllEventsAndListeners();
 		};
 
 		// Startup

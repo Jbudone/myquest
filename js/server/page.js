@@ -97,15 +97,17 @@ define(['movable'], function(Movable){
 				}, HIGH_PRIORITY);
 
 
-				this.listenTo(entity, EVT_DIED, function(entity){
-					this.eventsBuffer.push({
-						evtType: EVT_DIED,
-						data: {entity: entity.id }
-					});
+				// FIXME: brain
+				// this.listenTo(entity.character, EVT_DIED, function(character){
+				// 	this.eventsBuffer.push({
+				// 		evtType: EVT_DIED,
+				// 		data: {entity: character.entity.id }
+				// 	});
 
-					this.stopListeningTo(entity);
-					delete this.movables[entity.id];
-				}, HIGH_PRIORITY);
+				// 	this.stopListeningTo(character.entity);
+				// 	this.stopListeningTo(character);
+				// 	delete this.movables[character.entity.id];
+				// }, HIGH_PRIORITY);
 
 				this.listenTo(entity, EVT_ZONE, function(entity, oldPage, page){
 					// this.eventsBuffer.push({

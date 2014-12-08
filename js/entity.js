@@ -10,8 +10,6 @@ define(['sprite','eventful'], function(Sprite, Eventful){
 		extendClass(this).with(Eventful);
 
 		this.sprite=Resources.sprites[this.npc.sheet];
-		this.posX=32*2;
-		this.posY=32*2;
 		this.tileX=0;
 		this.tileY=0;
 		this.step=function(time){

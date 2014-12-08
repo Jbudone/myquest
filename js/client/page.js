@@ -4,11 +4,13 @@ define(function(){
 
 			this.listenTo(this, EVT_ADDED_ENTITY, function(page, entity){
 
-				this.listenTo(entity, EVT_DIED, function(entity){
+				//  FIXME: brain
+				// this.listenTo(entity.character, EVT_DIED, function(character){
 
-					this.stopListeningTo(entity);
-					delete this.movables[entity.id];
-				}, HIGH_PRIORITY);
+				// 	this.stopListeningTo(character);
+				// 	this.stopListeningTo(character.entity);
+				// 	delete this.movables[character.entity.id];
+				// }, HIGH_PRIORITY);
 			});
 		},
 

@@ -1,4 +1,4 @@
-define(['eventful','hookable','page','movable','loggable'], function(Eventful,Hookable,Page,Movable,Loggable){
+define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathfinding'], function(Eventful, Dynamic, Hookable, Page, Movable, Loggable, Pathfinding){
 	
 	/* Map
 	 *
@@ -22,6 +22,7 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 		extendClass(this).with(Eventful);
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Loggable);
+		extendClass(this).with(Dynamic);
 
 		this.Log("Loading map..");
 
@@ -39,12 +40,18 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			return this.pagesPerRow*y+x;
 		};
 
-		this.sheet = null;// Resources.findSheetFromFile('tilesheet.png');
+		this.sheet = null;// Resources.findSheetFromFile('tilesheet.png'); // FIXME: should this be here?
+		this.pathfinding = new Pathfinding(this);
+		this.lastUpdated = now();
 
 		this.getEntityFromPage = function(page, entityID){
-			if (!isNaN(page)) page = this.pages[page];
-			if (!page) return null;
-			return page.movables[entityID];
+			if (_.isNumber(page)) page = this.pages[page];
+			
+			if (page) {
+				return page.movables[entityID];
+			}
+
+			return null;
 		};
 
 
@@ -64,6 +71,51 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 		//
 		// Listen to an entity within the map, whenever its moving and needs to be switched between pages
 		this.registerHook('addedentity');
+		this.checkEntityZoned = function(entity){
+
+			if (!(entity instanceof Movable)) {
+				this.Log("Checking for entity zoning, but not an entity..", LOG_ERROR);
+				return UnexpectedError("Checking for entity zoning, but not an entity..");
+			}
+
+			// Check if entity in new page
+			var pageY   = parseInt(entity.position.global.y / (Env.tileSize*Env.pageHeight)),
+				pageX   = parseInt(entity.position.global.x / (Env.tileSize*Env.pageWidth)),
+				pageI   = this.pageIndex(pageY, pageX),
+				oldPage = null,
+				newPage = null;
+
+			// Moved to a new pages, need to set the proper local position
+			if (pageI != entity.page.index) {
+				newPage = this.pages[ pageI ];
+
+				entity.position.local = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
+			}
+
+			
+			// Zoned to new map?
+			var tY = parseInt(entity.position.local.y / Env.tileSize),
+				tX = parseInt(entity.position.local.x / Env.tileSize),
+				zoning = (newPage || entity.page).checkZoningTile(tY, tX);
+
+			if (zoning) {
+				newPage = zoning;
+			}
+
+//console.log("Player at: ["+this.position.tile.x+", "+this.position.tile.y+"]");
+			if (newPage) {
+				oldPage = entity.page;
+				if (zoning) {
+					oldPage.triggerEvent(EVT_ZONE_OUT, entity, zoning);
+					this.triggerEvent(EVT_ZONE_OUT, oldPage, entity, zoning);
+				} else {
+					this.Log("Zoning user ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
+					entity.page.zoneEntity(newPage, entity);
+					entity.triggerEvent(EVT_ZONE, oldPage, newPage);
+					this.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
+				}
+			}
+		};
 		this.watchEntity = function(entity){
 
 			if (entity.step) {
@@ -75,45 +127,9 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 
 					// Listen to the entity moving to new pages
 					this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
-						console.log("Moving to tile..");
-						// Check if entity in new page
-						var pageY = parseInt(entity.position.global.y / (Env.tileSize*Env.pageHeight)),
-							pageX = parseInt(entity.position.global.x / (Env.tileSize*Env.pageWidth)),
-							pageI = this.pageIndex(pageY, pageX),
-							oldPage = null,
-							newPage = null;
-
-						// Moved to a new pages, need to set the proper local position
-						if (pageI != entity.page.index) {
-							newPage = this.pages[ pageI ];
-
-							entity.position.local = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
-						}
-
-						
-						// Zoned to new map?
-						var tY = parseInt(entity.position.local.y / Env.tileSize),
-							tX = parseInt(entity.position.local.x / Env.tileSize),
-							zoning = (newPage || entity.page).checkZoningTile(tY, tX);
-
-						if (zoning) {
-							newPage = zoning;
-						}
-
-		//console.log("Player at: ["+this.position.tile.x+", "+this.position.tile.y+"]");
-						if (newPage) {
-							oldPage = entity.page;
-							if (zoning) {
-								oldPage.triggerEvent(EVT_ZONE_OUT, entity, zoning);
-								this.triggerEvent(EVT_ZONE_OUT, oldPage, entity, zoning);
-							} else {
-								this.Log("Zoning user ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
-								entity.page.zoneEntity(newPage, entity);
-								entity.triggerEvent(EVT_ZONE, oldPage, newPage);
-								this.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
-							}
-						}
-					});
+						console.log("Moving to tile.. ("+entity.position.tile.x+", "+entity.position.tile.y+")");
+						this.checkEntityZoned(entity);
+					}, HIGH_PRIORITY);
 
 					this.listenTo(entity, EVT_DIED, function(entity){
 
@@ -137,18 +153,33 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			}
 		};
 
-		this.registerHook('removedentity');
 		this.unwatchEntity = function(entity){
-			if (!this.doHook('removedentity').pre(entity)) return;
 
 			this.stopListeningTo(entity);
 			delete this.movables[entity.id];
-
-			this.doHook('removedentity').post(entity);
 		};
 
 
+		this.registerHook('removedentity');
+		this.removeEntity = function(entity){
+			if (!(entity instanceof Movable)) return UnexpectedError("Entity not a Movable");
 
+			if (!this.doHook('removedentity').pre(entity)) return;
+
+			var page   = entity.page;
+			delete page.movables[entity.id];
+			for (var i=0; i<page.updateList.length; ++i) {
+				if (page.updateList[i] == entity) {
+					page.updateList.splice(i,1);
+					break;
+				}
+			}
+
+			page.stopListeningTo(entity);
+			this.unwatchEntity(entity);
+
+			this.doHook('removedentity').post(entity);
+		};
 
 
 
@@ -203,13 +234,13 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 
 				   // filter open tiles
 				   tiles.filter(function(tile){
-					   try {
-						   var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x),
-							   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
-						   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-					   } catch (e) {
+					   var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x);
+
+					   if (localCoordinates instanceof Error) {
 						   return false;
 					   }
+
+					   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 				   });
 
 				   return tiles;
@@ -618,15 +649,13 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 				// destination = {y: toTile.y, x: toTile.x},
 				map = this,
 				isOpenTile = function(tile){
-					try {
-						var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x),
-							index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
-						return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+					var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x);
 
-						return true;
-					} catch (e) {
+					if (localCoordinates instanceof Error) {
 						return false;
 					}
+
+					return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 				}, getNeighbours = function(tileNode){
 					// return tiles neighbours
 					var tile  = tileNode.tile,
@@ -829,6 +858,10 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			return {
 			globalFromLocal: (function(x, y, page, isReal){
 
+				if (!(page instanceof Page)) {
+					return UnexpectedError("No page provided");
+				}
+
 				if (!isReal) {
 					x *= Env.tileSize;
 					y *= Env.tileSize;
@@ -839,6 +872,10 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 					globalY = y+pageY,
 					globalX = x+pageX;
 
+				if (isNaN(globalY) || isNaN(globalX)) {
+					return UnexpectedError("Bad coordinated calculated");
+				}
+
 				return {
 					y: globalY,
 					x: globalX
@@ -847,6 +884,10 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			}.bind(this)),
 
 			globalTileFromLocal: (function(x, y, page, isReal){
+
+				if (!(page instanceof Page)) {
+					return UnexpectedError("No page provided");
+				}
 
 				if (isReal) {
 					x /= Env.tileSize;
@@ -857,6 +898,10 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 					pageX   = page.x,
 					globalY = y+pageY,
 					globalX = x+pageX;
+
+				if (isNaN(globalY) || isNaN(globalX)) {
+					return UnexpectedError("Bad coordinated calculated");
+				}
 
 				return {
 					y: globalY,
@@ -881,14 +926,24 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 					localY = y % (Env.tileSize*Env.pageHeight),
 					localX = x % (Env.tileSize*Env.pageWidth);
 
-				if (pageI<0 || !this.pages[pageI]) {
+				if (isNaN(pageI) || !this.pages[pageI]) {
 					this.Log("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]", LOG_ERROR);
-				} else {
-					page = this.pages[pageI];
-
-					if (page.y != pageY*Env.pageHeight ||
-							page.x != pageX*Env.pageWidth) throw new MismatchError("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]");
+					return new UnexpectedError("Bad page found");
 				}
+
+				page = this.pages[pageI];
+
+				if (page.y != pageY*Env.pageHeight ||
+					page.x != pageX*Env.pageWidth) {
+						this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
+						return new MismatchError("Bad page found");
+				}
+
+
+				if (isNaN(localY) || isNaN(localX)) {
+					return UnexpectedError("Bad coordinated calculated");
+				}
+
 
 				return {
 					y: localY,
@@ -911,11 +966,24 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 					localY = y % (Env.pageHeight),
 					localX = x % (Env.pageWidth);
 
-				if (pageI<0 || !this.pages[pageI]) throw new RangeError("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
+
+				if (isNaN(pageI) || !this.pages[pageI]) {
+					this.Log("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]", LOG_ERROR);
+					return new UnexpectedError("Bad page found");
+				}
+
 				page = this.pages[pageI];
 
 				if (page.y != pageY*Env.pageHeight ||
-					page.x != pageX*Env.pageWidth) throw new MismatchError("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]");
+					page.x != pageX*Env.pageWidth) {
+						this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
+						return new MismatchError("Bad page found");
+				}
+
+				if (isNaN(localY) || isNaN(localX)) {
+					return UnexpectedError("Bad coordinated calculated");
+				}
+
 
 				return {
 					y: localY,
@@ -927,7 +995,7 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 		}.bind(this)());
 
 
-		this.localFromGlobalCoordinates=function(y, x) {
+		this.localFromGlobalCoordinates = function(y, x){
 			var pageY  = parseInt( y/Env.pageHeight ),
 				pageX  = parseInt( x/Env.pageWidth ),
 				pageI  = this.pageIndex(pageY, pageX),
@@ -935,11 +1003,22 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 				localY = y % (Env.pageHeight),
 				localX = x % (Env.pageWidth);
 
-			if (pageI<0 || !this.pages[pageI]) throw new RangeError("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
+			if (isNaN(pageI) || !this.pages[pageI]) {
+				return new RangeError("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
+			}
+
 			page = this.pages[pageI];
 
 			if (page.y != pageY*Env.pageHeight ||
-				page.x != pageX*Env.pageWidth) throw new MismatchError("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]");
+				page.x != pageX*Env.pageWidth) {
+					this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
+					return new MismatchError("Bad page found");
+			}
+
+			if (isNaN(localY) || isNaN(localX)) {
+				return UnexpectedError("Bad coordinated calculated");
+			}
+
 
 			return {
 				y: localY,
@@ -948,11 +1027,21 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			};
 		};
 
-		this.globalFromLocalCoordinates=function(y, x, page) {
+		this.globalFromLocalCoordinates=function(y, x, page){
+
+			if (!(page instanceof Page)) {
+				return UnexpectedError("No page provided");
+			}
+
 			var pageY   = page.y,
 				pageX   = page.x,
 				globalY = y+pageY,
 				globalX = x+pageX;
+
+			if (isNaN(globalY) || isNaN(globalX)) {
+				return UnexpectedError("Bad coordinated calculated");
+			}
+
 
 			return {
 				y: globalY,
@@ -960,7 +1049,11 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			};
 		};
 
-		this.isTileInRange=function(tile) {
+		this.isTileInRange=function(tile){
+			if (isNaN(tile.x) || isNaN(tile.y)) {
+				return UnexpectedError("Tile has bad coordinates");
+			}
+
 			if (tile.x > this.mapWidth ||
 				tile.y > this.mapHeight ||
 				tile.x < 0 || tile.y < 0) {
@@ -969,75 +1062,107 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			return true;
 		};
 
-		this.tileFromGlobalCoordinates=function(y, x) {
-			var tile = new Tile(y, x);
-			if (!this.isTileInRange(tile)) {
-				throw new RangeError("Bad range: ("+ y +","+ x +")");
+		this.tileFromGlobalCoordinates = function(y, x){
+			var tile    = new Tile(y, x),
+				inRange = this.isTileInRange(tile);
+
+			if (inRange === true) {
+				return tile;
+			} else if (inRange instanceof Error) {
+				inRange.print();
+			} else {
+				return new RangeError("Bad tile range: ("+ y +", "+ x +")");
 			}
-			return tile;
 		};
 
 
-		this.tileFromLocalCoordinates=function(y, x, page) {
-			var page = page || this.curPage,
-				globalCoordinates = this.globalFromLocalCoordinates(y, x, page),
-				tile = new Tile(globalCoordinates.y, globalCoordinates.x);
-			if (!this.isTileInRange(tile)) {
-				throw new RangeError("Bad range: ("+ tile.y +","+ tile.x +")");
+		this.tileFromLocalCoordinates=function(y, x, page){
+
+			var page              = page || this.curPage,
+				globalCoordinates = null,
+				tile              = null,
+				inRange           = null;
+			
+			if (!(page instanceof Page)) {
+				return UnexpectedError("No page provided, and no current page loaded");
+			}
+
+			globalCoordinates = this.globalFromLocalCoordinates(y, x, page);
+			if (globalCoordinates instanceof Error) {
+				return globalCoordinates;
+			}
+
+			tile    = new Tile(globalCoordinates.y, globalCoordinates.x);
+			inRange = this.isTileInRange(tile);
+
+			if (inRange === true) {
+				return tile;
+			} else if (inRange instanceof Error) {
+				return inRange;
+			} else {
+				return new RangeError("Bad range: ("+ tile.y +","+ tile.x +")");
 			}
 			return tile;
 		};
 
 		this.findNearestTile=function(posY, posX) {
-			// NOTE: global real coordinates
-			// return tile nearest to position
-			var tileY = Math.round(posY/Env.tileSize),
-				tileX = Math.round(posX/Env.tileSize),
-				tile  = (new Tile(tileY, tileX));
-			if (!this.isTileInRange(tile)) {
-				throw new RangeError("Bad range: ("+ tile.y +","+ tile.x +")");
-			}
+			// NOTE: global real coordinates return tile nearest to position
+			var tileY   = Math.round(posY/Env.tileSize),
+				tileX   = Math.round(posX/Env.tileSize),
+				tile    = (new Tile(tileY, tileX)),
+				inRange = this.isTileInRange(tile);
 
-			return tile;
+			if (inRange === true) {
+				return tile;
+			} else if (inRange instanceof Error) {
+				return inRange;
+			} else {
+				return new RangeError("Bad range: ("+ tile.y +","+ tile.x +")");
+			}
 		};
 
 		this.findNearestTiles = function(posY, posX) {
 			// NOTE: global real coordinates
-			var tiles = [],
-				onTileY = (posY % Env.tileSize == 0),
-				onTileX = (posX % Env.tileSize == 0);
+			var tiles   = [],
+				onTileY = (posY % Env.tileSize === 0),
+				onTileX = (posX % Env.tileSize === 0);
 
 
 			if (!onTileY && !onTileX) {
-				throw new UnexpectedError("findNearestTiles when not on a proper tileY NOR tileX");
+
+				this.Log("On this tile: "+ posX +", "+ posY, LOG_ERROR);
+				debugger;
+				return new UnexpectedError("findNearestTiles when not on a proper tileY NOR tileX");
+
 			} else if (onTileY && onTileX) {
-				tiles.push( this.findNearestTile(posY, posX) );
+
+				var nearestTile = this.findNearestTile(posY, posX);
+				if (nearestTile instanceof Tile) {
+					tiles.push( nearestTile );
+				} else if (nearestTile instanceof Error) {
+					return nearestTile;
+				}
+
 			} else {
 
 				if (!onTileY) {
 					var tileYfloor = Math.floor(posY/Env.tileSize), // global coordinates
 						tileX      = Math.floor(posX/Env.tileSize),
-						tileNorth  = null,
-						tileSouth  = null;
+						tileNorth  = (new Tile(tileYfloor, tileX)),
+						tileSouth  = (new Tile(tileYfloor+1, tileX));
 
-					try { tileNorth = (new Tile(tileYfloor, tileX));  } catch(e) {}
-					try { tileSouth = (new Tile(tileYfloor+1, tileX)); } catch(e) {}
-
-					if (tileNorth && this.isTileInRange(tileNorth)) tiles.push( tileNorth );
-					if (tileSouth && this.isTileInRange(tileSouth)) tiles.push( tileSouth );
+					if (tileNorth instanceof Tile && this.isTileInRange(tileNorth) === true) tiles.push( tileNorth );
+					if (tileSouth instanceof Tile && this.isTileInRange(tileSouth) === true) tiles.push( tileSouth );
 				}
 
 				if (!onTileX) {
 					var tileXfloor = Math.floor(posX/Env.tileSize), // global coordinates
 						tileY      = Math.floor(posY/Env.tileSize),
-						tileWest   = null,
-						tileEast   = null;
+						tileWest   = (new Tile(tileY, tileXfloor)),
+						tileEast   = (new Tile(tileY, tileXfloor+1));
 
-					try { tileWest = (new Tile(tileY, tileXfloor));   } catch(e) {}
-					try { tileEast = (new Tile(tileY, tileXfloor+1)); } catch(e) {}
-
-					if (tileWest && this.isTileInRange(tileWest)) tiles.push( tileWest );
-					if (tileEast && this.isTileInRange(tileEast)) tiles.push( tileEast );
+					if (tileWest instanceof Tile && this.isTileInRange(tileWest) === true) tiles.push( tileWest );
+					if (tileEast instanceof Tile && this.isTileInRange(tileEast) === true) tiles.push( tileEast );
 				}
 
 			}
@@ -1046,18 +1171,18 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 		};
 
 		this.isTileOpen = function(tile){
-		   try {
-			   var localCoordinates = this.localFromGlobalCoordinates(tile.y, tile.x),
-				   index            = localCoordinates.y*Env.pageWidth + localCoordinates.x;
-			   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-		   } catch (e) {
+		   var localCoordinates = this.localFromGlobalCoordinates(tile.y, tile.x);
+
+		   if (localCoordinates instanceof Error) {
 			   return false;
 		   }
+
+		   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 		};
 
 		this.getTilesInRange = function(tile, range, filterOpenTiles){
 
-			if (range < 0) throw new RangeError("getTilesInRange expects range >= 0: "+range);
+			if (isNaN(range) || range < 0) return new RangeError("getTilesInRange expects range >= 0: "+range);
 			
 			var left   = null,
 				right  = null,
@@ -1090,7 +1215,7 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 			for (var y=top; y<=bottom; ++y) {
 				for (var x=left; x<=right; ++x) {
 					var tile = new Tile(y, x);
-					if (!filterOpenTiles || this.isTileOpen(tile)) tiles.push( tile );
+					if (!filterOpenTiles || this.isTileOpen(tile) === true) tiles.push( tile );
 				}
 			}
 
@@ -1109,7 +1234,11 @@ define(['eventful','hookable','page','movable','loggable'], function(Eventful,Ho
 		 ***********************************************************************************************/
 
 
-		this.loadMap();
+		try {
+			this.loadMap();
+		} catch(e) {
+			this.Log(e, LOG_ERROR);
+		}
 	};
 
 	return Map;

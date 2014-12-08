@@ -65,21 +65,32 @@ define(function(){
 		MESSAGE_INFO: 'info',
 	};
 
-	var keyValue = 0,
+	var keyValue = 100, // FIXME: load all keys from above in addKeys instead
 		global = (typeof window !== 'undefined' ? window : GLOBAL),
 		addKey = function(key){
+			if (global[key] !== undefined) {
+				console.error("ERROR: KEY ["+key+"] ALREADY DEFINED!");
+				return;
+			}
+			console.log("Adding key ["+key+"]");
 			keys[key] = (keyValue++);
 			global[key]=keys[key];
+		}, addKeys = function(keys){
+			for (var i=0; i<keys.length; ++i) {
+				addKey(keys[i]);
+			}
 		};
 
 	for (var key in keys){
 		global[key] = keys[key];
 	}
+	global['addKey'] = addKey;
+	global['addKeys'] = addKeys;
 
 	// addKey('NORTH'); addKey('EAST'); addKey('SOUTH'); addKey('WEST');
 
 	// TODO: organize with arrays, {'events':{prefix:'evt',keys:['step','zone','finished_moving',...]}} and automatically add
-
+	addKey('EVT_ATTACK');
 
 	return keys;
 });

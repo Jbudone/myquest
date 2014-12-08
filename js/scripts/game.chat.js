@@ -1,4 +1,6 @@
-define(function(){
+define(['SCRIPTENV'], function(SCRIPTENV){
+
+	eval(SCRIPTENV);
 
 	var Chatter = function(){
 		var _self = this;
@@ -12,7 +14,7 @@ define(function(){
 			initialize: function(){
 				console.log("Chatter is for Server");
 
-				var game = this;
+				var game = this._script;
 				game.hook('addedplayer', this).then(function(entity){
 					console.log("Chatter would like to listen to ["+entity.id+"] for messages..");
 					
@@ -36,7 +38,13 @@ define(function(){
 						}
 					});
 				});
+
+				// FIXME: keep track of players & remove when necessary
 			},
+
+			unload: function(){
+				if (!_.isUndefined(game)) game.unhook(this);
+			}
 		};
 		this.client = {
 			initialize: function(){
@@ -61,6 +69,11 @@ define(function(){
 					UI.postMessage(data.message, MESSAGE_INFO);
 				});
 			},
+
+			unload: function(){
+				if (!_.isUndefined(UI)) UI.unhook(this);
+				if (!_.isUndefined(server)) server.handler(EVT_TESTJB).unset();
+			}
 		};
 	};
 

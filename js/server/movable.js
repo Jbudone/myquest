@@ -2,6 +2,7 @@ define(['AI'], function(AI){
 
 	var Movable={
 		_init: function() {
+			/*
 			if (this.npc.AI) {
 				console.log("Giving AI to "+this.npc.name+" ("+this.id+")");
 				this.brain = new AI.Core(this);
@@ -33,10 +34,11 @@ define(['AI'], function(AI){
 				});
 
 			}
+			*/
 		},
-		respawn: function(){
-			this.brain.triggerEvent(EVT_RESPAWNING);
-		}
+		// respawn: function(){
+		// 	this.brain.triggerEvent(EVT_RESPAWNING);
+		// }
 	};
 
 	return Movable;

@@ -136,6 +136,7 @@ define(['serializable'], function(Serializable){
 						nextWalk.distance = maxWalk;
 					}
 
+if (!curTile.hasOwnProperty('offset')) debugger;
 
 					     if (walk.direction == NORTH) yDistance = -nextWalk.distance;
 					else if (walk.direction == SOUTH) yDistance =  nextWalk.distance;

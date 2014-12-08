@@ -1,9 +1,11 @@
-define(['entity','animable'], function(Entity, Animable) {
+define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 	var Movable = function(spriteID, page, params) {
 		console.log("new Movable("+spriteID+")");
 		this.base = Entity;
 		this.base(spriteID, page);
+
+		extendClass(this).with(Dynamic);
 
 		// Position will always accurately reflect the movables position in the
 		// map. It is split up between local and global position; local refers
@@ -18,6 +20,8 @@ define(['entity','animable'], function(Entity, Animable) {
 		// after the movable has moved somewhere (eg. moving, zoning,
 		// respawning)
 		//
+		// local.x and local.y may be outside of the current page. Since a movable may be walking between two tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a time, that current tile is the one which is rounded from the global position. In other words, take the global position and round it to the nearest tile. So if a movable is currently standing on a tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less than 0.
+		//
 		// FIXME: posX == position.posX == position.local.x
 		this.position = {
 			tile:   { x: 0, y: 0 },
@@ -27,7 +31,9 @@ define(['entity','animable'], function(Entity, Animable) {
 
 		this.updatePosition = function(localX, localY){
 
-			if (localX && localY) {
+			if (!this.page) return; // In case we try to update while in the middle of zoning
+
+			if (localX !== undefined && localY !== undefined) {
 				this.position.local.x = localX;
 				this.position.local.y = localY;
 			} else {
@@ -35,12 +41,15 @@ define(['entity','animable'], function(Entity, Animable) {
 				localY = this.position.local.y;
 			}
 
+			
 			this.position.global.x = localX + this.page.x * Env.tileSize;
 			this.position.global.y = localY + this.page.y * Env.tileSize;
 			this.position.tile.x = parseInt(this.position.global.x / Env.tileSize)
 			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize)
 		};
 
+
+		// Set any predefined parameters for the movable
 		if (params) {
 			for (var param in params) {
 				this[param] = params[param];
@@ -56,21 +65,19 @@ define(['entity','animable'], function(Entity, Animable) {
 
 		Ext.extend(this,'movable');
 
-		this.sprite=(new Animable(this.npc.sheet));
+		this.sprite=(new Animable(this.npc.sheet)); // FIXME: should not need animable for server
 
-		this.moving=false;
-		this.direction=null;
-		this.speed=50;
-		this.moveSpeed=10;
-		this.lastMoved=now();
-		this.path=null;
-		this.zoning=false;
-
-		this.stepsToX=null;
-		this.stepsToY=null;
+		this.moving    = false;
+		this.direction = null;
+		this.speed     = 50;
+		this.moveSpeed = 10;
+		this.lastMoved = now();
+		this.path      = null;
+		this.zoning    = false;
 
 		this.physicalState = new State(STATE_ALIVE);
 
+		/* FIXME: brain
 		this.health=this.npc.health;
 		this.hurt = function(hit, attacker){
 			if (this.physicalState.state !== STATE_ALIVE) return;
@@ -83,6 +90,7 @@ define(['entity','animable'], function(Entity, Animable) {
 				this.triggerEvent(EVT_DIED);
 			}
 		};
+		*/
 
 
 		this.lastStep=0;
@@ -99,6 +107,19 @@ define(['entity','animable'], function(Entity, Animable) {
 				}
 			}
 		};
+
+		// FIXME: I put this listener up to fix a problem where the path was
+		// trying to run even though it wasn't cleared after zoning but before
+		// the page was set... This is probably a necessary functionality
+		// though, BUT it didn't seem to trigger before step() did, fix things
+		// up here..
+		this.listenTo(this, EVT_ZONE_OUT, function(){
+
+			if (this.path) {
+				this.path = null;
+			}
+		}, HIGH_PRIORITY);
+
 		this.step=_.wrap(this.step,function(step,time){
 
 			if (this.physicalState.state !== STATE_ALIVE) {
@@ -107,11 +128,26 @@ define(['entity','animable'], function(Entity, Animable) {
 			}
 			var stepResults = step.apply(this, [time]); // TODO: generalize this wrap/apply operation for basic inheritance
 
+			var timeDelta = time - this.lastMoved;
+
+			// Have we zoned? Disallow stepping page-specific things
+			if (!this.page) {
+				this.path = null;
+			}
+
 			if (this.path) {
 				// player step checks path, decrements from walk steps
 
-				var delta = time - this.lastMoved;
-				while (delta>this.moveSpeed) {
+				var delta = timeDelta;
+				while (delta>this.moveSpeed && this.path) {
+
+					if (!_.isArray(this.path.walks) ||
+						this.path.walks.length === 0) {
+
+						this.path = null;
+						return UnexpectedError("Path of length 0 walks");
+					}
+
 					var path              = this.path,
 						walk              = path.walks[0],
 						steps             = (walk.distance - walk.walked),
@@ -139,7 +175,7 @@ define(['entity','animable'], function(Entity, Animable) {
 						var pY=this.position.local.y,
 							pX=this.position.local.x;
 						// console.log("["+this.id+"] Finished walk! ("+walk.distance+") -> ("+pY+","+pX+")"); // TODO: why does this show as different on server/client?
-						if (!path.walks.length) {
+						if (path.walks.length === 0) {
 							// Finished path
 							this.triggerEvent(EVT_FINISHED_PATH, path.id);
 							this.path = null;
@@ -235,6 +271,12 @@ define(['entity','animable'], function(Entity, Animable) {
 				this.lastMoved = time;
 			}
 			this.sprite.step(time);
+
+
+			var dynamicHandler = this.handler('step');
+			if (dynamicHandler) {
+				dynamicHandler.call(timeDelta);
+			}
 
 			return stepResults;
 		});

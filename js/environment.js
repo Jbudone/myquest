@@ -36,6 +36,13 @@ define(function(){
 			'Resources': (logVerbose),
 			'ScriptMgr': (logVerbose),
 			'Script': (logVerbose),
+			'User': (logVerbose),
+			'Game': (logVerbose),
+			'Character': (logVerbose),
+			'AI': (logVerbose),
+			'Instinct': (logVerbose),
+			'Combat': (logVerbose),
+			'Movement': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};

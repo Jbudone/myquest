@@ -15,14 +15,13 @@ define(['eventful','map'], function(Eventful,Map){
 					try {
 						console.log(zone);
 						console.log("World zoning out");
-						debugger;
 						var oldPage = oldPage,
 							oldMap  = oldMap,
 							map     = this.maps[zone.map],
-							page    = map.zoneIn(entity, zone);
+							page    = null;
 						console.log("Zoning user ["+entity.id+"] to new map..");
-						oldPage.zoneEntity(null, entity);
-						oldMap.unwatchEntity(entity);
+						oldMap.removeEntity(entity);
+						page = map.zoneIn(entity, zone);
 						entity.triggerEvent(EVT_ZONE_OUT, oldMap, oldPage, map, page, zone);
 					} catch(e) {
 						console.log("Error zoning entity..");
@@ -40,8 +39,14 @@ define(['eventful','map'], function(Eventful,Map){
 				eventsBuffer = {};
 			for (var mapID in this.maps) {
 				var beforeStep=now();
-				var mapEvents = this.maps[mapID].step(lag)
-				if (mapEvents) eventsBuffer[mapID] = mapEvents;
+
+				try {
+					var mapEvents = this.maps[mapID].step(lag)
+					if (mapEvents) eventsBuffer[mapID] = mapEvents;
+				} catch(e) {
+					console.log(e);
+				}
+
 				lag += (now() - beforeStep);
 			}
 

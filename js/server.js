@@ -1,3 +1,11 @@
+var domain = require('domain');
+var d = domain.create();
+
+d.on('error', function(e){
+	console.log(e);
+});
+
+d.run(function(){
 try{
 	var requirejs = require('requirejs');
 
@@ -11,13 +19,16 @@ try{
 	});
 
 	var couldNotStartup = function(e){
-	   Log("Could not startup server");
+	   console.log("Could not startup server");
 	   if (e) {
-		   Log(e, LOG_ERROR);
-		   Log(e.stack, LOG_ERROR);
+		   console.log(e);
+		   console.log(e.stack);
 	   }
 	   process.exit();
 	};
+
+	process.on('exit', couldNotStartup);
+	process.on('SIGINT', couldNotStartup);
 	process.on('uncaughtException', couldNotStartup);
 
 requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
@@ -117,6 +128,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				GLOBAL['Resources'] = Resources;
 				Resources.initialize(['world', 'sheets', 'npcs', 'scripts']).then(function(assets){
 
+					try {
 					// TODO: include map loading with world
 					// TODO: handle sheets, sprites, npcs, world/maps internally in resource mgr
 
@@ -146,15 +158,27 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						var _sheet = res.tilesheets.list[i],
 						sheet  = makeSheet( _sheet );
 
-						sheet.data.collisions = [];
-						for (var j=0; j<_sheet.data.collisions.length; ++j) {
-							sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
+						if (_sheet.data.objects) {
+							sheet.data.objects = [];
+							for (var j=0; j<_sheet.data.objects.length; ++j) {
+								sheet.data.objects.push( parseInt( _sheet.data.objects[j] ) );
+							}
 						}
 
-						sheet.data.floating = [];
-						for (var j=0; j<_sheet.data.floating.length; ++j) {
-							sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+						if (_sheet.data.collisions) {
+							sheet.data.collisions = [];
+							for (var j=0; j<_sheet.data.collisions.length; ++j) {
+								sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
+							}
 						}
+
+						if (_sheet.data.floating) {
+							sheet.data.floating = [];
+							for (var j=0; j<_sheet.data.floating.length; ++j) {
+								sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+							}
+						}
+
 						Resources.sheets[_sheet.id] = sheet;
 					}
 
@@ -209,6 +233,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					});
 
 					loaded('resources');
+
+					} catch(e) {
+						console.log(e);
+					}
 				}, function(err){
 					Log(err);
 					throw new Error("Could not load resources!");
@@ -225,12 +253,14 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				// Scripts
 				The.scripting.world = The.world;
 				Resources.loadScripts(Resources._scriptRes).then(function(){
+					console.log("Starting script manager..");
 					delete Resources._scriptRes;
 					The.scriptmgr = new ScriptMgr();
 
 					loaded('scripts');
-				}, function(){
+				}, function(e){
 					console.error("Could not load scripts!");
+					console.error(e);
 				});
 
 			};
@@ -398,7 +428,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   for (var clientID in players) {
 					   var player = players[clientID],
 							client = player.client;
-					   for (var pageID in player.pages){
+						player.step(time);
+						for (var pageID in player.pages){
 						   var page   = pageID;
 
 						   // FIXME: for some reason old pages are still stored in player.pages.. this could
@@ -409,7 +440,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							   continue;
 						   }
 						   var mapID  = player.pages[pageID].map.id;
-						   players[clientID].step(time);
 						   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
 							   client.send(JSON.stringify({
 								   evtType: EVT_PAGE_EVENTS,
@@ -417,6 +447,13 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 								   events: eventsBuffer[mapID][page]
 							   }));
 						   }
+					   }
+
+					   // FIXME: find a better protocol for this.. need to send the player the last updates
+					   // from the page since they died, but need to immediately remove players pages
+					   // afterwards
+					   if (player.movable.character.alive == false) {
+						   player.pages = {};
 					   }
 				   }
 
@@ -437,3 +474,4 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 }catch(e){
 	console.error(e);
 }
+});

@@ -12,5 +12,17 @@
 				"zoning": "game.zoning.js"
 			}
 		}
+	},
+
+	"ai": {
+		"instincts": {
+			"combat": {
+				"script": "character.ai.instinct.combat",
+				"components": {
+					"melee": "character.ai.combat.melee"
+				}
+			},
+			"movement": "character.ai.instinct.movement"
+		}
 	}
 }

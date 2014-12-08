@@ -53,6 +53,7 @@ define(['loggable'], function(Loggable){
 		this._script = null;
 		this.children = [];
 		this.parent = null;
+		this.initialized = false;
 		this.getSubscription = function(obj, id){
 
 			if (!this.subscriptions[id]) this.subscriptions[id] = [];
@@ -163,10 +164,13 @@ define(['loggable'], function(Loggable){
 		}
 
 		this.addScript = function(script){
+			if (!(script instanceof Script)) {
+				script = new Script(script);
+			}
 			this.children.push(script);
 			script.parent = this;
+			return script._script;
 		};
-
 
 		// Inject client/server specific functionality from the script into itself
 		this.localizeScript = function(script){
@@ -194,23 +198,54 @@ define(['loggable'], function(Loggable){
 
 		this.initialize = function(){
 			// initialize this script
-			this.localizeScript(this._script);
-			if (this._script.hasOwnProperty('initialize')) {
-				this._script.initialize.bind(this)();
+			if (this.initialized) return;
+			try {
+				this.localizeScript(this._script);
+				if (this._script.hasOwnProperty('initialize')) {
+					this._script.initialize.bind(this)();
+				}
+			} catch(e){
+				console.error(e);
+				return false;
 			}
 
 			for (var componentKey in this._script.components) {
 				var component = (new this._script.components[componentKey]());
 				this.localizeScript(component);
 				if (component.hasOwnProperty('initialize')) {
-					component.initialize.bind(this)();
+					var result = component.initialize.bind(this)();
+					if (result === false) return false;
 				}
 			}
 
 			// initialize all child scripts
 			for (var i=0; i<this.children.length; ++i) {
-				this.children[i].initialize();
+				var result = this.children[i].initialize();
+				if (result === false) return false;
 			}
+
+			// The script is initialized once itself and all of its children have been initialized. This is an
+			// important ordering of operations, since children may be added later on (when the script has
+			// already been initialized), and will need to be initialized manually
+			this.initialized = true;
+		};
+
+		this.unload = function(){
+
+			// FIXME: unload components?
+			
+			for (var i=0; i<this.children.length; ++i) {
+				this.children[i].unload();
+			}
+
+			// TODO: unload subscriptions
+
+			// TODO: unload script: hookable, eventful, dynamic
+
+			if (this._script.hasOwnProperty('unload')) {
+				this._script.unload();
+			}
+			//this.stopAllEventsAndListeners();
 		};
 	};
 

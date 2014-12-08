@@ -12,6 +12,28 @@ define(['eventful','loggable'], function(Eventful, Loggable){
 		this.setLogPrefix('[' + this.entity.id + '](Component) ');
 	};
 
+	// TODO:
+	// 	Group based Combat
+	//
+	// 		Use neural networks for determining groups. If a player attacks you, then that player is given a
+	// 		neural node in your brain, and is set as a bad neuron. The more he attacks you, the more valuable
+	// 		he becomes. If other movables do something which affects that player, they have a neuron added to
+	// 		your brain too, and a weight is given to the connection between the two neurons. The more active
+	// 		the two neurons are together, the strong that weight becomes, and eventually that weight could
+	// 		surpass a threshold before building a connection between the two neurons (ie. two players are
+	// 		grouped; or another npc is considered apart of your group).
+	//
+	// 		Triggers between neurons are one-way, and that weight is added to the one-way stream. A connectino
+	// 		threshold may differ depending on which way the connection is being made. eg. if the player you
+	// 		hate suddenly attacks another npc, how much do you have to hate that player or how much does that
+	// 		player have to attack that npc before you consider that npc your friend? This should depend on
+	// 		personality, and on the value you've placed on each neuron
+	//
+	// 		PROBLEM: what if a player heals you to get on your good side, and in turn forces you to attack an
+	// 		npc?
+	// 		PROBLEM: how to determine role type based off neurons that you consider friends and enemies? How
+	// 		to determine which neuron to go after?
+
 	var AIComponents = {
 		"Follow": function(character){
 

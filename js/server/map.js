@@ -1,4 +1,4 @@
-define(['page'], function(Page){
+define(['page', 'movable'], function(Page, Movable){
 
 	var Map={
 		_init: function(){
@@ -231,17 +231,25 @@ define(['page'], function(Page){
 
 		zoneIn: function(entity, zone){
 			var tile = null;
+
+			if (!(entity instanceof Movable)) return UnexpectedError("Entity not a movable");
+			if (!zone || !zone.spawn) return UnexpectedError("No zone provided");
+
+			if (!this.zones) return UnexpectedError("Zones not set!");
+			if (!_.isArray(this.zones.in)) return UnexpectedError("Zones-in not set!");
+
+
 			for (var i=0; i<this.zones.in.length; ++i) {
 				var localZone = this.zones.in[i];
 				if (localZone.spot == zone.spawn) {
-					console.log("Found localZone");
-					console.log(localZone);
+					this.Log("Found localZone");
+					this.Log(localZone);
 					tile = this.localFromGlobalCoordinates(localZone.y, localZone.x);
 					break;
 				}
 			}
 
-			if (tile) {
+			if (!(tile instanceof Error)) {
 				entity.path = null;
 				entity.position = {
 					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),
@@ -254,9 +262,9 @@ define(['page'], function(Page){
 				if (!this.movables[entity.id]) this.watchEntity(entity);
 				entity.zoning = false;
 				return tile.page;
-			} else {
-				console.log(zone);
-				throw new UnexpectedError("No zoneIn zone found!");
+			} else if (tile instanceof Error) {
+				this.Log(zone, LOG_ERROR);
+				return tile;
 			}
 		},
 
@@ -271,6 +279,12 @@ define(['page'], function(Page){
 				if (pageEvents) eventsBuffer[page.index] = pageEvents;
 			}
 			this.handlePendingEvents(); // events from pages
+
+			var dynamicHandler = this.handler('step');
+			if (dynamicHandler) {
+				dynamicHandler.call(time - this.lastUpdated);
+			}
+			this.lastUpdated = time;
 
 			return eventsBuffer;
 

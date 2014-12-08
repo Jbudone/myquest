@@ -23,9 +23,10 @@ define(function(){
 				mainHandle: doNothing,
 				handler: function(){
 					if (!preHandle(arguments)) return;
-					_this._dynamicHandles[_id].mainHandle.apply(_this, arguments);//bind(this)(arguments); // FIXME: are we safe to use apply & this?
+					var result = _this._dynamicHandles[_id].mainHandle.apply(_this, arguments);//bind(this)(arguments); // FIXME: are we safe to use apply & this?
 					evtHandle(arguments);
 					postHandle(arguments);
+					return result;
 				}
 			};
 			this._dynamicHandles[id] = _dynamicHandler;
@@ -38,15 +39,16 @@ define(function(){
 				return null;
 			}
 
-			var setHandle = function(callback){
-				handle.mainHandle = callback;
-			};
+			var setHandle   = function(callback){ handle.mainHandle = callback; },
+				unsetHandle = function(){ handle.mainHandle = function(){ return true; }; };
 
 			return {
 				call: handle.handler,
-				set: setHandle
+				set: setHandle,
+				unset: unsetHandle
 			};
-		}
+		},
+
 	};
 
 	return Dynamic;

@@ -1,5 +1,6 @@
-define(function(){
+define(['SCRIPTENV'], function(SCRIPTENV){
 
+	eval(SCRIPTENV);
 
 	var ZoningMgr = function(){
 		var _self = this;

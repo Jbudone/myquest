@@ -3,7 +3,7 @@
 		"id":"player",
 		"name":"player",
 		"sheet":"firefox",
-		"spawn":1500,
+		"spawn":150,
 		"speed":15,
 		"health":150,
 		"damage":5,

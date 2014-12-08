@@ -162,7 +162,7 @@
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
 
-define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI,ScriptMgr) {
+define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr','client/user'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI,ScriptMgr,User) {
 try{
 
 	extendClass(this).with(Loggable);
@@ -189,6 +189,7 @@ try{
 		server                 = null,
 		renderer               = null,
 		ui                     = null,
+		listenToPlayer         = null,
 		loaded=function(module){
 			if (module) {
 				console.log("Loaded: "+module);
@@ -215,6 +216,77 @@ try{
 
 
 
+			listenToPlayer = function(){
+
+				// The.player.addEventListener(EVT_ZONE, ui, function(player, oldPage, newPage, direction){
+
+				// });
+
+				// NOTE: need to reset map listeners since this was all cleared when reloading scripts
+				The.player.addEventListener(EVT_ZONE, The.map, function(player, oldPage, newPage, direction){
+					console.log("Zone to "+newPage.index);
+					this.zone(newPage);
+				});
+
+				The.player.addEventListener(EVT_FINISHED_PATH, this, function(player, walk){
+					ui.tilePathHighlight = null;
+				});
+
+				The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
+
+					Log("Preparing to walk..");
+					var playerPosition = { y: The.player.position.global.y,
+										   x: The.player.position.global.x,
+										   globalY: The.player.position.tile.y,
+										   globalX: The.player.position.tile.x },
+						state = {
+							page: The.map.curPage.index,
+							localY: The.player.position.local.y,
+							localX: The.player.position.local.x,
+							y: playerPosition.y,
+							x: playerPosition.x,
+							globalY: playerPosition.globalY,
+							globalX: playerPosition.globalX
+						};
+
+					var onTileY = state.y % 16 == 0,
+						onTileX = state.x % 16 == 0;
+					if (!onTileY && !onTileX) {
+						debugger;
+						console.error("BAD STATE FOR WALK!");
+						return;
+					}
+
+					console.log("Sending walkTo request");
+					console.log(state);
+					
+					server.walkTo(walk, state).then(function(){
+					}, function(response){
+						// not allowed...go back to state
+						console.error("Going back to state..");
+						console.error(state);
+						console.error(event);
+
+						tilePathHighlight=null;
+
+						The.map.curPage = The.map.pages[state.page];
+						if (response.state) {
+							The.player.position.local.y = response.state.localY;
+							The.player.position.local.x = response.state.localX;
+						} else {
+							The.player.position.local.y = state.localY;
+							The.player.position.local.x = state.localX;
+						}
+						The.player.updatePosition();
+						The.player.path = null;
+						// The.player.lastMoved = null;
+						The.player.sprite.idle();
+						ui.updatePages();
+					});
+
+				});
+			};
+
 			server.onDisconnect = function(){
 				Log("Disconnected from server..");
 			};
@@ -239,16 +311,18 @@ try{
 					local: null,
 				};
 
-				// Setup basic AI (following target)
-				Log("Giving AI to player", LOG_DEBUG);
-				The.player.brain = new AI.Core(The.player);
-				The.player.brain.addComponent(AI.Components['Follow']);
-				// The.player.brain.addComponent(AI.Components['Combat']);
 
-				The.player.step=_.wrap(The.player.step,function(step,time){
-					var stepResults = step.apply(this, [time]);
-					this.brain.step(time);
-				});
+				// FIXME: clean this (brain)
+				// Setup basic AI (following target)
+				// Log("Giving AI to player", LOG_DEBUG);
+				// The.player.brain = new AI.Core(The.player);
+				// The.player.brain.addComponent(AI.Components['Follow']);
+				// // The.player.brain.addComponent(AI.Components['Combat']);
+
+				// The.player.step=_.wrap(The.player.step,function(step,time){
+				// 	var stepResults = step.apply(this, [time]);
+				// 	this.brain.step(time);
+				// });
 
 				ready = false;
 				loaded('player');
@@ -278,12 +352,10 @@ try{
 				window['Movable'] = Movable;
 				window['Entity'] = Entity;
 				window['resources'] = Resources;
+				
+				listenToPlayer();
 
-				The.player.addEventListener(EVT_ZONE, The.map, function(player, oldPage, newPage, direction){
-					// this.zone(direction);
-					console.log("Zone to "+newPage.index);
-					this.zone(newPage);
-				});
+				reloadScripts();
 
 				// TODO: debugging commands should be placed elsewhere
 				window['TheOtherPlayer'] = function(){
@@ -365,15 +437,27 @@ try{
 					var _sheet = res.tilesheets.list[i],
 						sheet  = makeSheet( _sheet );
 
-					sheet.data.collisions = [];
-					for (var j=0; j<_sheet.data.collisions.length; ++j) {
-						sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
+					if (_sheet.data.objects) {
+						sheet.data.objects = [];
+						for (var j=0; j<_sheet.data.objects.length; ++j) {
+							sheet.data.objects.push( parseInt( _sheet.data.objects[j] ) );
+						}
 					}
 
-					sheet.data.floating = [];
-					for (var j=0; j<_sheet.data.floating.length; ++j) {
-						sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+					if (_sheet.data.collisions) {
+						sheet.data.collisions = [];
+						for (var j=0; j<_sheet.data.collisions.length; ++j) {
+							sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
+						}
 					}
+
+					if (_sheet.data.floating) {
+						sheet.data.floating = [];
+						for (var j=0; j<_sheet.data.floating.length; ++j) {
+							sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+						}
+					}
+
 					Resources.sheets[_sheet.id] = sheet;
 				}
 
@@ -520,6 +604,25 @@ try{
 		loaded(); // In case tiles somehow loaded INSTANTLY fast
 
 
+		reloadScripts = function(){
+
+			console.log("Reloading scripts..");
+			The.scripting.map = The.map;
+
+			if (The.scriptmgr) {
+				The.scriptmgr.unload();
+			}
+
+			//Resources.unloadScripts(); // FIXME: need to unload scripts before zoning
+			Resources.loadScripts(Resources._scriptRes).then(function(){
+				delete Resources._scriptRes;
+
+				The.scriptmgr = new ScriptMgr();
+				loaded();
+			}, function(){
+				console.error("Could not load scripts!");
+			});
+		};
 
 		// ----------------------------------------------------------------- //
 		// ----------------------------------------------------------------- //
@@ -538,10 +641,7 @@ try{
 			ui.initialize( document.getElementById('entities') );
 			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
 			ui.camera = The.camera;
-			ui.setPage( The.map.curPage );
-			The.player.addEventListener(EVT_ZONE, ui, function(player, oldPage, newPage, direction){
-				this.setPage( newPage );
-			});
+			ui.updatePages();
 
 
 			renderer = new Renderer();
@@ -554,11 +654,11 @@ try{
 			renderer.setMap( The.map );
 			renderer.initialize();
 
+			The.user = User;
+
 
 			var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
                               window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-
-
 
 
 
@@ -726,7 +826,14 @@ try{
 							Log("COULD NOT MOVE ENTITY THROUGH PATH!! Jumping entity directly to end", LOG_WARNING);
 
 							var localCoordinates = The.map.localFromGlobalCoordinates(pathState.globalY, pathState.globalX),
-								page = The.map.pages[page];
+								page             = The.map.pages[page];
+
+							if (localCoordinates instanceof Error) {
+								Log("Could not find proper tile for entity..", LOG_ERROR);
+								localCoordinates.print();
+								return;
+							}
+
 							entity.path = null;
 							if (localCoordinates.page.index != page.index) {
 
@@ -757,16 +864,22 @@ try{
 
 				};
 
-				server.onEntityHurt = function(page, hurtEntity, targetEntity, amount){
+				server.onEntityHurt = function(page, hurtEntity, targetEntity, amount, health){
 
+					console.log("ENTITY "+hurtEntity.id+" HURT BY "+targetEntity.id);
 					var entity = The.map.movables[hurtEntity.id],
 						target = The.map.movables[targetEntity.id];
-					if (entity && target) entity.hurt(amount, target);
+					if (entity && target) {
+						var direction = target.directionOfTarget(entity);
+						target.sprite.dirAnimate('atk', direction);
+						entity.character.hurt(amount, target.character, health);
+					}
 
 				};
 
 				server.onEntityAttackedTarget = function(page, attackerEntity, targetEntity){
 
+					console.log("ENTITY "+attackerEntity.id+" ATTACKED "+targetEntity.id);
 					var entity = The.map.movables[attackerEntity.id],
 						target = The.map.movables[targetEntity.id];
 
@@ -784,7 +897,8 @@ try{
 						target = The.map.movables[targetEntity.id];
 
 					console.log("New Target for entity");
-					if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
+					// FIXME: clean this (brain)
+					// if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
 
 				};
 
@@ -794,16 +908,17 @@ try{
 					Log("Removing target for ["+eventEntity.id+"]");
 					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id);
 
-					// NOTE: do not select the target since the target may have died and been
-					// removed locally
-					if (entity) {
+					// FIXME: clean this (brain)
+					// // NOTE: do not select the target since the target may have died and been
+					// // removed locally
+					// if (entity) {
 
-						// remove core target
-						if (entity.brain.target && entity.brain.target.id == targetEntity.id) { 
-							console.log("	Target to remove ["+eventEntity.id+"] currently targeting: ("+entity.brain.target.id+")");
-							entity.brain.setTarget(null);
-						}
-					}
+					// 	// remove core target
+					// 	if (entity.brain.target && entity.brain.target.id == targetEntity.id) { 
+					// 		console.log("	Target to remove ["+eventEntity.id+"] currently targeting: ("+entity.brain.target.id+")");
+					// 		entity.brain.setTarget(null);
+					// 	}
+					// }
 
 				};
 
@@ -811,13 +926,22 @@ try{
 
 					// TODO: set die physical state, die animation, remove entity
 					Log("Entity "+deadEntity+" died");
-					var entity = The.map.curPage.movables[deadEntity];
+					var entity = The.map.curPage.movables[deadEntity],
+						character = null;
 					// NOTE: the entity may have already died if we've already received the killing blow event (client side noticed their health went below 0)
 					// NOTE: This may mean that our entity health/hurt is out of sync with the server; we should
 					// have seen them die locally before receiving this (unless attacked/dead were both apart
 					// of the same page event buffer)
 					if (entity) {
-						entity.triggerEvent(EVT_DIED);
+						character = entity.character;
+						if (character) {
+							if (character.alive) {
+								character.die();
+							} else if (deadEntity != The.player.id) {
+								debugger;
+								this.Log("Character already died! Should not exist in page anymore!");
+							}
+						}
 					}
 
 					// Is it us who died?
@@ -825,6 +949,10 @@ try{
 						ui.fadeToBlack();
 					}
 				};
+
+				The.player.character.hook('die', this).then(function(){
+					ui.fadeToBlack();
+				});
 
 				server.onZone = function(pages){
 					// Zoning information (new pages)
@@ -877,7 +1005,7 @@ try{
 					oldMap.stopAllEventsAndListeners();
 					The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
-					ui.setPage( The.map.curPage );
+					ui.updatePages();
 
 					The.player.page = The.map.curPage;
 
@@ -888,7 +1016,7 @@ try{
 						local: { y: player.position.local.y, x: player.position.local.x },
 					};
 
-
+					reloadScripts();
 
 					The.camera.updated = true;
 
@@ -912,15 +1040,11 @@ try{
 					oldMap.stopAllEventsAndListeners();
 					The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
-					ui.setPage( The.map.curPage );
+					ui.updatePages();
 
 					The.player.page = The.map.curPage;
 
-					// FIXME: is this necessary?
-					// The.player.addEventListener(EVT_ZONE, The.map, function(player, newPage, direction){
-					// 	console.log("Zone to "+newPage.index);
-					// 	this.zone(newPage);
-					// });
+					listenToPlayer();
 
 
 					The.player.position = {
@@ -928,6 +1052,8 @@ try{
 						global: { y: player.localY + The.map.curPage.y * Env.tileSize, x: player.localX + The.map.curPage.x * Env.tileSize },
 						local: { y: player.localY, x: player.localX },
 					};
+
+					reloadScripts();
 
 					The.camera.updated = true;
 
@@ -949,19 +1075,13 @@ try{
 			// TODO: setup The.scripting interface
 			The.scripting.player = The.player;
 			The.scripting.UI = ui;
+			The.scripting.user = User;
 			The.scripting.server = {
 				request: server.makeRequest.bind(server),
 				registerHandler: server.registerHandler.bind(server),
 				handler: server.handler.bind(server)
 			};
-			Resources.loadScripts(Resources._scriptRes).then(function(){
-				delete Resources._scriptRes;
 
-				The.scriptmgr = new ScriptMgr();
-				loaded();
-			}, function(){
-				console.error("Could not load scripts!");
-			});
 
 			ready=true;
 
@@ -1010,10 +1130,7 @@ try{
 
 				// Attack the enemy we're currently hovering
 				if (ui.hoveringEntity) {
-					server.attackEntity(ui.hoveringEntity)
-						  .then(function(){
-							  The.player.brain.setTarget(ui.hoveringEntity);
-						  });
+					The.user.clickedEntity( ui.hoveringEntity );
 					return;
 				}
 
@@ -1031,10 +1148,11 @@ try{
 					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
 					console.group();
 					console.log(path);
-					if (The.player.brain.target) {
-						server.playerDistracted();
-						The.player.triggerEvent(EVT_DISTRACTED);
-					}
+					// FIXME: clean this (brain)
+					// if (The.player.brain.target) {
+					// 	server.playerDistracted();
+					// 	The.player.triggerEvent(EVT_DISTRACTED);
+					// }
 
 
 					// inject walk to beginning of path depending on where player is relative to start tile
@@ -1081,13 +1199,11 @@ try{
 
 					ui.tilePathHighlight = toTile;
 
-					The.player.addEventListener(EVT_FINISHED_PATH, this, function(player, walk){
-						ui.tilePathHighlight = null;
-					});
 				} else {
 					console.log("Bad path :(");
 				}
 
+				The.user.clickedTile( toTile );
 			};
 
 			// Load testing tools
@@ -1122,47 +1238,6 @@ try{
 		window['clickPoint'] = clickPoint;
 
 
-			The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
-
-				Log("Preparing to walk..");
-				var playerPosition = { y: The.player.position.local.y + The.map.curPage.y * Env.tileSize,
-									   x: The.player.position.local.x + The.map.curPage.x * Env.tileSize,
-									   globalY: Math.floor(The.player.position.local.y / Env.tileSize) + The.map.curPage.y,
-									   globalX: Math.floor(The.player.position.local.x / Env.tileSize) + The.map.curPage.x },
-					state = {
-						page: The.map.curPage.index,
-						localY: The.player.position.local.y,
-						localX: The.player.position.local.x,
-						y: playerPosition.y,
-						x: playerPosition.x,
-						globalY: playerPosition.globalY,
-						globalX: playerPosition.globalX
-					};
-				
-				server.walkTo(walk, state).then(function(){
-				}, function(response){
-					// not allowed...go back to state
-					console.error("Going back to state..");
-					console.error(state);
-					console.error(event);
-
-					tilePathHighlight=null;
-
-					The.map.curPage = The.map.pages[state.page];
-					if (response.state) {
-						The.player.position.local.y = response.state.localY;
-						The.player.position.local.x = response.state.localX;
-					} else {
-						The.player.position.local.y = state.localY;
-						The.player.position.local.x = state.localX;
-					}
-					The.player.path = null;
-					// The.player.lastMoved = null;
-					The.player.sprite.idle();
-					ui.setPage( The.map.curPage );
-				});
-
-			});
 
 		};
 }catch(e){

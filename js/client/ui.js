@@ -17,7 +17,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 		this.messageBox = null;
 
-		this.curPage = null;
+		this.pages = {};
 		this.camera  = null;
 
 		var _UI = this;
@@ -34,13 +34,15 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 								Env.tileScale * movable.sprite.tileSize / 2 + // centered UI
 								-1 * Env.tileScale * movable.sprite.offset_x + // offset sprite
 								-1 * Env.tileScale * _UI.camera.offsetX + // camera offset
+								1 * Env.tileScale * (movable.page.x - The.map.curPage.x) * Env.tileSize + // page offset
 								-1 * this.ui.width() + // centered
 								$('#game').offset().left, // canvas offset
 
 						top = Env.tileScale * movable.position.local.y + // game top
 								movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
-								-1 * Env.tileScale * _UI.camera.offsetY + // camera offset
+								1 * Env.tileScale * _UI.camera.offsetY + // camera offset
+								1 * Env.tileScale * (movable.page.y - The.map.curPage.y) * Env.tileSize + // page offset
 								-1 * this.ui.height() + // floating above head
 								$('#game').offset().top; // canvas offset
 
@@ -221,6 +223,74 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			if (!movableDetails) return;
 
 			movableDetails.ui.show();
+		};
+
+		this.addPage = function(pageID){
+			if (this.pages[pageID]) return;
+
+			// add page to list
+			var page = The.map.pages[pageID];
+			this.pages[pageID] = page;
+
+			// add all ui from this page
+			for (var movableID in page.movables) {
+				if (this.movables[ movableID ]) continue;
+				var movable = page.movables[movableID];
+				this.postMessage("Attaching UI to entity ("+movable.id+")");
+				this.attachMovable( movable );
+			}
+
+			// NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
+			this.listenTo(page, EVT_ADDED_ENTITY, function(page, entity){
+				if (this.movables[ entity.id ]) {
+					this.postMessage("Removed entity first.. ("+entity.id+")");
+					this.detachMovable( entity );
+				}
+				this.postMessage("Adding entity and attaching UI ("+entity.id+")");
+				this.attachMovable( entity );
+			});
+
+			this.listenTo(page, EVT_REMOVED_ENTITY, function(page, entity){
+				this.postMessage("Removed entity");
+				this.detachMovable( entity );
+			});
+		};
+
+		this.removePage = function(pageID){
+			if (!this.pages[pageID]) return;
+
+			// remove page from list
+			var page = this.pages[pageID];
+			delete this.pages[pageID];
+
+			// Remove ui stuff
+			// FIXME: what if EVT_ADDED_ENTITY or EVT_REMOVED_ENTITY is triggered and the callbacks are
+			// stored for later handling before setPage is called for a new page
+			this.stopListeningTo( page );
+
+			// NOTE: movables from curPage are probably already removed
+			for (var movableID in page.movables) {
+				if ( this.movables[movableID] ) continue; // don't remove ui from movable thats in another page
+				var movable = this.movables[movableID].entity;
+				this.detachMovable( movable );
+			}
+		};
+
+		this.updatePages = function(){
+
+			// Remove unloaded pages
+			for (var pageID in this.pages) {
+				if (!The.map.pages[pageID]) {
+					this.removePage(pageID);
+				}
+			}
+
+			// Add missing pages
+			for (var pageID in The.map.pages) {
+				if (!this.pages[pageID]) {
+					this.addPage(pageID);
+				}
+			}
 		};
 
 		this.setPage = function(page){ 
