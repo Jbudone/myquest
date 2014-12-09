@@ -1,71 +1,18 @@
 define(function(){
 
 	var keys={
-		EVT_STEP:1,
-		EVT_ZONE:2,
-		EVT_FINISHED_MOVING:3,
-		EVT_CANCEL_PATH:4,
-		EVT_FINISHED_PATH:5,
-		EVT_FINISHED_WALK:6,
 
-		EVT_NEW_PATH:7,
-		EVT_PREPARING_WALK:8,
-
-		EVT_LOGIN:9,
-		EVT_REQUEST_MAP:10,
-
-		EVT_ADDED_ENTITY:11,
-		EVT_PAGE_EVENTS:12,
-		EVT_REMOVED_ENTITY:13,
-		EVT_DISCONNECTED:14,
-		EVT_ZONE_OUT:15,
-
-		EVT_ATTACKED:16,
-		EVT_REROUTING:17,
-		EVT_DIED:18,
-		EVT_NEW_TARGET:19,
-		EVT_ATTACKED_ENTITY:20,
-		EVT_REMOVED_TARGET:21, // unset this target from our current target
-		EVT_AGGRO:22,
-		EVT_NEW_CHARACTER:23,
-		EVT_DISTRACTED:24,
-		EVT_TARGET_ZONED_OUT:25,
-		EVT_MOVED_TO_NEW_TILE:26,
-		EVT_MOVING_TO_NEW_TILE:27,
-		EVT_BORED:28,
-		EVT_RESPAWNING:29,
-		EVT_RESPAWNED:30,
-
-		ACTION_NEW_PATH:1,
-
-		HIGH_PRIORITY:1,
-
-		LEFT_TO_RIGHT:1,
-		UP_TO_DOWN:2,
-
-		NORTH:1,
-		EAST:2,
-		SOUTH:3,
-		WEST:4,
-
-		EVT_TESTJB:40,
-
-		HOOK_INTO_MAP:1,
-
-		LOG_CRITICAL:1<<0,
-		LOG_ERROR:1<<1,
-		LOG_WARNING:1<<2,
-		LOG_INFO:1<<3,
-		LOG_DEBUG:1<<4,
-
-		PAGE_SERIALIZE_BASE:1,
-		PAGE_SERIALIZE_MOVABLES:2,
+		LOG_CRITICAL: 1<<0,
+		LOG_ERROR:    1<<1,
+		LOG_WARNING:  1<<2,
+		LOG_INFO:     1<<3,
+		LOG_DEBUG:    1<<4,
 
 		MESSAGE_PROGRAM: 'program',
 		MESSAGE_INFO: 'info',
 	};
 
-	var keyValue = 100, // FIXME: load all keys from above in addKeys instead
+	var keyValue = 0,
 		global = (typeof window !== 'undefined' ? window : GLOBAL),
 		addKey = function(key){
 			if (global[key] !== undefined) {
@@ -87,10 +34,74 @@ define(function(){
 	global['addKey'] = addKey;
 	global['addKeys'] = addKeys;
 
-	// addKey('NORTH'); addKey('EAST'); addKey('SOUTH'); addKey('WEST');
 
 	// TODO: organize with arrays, {'events':{prefix:'evt',keys:['step','zone','finished_moving',...]}} and automatically add
+
+	/// %%%%%%%%%%%%%%%%%%%%%
+	/// %%%%%% Event IDs
+	/// %%%%%%%%%%%%%%%%%%%%%
+
 	addKey('EVT_ATTACK');
+	addKey('EVT_STEP');
+	addKey('EVT_ZONE');
+	addKey('EVT_FINISHED_MOVING');
+	addKey('EVT_CANCEL_PATH');
+	addKey('EVT_FINISHED_PATH');
+	addKey('EVT_FINISHED_WALK');
+
+	addKey('EVT_NEW_PATH');
+	addKey('EVT_PREPARING_WALK');
+
+	addKey('EVT_LOGIN');
+	addKey('EVT_REQUEST_MAP');
+
+	addKey('EVT_ADDED_ENTITY');
+	addKey('EVT_PAGE_EVENTS');
+	addKey('EVT_REMOVED_ENTITY');
+	addKey('EVT_DISCONNECTED');
+	addKey('EVT_ZONE_OUT');
+
+	addKey('EVT_ATTACKED');
+	addKey('EVT_REROUTING');
+	addKey('EVT_DIED');
+	addKey('EVT_NEW_TARGET');
+	addKey('EVT_ATTACKED_ENTITY');
+	addKey('EVT_REMOVED_TARGET');
+	addKey('EVT_AGGRO');
+	addKey('EVT_NEW_CHARACTER');
+	addKey('EVT_DISTRACTED');
+	addKey('EVT_TARGET_ZONED_OUT');
+	addKey('EVT_MOVED_TO_NEW_TILE');
+	addKey('EVT_MOVING_TO_NEW_TILE');
+	addKey('EVT_BORED');
+	addKey('EVT_RESPAWNING');
+	addKey('EVT_RESPAWNED');
+
+
+	/// %%%%%%%%%%%%%%%%%%%%%
+	/// %%%%%% Misc. Keys
+	/// %%%%%%%%%%%%%%%%%%%%%
+
+	addKey('ACTION_NEW_PATH');
+
+	addKey('HIGH_PRIORITY');
+
+	addKey('LEFT_TO_RIGHT');
+	addKey('UP_TO_DOWN');
+
+	addKey('NORTH');
+	addKey('EAST');
+	addKey('SOUTH');
+	addKey('WEST');
+
+	addKey('EVT_TESTJB');
+
+	addKey('HOOK_INTO_MAP');
+
+	addKey('PAGE_SERIALIZE_BASE');
+	addKey('PAGE_SERIALIZE_MOVABLES');
+
+	addKey('ADJACENT_RANGE'); // Pathfinding
 
 	return keys;
 });

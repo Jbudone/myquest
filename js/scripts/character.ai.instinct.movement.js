@@ -2,9 +2,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 
 	eval(SCRIPTENV);
 
-	var keys = ['ADJACENT_RANGE'];
-	addKeys(keys);
-
 	var Movement = function(brain){
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Dynamic);
