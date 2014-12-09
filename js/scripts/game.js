@@ -65,6 +65,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			delete this.characters[entityID];
 
 			character.hook('die', this).remove();
+			_script.removeScript( character._script );
 			
 			console.log("Removed character from Game: "+entityID);
 			this.doHook('removedcharacter').post(entity);

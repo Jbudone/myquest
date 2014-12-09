@@ -172,6 +172,21 @@ define(['loggable'], function(Loggable){
 			return script._script;
 		};
 
+		this.removeScript = function(script){
+			if (!(script instanceof Script)) {
+				return new UnexpectedError("Provided script not a script");
+			}
+
+			for (var i=0; i<this.children.length; ++i) {
+				if (this.children[i] == script) {
+					this.children.splice(i, 1);
+					return true;
+				}
+			}
+
+			return new UnexpectedError("Could not find script");
+		};
+
 		// Inject client/server specific functionality from the script into itself
 		this.localizeScript = function(script){
 			var localPart = (Env.isServer ? script.server : script.client);

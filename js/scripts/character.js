@@ -13,6 +13,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.entity = entity;
 		this.brain = null;
 		entity.character = this;
+		this._script = null;
 
 		this.setLogPrefix('[char:'+this.entity.id+'] ');
 
@@ -130,17 +131,16 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			if (this.entity instanceof Movable) this.entity.handler('step').unset();
 		}
 
-		var _character = this,
-			_script = null;
+		var _character = this;
 		this.server = {
 			initialize: function(){
 				console.log("Initializing character..");
-				_script = this;
+				_character._script = this;
 				_character.characterInit.bind(_character)();
 			},
 
 			characterInit: function(){
-				this.brain = _script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
+				this.brain = this._script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
 				this.initListeners();
 			},
 		};
@@ -148,12 +148,12 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.client = {
 			initialize: function(){
 				console.log("["+_character.entity.id+"] Initializing character..");
-				_script = this;
+				_character._script = this;
 				_character.characterInit.bind(_character)();
 			},
 
 			characterInit: function(){
-				this.brain = _script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
+				this.brain = this._script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
 				this.initListeners();
 			},
 
