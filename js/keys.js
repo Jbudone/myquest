@@ -12,7 +12,7 @@ define(function(){
 		MESSAGE_INFO: 'info',
 	};
 
-	var keyValue = 0,
+	var keyValue = 1,
 		global = (typeof window !== 'undefined' ? window : GLOBAL),
 		addKey = function(key){
 			if (global[key] !== undefined) {

@@ -97,7 +97,12 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			this.registerHook('removedplayer');
 
 			map.hook('addedentity', this).then(function(entity){
-				this.createCharacter.call(this, entity); // FIXME: what if entity is zoning and already has a character?
+
+				// Create a new character object for this entity if one hasn't been created yet
+				if (!(entity.character instanceof Character)) {
+					this.createCharacter.call(this, entity);
+				}
+
 				this.addCharacter.call(this, entity);
 				if (entity.playerID) {
 					this.addPlayer.call(this, entity);
