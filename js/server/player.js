@@ -154,46 +154,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				this.client.send(JSON.stringify(initialization));
 			});
 
-
-			// FIXME: clean this (brain)
-			/*
-			this.movable.brain.addEventListener(EVT_RESPAWNED, this, function(player){
-				this.Log("Player respawned");
-
-				this.pages = { };
-				this.pages[this.movable.page.index] = this.movable.page;
-				var page = this.movable.page,
-					map = page.map,
-					initialization = {
-						respawn:true,
-						map:{
-							id: map.id,
-							pagesPerRow: map.pagesPerRow,
-							mapWidth: map.map.properties.width,
-							mapHeight: map.map.properties.height,
-							tileset: map.map.properties.tileset,
-						},
-						player:{
-							localY: this.movable.position.local.y,
-							localX: this.movable.position.local.x,
-							page: this.movable.page.index,
-							health: this.movable.health
-						},
-						pages:{}
-				};
-
-				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				for (var neighbour in page.neighbours) {
-					var npage = page.neighbours[neighbour];
-					if (npage) this.pages[npage.index] = npage;
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				}
-
-
-				this.client.send(JSON.stringify(initialization));
-			}, HIGH_PRIORITY);
-			*/
-
 			return true;
 		};
 

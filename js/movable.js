@@ -22,7 +22,6 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		//
 		// local.x and local.y may be outside of the current page. Since a movable may be walking between two tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a time, that current tile is the one which is rounded from the global position. In other words, take the global position and round it to the nearest tile. So if a movable is currently standing on a tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less than 0.
 		//
-		// FIXME: posX == position.posX == position.local.x
 		this.position = {
 			tile:   { x: 0, y: 0 },
 			local:  { x: 0, y: 0 },
@@ -76,21 +75,6 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		this.zoning    = false;
 
 		this.physicalState = new State(STATE_ALIVE);
-
-		/* FIXME: brain
-		this.health=this.npc.health;
-		this.hurt = function(hit, attacker){
-			if (this.physicalState.state !== STATE_ALIVE) return;
-			this.health -= hit;
-			this.triggerEvent(EVT_ATTACKED, attacker, hit);
-			console.log("["+this.id+"] AM HURT: "+this.health+"/"+this.npc.health);
-			if (this.health<=0) {
-				console.log("["+this.id+"] I died :(");
-				this.physicalState.transition(STATE_DEAD);
-				this.triggerEvent(EVT_DIED);
-			}
-		};
-		*/
 
 
 		this.lastStep=0;
@@ -297,8 +281,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			}
 
 
-				this.path = path; // replace current path with this
-			// this.paths.push(path);
+			this.path = path; // replace current path with this
 			this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
 			var mov=this;
 			   var logWalk = function(walk) {

@@ -225,7 +225,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			},
 
 			combatInit: function(){
-				// TODO: listen to EVT_ATTACKED on us
 				// TODO: FSM
 				// TODO: Leave Combat 
 
@@ -248,22 +247,10 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				if (_character.isPlayer) {
 					console.log("You are a player");
 					var player = _character.entity.player;
-					/* NOTE: not handling attack for player on server
-					player.registerHandler(EVT_ATTACKED);
-					player.handler(EVT_ATTACKED).set(function(evt, data){
-						console.log(data);
-						if (typeof data !== "object") return;
-						if (isNaN(data.id)) return;
-
-						data.target = player.movable.page.map.movables[ data.id ];
-						_combat.setTarget(data);
-					});
-					*/
 
 				   _combat.requests = [];
 
 				   this.update = function(){
-				   // _combat.hook('update', _combat).first(function(){
 					   if (this.requests.length !== 0) {
 						   while (this.requests.length) {
 							   // Attempt to handle each request

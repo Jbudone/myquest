@@ -162,7 +162,7 @@
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
 
-define(['jquery','resources','entity','movable','map','page','client/camera','AI','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr','client/user'], function($,Resources,Entity,Movable,Map,Page,Camera,AI,ServerHandler,Loggable,Renderer,UI,ScriptMgr,User) {
+define(['jquery','resources','entity','movable','map','page','client/camera','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr','client/user'], function($,Resources,Entity,Movable,Map,Page,Camera,ServerHandler,Loggable,Renderer,UI,ScriptMgr,User) {
 try{
 
 	extendClass(this).with(Loggable);
@@ -311,18 +311,6 @@ try{
 					local: null,
 				};
 
-
-				// FIXME: clean this (brain)
-				// Setup basic AI (following target)
-				// Log("Giving AI to player", LOG_DEBUG);
-				// The.player.brain = new AI.Core(The.player);
-				// The.player.brain.addComponent(AI.Components['Follow']);
-				// // The.player.brain.addComponent(AI.Components['Combat']);
-
-				// The.player.step=_.wrap(The.player.step,function(step,time){
-				// 	var stepResults = step.apply(this, [time]);
-				// 	this.brain.step(time);
-				// });
 
 				ready = false;
 				loaded('player');
@@ -613,7 +601,6 @@ try{
 				The.scriptmgr.unload();
 			}
 
-			//Resources.unloadScripts(); // FIXME: need to unload scripts before zoning
 			Resources.loadScripts(Resources._scriptRes).then(function(){
 				delete Resources._scriptRes;
 
@@ -877,78 +864,6 @@ try{
 
 				};
 
-				server.onEntityAttackedTarget = function(page, attackerEntity, targetEntity){
-
-					console.log("ENTITY "+attackerEntity.id+" ATTACKED "+targetEntity.id);
-					var entity = The.map.movables[attackerEntity.id],
-						target = The.map.movables[targetEntity.id];
-
-					if (entity && target) {
-						// entity.faceDirection(direction);
-						var direction = entity.directionOfTarget(target);
-						entity.sprite.dirAnimate('atk', direction);
-					}
-
-				};
-
-				server.onEntityNewTarget = function(page, eventEntity, targetEntity){
-
-					var entity = The.map.movables[eventEntity.id],
-						target = The.map.movables[targetEntity.id];
-
-					console.log("New Target for entity");
-					// FIXME: clean this (brain)
-					// if (entity && target) entity.brain.setTarget(target); // TODO: target could be in another page, when we set new target then this won't actually set; when the target moves to same page as entity then we won't have them as the current target
-
-				};
-
-				server.onEntityRemovedTarget = function(page, eventEntity, targetEntity){
-
-
-					Log("Removing target for ["+eventEntity.id+"]");
-					var entity = The.map.getEntityFromPage(eventEntity.page, eventEntity.id);
-
-					// FIXME: clean this (brain)
-					// // NOTE: do not select the target since the target may have died and been
-					// // removed locally
-					// if (entity) {
-
-					// 	// remove core target
-					// 	if (entity.brain.target && entity.brain.target.id == targetEntity.id) { 
-					// 		console.log("	Target to remove ["+eventEntity.id+"] currently targeting: ("+entity.brain.target.id+")");
-					// 		entity.brain.setTarget(null);
-					// 	}
-					// }
-
-				};
-
-				server.onEntityDied = function(page, deadEntity){
-
-					// TODO: set die physical state, die animation, remove entity
-					Log("Entity "+deadEntity+" died");
-					var entity = The.map.curPage.movables[deadEntity],
-						character = null;
-					// NOTE: the entity may have already died if we've already received the killing blow event (client side noticed their health went below 0)
-					// NOTE: This may mean that our entity health/hurt is out of sync with the server; we should
-					// have seen them die locally before receiving this (unless attacked/dead were both apart
-					// of the same page event buffer)
-					if (entity) {
-						character = entity.character;
-						if (character) {
-							if (character.alive) {
-								character.die();
-							} else if (deadEntity != The.player.id) {
-								debugger;
-								this.Log("Character already died! Should not exist in page anymore!");
-							}
-						}
-					}
-
-					// Is it us who died?
-					if (deadEntity == The.player.id) {
-						ui.fadeToBlack();
-					}
-				};
 
 				The.player.character.hook('die', this).then(function(){
 					ui.fadeToBlack();
@@ -1148,12 +1063,6 @@ try{
 					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
 					console.group();
 					console.log(path);
-					// FIXME: clean this (brain)
-					// if (The.player.brain.target) {
-					// 	server.playerDistracted();
-					// 	The.player.triggerEvent(EVT_DISTRACTED);
-					// }
-
 
 					// inject walk to beginning of path depending on where player is relative to start tile
 					var startTile = path.start.tile,

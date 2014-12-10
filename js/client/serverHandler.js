@@ -65,10 +65,6 @@ define(['dynamic','loggable'],function(Dynamic, Loggable){
 							else if (evtType == EVT_REMOVED_ENTITY) server.onEntityRemoved( page, event.entity );
 							else if (evtType == EVT_PREPARING_WALK) server.onEntityWalking( page, event.data );
 							else if (evtType == EVT_ATTACKED) server.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount, event.data.health );
-							else if (evtType == EVT_ATTACKED_ENTITY) server.onEntityAttackedTarget( page, event.data.entity, event.data.target );
-							else if (evtType == EVT_NEW_TARGET) server.onEntityNewTarget( page, event.data.entity, event.data.target );
-							else if (evtType == EVT_REMOVED_TARGET) server.onEntityRemovedTarget( page, event.data.entity, event.data.target );
-							else if (evtType == EVT_DIED) server.onEntityDied( page, event.data.entity );
 							else {
 								var dynamicHandler = server.handler(evtType);
 								if (dynamicHandler) {
@@ -132,10 +128,6 @@ define(['dynamic','loggable'],function(Dynamic, Loggable){
 		this.onEntityRemoved        = new Function();
 		this.onEntityWalking        = new Function();
 		this.onEntityHurt           = new Function();
-		this.onEntityAttackedTarget = new Function();
-		this.onEntityNewTarget      = new Function();
-		this.onEntityRemovedTarget  = new Function();
-		this.onEntityDied           = new Function();
 		this.onFinishedMoving       = new Function(); // TODO: is this one necessary?
 
 

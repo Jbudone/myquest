@@ -16,12 +16,7 @@ define(['hookable', 'dynamic', 'loggable'], function(Hookable, Dynamic, Loggable
 		this.clickedEntity = function(entity){
 			if (!this.doHook('clickedEntity').pre(entity)) return;
 			this.Log("Clicked entity");
-
 			this.doHook('clickedEntity').post(entity);
-			// server.attackEntity(ui.hoveringEntity)
-			// 	  .then(function(){
-			// 		  The.player.brain.setTarget(ui.hoveringEntity);
-			// 	  });
 		};
 
 		this.clickedTile = function(tile){
