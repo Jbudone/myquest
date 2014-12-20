@@ -41,6 +41,10 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			delete this.neurons[id];
 		};
 
+		this.reset = function(){
+			this.neurons = {};
+		};
+
 		this.neurons = {};
 	};
 

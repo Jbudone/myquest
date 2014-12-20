@@ -16,7 +16,7 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		};
 		this.client = {
 			initialize: function(){
-				console.log("Loading zoning mgr");
+				//console.log("Loading zoning mgr");
 				_self.heMoved(-1);
 				this.listenTo(player, EVT_MOVED_TO_NEW_TILE).then(function(theGuyWhoMoved){
 					_self.heMoved(id);
@@ -24,7 +24,7 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			},
 
 			heMoved: function(id){
-				console.log("Cliently moved ["+id+"]");
+				//console.log("Cliently moved ["+id+"]");
 			}
 		};
 	};

@@ -47,6 +47,16 @@ define(function(){
 
 			};
 
+			if (_.isString(data)) {
+				try {
+					data = JSON.parse(data);
+				} catch(e){
+					return UnexpectedError("Bad JSON given");
+				}
+			}
+
+			if (!_.isObject(data)) return UnexpectedError("Data is not an object");
+
 			for (var key in data) {
 				this[key] = data[key];
 			}

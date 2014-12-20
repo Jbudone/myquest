@@ -28,7 +28,7 @@ define(function(){
 		this.logmask = {
 			'AI': (logVerbose),
 			'Movable': (logVerbose),
-			'Connection': (logVerbose),
+			'Connection': (logImportant),
 			'Renderer': (logVerbose),
 			'UI': (logVerbose),
 			'DB': (logVerbose),
@@ -43,7 +43,7 @@ define(function(){
 			'Instinct': (logVerbose),
 			'Combat': (logVerbose),
 			'Movement': (logVerbose),
-			'Default': (logVerbose)
+			'Default': (logImportant)
 		};
 	};
 

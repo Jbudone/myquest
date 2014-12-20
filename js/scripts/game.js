@@ -156,7 +156,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 								continue;
 							}
 
-							character.respawnTime -= delta;
+							character.respawnTime -= 100; // FIXME: shouldn't hardcode this, but can't use delta
 							if (character.respawnTime <= 0) {
 								delete this.respawning[entid];
 

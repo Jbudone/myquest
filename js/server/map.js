@@ -10,20 +10,35 @@ define(['page', 'movable'], function(Page, Movable){
 		spawns: {},
 
 		loadMap: function(){
+			debugger;
 			// Initialize map
-			var pageHeight=Env.pageHeight, // TODO: global maps properties elsewhere
-				pageWidth=Env.pageWidth,
-				mapHeight=this.map.properties.height, // TODO: figure out height/width
-				mapWidth=this.map.properties.width,
-				map=this.map.data,
-				mapPageHeight=this.map.properties.pageHeight,
-				mapPageWidth=this.map.properties.pageWidth,
-				pages=this.pages;
+			var pageHeight    = Env.pageHeight, // TODO: global maps properties elsewhere
+				pageWidth     = Env.pageWidth,
+				mapHeight     = this.map.properties.height, // TODO: figure out height/width
+				mapWidth      = this.map.properties.width,
+				spawns        = this.map.data.spawns,
+				map           = this.map.data.pages,
+				zones         = this.map.data.zones,
+				mapPageHeight = this.map.properties.pageHeight,
+				mapPageWidth  = this.map.properties.pageWidth,
+				pages         = this.pages;
 
-			this.sheet = Resources.findSheetFromFile(this.map.properties.tileset);
-			this.pagesPerRow=Math.ceil(mapWidth/pageWidth); // Number of pages in an entire row of the entire map
-			this.mapWidth = mapWidth;
-			this.mapHeight = mapHeight;
+			//this.sheet = Resources.findSheetFromFile(this.map.properties.tileset);
+			this.sheets = [];
+			for (var i=0; i<this.map.properties.tilesets.length; ++i) {
+				var sheet = Resources.findSheetFromFile(this.map.properties.tilesets[i].image);
+				if (!_.isObject(sheet)) continue;
+				this.sheets.push( sheet );
+				_.last(this.sheets).gid = {
+					first: this.map.properties.tilesets[i].gid.first,
+					last: this.map.properties.tilesets[i].gid.last
+				};
+			}
+
+			this.pagesPerRow = Math.ceil(mapWidth/pageWidth); // Number of pages in an entire row of the entire map
+			this.mapWidth    = mapWidth;
+			this.mapHeight   = mapHeight;
+
 
 			// TODO: render borders for pages; pageWidth-2*border included here
 			// TODO: HEAVY HEAVY HEAVY testing of various page sizes vs. map pages
@@ -40,6 +55,17 @@ define(['page', 'movable'], function(Page, Movable){
 					// 			Tiles: page[0:StartingPoint] . cell[0:EndOfPageOrCell] . page[]
 					//
 					//
+					//	GLOSSARY
+					//		eMAP, ePAGE: the map/page from the exported JSON file
+					//		map, page: the map/page in the game
+					//
+					//	mapCell: ePAGE
+					//	mapPageWH: ePAGE width/height
+					//	mapXYCoord: ePAGE x/y position
+					//
+					//	pageWH: page width/height
+					//	pageXY: page x/y position
+					//
 					// NOTE: map starts at 0 since the cell.tiles is spliced each time, so those spliced tiles
 					// 		are removed from the array
 					mapCell = mapY[mapXCoord];
@@ -47,6 +73,8 @@ define(['page', 'movable'], function(Page, Movable){
 						for (var pageX = Math.floor(mapXCoord/pageWidth); pageX*pageWidth < mapXCoord+mapPageWidth; ++pageX) {
 							var pageY      = Math.floor((mapYCoord+y)/pageHeight),
 								cellY      = y,//Math.max(pageY-mapYCoord, 0), // y offset in current cell of mapgrid
+								cellX      = mapXCoord + pageX - Math.floor(mapXCoord/pageWidth),
+								cellI      = cellY*mapPageWidth + cellX,
 								pgY        = pageY*pageHeight, // Global position of page in entire map
 								pgX        = pageX*pageWidth,
 								pgBegin    = ((cellY+mapYCoord-pgY)%pageHeight)*pageWidth + Math.max(0, mapXCoord - pgX),
@@ -59,7 +87,7 @@ define(['page', 'movable'], function(Page, Movable){
 								sprites    = [];
 							
 							if (!pages[pageI]) pages[pageI] = (new Page(this));
-							page = pages[pageI];
+							page       = pages[pageI];
 							page.index = pageI;
 							page.y     = pgY;
 							page.x     = pgX;
@@ -71,6 +99,54 @@ define(['page', 'movable'], function(Page, Movable){
 												page.tiles );
 							page.tiles = tiles;
 
+
+							/*
+							for (var j=0; j<count; ++j) {
+								if (mapCell.sprites.hasOwnProperty(y*mapPageWidth+j)) {
+									var sprite = mapCell.sprites[y*mapPageWidth+j],
+										ix      = (Math.max(0, mapXCoord - pgX)) + j, // TODO: use above
+										iy      = (mapYCoord + cellY - pgY), // TODO: use above
+										index  = iy*pageWidth + ix;
+									if (sprite == 1) debugger; // 1080 coord
+									page.sprites[index] = {
+										sprite: sprite
+									};
+
+									var sheet = null;
+									for (var i=0; i<this.sheets.length; ++i) {
+										if (sprite >= this.sheets[i].gid.first &&
+											sprite <= this.sheets[i].gid.last) {
+
+											sheet = this.sheets[i];
+										}
+									}
+
+									if (sheet == null) {
+										return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+									}
+
+									// set collision mask if necessary
+									if (sheet.data.collisions !== undefined && sheet.data.collisions.indexOf(sprite-1) >= 0) {
+										page.collidables[iy] |= 1<<ix;
+										page.sprites[index].collidable = true;
+									}
+
+									// set floating details
+									if (sheet.data.floating !== undefined && sheet.data.floating.indexOf(sprite-1) >= 0) {
+										page.sprites[index].floating = true;
+									}
+
+									// TODO: search if this sprite has any animations
+
+									if (!page.sprites[index].hasOwnProperty('floating')) {
+										page.sprites[index].static = true;
+									}
+								}
+							}
+							*/
+							/* FIXME: sprites are objects w/ key=map_coord & val=spawn_obj
+							 * 			Choice: either keep sprite part in here and use sprites.hasOwnProperty(map_coordinate) to add sprite
+							 *			Choice2: pull sprite addition out of here then use for..in on sprites and determine page index & coordinates from spawn map positions
 							// Setup sprites
 							sprites = mapCell.sprites.splice(0, count);
 							for (var j=0; j<sprites.length; ++j) {
@@ -84,14 +160,27 @@ define(['page', 'movable'], function(Page, Movable){
 										sprite: sprite
 									};
 
+									var sheet = null;
+									for (var i=0; i<this.sheets.length; ++i) {
+										if (sprite >= this.sheets[i].gid.first &&
+											sprite <= this.sheets[i].gid.last) {
+
+											sheet = this.sheets[i];
+										}
+									}
+
+									if (sheet == null) {
+										return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+									}
+
 									// set collision mask if necessary
-									if (this.sheet.data.collisions !== undefined && this.sheet.data.collisions.indexOf(sprite-1) >= 0) {
+									if (sheet.data.collisions !== undefined && sheet.data.collisions.indexOf(sprite-1) >= 0) {
 										page.collidables[iy] |= 1<<ix;
 										page.sprites[index].collidable = true;
 									}
 
 									// set floating details
-									if (this.sheet.data.floating !== undefined && this.sheet.data.floating.indexOf(sprite-1) >= 0) {
+									if (sheet.data.floating !== undefined && sheet.data.floating.indexOf(sprite-1) >= 0) {
 										page.sprites[index].floating = true;
 									}
 
@@ -102,15 +191,74 @@ define(['page', 'movable'], function(Page, Movable){
 									}
 								}
 							}
+							*/
 						}
 					}
+
+
+
+					for (var spriteCoord in mapCell.sprites) {
+
+						if (parseInt(mapCell.sprites[spriteCoord]) == 1) debugger;
+						var sprite = mapCell.sprites[spriteCoord],
+							coord  = parseInt(spriteCoord),
+							eY     = Math.floor(coord / mapPageWidth),
+							eX     = coord - eY*mapPageWidth,
+							mY     = mapYCoord + eY,
+							mX     = mapXCoord + eX,
+							pageY  = Math.floor(mY / pageHeight),
+							pageX  = Math.floor(mX / pageWidth),
+							pageI  = pageY*this.pagesPerRow + pageX,
+							pY     = mY - pageY*pageHeight,
+							pX     = mX - pageX*pageWidth,
+							index  = pY*pageWidth + pX,
+							page   = pages[pageI];
+
+
+						if (pY < 0 || pX < 0) continue; // Belongs in another page
+
+									page.sprites[index] = {
+										sprite: sprite
+									};
+
+									var sheet = null;
+									for (var i=0; i<this.sheets.length; ++i) {
+										if (sprite >= this.sheets[i].gid.first &&
+											sprite < this.sheets[i].gid.last) {
+
+											sheet = this.sheets[i];
+										}
+									}
+
+									if (sheet == null) {
+										return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+									}
+
+									// set collision mask if necessary
+									if (sheet.data.collisions !== undefined && sheet.data.collisions.indexOf(sprite-1) >= 0) {
+										page.collidables[pY] |= 1<<pX;
+										page.sprites[index].collidable = true;
+									}
+
+									// set floating details
+									if (sheet.data.floating !== undefined && sheet.data.floating.indexOf(sprite-1) >= 0) {
+										page.sprites[index].floating = true;
+									}
+
+									// TODO: search if this sprite has any animations
+
+									if (!page.sprites[index].hasOwnProperty('floating')) {
+										page.sprites[index].static = true;
+									}
+					}
+
 
 
 				}
 			}
 
 			this.pages = pages; // TODO: is this necessary? remove and check, pls
-			this.zones = map.zones;
+			this.zones = zones;
 			var pagesWithZones = {};
 			for (var i=0; i<this.zones.out.length; ++i) {
 				var zone = this.zones.out[i];
@@ -134,7 +282,7 @@ define(['page', 'movable'], function(Page, Movable){
 			// 	});
 			// }
 
-			this.spawns = map.spawns;
+			this.spawns = spawns;
 			console.log("Spawns: ");
 			console.log(this.spawns);
 			var pagesWithSpawns = {};

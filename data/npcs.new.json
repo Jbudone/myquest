@@ -41,5 +41,16 @@
 		"health":80,
 		"damage":3,
 		"AI":true
+	},
+	{
+		"id":"spider",
+		"name":"spider",
+		"sheet":"spider",
+		"spawn":5500,
+		"killable":true,
+		"speed":10,
+		"health":80,
+		"damage":3,
+		"AI":true
 	}
 ] }

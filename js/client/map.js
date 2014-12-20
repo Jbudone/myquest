@@ -14,7 +14,18 @@ define(['page','movable'], function(Page,Movable){
 				this.pagesPerRow = map.pagesPerRow;
 				this.mapWidth    = map.mapWidth;
 				this.mapHeight   = map.mapHeight;
-				this.sheet       = Resources.findSheetFromFile(map.tileset);
+				//this.sheet       = Resources.findSheetFromFile(map.tileset);
+				this.sheets = [];
+				for (var i=0; i<map.tilesets.length; ++i) {
+					var sheet = Resources.findSheetFromFile(map.tilesets[i].image);
+					if (!_.isObject(sheet)) continue;
+					this.sheets.push( sheet );
+					_.last(this.sheets).gid = {
+						first: map.tilesets[i].gid.first,
+						last: map.tilesets[i].gid.last
+					};
+				}
+
 			}
 
 			for (var entID in this.movables) {
@@ -50,6 +61,27 @@ define(['page','movable'], function(Page,Movable){
 				page.tiles       = evtPage.tiles;
 				page.sprites     = evtPage.sprites;
 				page.collidables = evtPage.collidables;
+				
+				
+				
+				
+				/*
+FIXME FIXME FIXME FIXME FIXME
+			// Base tiles are quite often reused in pages. To improve performance, we create an object
+			// reference for unique tiles and then have the tile element reference that object
+			// NOTE: this function MUST be bound to the page with which the tile belongs
+			var _mapRef      = this,
+				prepareTiles = function(tile){
+
+				if (!(this instanceof Page)) {
+					_mapRef.Log("Prepare Tiles was called without being bound to a page", LOG_ERROR);
+					throw new UnexpectedError("Failed to prepare tile");
+				}
+
+				if (!this.tileObjects
+			};
+				new Uint8Array(tiles.map(prepareTiles.bind(page)));
+				*/
 
 				if (evtPage.movables) {
 

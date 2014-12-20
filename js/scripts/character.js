@@ -85,6 +85,10 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			this.entity.sprite.idle();
 			this.entity.pendingEvents=[];
 
+			this.alive = true;
+			this.health = this.entity.npc.health;
+			this.brain.reset();
+
 			this.doHook('respawning').post();
 		};
 

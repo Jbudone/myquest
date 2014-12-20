@@ -17,7 +17,6 @@ define(['sprite'], function(Sprite){
 		this.animate=function(spriteID, repeat){
 			if (Env.isServer) return;
 			if (this.animation != this.animations[spriteID]) {
-				console.log("Animating "+spriteID);
 				this.animation=this.animations[spriteID];
 				this.repeating=repeat;
 				this.state.y = this.animation.row*this.tileSize;

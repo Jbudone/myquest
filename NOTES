@@ -7,7 +7,7 @@ http://opengameart.org/content/98-pixel-art-rpg-icons
 http://opengameart.org/content/lots-of-hyptosis-tiles-organized
 http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
 http://www.deviantart.com/morelikethis/artists/333013048?view_mode=2
-
+http://gaurav.munjal.us/Universal-LPC-Spritesheet-Character-Generator/
 
 NO inventory, use a belt/pack for storing immediate items (scrolls/potions) limited space. Use Messagebox for purchasing items from shops (link texts). Store quest items internally, show a box of what items you have already (unable to drop/interact/sell those items). Pickup armour from ground to put it on; deletes your current armour in favour of this one. Allow for armour/weapon buffs (timed/perma for item): particle system which you can walk into to get effects, quest givers provide this, certain monsters, etc.
 

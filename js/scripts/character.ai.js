@@ -32,7 +32,11 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				this.state = null;
 			}
 
-			// TODO: clear neuralnet
+			this.neuralNet.reset();
+		};
+
+		this.reset = function(){
+
 		};
 
 		// Safely exit out of current state, and enter new state
@@ -91,6 +95,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 		// while in a mild fight)
 		this.postNews = function(news){
 
+			if (!this.character.alive) return;
 			if (!news || _.isUndefined(news.instinct)) {
 				this.Log("Bad news item given", LOG_ERROR);
 				return new UnexpectedError("Bad news item given..");
@@ -99,6 +104,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 			if (this.state) {
 
 				if (news.instinct === this.state.name) {
+					debugger;
 					this.Log("This state is already active! "+this.state.name, LOG_ERROR);
 				} else {
 					var result = this.state.inform(news);

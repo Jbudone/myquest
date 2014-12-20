@@ -135,7 +135,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							pagesPerRow: map.pagesPerRow,
 							mapWidth: map.map.properties.width,
 							mapHeight: map.map.properties.height,
-							tileset: map.map.properties.tileset,
+							tilesets: map.map.properties.tilesets,
 						},
 						player:{
 							position: this.movable.position,
@@ -170,7 +170,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						pagesPerRow: map.pagesPerRow,
 						mapWidth: map.map.properties.width,
 						mapHeight: map.map.properties.height,
-						tileset: map.map.properties.tileset,
+						tilesets: map.map.properties.tilesets,
 					},
 					player:{
 						localY: this.movable.position.local.y,
@@ -487,7 +487,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							pagesPerRow: map.pagesPerRow,
 							mapWidth: map.map.properties.width,
 							mapHeight: map.map.properties.height,
-							tileset: map.map.properties.tileset,
+							tilesets: map.map.properties.tilesets,
 						},
 						pages:{}
 					};

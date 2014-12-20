@@ -101,6 +101,8 @@
 				//	> CLEAN: tile (global/local???)
 				//	> CLEAN: for(...){ ... } where functions perform chaining to variables within the for loop (errors)
 				//	> CLEAN: resources initialization routine (in client/server resources.js?)
+				//	> CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
+				//	> CLEAN: convert server tiles to Uint8Array; each references an index of tileRefs which specify the gid; cache and send page data as a blob (for compression/throughput)
 				//
 				//
 				//	
@@ -257,8 +259,8 @@ try{
 						return;
 					}
 
-					console.log("Sending walkTo request");
-					console.log(state);
+					this.Log("Sending walkTo request", LOG_DEBUG);
+					this.Log(state, LOG_DEBUG);
 					
 					server.walkTo(walk, state).then(function(){
 					}, function(response){
@@ -843,6 +845,7 @@ try{
 
 								entity.position.local.y = y;
 								entity.position.local.x = x;
+								entity.updatePosition();
 								entity.sprite.idle();
 							}
 
@@ -1060,9 +1063,9 @@ try{
 					path         = The.map.findPath(nearestTiles, [toTile]);
 
 				if (path && path.path) {
-					console.log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")");
-					console.group();
-					console.log(path);
+					this.Log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")", LOG_DEBUG);
+					//console.group();
+					this.Log(path, LOG_DEBUG);
 
 					// inject walk to beginning of path depending on where player is relative to start tile
 					var startTile = path.start.tile,
@@ -1082,25 +1085,25 @@ try{
 						// Inject walk to this tile
 						var distance    = -1*(playerPosition.y - startTile.y * Env.tileSize),
 							walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), startTile.offset(0, 0));
-						console.log("Recalibrating Walk (Y): ");
-						console.log("	steps: "+distance);
+						this.Log("Recalibrating Walk (Y): ", LOG_DEBUG);
+						this.Log("	steps: "+distance, LOG_DEBUG);
 						path.walks.unshift(walk);
 					}
 					if (recalibrateX) {
 						// Inject walk to this tile
 						var distance    = -1*(playerPosition.x - startTile.x * Env.tileSize),
 							walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
-						console.log("Recalibrating Walk (X): ");
-						console.log("	steps: "+distance+" FROM ("+The.player.position.local.x+") TO ("+startTile.x*Env.tileSize+")");
+						this.Log("Recalibrating Walk (X): ", LOG_DEBUG);
+						this.Log("	steps: "+distance+" FROM ("+The.player.position.local.x+") TO ("+startTile.x*Env.tileSize+")", LOG_DEBUG);
 						path.walks.unshift(walk);
 					}
 					path.walks[0].time = time;
 
 					for (i=0; i<path.walks.length; ++i) {
 						var walk = path.walks[i];
-						console.log("Walk: ("+walk.direction+", "+walk.distance+", "+walk.steps+")");
+						this.Log("Walk: ("+walk.direction+", "+walk.distance+", "+walk.steps+")", LOG_DEBUG);
 					}
-					console.groupEnd();
+					//console.groupEnd();
 
 					if (path.walks.length) {
 						The.player.addPath(path, true);
@@ -1113,7 +1116,7 @@ try{
 				}
 
 				The.user.clickedTile( toTile );
-			};
+			}.bind(this);
 
 			// Load testing tools
 			//////////////////////

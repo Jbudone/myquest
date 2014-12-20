@@ -17,6 +17,7 @@ define(['loggable'], function(Loggable){
 		this.ui        = null;
 		this.map       = null;
 		this.tilesheet = null;
+		this.tilesheets= null;
 		
 		this.settings  = {
 			lineWidth: 3,
@@ -26,7 +27,7 @@ define(['loggable'], function(Loggable){
 
 		this.setMap = function(map){
 			this.map       = map;
-			this.tilesheet = map.sheet;
+			this.tilesheets = map.sheets;
 		};
 
 		this.initialize = function(options){
@@ -61,14 +62,23 @@ define(['loggable'], function(Loggable){
 			this.ctxBackground.lineWidth                   = options.lineWidth;
 		};
 
+		this.sheetFromGID = function(gid){
+			for (var i=0; i<this.tilesheets.length; ++i) {
+				var tilesheet = this.tilesheets[i];
+				if (gid >= tilesheet.gid.first &&
+					gid < tilesheet.gid.last)
+						return tilesheet;
+			}
+		};
+
 		this.render = function(){
 
 			// Redraw the entities every frame
 			this.ctxEntities.clearRect(0, 0, this.canvasEntities.width, this.canvasEntities.height);
-			var sheetData   = this.tilesheet,
-				sheet       = sheetData.image,
-				floating    = this.tilesheet.data.floating,
-				collisions  = this.tilesheet.data.collisions;
+			var sheetData  = this.tilesheets[0]; // TODO: fix this: necessary in some places
+				//sheet       = sheetData.image,
+				//floating    = this.tilesheet.data.floating,
+				//collisions  = this.tilesheet.data.collisions;
 
 			// Only redraw the background if the camera has moved
 			if (this.camera.updated) {
@@ -80,7 +90,7 @@ define(['loggable'], function(Loggable){
 				var tileSize    = Env.tileSize,
 					pageWidth   = Env.pageWidth,
 					pageHeight  = Env.pageHeight,
-					tilesPerRow = sheetData.tilesPerRow,
+					//tilesPerRow = sheetData.tilesPerRow,
 					offsetY     = The.camera.offsetY,
 					offsetX     = The.camera.offsetX;
 
@@ -190,6 +200,10 @@ define(['loggable'], function(Loggable){
 			for (var coord in page.sprites) {
 				var spriteObj=page.sprites[coord],
 					sprite=(spriteObj?spriteObj.sprite-1:-1),
+					sheetData = this.sheetFromGID(sprite),
+					sheet = sheetData.image,
+					floating    = sheetData.data.floating,
+					collisions  = sheetData.data.collisions,
 					tilesPerRow=sheetData.tilesPerRow,
 					scale=Env.tileScale,
 					iy = Math.floor(coord / Env.pageWidth),
@@ -268,7 +282,11 @@ define(['loggable'], function(Loggable){
 				for (var coord in neighbour.sprites) {
 					var spriteObj=neighbour.sprites[coord],
 						sprite=(spriteObj?spriteObj.sprite-1:-1),
-						tilesPerRow=20, // TODO: find this: Spritesheet tiles per row
+						sheetData = this.sheetFromGID(sprite),
+						sheet = sheetData.image,
+						floating    = sheetData.data.floating,
+						collisions  = sheetData.data.collisions,
+						tilesPerRow=sheetData.tilesPerRow,
 						scale=Env.tileScale,
 						iy = Math.floor(coord / Env.pageWidth),
 						ix = coord % Env.pageWidth,
@@ -323,7 +341,7 @@ define(['loggable'], function(Loggable){
 							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 				}
 
-				// Draw sprites
+				// Draw neighbour movables
 				for(var i=0; i<neighbours.length; ++i) {
 					var neighbourInfo = neighbours[i],
 						neighbour = neighbourInfo.neighbour,
@@ -356,6 +374,8 @@ define(['loggable'], function(Loggable){
 			// draw floating sprites
 			for (var i=0; i<floatingSprites.length; ++i) {
 				var floatingSprite = floatingSprites[i],
+					sheetData = this.sheetFromGID(floatingSprite.sprite),
+					sheet = sheetData.image,
 					tileSize = Env.tileSize,
 					scale = Env.tileScale,
 					sx = floatingSprite.sx,
@@ -384,11 +404,10 @@ define(['loggable'], function(Loggable){
 			(function SetVarsA(){
 				scale       = Env.tileScale,
 				tileSize    = Env.tileSize,
-				sheet       = renderer.tilesheet.image;
 				pageWidth   = Env.pageWidth,
 				pageHeight  = Env.pageHeight,
-				tilesPerRow = renderer.tilesheet.tilesPerRow,
-				sheet       = renderer.tilesheet.image,
+				//tilesPerRow = renderer.tilesheet.tilesPerRow,
+				//sheet       = renderer.tilesheet.image,
 				offsetY     = The.camera.offsetY+offY,
 				offsetX     = The.camera.offsetX-offX;
 			}());
@@ -403,17 +422,57 @@ define(['loggable'], function(Loggable){
 						sy        = null,
 						sx        = null,
 						py        = null,
-						px        = null;
+						px        = null,
+						sheet     = null,
+						sheetData = null,
+						tilesPerRow = null;
 					(function SetVarsB(){
 						tile      = page.tiles[iy*pageWidth+ix]-1,
 						spriteObj = page.sprites[iy*pageWidth+ix],
 						sprite    = (spriteObj?spriteObj.sprite-1:-1),
-						ty        = Math.max(-1,parseInt(tile/tilesPerRow)),
-						tx        = Math.max(-1,tile%tilesPerRow),
-						sy        = Math.max(-1,parseInt(sprite/tilesPerRow)),
-						sx        = Math.max(-1,sprite%tilesPerRow),
+						ty        = null,//Math.max(-1,parseInt(tile/tilesPerRow)),
+						tx        = null,//Math.max(-1,tile%tilesPerRow),
+						sy        = null,//Math.max(-1,parseInt(sprite/tilesPerRow)),
+						sx        = null,//Math.max(-1,sprite%tilesPerRow),
 						py        = (iy*tileSize+offsetY)*scale,
 						px        = (ix*tileSize-offsetX)*scale;
+
+						if (tile != -1) {
+							for (var i=0; i<renderer.tilesheets.length; ++i) {
+								var tilesheet = renderer.tilesheets[i];
+								if (tile >= tilesheet.gid.first && tile < tilesheet.gid.last) {
+									sheetData = tilesheet;
+									sheet = sheetData.image;
+
+									tile -= tilesheet.gid.first;
+									tilesPerRow = tilesheet.tilesPerRow;
+									ty = parseInt(tile/tilesPerRow);
+									tx = tile%tilesPerRow;
+
+									renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+									break;
+								}
+							}
+						}
+
+						if (sprite != -1 && spriteObj.hasOwnProperty('static')) {
+							for (var i=0; i<renderer.tilesheets.length; ++i) {
+								var tilesheet = renderer.tilesheets[i];
+								if (sprite >= tilesheet.gid.first && sprite < tilesheet.gid.last) {
+									sheetData = tilesheet;
+									sheet = sheetData.image;
+
+									tile -= tilesheet.gid.first;
+									tilesPerRow = tilesheet.tilesPerRow;
+									ty = parseInt(sprite/tilesPerRow);
+									tx = sprite%tilesPerRow;
+
+									renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+									break;
+								}
+							}
+						}
+
 					}());
 
 					// TODO: only render tile if it will display on screen (figure this out from page
@@ -422,13 +481,13 @@ define(['loggable'], function(Loggable){
 					// 	this.Log("Bad spot!");
 					// }
 
-					(function Drawing(){
-						if (ty!=-1 && tx!=-1)
-							renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-						// Draw sprite ONLY if its static
-						if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static'))
-							renderer.ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-					}());
+					// (function Drawing(){
+					// 	if (ty!=-1 && tx!=-1)
+					// 		renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+					// 	// Draw sprite ONLY if its static
+					// 	if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static'))
+					// 		renderer.ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+					// }());
 				}
 			}
 		};

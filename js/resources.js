@@ -55,9 +55,10 @@ define(['jquery', 'loggable'], function($, Loggable){
 		}.bind(this)),
 
 		findSheetFromFile = (function(image){
+			var img = image.split('/').pop();
 			for (var sheet in this.sheets) {
 				var file = this.sheets[sheet].file.split('/').pop();
-				if (file == image) {
+				if (file == img) {
 					return this.sheets[sheet];
 				}
 			}

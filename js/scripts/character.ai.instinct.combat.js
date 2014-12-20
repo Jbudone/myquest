@@ -122,6 +122,13 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			if (this.target) {
 				this.target = null;
 			}
+
+			// FIXME: not the best way to do this..
+			for (var neuron in brain.neuralNet.neurons) {
+				var target = brain.neuralNet.neurons[neuron].character;
+				this.stopListeningToTarget(target);
+			}
+
 		};
 
 		this.registerHook('update');
@@ -198,6 +205,31 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			}
 		};
 
+		this.stopListeningToTarget = function(target){
+			if (!(target instanceof Character)) return UnexpectedError("Target not a Character");
+
+			this.stopListeningTo(target);
+			brain.neuralNet.remove(target.entity.id);
+
+			// FIXME: what if we have news items regarding this character? Need to remove
+			// those, or have a setTarget check that the target has died?
+			if (this.target && this.target === target) {
+				this.target = null;
+			}
+		};
+
+		this.listenToTarget = function(target){
+			if (!(target instanceof Character)) return UnexpectedError("Target not a Character");
+
+			// listen to entity
+			this.listenTo(target, EVT_DIED, function(target){
+				console.log("AWWW YOU DIED!!! :( :(");
+				this.Log("You died :(");
+				this.stopListeningToTarget(target);
+			});
+
+		};
+
 		// If we get distracted by something (eg. user clicks to walk somewhere) then leave combat and forget
 		// all targets from the neural network
 		this.distracted = function(){
@@ -207,8 +239,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			if (this.isActive) {
 				// TODO: Leave combat; forget neural network of enemies
 				brain.leaveState('combat');
-			} else {
-				this.Log("Getting distracted, but not currently in combat mode...", LOG_ERROR);
+				brain.neuralNet.reset();
 			}
 		};
 
@@ -238,6 +269,12 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				// TODO: upstream to listen to character
 				_script.listenTo(_character, EVT_ATTACKED).then(function(_character, enemy, amount){
 					_combat.attackedBy(enemy, amount);
+
+					if (_character.isPlayer) {
+
+					} else {
+						_combat.listenToTarget(enemy);
+					}
 				});
 
 				_script.listenTo(_character, EVT_DISTRACTED).then(function(){
@@ -265,6 +302,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 									   var time = now();
 									   if (time - request.time > 3000) {
 
+										   this.Log("Could not perform request in time..", LOG_ERROR);
 										   player.respond(request.evtid, false, {
 											   msg: "Could not perform request within time"
 										   });
@@ -336,6 +374,8 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					   if (!character.isAttackable()) err = "Character is not attackable";
 
 					   if (err) {
+						   this.Log("Disallowing user attack", LOG_ERROR);
+						   this.Log(err, LOG_ERROR);
 						   player.respond(evt.id, false, {
 							   reason: err
 						   });
@@ -465,6 +505,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				// TODO: upstream from characer
 				_script.listenTo(_character, EVT_ATTACKED).then(function(_character, enemy, amount){
 					_combat.attackedBy(enemy, amount);
+					_combat.listenToTarget(enemy);
 				});
 
 				_script.listenTo(_character, EVT_DISTRACTED).then(function(){
@@ -483,21 +524,9 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					if (!brain.neuralNet.has(entity.id)) {
 						this.Log("Adding entity to our neural net");
 						var neuron = brain.neuralNet.add(character);
-
-						// TODO: listen to entity
-						this.listenTo(character, EVT_DIED, function(){
-							console.log("AWWW YOU DIED!!! :( :(");
-							this.Log("You died :(");
-							this.stopListeningTo(character);
-							brain.neuralNet.remove(entity.id);
-
-							// FIXME: what if we have news items regarding this character? Need to remove
-							// those, or have a setTarget check that the target has died?
-							if (this.target && this.target === entity) {
-								this.target = null;
-							}
-						});
 					}
+
+					_combat.listenToTarget(character);
 
 					_combat.setTarget(entity.character);
 				}.bind(this));
