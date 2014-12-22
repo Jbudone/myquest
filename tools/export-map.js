@@ -173,7 +173,7 @@ fs.readFile('../data/world.json', function(err, data) {
 							first: tileset.firstgid - 1,
 							last: (tileset.imageheight / tileset.tileheight) *
 								  (tileset.imagewidth /  tileset.tilewidth) +
-								  tileset.firstgid - 1
+								  tileset.firstgid - 2 // NOTE: 2 because firstgid had -1
 						},
 						tileWidth: tileset.tilewidth,
 						tileHeight: tileset.tileHeight,

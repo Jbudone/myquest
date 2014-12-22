@@ -190,8 +190,6 @@ define(['loggable'], function(Loggable){
 
 			}
 
-
-
 			var floatingSprites = [];
 
 
@@ -200,7 +198,7 @@ define(['loggable'], function(Loggable){
 			for (var coord in page.sprites) {
 				var spriteObj=page.sprites[coord],
 					sprite=(spriteObj?spriteObj.sprite-1:-1),
-					sheetData = this.sheetFromGID(sprite),
+					sheetData = spriteObj.sheet || this.sheetFromGID(sprite),
 					sheet = sheetData.image,
 					floating    = sheetData.data.floating,
 					collisions  = sheetData.data.collisions,
@@ -208,24 +206,27 @@ define(['loggable'], function(Loggable){
 					scale=Env.tileScale,
 					iy = Math.floor(coord / Env.pageWidth),
 					ix = coord % Env.pageWidth,
-					sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-					sx=Math.max(-1,sprite%tilesPerRow),
-					tileSize = Env.tileSize,
-					py=(iy*tileSize+this.camera.offsetY)*scale,
-					px=(ix*tileSize-this.camera.offsetX)*scale;
+					sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
+					sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
+					tileSize = sheetData.tileSize.width,
+					py=(iy*Env.tileSize+this.camera.offsetY)*scale,
+					px=(ix*Env.tileSize-this.camera.offsetX)*scale;
+
+				if (!spriteObj.sheet) spriteObj.sheet = sheetData;
 				try {
-					if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
+					if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) { // FIXME: static!?
 						if (floating !== 'undefined' &&
 							floating.indexOf(sprite) >= 0) {
 							floatingSprites.push({
 								sprite: sprite,
+								sheet: sheetData,
 								sx: sx,
 								sy: sy,
 								px: px,
 								py: py
 							});
 						} else {
-							this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+							this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 						}
 					}
 				} catch(e) {
@@ -282,7 +283,7 @@ define(['loggable'], function(Loggable){
 				for (var coord in neighbour.sprites) {
 					var spriteObj=neighbour.sprites[coord],
 						sprite=(spriteObj?spriteObj.sprite-1:-1),
-						sheetData = this.sheetFromGID(sprite),
+						sheetData = spriteObj.sheet || this.sheetFromGID(sprite),
 						sheet = sheetData.image,
 						floating    = sheetData.data.floating,
 						collisions  = sheetData.data.collisions,
@@ -290,12 +291,13 @@ define(['loggable'], function(Loggable){
 						scale=Env.tileScale,
 						iy = Math.floor(coord / Env.pageWidth),
 						ix = coord % Env.pageWidth,
-						sy=Math.max(-1,parseInt(sprite/tilesPerRow)),
-						sx=Math.max(-1,sprite%tilesPerRow),
-						tileSize = Env.tileSize,
-						py=(iy*tileSize+this.camera.offsetY+offY)*scale,
-						px=(ix*tileSize-this.camera.offsetX+offX)*scale;
+						sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
+						sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
+						tileSize = sheetData.tileSize.width,
+						py=(iy*Env.tileSize+this.camera.offsetY+offY)*scale,
+						px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
 
+					if (!spriteObj.sheet) spriteObj.sheet = sheetData;
 					try {
 						if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
 							if (floating !== 'undefined' &&
@@ -303,13 +305,14 @@ define(['loggable'], function(Loggable){
 
 								floatingSprites.push({
 									sprite: sprite,
+									sheet: sheetData,
 									sx: sx,
 									sy: sy,
 									px: px,
 									py: py
 								});
 							} else {
-								this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+								this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 							}
 						}
 					} catch(e) {
@@ -374,15 +377,15 @@ define(['loggable'], function(Loggable){
 			// draw floating sprites
 			for (var i=0; i<floatingSprites.length; ++i) {
 				var floatingSprite = floatingSprites[i],
-					sheetData = this.sheetFromGID(floatingSprite.sprite),
+					sheetData = floatingSprite.sheet,
 					sheet = sheetData.image,
-					tileSize = Env.tileSize,
+					tileSize = sheetData.tileSize.width,
 					scale = Env.tileScale,
 					sx = floatingSprite.sx,
 					sy = floatingSprite.sy,
 					px = floatingSprite.px,
 					py = floatingSprite.py;
-				this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
+				this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 			}
 
 		};
@@ -427,50 +430,38 @@ define(['loggable'], function(Loggable){
 						sheetData = null,
 						tilesPerRow = null;
 					(function SetVarsB(){
-						tile      = page.tiles[iy*pageWidth+ix]-1,
-						spriteObj = page.sprites[iy*pageWidth+ix],
-						sprite    = (spriteObj?spriteObj.sprite-1:-1),
-						ty        = null,//Math.max(-1,parseInt(tile/tilesPerRow)),
-						tx        = null,//Math.max(-1,tile%tilesPerRow),
-						sy        = null,//Math.max(-1,parseInt(sprite/tilesPerRow)),
-						sx        = null,//Math.max(-1,sprite%tilesPerRow),
-						py        = (iy*tileSize+offsetY)*scale,
-						px        = (ix*tileSize-offsetX)*scale;
+						tile      = page.tiles[iy*pageWidth+ix]-1;
 
 						if (tile != -1) {
-							for (var i=0; i<renderer.tilesheets.length; ++i) {
-								var tilesheet = renderer.tilesheets[i];
-								if (tile >= tilesheet.gid.first && tile < tilesheet.gid.last) {
-									sheetData = tilesheet;
-									sheet = sheetData.image;
+							sheetData = renderer.sheetFromGID(tile);
+							sheet     = sheetData.image;
+							tilesPerRow=sheetData.tilesPerRow;
+							tileSize = sheetData.tileSize.width; // TODO: width/height
+							// ty        = null,//Math.max(-1,parseInt(tile/tilesPerRow)),
+							// tx        = null,//Math.max(-1,tile%tilesPerRow),
+							// sy        = null,//Math.max(-1,parseInt(sprite/tilesPerRow)),
+							// sx        = null,//Math.max(-1,sprite%tilesPerRow),
+						// ty = Math.floor(coord / Env.pageWidth),
+						// tx = coord % Env.pageWidth,
+						ty=Math.max(-1,parseInt((tile-sheetData.gid.first)/tilesPerRow));
+						tx=Math.max(-1,(tile-sheetData.gid.first)%tilesPerRow);
+							py        = (iy*Env.tileSize+offsetY)*scale;
+							px        = (ix*Env.tileSize-offsetX)*scale;
+							// for (var i=0; i<renderer.tilesheets.length; ++i) {
+							// 	var tilesheet = renderer.tilesheets[i];
+							// 	if (tile >= tilesheet.gid.first && tile < tilesheet.gid.last) {
+							// 		sheetData = tilesheet;
+							// 		sheet = sheetData.image;
 
-									tile -= tilesheet.gid.first;
-									tilesPerRow = tilesheet.tilesPerRow;
-									ty = parseInt(tile/tilesPerRow);
-									tx = tile%tilesPerRow;
+							// 		tile -= tilesheet.gid.first;
+							// 		tilesPerRow = tilesheet.tilesPerRow;
+							// 		ty = parseInt(tile/tilesPerRow);
+							// 		tx = tile%tilesPerRow;
 
-									renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-									break;
-								}
-							}
-						}
-
-						if (sprite != -1 && spriteObj.hasOwnProperty('static')) {
-							for (var i=0; i<renderer.tilesheets.length; ++i) {
-								var tilesheet = renderer.tilesheets[i];
-								if (sprite >= tilesheet.gid.first && sprite < tilesheet.gid.last) {
-									sheetData = tilesheet;
-									sheet = sheetData.image;
-
-									tile -= tilesheet.gid.first;
-									tilesPerRow = tilesheet.tilesPerRow;
-									ty = parseInt(sprite/tilesPerRow);
-									tx = sprite%tilesPerRow;
-
-									renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*tileSize, scale*tileSize);
-									break;
-								}
-							}
+									renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+									// break;
+							// 	}
+							// }
 						}
 
 					}());
@@ -490,6 +481,35 @@ define(['loggable'], function(Loggable){
 					// }());
 				}
 			}
+
+
+				for (var coord in page.sprites) {
+					var spriteObj=page.sprites[coord],
+						sprite=(spriteObj?spriteObj.sprite-1:-1),
+						sheetData = spriteObj.sheet || renderer.sheetFromGID(sprite),
+						sheet = sheetData.image,
+						floating    = sheetData.data.floating,
+						collisions  = sheetData.data.collisions,
+						tilesPerRow=sheetData.tilesPerRow,
+						scale=Env.tileScale,
+						iy = Math.floor(coord / Env.pageWidth),
+						ix = coord % Env.pageWidth,
+						sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
+						sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
+						tileSize = sheetData.tileSize.width, // TODO: width/height
+						py=(iy*Env.tileSize+this.camera.offsetY+offY)*scale,
+						px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
+
+					if(!spriteObj.sheet) spriteObj.sheet = sheetData;
+					try {
+						if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static')) {
+								this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+						}
+					} catch(e) {
+						this.Log("Error!");
+					}
+				}
+
 		};
 	};
 
