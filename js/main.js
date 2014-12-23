@@ -604,7 +604,7 @@ try{
 			}
 
 			Resources.loadScripts(Resources._scriptRes).then(function(){
-				delete Resources._scriptRes;
+				//delete Resources._scriptRes; // TODO: why delete them if this needs to be reloaded ???
 
 				The.scriptmgr = new ScriptMgr();
 				loaded();

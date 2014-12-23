@@ -43,7 +43,7 @@ define(function(){
 			'Instinct': (logVerbose),
 			'Combat': (logVerbose),
 			'Movement': (logVerbose),
-			'Default': (logImportant)
+			'Default': (logVerbose)
 		};
 	};
 

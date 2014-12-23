@@ -170,7 +170,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 					// FIXME: hook died
 					this.entity.listenTo(this, EVT_DIED, function(){
 						this.stopAllEventsAndListeners();
-					});
+					}, HIGH_PRIORITY);
 				}
 			}
 		};
