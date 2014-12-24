@@ -234,6 +234,8 @@ define(['loggable'], function(Loggable){
 				}
 			}
 
+
+
 			// Draw border
 			//	Camera width/height and offset (offset by -border)
 			//	Draw ALL neighbours using this algorithm
@@ -273,13 +275,14 @@ define(['loggable'], function(Loggable){
 			}
 
 
-			// Draw sprites
+			// Draw Neighbours
 			for(var i=0; i<neighbours.length; ++i) {
 				var neighbourInfo = neighbours[i],
 					neighbour = neighbourInfo.neighbour,
 					offX = neighbourInfo.offsetX,
 					offY = neighbourInfo.offsetY;
 
+				// Draw sprites
 				for (var coord in neighbour.sprites) {
 					var spriteObj=neighbour.sprites[coord],
 						sprite=(spriteObj?spriteObj.sprite-1:-1),
@@ -319,6 +322,7 @@ define(['loggable'], function(Loggable){
 						this.Log("Error!");
 					}
 				}
+
 
 			}
 
@@ -509,6 +513,32 @@ define(['loggable'], function(Loggable){
 						this.Log("Error!");
 					}
 				}
+
+			// Draw items
+			for (var coord in page.items) {
+				var itemObj=page.items[coord],
+					sprite=(itemObj?itemObj.sprite-1:-1),
+					sheetData = itemObj.sheet || this.sheetFromGID(sprite),
+					sheet = sheetData.image,
+					tilesPerRow=sheetData.tilesPerRow,
+					scale=Env.tileScale,
+					iy = Math.floor(coord / Env.pageWidth),
+					ix = coord % Env.pageWidth,
+					sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
+					sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
+					tileSize = sheetData.tileSize.width,
+					py=(iy*Env.tileSize+this.camera.offsetY)*scale,
+					px=(ix*Env.tileSize-this.camera.offsetX)*scale;
+
+				if (!itemObj.sheet) itemObj.sheet = sheetData;
+				try {
+					if (sy!=-1 && sx!=-1 && sprite) {
+						this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+					}
+				} catch(e) {
+					this.Log("Error!");
+				}
+			}
 
 		};
 	};

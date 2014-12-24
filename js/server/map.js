@@ -10,7 +10,6 @@ define(['page', 'movable'], function(Page, Movable){
 		spawns: {},
 
 		loadMap: function(){
-			debugger;
 			// Initialize map
 			var pageHeight    = Env.pageHeight, // TODO: global maps properties elsewhere
 				pageWidth     = Env.pageWidth,
@@ -199,7 +198,6 @@ define(['page', 'movable'], function(Page, Movable){
 
 					for (var spriteCoord in mapCell.sprites) {
 
-						if (parseInt(mapCell.sprites[spriteCoord]) == 1) debugger;
 						var sprite = mapCell.sprites[spriteCoord],
 							coord  = parseInt(spriteCoord),
 							eY     = Math.floor(coord / mapPageWidth),
@@ -252,6 +250,56 @@ define(['page', 'movable'], function(Page, Movable){
 									}
 					}
 
+					for (var itemCoord in mapCell.items) {
+
+						var sprite = mapCell.items[itemCoord],
+							coord  = parseInt(itemCoord),
+							eY     = Math.floor(coord / mapPageWidth),
+							eX     = coord - eY*mapPageWidth,
+							mY     = mapYCoord + eY,
+							mX     = mapXCoord + eX,
+							pageY  = Math.floor(mY / pageHeight),
+							pageX  = Math.floor(mX / pageWidth),
+							pageI  = pageY*this.pagesPerRow + pageX,
+							pY     = mY - pageY*pageHeight,
+							pX     = mX - pageX*pageWidth,
+							index  = pY*pageWidth + pX,
+							page   = pages[pageI];
+
+
+						if (pY < 0 || pX < 0) continue; // Belongs in another page
+
+						var item = {
+								sprite: sprite,
+								id: null
+							};
+
+						var sheet = null;
+						for (var i=0; i<this.sheets.length; ++i) {
+							if (sprite >= this.sheets[i].gid.first &&
+								sprite < this.sheets[i].gid.last) {
+
+								sheet = this.sheets[i];
+							}
+						}
+
+						if (sheet == null) {
+							return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+						}
+
+						if (!sheet.hasOwnProperty('data')) {
+							return UnexpectedError("Sheet ("+ sheet.file +") does not have data property");
+						}
+
+						if (!sheet.data.hasOwnProperty('objects')) {
+							return UnexpectedError("Sheet ("+ sheet.file +") does not have any objects; yet item ("+ sprite +") references sheet");
+						}
+
+						
+						item.id = sheet.data.objects[sprite - sheet.gid.first - 1];
+						page.items[index] = item;
+
+					}
 
 
 				}

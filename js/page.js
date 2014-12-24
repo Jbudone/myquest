@@ -23,6 +23,7 @@ define(['eventful','movable'], function(Eventful,Movable){
 
 		this.sprites = {};
 		this.movables = {};
+		this.items = {};
 
 		// A matrix of collidable tiles; each element is a number which represents the i_th row of this page.
 		// That number is a bitmask where 1 represents a collision and 0 is an open tile

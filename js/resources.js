@@ -16,6 +16,7 @@ define(['jquery', 'loggable'], function($, Loggable){
 			maps: {},
 			npcs: {},
 			scripts: {},
+			items: {},
 
 			initialize: new Function(),
 			findSheetFromFile: new Function(),

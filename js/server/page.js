@@ -124,6 +124,7 @@ define(['movable'], function(Movable){
 				serialized.tiles       = this.tiles;
 				serialized.sprites     = this.sprites;
 				serialized.collidables = this.collidables;
+				serialized.items       = this.items;
 			}
 
 			if (options |= PAGE_SERIALIZE_MOVABLES) {

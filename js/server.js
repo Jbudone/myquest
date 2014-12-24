@@ -3,6 +3,7 @@ var d = domain.create();
 
 d.on('error', function(e){
 	console.log(e);
+	console.trace();
 });
 
 d.run(function(){
@@ -156,12 +157,17 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					};
 					for (var i=0; i<res.tilesheets.list.length; ++i) {
 						var _sheet = res.tilesheets.list[i],
-						sheet  = makeSheet( _sheet );
+							sheet  = makeSheet( _sheet );
+
 
 						if (_sheet.data.objects) {
-							sheet.data.objects = [];
-							for (var j=0; j<_sheet.data.objects.length; ++j) {
-								sheet.data.objects.push( parseInt( _sheet.data.objects[j] ) );
+							sheet.data.objects = {};
+							for (var objCoord in _sheet.data.objects) {
+								var id = _sheet.data.objects[objCoord];
+								Resources.items[id] = {
+									isTotallyAnItem: true, // TODO: item details here
+								};
+								sheet.data.objects[ parseInt(objCoord) ] = id;
 							}
 						}
 

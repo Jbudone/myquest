@@ -93,7 +93,7 @@ fs.readFile('../data/world.json', function(err, data) {
 						sprites: null,
 						zoning: null,
 						spawns: null,
-						items: null, // TODO
+						items: null,
 						areas: null // TODO
 					};
 
@@ -142,6 +142,7 @@ fs.readFile('../data/world.json', function(err, data) {
 
 				layers['sprites'].data  = layers['sprites'].data.data;
 				if (layers['spawns'] !== null) layers['spawns'].data = layers['spawns'].data.objects;
+				if (layers['items'] !== null) layers['items'].data = layers['items'].data.data;
 
 
 				mapJSON.MapFile.properties.height = layers.base.height;
@@ -149,18 +150,6 @@ fs.readFile('../data/world.json', function(err, data) {
 				// ==================================================================================
 
 
-
-/*
-				var base = { height: parseInt(baseLayer.height), width: parseInt(baseLayer.width) },
-					sprites = { height: parseInt(spritesLayer.height), width: parseInt(spritesLayer.width), length: spritesLayer.data.length },
-					spawns = {},
-					zones = { out:[], in:[] };
-
-				map.zones = zones;
-				map.spawns = spawns;
-				mapJSON.MapFile.properties.width      = base.width;
-				mapJSON.MapFile.properties.height     = base.height;
-*/
 
 				// Setup all tilesheets
 				for (var i=0; i<tilesets.length; ++i) {
@@ -184,14 +173,6 @@ fs.readFile('../data/world.json', function(err, data) {
 					});
 				}
 
-/*
-				var spawnTileset = null;
-				for (var i=0; i<mapJSON.MapFile.properties.tilesets.length; ++i) {
-					if (mapJSON.MapFile.properties.tilesets[i].name == "npc") {
-						spawnTileset = mapJSON.MapFile.properties.tilesets[i];
-					}
-				}
-*/
 
 				// Build base tiles & sprites
 				//
@@ -203,7 +184,8 @@ fs.readFile('../data/world.json', function(err, data) {
 					for(var x=0; x<layers.base.width; x+=pageWidth) {
 						var page = {
 							tiles: [],
-							sprites: {}
+							sprites: {},
+							items: {}
 						};
 						map.pages[y][x] = page;
 
@@ -220,6 +202,16 @@ fs.readFile('../data/world.json', function(err, data) {
 										page.sprites[iy*pageWidth + ix] = sprite;
 									}
 								}
+
+								// Check if there's an item here
+								if (layers.items &&
+								     y+iy<layers.items.height && x+ix<layers.items.width && // Within item layer range?
+									 (iy+y)*layers.sprites.width+(ix+x)<layers.items.data.length) {
+									var item = layers.items.data[(iy+y)*layers.items.width+(ix+x)];
+									if (item != 0) {
+										page.items[iy*pageWidth + ix] = item;
+									}
+								 }
 							}
 						}
 					}
@@ -268,6 +260,8 @@ fs.readFile('../data/world.json', function(err, data) {
 
 				}
 
+
+
 				// Spawn Layer
 				///////////////////
 				if (layers.spawns) {
@@ -293,15 +287,6 @@ fs.readFile('../data/world.json', function(err, data) {
 					}
 				}
 
-
-				// if (tilesets.length != 1) {
-				// 	console.log(tilesets);
-				// 	throw new Error("Too many tilesets!? ("+tilesets.length+")");
-				// }
-
-				//var tileset = tilesets[0].image;
-				//if (tileset.indexOf('../')==0) tileset = tileset.substr(3);
-				//mapJSON.MapFile.properties.tileset = tileset;
 				
 
 				fs.writeFile(mapFile, JSON.stringify(mapJSON), function(err){

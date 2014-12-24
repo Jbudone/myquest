@@ -61,6 +61,7 @@ define(['page','movable'], function(Page,Movable){
 				page.tiles       = evtPage.tiles;
 				page.sprites     = evtPage.sprites;
 				page.collidables = evtPage.collidables;
+				page.items       = evtPage.items;
 				
 				
 				
