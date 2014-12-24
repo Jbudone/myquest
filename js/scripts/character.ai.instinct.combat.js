@@ -221,6 +221,12 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 		this.listenToTarget = function(target){
 			if (!(target instanceof Character)) return UnexpectedError("Target not a Character");
 
+			// If the entity is already in our neural net, then we're already listening to him
+			if (brain.neuralNet.has(target.entity.id)) return;
+
+			this.Log("Adding entity to our neural net");
+			var neuron = brain.neuralNet.add(target);
+
 			// listen to entity
 			this.listenTo(target, EVT_DIED, function(target){
 				console.log("AWWW YOU DIED!!! :( :(");
@@ -518,12 +524,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					if (character.isPlayer) {
 						// TODO: follow player
 						return;
-					}
-
-					// If the entity isn't in our neural net yet, add him
-					if (!brain.neuralNet.has(entity.id)) {
-						this.Log("Adding entity to our neural net");
-						var neuron = brain.neuralNet.add(character);
 					}
 
 					_combat.listenToTarget(character);
