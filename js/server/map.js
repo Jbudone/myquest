@@ -271,7 +271,9 @@ define(['page', 'movable'], function(Page, Movable){
 
 						var item = {
 								sprite: sprite,
-								id: null
+								id: null,
+								coord: index,
+								page: pageI
 							};
 
 						var sheet = null;
@@ -446,6 +448,7 @@ define(['page', 'movable'], function(Page, Movable){
 			}
 
 			if (!(tile instanceof Error)) {
+				if (entity.path) entity.path.onFailed();
 				entity.path = null;
 				entity.position = {
 					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),

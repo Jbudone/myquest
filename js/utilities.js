@@ -103,6 +103,8 @@ define(['serializable'], function(Serializable){
 		this.id          = (++numPaths);
 		this.walks       = [];
 		this.start       = null; // TODO: NEED THIS (splitWalks)
+		this.onFinished  = new Function();
+		this.onFailed    = new Function();
 
 		this.length=function(){
 			var distance=0;

@@ -22,6 +22,18 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 		this.respawning = {};
 		this.delta = 0;
 
+
+
+		this.activeTiles = {}; // Tiles which scripts are listening too (eg. characters listening to certain tiles)
+		this.hashTile = function(x, y){
+			return y*map.width + x;
+		};
+		var ActiveTile = function(x, y){
+
+			this.hash = _game.hashTile(x, y);
+			this.listeners = [];
+		};
+
 		this.createCharacter = function(entity){
 			var entityID  = entity.id,
 				character = null;

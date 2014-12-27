@@ -14,6 +14,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 		this.tileHover = null;
 		this.hoveringEntity = null;
+		this.hoveringItem = null;
 
 		this.messageBox = null;
 

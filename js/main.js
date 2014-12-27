@@ -876,6 +876,20 @@ try{
 					ui.fadeToBlack();
 				});
 
+				The.user.hook('clickedItem', this).then(function(item){
+					var page = The.map.pages[item.page],
+						y    = parseInt(item.coord / Env.pageWidth),
+						x    = item.coord - y*Env.pageWidth,
+						tile = new Tile( page.y + y, page.x + x ),
+						path = The.map.pathfinding.findPath( The.player, tile );
+					console.log(item);
+					The.player.addPath(path).then(function(){
+						console.log("ZOMG I GOT THE ITEM!!");
+					}, function(){
+						console.log("Zawww I couldn't get the item :(");
+					});
+				});
+
 				server.onZone = function(pages){
 					// Zoning information (new pages)
 
@@ -1023,10 +1037,10 @@ try{
 					for (var pageID in The.map.pages) {
 						var page = The.map.pages[pageID],
 							offY = (The.map.curPage.y - page.y)*Env.tileSize - The.camera.offsetY,
-							offX = (The.map.curPage.x - page.x)*Env.tileSize - The.camera.offsetX;
+							offX = (The.map.curPage.x - page.x)*Env.tileSize + The.camera.offsetX;
 						for (var movableID in page.movables) {
 							var movable = page.movables[movableID],
-								px      = movable.position.local.x + offX,
+								px      = movable.position.local.x - offX,
 								py      = movable.position.local.y - offY;
 							if (movable.npc.killable) {
 								if (movable.playerID) continue;
@@ -1038,6 +1052,28 @@ try{
 								}
 							}
 						}
+						if (ui.hoveringEntity) break;
+					}
+
+					ui.hoveringItem = false;
+					for (var pageID in The.map.pages) {
+						var page = The.map.pages[pageID],
+							offY = (The.map.curPage.y - page.y)*Env.tileSize - The.camera.offsetY,
+							offX = (The.map.curPage.x - page.x)*Env.tileSize + The.camera.offsetX;
+						for (var itemCoord in page.items) {
+							var item    = page.items[itemCoord],
+								localY  = parseInt(itemCoord / Env.pageWidth),
+								localX  = itemCoord - localY*Env.pageWidth,
+								px      = localX * Env.tileSize - offX,
+								py      = localY * Env.tileSize - offY;
+							if (mouse.canvasX >= px && mouse.canvasX <= px + 16 &&
+								mouse.canvasY >= py && mouse.canvasY <= py + 16) {
+									// Hovering movable
+									ui.hoveringItem = item;
+									break;
+							}
+						}
+						if (ui.hoveringItem) break;
 					}
 
 					ui.updateCursor();
@@ -1053,6 +1089,12 @@ try{
 				// Attack the enemy we're currently hovering
 				if (ui.hoveringEntity) {
 					The.user.clickedEntity( ui.hoveringEntity );
+					return;
+				}
+
+				// Pickup item we're currently hovering
+				if (ui.hoveringItem) {
+					The.user.clickedItem( ui.hoveringItem );
 					return;
 				}
 

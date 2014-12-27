@@ -527,8 +527,8 @@ define(['loggable'], function(Loggable){
 					sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
 					sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
 					tileSize = sheetData.tileSize.width,
-					py=(iy*Env.tileSize+this.camera.offsetY)*scale,
-					px=(ix*Env.tileSize-this.camera.offsetX)*scale;
+					py=(iy*Env.tileSize+this.camera.offsetY+offY)*scale,
+					px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
 
 				if (!itemObj.sheet) itemObj.sheet = sheetData;
 				try {

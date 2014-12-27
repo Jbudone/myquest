@@ -100,6 +100,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		this.listenTo(this, EVT_ZONE_OUT, function(){
 
 			if (this.path) {
+				this.path.onFailed();
 				this.path = null;
 			}
 		}, HIGH_PRIORITY);
@@ -116,6 +117,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 			// Have we zoned? Disallow stepping page-specific things
 			if (!this.page) {
+				if (this.path) this.path.onFailed();
 				this.path = null;
 			}
 
@@ -128,6 +130,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					if (!_.isArray(this.path.walks) ||
 						this.path.walks.length === 0) {
 
+						this.path.onFailed();
 						this.path = null;
 						return UnexpectedError("Path of length 0 walks");
 					}
@@ -162,6 +165,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 						if (path.walks.length === 0) {
 							// Finished path
 							this.triggerEvent(EVT_FINISHED_PATH, path.id);
+							this.path.onFinished();
 							this.path = null;
 
 							// Finished moving
@@ -266,9 +270,15 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		});
 		
 		this.addPath=function(path, priority){
+
+
 			// add/replace path
 			// TODO: implement priority better?
-			
+
+			if (this.path) {
+				this.path.onFailed();
+			}
+
 			if (this.path && priority) {
 				this.path = path; // replace current path with this
 				this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
@@ -283,22 +293,27 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 			this.path = path; // replace current path with this
 			this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
-			var mov=this;
-			   var logWalk = function(walk) {
-				   var dir = null;
-						if (walk.direction == NORTH) dir = "NORTH";
-				   else if (walk.direction == SOUTH) dir = "SOUTH";
-				   else if (walk.direction == WEST)  dir = "WEST";
-				   else if (walk.direction == EAST)  dir = "EAST";
-				   console.log("		Walk: "+dir+"  ("+walk.distance+")");
-				   if (walk.started) console.log("			WALK ALREADY STARTED!!!");
-			   }, logPath = function(path) {
-				   console.log("	Path:");
-				   console.log("		FROM ("+mov.position.local.y+","+mov.position.local.x+")");
-				   for (var j=0; j<path.walks.length; ++j) {
-					   logWalk(path.walks[j]);
-				   }
-			   }
+			var mov = this,
+				logWalk = function(walk) {
+					var dir = null;
+					if (walk.direction == NORTH) dir = "NORTH";
+					else if (walk.direction == SOUTH) dir = "SOUTH";
+					else if (walk.direction == WEST)  dir = "WEST";
+					else if (walk.direction == EAST)  dir = "EAST";
+					console.log("		Walk: "+dir+"  ("+walk.distance+")");
+					if (walk.started) console.log("			WALK ALREADY STARTED!!!");
+				}, logPath = function(path) {
+					console.log("	Path:");
+					console.log("		FROM ("+mov.position.local.y+","+mov.position.local.x+")");
+					for (var j=0; j<path.walks.length; ++j) {
+						logWalk(path.walks[j]);
+					}
+				}
+
+			return ({then:function(success, failed){
+				if (_.isFunction(success)) this.path.onFinished = success;
+				if (_.isFunction(failed))  this.path.onFailed   = failed;
+			}.bind(this)});
 		};
 
 

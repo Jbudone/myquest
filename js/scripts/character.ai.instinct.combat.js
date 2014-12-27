@@ -268,6 +268,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				this._abilities = [];// TODO: fetch this from NPC
 				if (!_character.isPlayer) {
 					this._abilities = ['melee'];
+					this._abilities = ['sight'];
 				}
 
 				this.setAbilities(this._abilities);
