@@ -876,19 +876,6 @@ try{
 					ui.fadeToBlack();
 				});
 
-				The.user.hook('clickedItem', this).then(function(item){
-					var page = The.map.pages[item.page],
-						y    = parseInt(item.coord / Env.pageWidth),
-						x    = item.coord - y*Env.pageWidth,
-						tile = new Tile( page.y + y, page.x + x ),
-						path = The.map.pathfinding.findPath( The.player, tile );
-					console.log(item);
-					The.player.addPath(path).then(function(){
-						console.log("ZOMG I GOT THE ITEM!!");
-					}, function(){
-						console.log("Zawww I couldn't get the item :(");
-					});
-				});
 
 				server.onZone = function(pages){
 					// Zoning information (new pages)

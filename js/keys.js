@@ -77,6 +77,8 @@ define(function(){
 	addKey('EVT_RESPAWNING');
 	addKey('EVT_RESPAWNED');
 
+	addKey('EVT_GET_ITEM');
+
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Misc. Keys

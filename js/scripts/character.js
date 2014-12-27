@@ -147,6 +147,81 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 				this.brain = this._script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
 				this.initListeners();
 			},
+
+			setAsPlayer: function(){
+
+				var player = _character.entity.player,
+					pickupItem = function(evt, data){
+						var err   = null,
+							coord = null,
+							page  = null,
+							item  = null,
+							y     = null,
+							x     = null,
+							myPos = null;
+
+						if (!_.isObject(data)) err = "No args given";
+
+						if (err === null) {
+							if (!data.hasOwnProperty('coord')) err = "No coordinates given for item";
+							if (isNaN(data.coord)) err = "Bad coordinates given for item";
+							if (!data.hasOwnProperty('page')) err = "No page given";
+							if (isNaN(data.page)) err = "Bad page given";
+						}
+
+						if (err === null) {
+							coord = parseInt(data.coord);
+							page = player.movable.page.map.pages[data.page];
+							if (!page.items.hasOwnProperty(coord)) err = "No item found at " + coord;
+						}
+
+						if (err === null) {
+							item = page.items[coord];
+
+							// Is character in range?
+							y = parseInt(coord / Env.pageWidth);
+							x = coord - y*Env.pageWidth;
+							myPos = player.movable.position.tile;
+
+							if ((y+page.y) !== myPos.y || (x+page.x) !== myPos.x) {
+								if (player.movable.path && !data.hasOwnProperty('retrying')) {
+									player.movable.path.onFinished = (function(){ 
+										console.log("Character not near item.. Trying again after movable finishes path");
+										data.retrying = true;
+										pickupItem.call(_character, evt, data);
+									});
+									player.movable.path.onFailed = (function(){
+										player.respond(evt.id, false, {
+											msg: "Player not near item"
+										});
+									});
+									return;
+								} else {
+									err = "Player not in range of item: ("+x+","+y+") -> ("+myPos.x+","+myPos.y+")";
+								}
+							}
+						}
+
+						if (err) {
+							this.Log("Could not pickup item: " + err);
+							player.respond(evt.id, false, {
+								msg: err
+							});
+
+							return false;
+						}
+
+
+						this.Log("Requesting to pickup item");
+						delete page.items[coord];
+						// TODO: use item
+
+						player.respond(evt.id, true);
+					};
+				player.registerHandler(EVT_GET_ITEM);
+				player.handler(EVT_GET_ITEM).set(pickupItem);
+				
+			},
 		};
 
 		this.client = {
@@ -172,7 +247,11 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						this.stopAllEventsAndListeners();
 					}, HIGH_PRIORITY);
 				}
-			}
+			},
+
+			setAsPlayer: function(){
+				console.log("I'm such a player");
+			},
 		};
 	};
 

@@ -88,6 +88,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (this.players.hasOwnProperty(playerID)) return;
 			if (!this.doHook('addedplayer').pre(entity)) return;
 			this.players[playerID] = entity;
+			if (!(entity.character instanceof Character)) return new UnexpectedError("Entity does not have character property");
+			entity.character.setAsPlayer();
 			console.log("Added player to Game: "+playerID);
 			this.doHook('addedplayer').post(entity);
 		};
@@ -226,6 +228,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					}
 				}.bind(this));
 
+				_game.handleItems.bind(_game)();
+
 				window['game'] = _game; // FIXME: user debugging script for this
 			},
 
@@ -235,6 +239,32 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				this.addCharacter(entity);
 				this.addPlayer(entity);
 				this.characters[entity.id].setToUser();
+			},
+
+			handleItems: function(){
+
+				user.hook('clickedItem', this).then(function(item){
+					var page = map.pages[item.page],
+						y    = parseInt(item.coord / Env.pageWidth),
+						x    = item.coord - y*Env.pageWidth,
+						tile = new Tile( page.y + y, page.x + x ),
+						path = map.pathfinding.findPath( player, tile );
+					console.log(item);
+					player.addPath(path).then(function(){
+						server.request(EVT_GET_ITEM, { coord: item.coord, page: item.page })
+							.then(function(){
+								// Got item
+								console.log("Got item!");
+							}, function(){
+								// Couldn't get item
+								console.log("Couldn't get item");
+							});
+							
+						console.log("ZOMG I GOT THE ITEM!!");
+					}, function(){
+						console.log("Zawww I couldn't get the item :(");
+					});
+				});
 			},
 
 
