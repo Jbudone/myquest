@@ -13,7 +13,7 @@ define(function(){
 
 			var doNothing = function(){ return true; },
 				preHandle = (options.hook ? this.doHook(options.hook).pre : doNothing),
-				evtHandle = (options.event ? this.triggerEvent(optinos.event) : doNothing),
+				evtHandle = (options.event ? this.triggerEvent(options.event) : doNothing),
 				postHandle = (options.hook ? this.doHook(options.hook).post : doNothing),
 				_this     = this,
 				_id       = id;

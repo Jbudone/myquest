@@ -99,11 +99,21 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			this.entity.position.local.y = this.respawnPoint.y;
 			this.entity.position.local.x = this.respawnPoint.x;
 			this.entity.updatePosition();
+			this.characterHasMoved();
 			this.Log("Respawned");
 
 			this.doHook('respawned').post();
 		};
 
+
+		// Note whenver the character has moved to a new tile
+		this.registerHook('moved');
+		this.characterHasMoved = function(){
+			if (!this.doHook('moved').pre()) return;
+
+			this.doHook('moved').post();
+		};
+		this.listenTo(this.entity, EVT_MOVED_TO_NEW_TILE, this.characterHasMoved);
 
 
 

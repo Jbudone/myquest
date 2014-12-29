@@ -105,6 +105,12 @@ define(function(){
 			this._hooks[name] = new Hook(name);
 		},
 
+		unregisterHook: function(name){
+			if (!this._hooks.hasOwnProperty(name)) return;
+
+			delete this._hooks[name];
+		},
+
 		hook: function(name, listener){
 			if (!this._hooks[name]) {
 				console.error("ERROR! HOOK NOT AVAILABLE ("+name+")");

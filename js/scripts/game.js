@@ -26,13 +26,44 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 		this.activeTiles = {}; // Tiles which scripts are listening too (eg. characters listening to certain tiles)
 		this.hashTile = function(x, y){
-			return y*map.width + x;
+			return y*map.mapWidth + x;
 		};
-		var ActiveTile = function(x, y){
+		this.tile = function(x, y){
+			var hash = this.hashTile(x, y),
+				listenToTile = function(context, callback){
+					if (!this.activeTiles.hasOwnProperty(hash)) {
+						this.activeTiles[hash] = 0;
+						this.registerHook('tile-'+hash);
+					}
 
-			this.hash = _game.hashTile(x, y);
-			this.listeners = [];
+					++this.activeTiles[hash];
+					this.hook('tile-'+hash, context).then(callback);
+				}.bind(this), stopListeningToTile = function(context){
+					if (!this.activeTiles.hasOwnProperty(hash)) return;
+
+					// If 0 listeners then remove hook
+					this.hook('tile-'+hash, context).remove();
+					if (--this.activeTiles[hash] === 0) {
+						this.unregisterHook('tile-'+hash);
+						delete this.activeTiles[hash];
+					}
+				}.bind(this), triggerTile = function(args){
+					if (!this.activeTiles.hasOwnProperty(hash)) return;
+					if (!this.doHook('tile-'+hash).pre(args)) return;
+					this.doHook('tile-'+hash).post(args);
+				}.bind(this);
+
+
+			return {
+				listen: listenToTile,
+				forget: stopListeningToTile,
+				trigger: triggerTile
+			};
 		};
+
+
+
+
 
 		this.createCharacter = function(entity){
 			var entityID  = entity.id,
@@ -64,6 +95,11 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				character.hook('die', this).remove();
 			});
 
+			character.hook('moved', this).then(function(){
+				var pos = character.entity.position.tile;
+				this.tile(pos.x, pos.y).trigger(character);
+			});
+
 			console.log("Added character to Game: "+entityID);
 			this.doHook('addedcharacter').post(entity);
 		};
@@ -77,6 +113,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			delete this.characters[entityID];
 
 			character.hook('die', this).remove();
+			character.hook('moved', this).remove();
 			_script.removeScript( character._script );
 			
 			console.log("Removed character from Game: "+entityID);

@@ -206,12 +206,15 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					// only two possible rounding cases. If tile rounded down
 					// and rounded are the same, and not equal to our current
 					// tile, then we've finished moving to this new tile
-					var tile = posK / Env.tileSize;
+					var tile = posK / Env.tileSize,
+						adjustedTile = tile;
+
+					adjustedTile += ((direction == NORTH || direction == SOUTH) ? this.page.y : this.page.x);
 					if (direction==NORTH || direction==SOUTH) {
-						if (Math.floor(tile) != this.tileY || Math.ceil(tile) != this.tileY) {
-							if (Math.floor(tile) == Math.ceil(tile)) {
+						if (Math.floor(tile) != this.position.tile.y || Math.ceil(tile) != this.position.tile.y) {
+							if ((direction==NORTH && adjustedTile < this.position.tile.y) ||
+								(direction==SOUTH && adjustedTile >= (this.position.tile.y+1))) {
 								// Moved to new tile
-								this.tileY = tile;
 								this.updatePosition(this.position.local.x, posK);
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
@@ -224,10 +227,13 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 							this.position.local.y = posK;
 						}
 					} else {
-						if (Math.floor(tile) != this.tileX || Math.ceil(tile) != this.tileX) {
-							if (Math.floor(tile) == Math.ceil(tile)) {
+						if (Math.floor(adjustedTile) != this.position.tile.x || Math.ceil(adjustedTile) != this.position.tile.x) {
+							if ((direction==WEST && adjustedTile < this.position.tile.x) ||
+								(direction==EAST && adjustedTile >= (this.position.tile.x+1))) {
+								// FIXME: use >= (this.position.tile.x+0.5) to allow reaching new tile while walking to it
+								// 			NOTE: need to consider walking west and reaching next tile too early
+
 								// Moved to new tile
-								this.tileX = tile;
 								this.updatePosition(posK, this.position.local.y);
 								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
 							} else {
