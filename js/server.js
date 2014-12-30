@@ -127,7 +127,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				loading('resources');
 				Resources = (new Resources());
 				GLOBAL['Resources'] = Resources;
-				Resources.initialize(['world', 'sheets', 'npcs', 'scripts']).then(function(assets){
+				Resources.initialize(['world', 'sheets', 'npcs', 'items', 'scripts']).then(function(assets){
 
 					try {
 					// TODO: include map loading with world
@@ -164,9 +164,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							sheet.data.objects = {};
 							for (var objCoord in _sheet.data.objects) {
 								var id = _sheet.data.objects[objCoord];
-								Resources.items[id] = {
-									isTotallyAnItem: true, // TODO: item details here
-								};
 								sheet.data.objects[ parseInt(objCoord) ] = id;
 							}
 						}
@@ -205,6 +202,25 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						var npc = res[i];
 						Resources.npcs[npc.id]=npc;
 					}
+
+
+
+					// Items
+					res = JSON.parse(assets.items).items;
+
+					Resources.items.list = {};
+					Resources.items.base = {};
+					for (var i=0; i<res.length; ++i) {
+						var item = res[i];
+						Resources.items.list[item.id] = item;
+						if (!Resources.items.base.hasOwnProperty(item.base)) {
+							Resources.items.base[item.base] = null;
+						}
+					}
+					Resources.items['items-not-loaded'] = true;
+					// NOTE: save item base scripts (like scripts) loading/initialization until we've setup the
+					// scripting environment
+
 
 
 					// Scripts
@@ -251,6 +267,37 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			};
 
 
+			var ItemBase = function(itemBase){
+				var item = itemBase;
+				this.invoke = function(character, args){
+					var new_item = new item(character, args);
+					if (new_item.hasOwnProperty('server')) {
+						for (var itm_key in new_item.server) {
+							new_item[itm_key] = new_item.server[itm_key];
+						}
+						delete new_item.client;
+						delete new_item.server;
+					}
+
+					if (new_item.hasOwnProperty('initialize')) {
+						new_item.initialize(character, args);
+					}
+				};
+			};
+
+			loadItemScripts = function(){
+				loading('items');
+				var itemsToLoad = 0;
+				_.each(Resources.items.base, function(nothing, itemBase){
+					var baseFile = 'scripts/items.'+itemBase;
+					++itemsToLoad;
+					requirejs([baseFile], function(baseScript){
+						Resources.items.base[itemBase] = new ItemBase(baseScript);
+						if (--itemsToLoad === 0) loaded('items');
+					});
+				});
+			};
+
 
 			loadScripts = function(){
 
@@ -262,6 +309,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					console.log("Starting script manager..");
 					delete Resources._scriptRes;
 					The.scriptmgr = new ScriptMgr();
+
+					if (Resources.items.hasOwnProperty('items-not-loaded')) {
+						delete Resources.items['items-not-loaded'];
+						loadItemScripts();
+						debugger;
+					}
 
 					loaded('scripts');
 				}, function(e){

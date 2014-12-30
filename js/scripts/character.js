@@ -162,13 +162,16 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 				var player = _character.entity.player,
 					pickupItem = function(evt, data){
-						var err   = null,
-							coord = null,
-							page  = null,
-							item  = null,
-							y     = null,
-							x     = null,
-							myPos = null;
+						var err     = null,
+							coord   = null,
+							page    = null,
+							item    = null,
+							y       = null,
+							x       = null,
+							myPos   = null,
+							itmRef  = null,
+							itmBase = null,
+							result  = null;
 
 						if (!_.isObject(data)) err = "No args given";
 
@@ -212,6 +215,18 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							}
 						}
 
+						if (err === null) {
+							itmRef = Resources.items.list[item.id];
+
+							if (!itmRef.hasOwnProperty('base')) err = "Item does not contain a base script";
+							if (err === null && !Resources.items.base.hasOwnProperty(itmRef.base)) err = "Base script("+ itmRef.base +") not found";
+						}
+
+						if (err === null) {
+							itmBase = Resources.items.base[itmRef.base];
+							if (!itmBase.hasOwnProperty('invoke')) err = "Base item script not prepared";
+						}
+
 						if (err) {
 							this.Log("Could not pickup item: " + err);
 							player.respond(evt.id, false, {
@@ -224,9 +239,22 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 						this.Log("Requesting to pickup item");
 						delete page.items[coord];
-						// TODO: use item
+						result = itmBase.invoke(_character, itmRef.args);
+
+						if (result instanceof Error) {
+							result.print();
+							player.respond(evt.id, false, {
+								msg: result.message
+							});
+							return false;
+						}
+
 
 						player.respond(evt.id, true);
+						page.broadcast(EVT_GET_ITEM, {
+							page: page.index,
+							coord: coord
+						});
 					};
 				player.registerHandler(EVT_GET_ITEM);
 				player.handler(EVT_GET_ITEM).set(pickupItem);

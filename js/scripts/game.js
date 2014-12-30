@@ -302,6 +302,45 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						console.log("Zawww I couldn't get the item :(");
 					});
 				});
+
+				server.registerHandler(EVT_GET_ITEM);
+				server.handler(EVT_GET_ITEM).set(function(evt, data){
+					var page = null;
+					if (!_.isObject(data)) return;
+					if (!data.hasOwnProperty('page')) return;
+					if (!data.hasOwnProperty('coord')) return;
+
+					if (!The.map.pages.hasOwnProperty(data.page)) return;
+					page = The.map.pages[data.page];
+
+					if (!page.items.hasOwnProperty(data.coord)) return;
+					delete page.items[data.coord];
+				});
+
+				server.registerHandler(EVT_USE_ITEM);
+				server.handler(EVT_USE_ITEM).set(function(evt, data){
+					var base      = null,
+						character = null,
+						args      = null,
+						result    = null;
+
+					if (!_.isObject(data)) return;
+					if (!data.hasOwnProperty('base')) return;
+					if (!data.hasOwnProperty('character')) return;
+
+					if (!Resources.items.base.hasOwnProperty(data.base)) return;
+					if (!The.map.movables.hasOwnProperty(data.character)) return;
+
+					base = Resources.items.base[data.base];
+					character = The.map.movables[data.character].character;
+
+					if (!base.hasOwnProperty('invoke')) return;
+					result = base.invoke(character, data);
+
+					if (result instanceof Error) {
+						this.Log(result, LOG_ERROR);
+					}
+				});
 			},
 
 
