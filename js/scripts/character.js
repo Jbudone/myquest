@@ -2,7 +2,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 	eval(SCRIPTENV);
 
-	var Character = function(entity){
+	var Character = function(game, entity){
 		extendClass(this).with(Eventful);
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Loggable);
@@ -154,7 +154,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			},
 
 			characterInit: function(){
-				this.brain = this._script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
+				this.brain = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
 				this.initListeners();
 			},
 
@@ -270,7 +270,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			},
 
 			characterInit: function(){
-				this.brain = this._script.addScript( new AI(_character) ); // NOTE: brain will be initialized automatically after character is initialized
+				this.brain = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
 				this.initListeners();
 			},
 

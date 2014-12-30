@@ -2,7 +2,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 
 	eval(SCRIPTENV);
 
-	var Movement = function(brain){
+	var Movement = function(game, brain){
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Dynamic);
 		extendClass(this).with(Loggable);

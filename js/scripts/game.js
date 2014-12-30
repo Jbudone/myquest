@@ -70,7 +70,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				character = null;
 
 			if (this.characters.hasOwnProperty(entityID)) return;
-			character = _script.addScript( new Character(entity) );
+			character = _script.addScript( new Character(this, entity) );
 			_.last(_script.children).initialize(); // FIXME: this isn't the safest way to go..; NOTE: if game script is currently initializing, it will attempt to initialize all children afterwards; this child script will already have been initialized, and will not re-initialize the child
 			return character;
 		};

@@ -2,7 +2,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 	
 	eval(SCRIPTENV);
 
-	var Combat = function(brain){
+	var Combat = function(game, brain){
 		extendClass(this).with(Eventful);
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Dynamic);
@@ -17,6 +17,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 		var _combat = this,
 			brain = brain,
+			_game = game,
 			_character = brain.character;
 			_script = null;
 
@@ -98,7 +99,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				console.log("Loading ability: "+_ability);
 				var ability = Resources.scripts.ai.instincts[this.name].components[_ability];
 				if (ability.script) ability = ability.script;
-				this.abilities[_ability] = _script.addScript( new ability(this) );
+				this.abilities[_ability] = _script.addScript( new ability(_game, this, _character) );
 				console.log("Loaded ability");
 			}
 		};
@@ -267,11 +268,26 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 				this._abilities = [];// TODO: fetch this from NPC
 				if (!_character.isPlayer) {
-					this._abilities = ['melee'];
-					this._abilities = ['sight'];
+					this._abilities = ['melee', 'sight'];
 				}
 
 				this.setAbilities(this._abilities);
+
+				if (!_character.isPlayer) {
+					var sight = this.abilities['sight'];
+					sight.onReady = function(){
+						sight.hook('see', this).then(function(character){
+							if (character.isPlayer) {
+								console.log("I WANT TO ATTACK YOU!!!");
+
+								// TODO: fix this; should be a better way to enable aggro
+								if (!this.target) {
+									_combat.attackedBy(character, 0);
+								}
+							}
+						});
+					}.bind(this);
+				}
 
 				// TODO: upstream to listen to character
 				_script.listenTo(_character, EVT_ATTACKED).then(function(_character, enemy, amount){

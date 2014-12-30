@@ -2,7 +2,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 
 	eval(SCRIPTENV);
 	
-	var AI = function(character){
+	var AI = function(game, character){
 		this.character = character;
 
 		extendClass(this).with(Loggable);
@@ -148,7 +148,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 					console.log("Loading instinct: "+_instinct);
 					var instinct = Resources.scripts.ai.instincts[_instinct];
 					if (instinct.script) instinct = instinct.script;
-					this.instincts[_instinct] = _script.addScript( new instinct(this) );
+					this.instincts[_instinct] = _script.addScript( new instinct(game, this) );
 					console.log("Loaded instinct");
 				}
 			},
@@ -175,7 +175,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 					console.log("Loading instinct: "+_instinct);
 					var instinct = Resources.scripts.ai.instincts[_instinct];
 					if (instinct.script) instinct = instinct.script;
-					this.instincts[_instinct] = _script.addScript( new instinct(this) );
+					this.instincts[_instinct] = _script.addScript( new instinct(game, this) );
 					console.log("Loaded instinct");
 				}
 			},

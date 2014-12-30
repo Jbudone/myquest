@@ -313,7 +313,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					if (Resources.items.hasOwnProperty('items-not-loaded')) {
 						delete Resources.items['items-not-loaded'];
 						loadItemScripts();
-						debugger;
 					}
 
 					loaded('scripts');
