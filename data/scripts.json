@@ -19,7 +19,8 @@
 			"combat": {
 				"script": "character.ai.instinct.combat",
 				"components": {
-					"melee": "character.ai.combat.melee"
+					"melee": "character.ai.combat.melee",
+					"sight": "character.ai.combat.sight"
 				}
 			},
 			"movement": "character.ai.instinct.movement"

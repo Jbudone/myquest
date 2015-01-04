@@ -1,0 +1,12 @@
+{"items": [
+	{
+		"id": "itm_potion",
+		"base": "heal",
+		"args": { "amt": 10 }
+	},
+	{
+		"id": "itm_potion2",
+		"base": "heal",
+		"args": { "amt": 20 }
+	}
+]}
