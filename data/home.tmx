@@ -13,7 +13,7 @@
    eJzt2slqFFEYhuHThBSo0b3eSfQKoqh7R9S9mohxWCoqJupSUYkaIVEjURwScFw6gYIunUBB78Bx5RvsJpWqU9q2oTiL94GPQ1c3VfD/fHQveqw7hHFyiVyu8bxCJojmusNM7pJ75H6N5wPy0H2UPGcmL8jMaFqJ2d0VwiDZ0xV/f10WwnqyIZt7/RCvD5MjhesvedAr91HygZl8JEvDbGKOsochMlyxj+3MewfZWZj7aV6fIWcL1z/xzM/uo6TdfvSyh+VkRWQfgw16Q/aSfWR/Y/a9SfZwjVy3H21ptx+r2cMasjayjyHmP0yOkePkRKP8mSL7Edfqx7LwO1W2sIetZFthHyPM/hw5Ty6QUXIxt48+erGSrLIfbWn1o1M3mP1NcovcJlNkOrePjexhE9nc3McBzoOZ/ajS6seMrJl/9Yj5PyZPyFPyLLePfm44QHY1b3yS81RmP6rk+9HpPl4z/zfkLXlH3v/h+2OCB1y1H5Xmox+dsB9x+X787Tt9PtmPuHw/6mQ/4v7391Wn7Eec/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UiL/UjLF2bylXwj32s8f5Cf7qNkQRbCQrKI9NR4LiZL6vrzhCRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJklThF9dg3I8=
   </data>
  </layer>
- <objectgroup name="zoning">
+ <objectgroup name="zoning" width="0" height="0">
   <object x="304" y="96" width="16" height="16">
    <properties>
     <property name="spot" value="1"/>

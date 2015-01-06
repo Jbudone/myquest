@@ -23,7 +23,6 @@
          "y":0
         }, 
         {
-         "draworder":"topdown",
          "height":0,
          "name":"zoning",
          "objects":[
@@ -34,7 +33,6 @@
                     {
                      "spot":"1"
                     },
-                 "rotation":0,
                  "type":"",
                  "visible":true,
                  "width":16,
@@ -49,7 +47,6 @@
                      "map":"main",
                      "spawn":"1"
                     },
-                 "rotation":0,
                  "type":"",
                  "visible":true,
                  "width":16,
