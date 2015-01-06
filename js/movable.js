@@ -262,7 +262,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 						}
 						this.updatePosition();
 					
-					} else { debugger; }
+					}
 
 
 					this.lastMoved += deltaTaken;

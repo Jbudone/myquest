@@ -13,7 +13,6 @@ define(['eventful','map'], function(Eventful,Map){
 
 				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {
 					try {
-						debugger;
 						console.log(zone);
 						console.log("World zoning out");
 						var oldPage = oldPage,
