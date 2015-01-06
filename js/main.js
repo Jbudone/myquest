@@ -915,9 +915,9 @@ try{
 					if (entity && target) {
 						var styleType = MESSAGE_INFO;
 						if (target == The.player) {
-							styleType = MESSAGE_BAD;
-						} else if (entity == The.player) {
 							styleType = MESSAGE_GOOD;
+						} else if (entity == The.player) {
+							styleType = MESSAGE_BAD;
 						}
 						ui.postMessage(target.npc.name + ' attacked ' + entity.npc.name + ' for ' + amount + ' damage', styleType);
 						var direction = target.directionOfTarget(entity);
