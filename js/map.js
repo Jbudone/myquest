@@ -127,7 +127,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					// Listen to the entity moving to new pages
 					this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
-						this.Log("Moving to tile.. ("+entity.position.tile.x+", "+entity.position.tile.y+")", LOG_DEBUG);
+						this.Log("Moving to tile.. ("+entity.position.tile.x+", "+entity.position.tile.y+")["+this.id+"]", LOG_DEBUG);
+						if (entity.hasOwnProperty('isZoning')) return;
 						this.checkEntityZoned(entity);
 					}, HIGH_PRIORITY);
 

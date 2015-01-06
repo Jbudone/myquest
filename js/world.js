@@ -13,6 +13,7 @@ define(['eventful','map'], function(Eventful,Map){
 
 				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {
 					try {
+						debugger;
 						console.log(zone);
 						console.log("World zoning out");
 						var oldPage = oldPage,
@@ -23,6 +24,7 @@ define(['eventful','map'], function(Eventful,Map){
 						oldMap.removeEntity(entity);
 						page = map.zoneIn(entity, zone);
 						entity.triggerEvent(EVT_ZONE_OUT, oldMap, oldPage, map, page, zone);
+						entity.isZoning = true; // FIXME: this is a quickfix to tell the movement not to update position in movable.js
 					} catch(e) {
 						console.log("Error zoning entity..");
 						console.log(e);

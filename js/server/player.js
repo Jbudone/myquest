@@ -297,6 +297,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			}
 
+			debugger;
 			var movableState = {
 					y: player.position.local.y + player.page.y * Env.tileSize, // NOTE: global real coordinates
 					x: player.position.local.x + player.page.x * Env.tileSize,

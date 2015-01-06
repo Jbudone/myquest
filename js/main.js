@@ -708,7 +708,7 @@ try{
 
 
 			startGame = function(){
-				var speed = 30,
+				var speed = 15,
 					gameLoop = function() {
 
 						time = new Date().getTime();

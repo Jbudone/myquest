@@ -125,6 +125,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 				// player step checks path, decrements from walk steps
 
 				var delta = timeDelta;
+				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
 				while (delta>this.moveSpeed && this.path) {
 
 					if (!_.isArray(this.path.walks) ||
@@ -142,7 +143,8 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 						deltaTaken        = null,
 						direction         = walk.direction,
 						posK              = (walk.direction==NORTH||walk.direction==SOUTH?this.position.local.y:this.position.local.x),
-						finishedWalk      = false;
+						finishedWalk      = false,
+						hasZoned		  = false;
 
 					if (deltaSteps > steps) {
 						// TODO: change lastMoved to when this move WOULD have finished to satisfy steps
@@ -248,19 +250,25 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					}
 
 
-					// Movable has finished the walk. This is only a final step
-					// to calibrate the user to the center of the tile
-					if (finishedWalk) {
-						// TODO: might need to change lastMoved to reflect this recalibration
-						this.position.local.x = Env.tileSize*Math.round(this.position.local.x/Env.tileSize);
-						this.position.local.y = Env.tileSize*Math.round(this.position.local.y/Env.tileSize);
-					}
-					this.updatePosition();
+					hasZoned = this.hasOwnProperty('isZoning');
+					if (!hasZoned) {
+
+						// Movable has finished the walk. This is only a final step
+						// to calibrate the user to the center of the tile
+						if (finishedWalk) {
+							// TODO: might need to change lastMoved to reflect this recalibration
+							this.position.local.x = Env.tileSize*Math.round(this.position.local.x/Env.tileSize);
+							this.position.local.y = Env.tileSize*Math.round(this.position.local.y/Env.tileSize);
+						}
+						this.updatePosition();
 					
+					} else { debugger; }
 
 
 					this.lastMoved += deltaTaken;
 				}
+
+				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
 			} else {
 				this.lastMoved = time;
 			}

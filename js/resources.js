@@ -45,7 +45,7 @@ define(['jquery', 'loggable'], function($, Loggable){
 								this.Log("Loaded resource assets");
 								loaded(assets);
 							}
-						}.bind(this)), function(){
+						}.bind(this)), function(a){
 							console.log("Error loading resources");
 						});
 					}.bind(this)));

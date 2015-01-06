@@ -436,7 +436,7 @@ define(['loggable'], function(Loggable){
 					(function SetVarsB(){
 						tile      = page.tiles[iy*pageWidth+ix]-1;
 
-						if (tile != -1) {
+						if (!isNaN(tile) && tile != -1) {
 							sheetData = renderer.sheetFromGID(tile);
 							sheet     = sheetData.image;
 							tilesPerRow=sheetData.tilesPerRow;
