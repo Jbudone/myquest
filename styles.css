@@ -40,6 +40,14 @@ h3 {
 	color: red;
 }
 
+.message-good {
+	color: green;
+}
+
+.message-bad {
+	color: red;
+}
+
 
 .movable-ui {
 	position: absolute;

@@ -85,8 +85,8 @@ fs.readFile('../data/world.json', function(err, data) {
 				var mapJSON = { MapFile: { Map: {'id':mapID, pages:{}, spawns:{}}, properties: {pageWidth:null, pageHeight:null, width:null, height:null, tilesets:[]} } },
 					map = mapJSON.MapFile.Map,
 					tilesets = json.tilesets,
-					pageWidth = 50,
-					pageHeight = 30,
+					pageWidth = 30,
+					pageHeight = 14,
 					tileSize = 16,
 					layers = {
 						base: null,
@@ -193,6 +193,7 @@ fs.readFile('../data/world.json', function(err, data) {
 						for(var iy=0; iy<pageHeight; ++iy) {
 							for(var ix=0; ix<pageWidth; ++ix) {
 								page.tiles.push(layers.base.data[(iy+y)*layers.base.width+(ix+x)]);
+								if (page.tiles[page.tiles.length-1] == null) page.tiles[page.tiles.length-1] = 1;
 
 								// Check if there's a sprite at this spot
 								if ( y+iy<layers.sprites.height && x+ix<layers.sprites.width && // Within sprite layer range?

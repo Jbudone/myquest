@@ -47,6 +47,12 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 			this.Log("Just a scratch.. " + this.health + " / "+ this.entity.npc.health +"   ("+amount+" dmg)");
 			this.triggerEvent(EVT_ATTACKED, from, amount);
+
+			if (!Env.isServer) {
+				if (this.entity.hasOwnProperty('ui')) {
+					this.entity.ui.hurt();
+				}
+			}
 			
 			if (this.health <= 0) {
 				this.die();

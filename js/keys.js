@@ -10,6 +10,8 @@ define(function(){
 
 		MESSAGE_PROGRAM: 'program',
 		MESSAGE_INFO: 'info',
+		MESSAGE_GOOD: 'good',
+		MESSAGE_BAD: 'bad'
 	};
 
 	var keyValue = 1,

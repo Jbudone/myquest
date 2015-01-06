@@ -46,6 +46,7 @@ define(['page', 'movable'], function(Page, Movable){
 				var mapY = map[mapYCoord];
 				for (var mapXCoord=0; mapY[mapXCoord]; mapXCoord+=mapPageWidth) {
 
+
 					// Build up each page in this cell
 					//
 					// 	Go through each row in the cell

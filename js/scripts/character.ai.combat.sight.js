@@ -28,7 +28,8 @@ define(['SCRIPTENV', 'hookable', 'scripts/character.ai.ability'], function(SCRIP
 		var _sight = this,
 			_script = null,
 			game = game,
-			character = character;
+			character = character,
+			sightRange = 3;
 		this.server = {
 			initialize: function(){
 				_script = this;
@@ -85,7 +86,7 @@ define(['SCRIPTENV', 'hookable', 'scripts/character.ai.ability'], function(SCRIP
 					hashTile = function(x, y){
 						return y*(character.entity.page.map.mapWidth)+x;
 					}, isInRange = function(x, y){
-						return (Math.abs(x - myTile.x) <= 1 && Math.abs(y - myTile.y) <= 1);
+						return (Math.abs(x - myTile.x) <= sightRange && Math.abs(y - myTile.y) <= sightRange);
 					};
 
 				tilesToTest.push(this.tile);

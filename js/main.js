@@ -501,7 +501,6 @@ try{
 
 						canvas.height = tHeight * rows;
 						canvas.width  = tWidth  * cols;
-						$('body').append(canvas);
 
 						// Draw animations to sheet
 						var iRow = 0;
@@ -708,7 +707,7 @@ try{
 
 
 			startGame = function(){
-				var speed = 15,
+				var speed = 30,
 					gameLoop = function() {
 
 						time = new Date().getTime();
@@ -914,6 +913,13 @@ try{
 					var entity = The.map.movables[hurtEntity.id],
 						target = The.map.movables[targetEntity.id];
 					if (entity && target) {
+						var styleType = MESSAGE_INFO;
+						if (target == The.player) {
+							styleType = MESSAGE_BAD;
+						} else if (entity == The.player) {
+							styleType = MESSAGE_GOOD;
+						}
+						ui.postMessage(target.npc.name + ' attacked ' + entity.npc.name + ' for ' + amount + ' damage', styleType);
 						var direction = target.directionOfTarget(entity);
 						target.sprite.dirAnimate('atk', direction);
 						entity.character.hurt(amount, target.character, health);
@@ -962,7 +968,6 @@ try{
 					}
 
 					The.map.addPages(pages, true); // Zoning into one of the new pages
-
 				};
 
 				server.onLoadedMap = function(newMap, pages, player){
@@ -978,6 +983,7 @@ try{
 					oldMap.stopAllEventsAndListeners();
 					The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
+					ui.clear();
 					ui.updatePages();
 
 					The.player.page = The.map.curPage;
@@ -1013,6 +1019,7 @@ try{
 					oldMap.stopAllEventsAndListeners();
 					The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
+					ui.clear();
 					ui.updatePages();
 
 					The.player.page = The.map.curPage;

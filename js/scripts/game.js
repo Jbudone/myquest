@@ -112,6 +112,12 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (!this.doHook('removedcharacter').pre(entity)) return;
 			delete this.characters[entityID];
 
+			if (!Env.isServer) {
+				if (character.entity.hasOwnProperty('ui')) {
+					character.entity.ui.remove();
+				}
+			}
+
 			character.hook('die', this).remove();
 			character.hook('moved', this).remove();
 			_script.removeScript( character._script );

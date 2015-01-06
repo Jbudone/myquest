@@ -50,7 +50,10 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 					this.ui.css('left', left + 'px');
 					this.ui.css('top', top + 'px');
 
-					var health = 100 * this.movable.health / this.movable.npc.health;
+					var health = 100;
+					if (this.movable.hasOwnProperty('character')) {
+						health = 100 * Math.max(0, this.movable.character.health) / this.movable.npc.health;
+					}
 					this.ui_healthbar_health.css('width', health + '%');
 				};
 				this.clear = function(){
@@ -147,15 +150,29 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 		this.movables = {};
 
 		this.attachMovable = function(entity){
-			this.postMessage("Added entity ("+entity.id+")");
-			this.postMessage(entity);
+
+			var remove = function(){
+					if (entity != The.player) {
+						_UI.detachMovable(entity);
+					} else {
+						_UI.hideMovable(entity);
+					}
+			},  hurt = function(){
+					if (!movableDetails.attached) return; // event leftover from before entity was cleared
+					movableDetails.ui.update();
+			};
 
 			this.movables[ entity.id ] = {
 				entity: entity,
 				attached: true,
-				ui: new this.components.MovableUI( entity )
+				ui: new this.components.MovableUI( entity ),
+				interface: {
+					remove: remove,
+					hurt: hurt
+				}
 			};
 			var movableDetails = this.movables[ entity.id ];
+			entity.ui = movableDetails.interface;
 
 			// NOTE: sometimes events are triggered and stored for callbacks before the another event is
 			// triggered which detaches the movable. Hence its necessary for the callbacks here to check if
@@ -237,22 +254,18 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			for (var movableID in page.movables) {
 				if (this.movables[ movableID ]) continue;
 				var movable = page.movables[movableID];
-				this.postMessage("Attaching UI to entity ("+movable.id+")");
 				this.attachMovable( movable );
 			}
 
 			// NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
 			this.listenTo(page, EVT_ADDED_ENTITY, function(page, entity){
 				if (this.movables[ entity.id ]) {
-					this.postMessage("Removed entity first.. ("+entity.id+")");
 					this.detachMovable( entity );
 				}
-				this.postMessage("Adding entity and attaching UI ("+entity.id+")");
 				this.attachMovable( entity );
 			});
 
 			this.listenTo(page, EVT_REMOVED_ENTITY, function(page, entity){
-				this.postMessage("Removed entity");
 				this.detachMovable( entity );
 			});
 		};
@@ -270,11 +283,11 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			this.stopListeningTo( page );
 
 			// NOTE: movables from curPage are probably already removed
-			for (var movableID in page.movables) {
-				if ( this.movables[movableID] ) continue; // don't remove ui from movable thats in another page
-				var movable = this.movables[movableID].entity;
-				this.detachMovable( movable );
-			}
+			// for (var movableID in page.movables) {
+			// 	if ( this.movables[movableID] ) continue; // don't remove ui from movable thats in another page
+			// 	var movable = this.movables[movableID].entity;
+			// 	this.detachMovable( movable );
+			// }
 		};
 
 		this.updatePages = function(){
@@ -291,6 +304,18 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 				if (!this.pages[pageID]) {
 					this.addPage(pageID);
 				}
+			}
+		};
+
+		this.clear = function(){
+
+			for (var pageID in this.pages) {
+				this.removePage(pageID);
+			}
+
+			for (var movableID in this.movables) {
+				var movable = this.movables[movableID].entity;
+				this.detachMovable( movable );
 			}
 		};
 
@@ -317,22 +342,18 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 				for (var movableID in page.movables) {
 					if (this.movables[ movableID ]) continue;
 					var movable = page.movables[movableID];
-					this.postMessage("Attaching UI to entity ("+movable.id+")");
 					this.attachMovable( movable );
 				}
 
 				// NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
 				this.listenTo(this.curPage, EVT_ADDED_ENTITY, function(page, entity){
 					if (this.movables[ entity.id ]) {
-						this.postMessage("Removed entity first.. ("+entity.id+")");
 						this.detachMovable( entity );
 					}
-					this.postMessage("Adding entity and attaching UI ("+entity.id+")");
 					this.attachMovable( entity );
 				});
 
 				this.listenTo(this.curPage, EVT_REMOVED_ENTITY, function(page, entity){
-					this.postMessage("Removed entity");
 					this.detachMovable( entity );
 				});
 			}

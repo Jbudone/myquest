@@ -91,12 +91,12 @@ define(['loggable'], function(Loggable){
 							// Default player values
 							id: id,
 							position: {
-								y: 20, x: 14
+								y: 60, x: 53
 							},
 							respawn: {
 								map: "main",
 								position: {
-									y: 20, x: 14
+									y: 60, x: 53
 								},
 							},
 							map: "main"

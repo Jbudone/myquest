@@ -235,6 +235,11 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				this.stopListeningToTarget(target);
 			});
 
+			this.listenTo(target.entity, EVT_ZONE_OUT, function(target){
+				console.log("Aww you ran away! :(");
+				this.stopListeningToTarget(target.character);
+			});
+
 		};
 
 		// If we get distracted by something (eg. user clicks to walk somewhere) then leave combat and forget
@@ -283,6 +288,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 								// TODO: fix this; should be a better way to enable aggro
 								if (!this.target) {
 									_combat.attackedBy(character, 0);
+									_combat.listenToTarget(character);
 								}
 							}
 						});
