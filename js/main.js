@@ -417,16 +417,24 @@ try{
 							},
 							image: (new Image()),
 							tilesPerRow: parseInt(_sheet.columns),
-							data: { }
+							data: { },
+							gid: {}
 						};
 
 						sheet.image.src = location.origin + location.pathname + sheet.file;
 						return sheet;
 					};
+
+				var gid = 0;
 				for (var i=0; i<res.tilesheets.list.length; ++i) {
 					var _sheet = res.tilesheets.list[i],
 						sheet  = makeSheet( _sheet );
 
+
+
+					sheet.gid.first = gid;
+					gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
+					sheet.gid.last = gid - 1;
 					if (_sheet.data.objects) {
 						sheet.data.objects = {};
 						for (var objCoord in _sheet.data.objects) {
@@ -580,6 +588,19 @@ try{
 					Resources.items.list[item.id] = item;
 					if (!Resources.items.base.hasOwnProperty(item.base)) {
 						Resources.items.base[item.base] = null;
+					}
+					for (var sheetName in Resources.sheets) {
+						var sheet = Resources.sheets[sheetName];
+						if (!sheet.hasOwnProperty('data')) continue;
+						if (!sheet.data.hasOwnProperty('objects')) continue;
+
+						for (var sprite in sheet.data.objects) {
+							if (sheet.data.objects[sprite] == item.id) {
+								item.sprite = parseInt(sprite) + sheet.gid.first;
+								break;
+							}
+						}
+						if (item.hasOwnProperty('sprite')) break;
 					}
 				}
 				Resources.items['items-not-loaded'] = true;

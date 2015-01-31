@@ -118,8 +118,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			});
 
 
-
-
 			// Load game resources
 			/////////////////////////
 			loadResources = function(){
@@ -150,16 +148,21 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							},
 							image: null,
 							tilesPerRow: parseInt(_sheet.columns),
-							data: { }
+							data: { },
+							gid: {}
 						};
 
 						return sheet;
 					};
+					var gid = 0;
 					for (var i=0; i<res.tilesheets.list.length; ++i) {
 						var _sheet = res.tilesheets.list[i],
 							sheet  = makeSheet( _sheet );
 
 
+						sheet.gid.first = gid;
+						gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
+						sheet.gid.last = gid - 1;
 						if (_sheet.data.objects) {
 							sheet.data.objects = {};
 							for (var objCoord in _sheet.data.objects) {
@@ -215,6 +218,19 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						Resources.items.list[item.id] = item;
 						if (!Resources.items.base.hasOwnProperty(item.base)) {
 							Resources.items.base[item.base] = null;
+						}
+						for (var sheetName in Resources.sheets) {
+							var sheet = Resources.sheets[sheetName];
+							if (!sheet.hasOwnProperty('data')) continue;
+							if (!sheet.data.hasOwnProperty('objects')) continue;
+
+							for (var sprite in sheet.data.objects) {
+								if (sheet.data.objects[sprite] == item.id) {
+									item.sprite = parseInt(sprite) + sheet.gid.first;
+									break;
+								}
+							}
+							if (item.hasOwnProperty('sprite')) break;
 						}
 					}
 					Resources.items['items-not-loaded'] = true;
@@ -372,7 +388,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   you.onRequestNewCharacter = function(){
 					   return new Promise(function(resolved, failed){
-						   db.createNewPlayer({map:'main', position:{y:20, x:14}}).then(function(newID){
+						   db.createNewPlayer({map:'main', position:{y:60, x:53}}).then(function(newID){
 							   resolved(newID);
 						   }, function(){
 							   failed();
@@ -452,6 +468,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 						   var page = you.movable.page;
 						   you.disconnectPlayer();
+						   page.map.removeEntity( you.movable );
 						   page.eventsBuffer.push({
 							   evtType: EVT_REMOVED_ENTITY,
 							   entity: { id: you.movable.id }

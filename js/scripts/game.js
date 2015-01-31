@@ -87,6 +87,10 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				this.removeCharacter(character.entity);
 				if (character.isPlayer) {
 					this.removePlayer(character.entity);
+				} else {
+					if (Env.isServer) {
+						this.handleLoot(character);
+					}
 				}
 
 				character.entity.page.map.removeEntity(character.entity);
@@ -248,7 +252,33 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				this.stopAllEventsAndListeners();
 				map.handler('step').unset();
 				map.unhook(this);
-			}
+			},
+
+			handleLoot: function(character){
+				if (Math.random() > 0.0) { // FIXME: handle this based off of loot details from NPC
+					if (!(character instanceof Character)) return new UnexpectedError("character not a Character");
+
+					var page = character.entity.page,
+						position = character.entity.position.tile,
+						itm_id = "itm_potion",
+						item = null;
+
+					page.broadcast(EVT_DROP_ITEM, {
+						position: {x: position.x, y: position.y},
+						item: itm_id,
+						page: page.index
+					});
+
+					item = {
+						id: itm_id,
+						sprite: Resources.items.list[itm_id].sprite,
+						coord: {x: position.x, y: position.y},
+						page: page.index
+					};
+
+					page.items[(position.y-page.y)*Env.pageWidth + (position.x-page.x)] = item;
+				}
+			},
 		};
 
 		this.client = {
@@ -288,13 +318,13 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 				user.hook('clickedItem', this).then(function(item){
 					var page = map.pages[item.page],
-						y    = parseInt(item.coord / Env.pageWidth),
-						x    = item.coord - y*Env.pageWidth,
-						tile = new Tile( page.y + y, page.x + x ),
+						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
+						x    = item.coord.x,//item.coord - y*Env.pageWidth,
+						tile = new Tile( y, x ),
 						path = map.pathfinding.findPath( player, tile );
 					console.log(item);
 					player.addPath(path).then(function(){
-						server.request(EVT_GET_ITEM, { coord: item.coord, page: item.page })
+						server.request(EVT_GET_ITEM, { coord: ((item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x)), page: item.page })
 							.then(function(){
 								// Got item
 								console.log("Got item!");
@@ -346,6 +376,31 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					if (result instanceof Error) {
 						this.Log(result, LOG_ERROR);
 					}
+				});
+
+				server.registerHandler(EVT_DROP_ITEM);
+				server.handler(EVT_DROP_ITEM).set(function(evt, data){
+					var position = null,
+						page     = null,
+						item     = null;
+
+					if (!_.isObject(data)) return;
+					if (!data.hasOwnProperty('item')) return;
+					if (!data.hasOwnProperty('position')) return;
+					if (!data.hasOwnProperty('page')) return;
+					if (!The.map.pages.hasOwnProperty(data.page)) return;
+					if (!Resources.items.list.hasOwnProperty(data.item)) return;
+
+					position = data.position;
+					page = The.map.pages[data.page];
+					item = {
+						id: data.item,
+						sprite: Resources.items.list[data.item].sprite,
+						coord: position,
+						page: page.index
+					};
+
+					page.items[(position.y-page.y)*Env.pageWidth + (position.x-page.x)] = item;
 				});
 			},
 

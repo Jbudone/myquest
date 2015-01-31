@@ -27,7 +27,17 @@ define(['loggable'], function(Loggable){
 
 		this.setMap = function(map){
 			this.map       = map;
-			this.tilesheets = map.sheets;
+
+			var sheetsToUse = {};
+			for (var sheetID in Resources.sheets) {
+				var sheet = Resources.sheets[sheetID];
+				sheetsToUse[sheet.gid.first] = sheet;
+			}
+
+			this.tilesheets = [];
+			for (var sheetGID in sheetsToUse) {
+				this.tilesheets.push(sheetsToUse[sheetGID]);
+			}
 		};
 
 		this.initialize = function(options){

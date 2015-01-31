@@ -192,18 +192,50 @@ var AssetsManager = function(assets, container, files){
 
 	$('#assetsSave').data('assets', assets).click(function(){
 
+		var confirmDimensions = function(){
+
+			return new Promise(function(finished){
+				var toConfirm = 0;
+				for (var i=0; i<assets.tilesheets.list.length; ++i) {
+					++toConfirm;
+
+					var env = {
+						asset: assets.tilesheets.list[i],
+						img: new Image(),
+						width: null,
+						height: null,
+						tileSize: asset.tileSize
+					};
+
+					env.img.onload = function(){
+						this.asset.columns= Math.ceil((this.img.width - parseInt(this.asset.sheet_offset.x)) / parseInt(this.asset.tilesize));
+						this.asset.rows = Math.ceil((this.img.height - parseInt(this.asset.sheet_offset.y)) / parseInt(this.asset.tilesize));
+
+
+						if (--toConfirm == 0) {
+							finished();
+						}
+					}.bind(env);
+					env.img.src = env.asset.image;
+				}
+			});
+		};
 
 		var saveSheets = function(){
 
-			var sheetsFile = files.sheets;
-			$.post('assets.php', { request: "sheets", assets: assets, file: sheetsFile }, function(data){
-				var json = JSON.parse(data),
-					success = !!json.success;
-				console.log('saved sheets: '+(success?'true':'false'));
+			confirmDimensions().then(function(){
 
-				if (success) {
-					saveAvatars();
-				}
+				var sheetsFile = files.sheets;
+				$.post('assets.php', { request: "sheets", assets: assets, file: sheetsFile }, function(data){
+					var json = JSON.parse(data),
+						success = !!json.success;
+					console.log('saved sheets: '+(success?'true':'false'));
+
+					if (success) {
+						saveAvatars();
+					}
+				});
+
 			});
 
 		}, saveAvatars = function(){

@@ -81,6 +81,7 @@ define(function(){
 
 	addKey('EVT_GET_ITEM');
 	addKey('EVT_USE_ITEM');
+	addKey('EVT_DROP_ITEM');
 
 
 	/// %%%%%%%%%%%%%%%%%%%%%
