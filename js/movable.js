@@ -100,7 +100,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		this.listenTo(this, EVT_ZONE_OUT, function(){
 
 			if (this.path) {
-				this.path.onFailed();
+ 				if (_.isFunction(this.path.onFailed)) this.path.onFailed();
 				this.path = null;
 			}
 		}, HIGH_PRIORITY);
@@ -117,7 +117,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 			// Have we zoned? Disallow stepping page-specific things
 			if (!this.page) {
-				if (this.path) this.path.onFailed();
+				if (this.path && _.isFunction(this.path.onFailed)) this.path.onFailed();
 				this.path = null;
 			}
 
@@ -131,7 +131,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					if (!_.isArray(this.path.walks) ||
 						this.path.walks.length === 0) {
 
-						this.path.onFailed();
+						if (_.isFunction(this.path.onFailed)) this.path.onFailed();
 						this.path = null;
 						return UnexpectedError("Path of length 0 walks");
 					}
@@ -167,7 +167,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 						if (path.walks.length === 0) {
 							// Finished path
 							this.triggerEvent(EVT_FINISHED_PATH, path.id);
-							this.path.onFinished();
+							if (_.isFunction(this.path.onFinished)) this.path.onFinished();
 							this.path = null;
 
 							// Finished moving
@@ -289,7 +289,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			// add/replace path
 			// TODO: implement priority better?
 
-			if (this.path) {
+			if (this.path && _.isFunction(this.path.onFailed)) {
 				this.path.onFailed();
 			}
 

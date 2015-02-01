@@ -449,7 +449,7 @@ define(['page', 'movable'], function(Page, Movable){
 			}
 
 			if (!(tile instanceof Error)) {
-				if (entity.path) entity.path.onFailed();
+				if (entity.path && _.isFunction(entity.path.onFailed)) entity.path.onFailed();
 				entity.path = null;
 				entity.position = {
 					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),
