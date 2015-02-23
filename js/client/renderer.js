@@ -223,7 +223,7 @@ define(['loggable'], function(Loggable){
 					px=(ix*Env.tileSize-this.camera.offsetX)*scale;
 
 				if (!spriteObj.sheet) spriteObj.sheet = sheetData;
-				try {
+				// try {
 					if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) { // FIXME: static!?
 						if (floating !== 'undefined' &&
 							floating.indexOf(sprite) >= 0) {
@@ -239,9 +239,9 @@ define(['loggable'], function(Loggable){
 							this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 						}
 					}
-				} catch(e) {
-					this.Log("Error!");
-				}
+				// } catch(e) {
+				// 	this.Log("Error!");
+				// }
 			}
 
 
@@ -311,7 +311,7 @@ define(['loggable'], function(Loggable){
 						px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
 
 					if (!spriteObj.sheet) spriteObj.sheet = sheetData;
-					try {
+					// try {
 						if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
 							if (floating !== 'undefined' &&
 								floating.indexOf(sprite) >= 0) {
@@ -328,9 +328,9 @@ define(['loggable'], function(Loggable){
 								this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 							}
 						}
-					} catch(e) {
-						this.Log("Error!");
-					}
+					// } catch(e) {
+					// 	this.Log("Error!");
+					// }
 				}
 
 
@@ -515,13 +515,13 @@ define(['loggable'], function(Loggable){
 						px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
 
 					if(!spriteObj.sheet) spriteObj.sheet = sheetData;
-					try {
+					// try {
 						if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static')) {
 								this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 						}
-					} catch(e) {
-						this.Log("Error!");
-					}
+					// } catch(e) {
+					// 	this.Log("Error!");
+					// }
 				}
 
 			// Draw items
@@ -541,13 +541,13 @@ define(['loggable'], function(Loggable){
 					px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
 
 				if (!itemObj.sheet) itemObj.sheet = sheetData;
-				try {
+				// try {
 					if (sy!=-1 && sx!=-1 && sprite) {
 						this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 					}
-				} catch(e) {
-					this.Log("Error!");
-				}
+				// } catch(e) {
+				// 	this.Log("Error!");
+				// }
 			}
 
 		};

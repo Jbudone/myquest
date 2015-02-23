@@ -158,6 +158,22 @@
 				//				0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
 				//
 				//  > TODO: protocol for: archiving paths / events / requests / responses (push archives); map/zones; abstract pathfinding & tiles/positions/distances; efficient path confirmation / recalibration on server; dynamic sprites (path-blocking objects & pushing entities); server path follows player requested paths (eg. avoiding/walking through fire, server path should do the same)
+				//  > debugger: allow player to run /admin to change to admin status; then /debug enters
+				//  			(client) debug mode. Server uses node.js VM, creates a context for the debug
+				//  			session. Client UI treats all input as JS for the server, the server sends
+				//  			this to the VM and sends all output to the user, which is printed to the UI
+				//  > Use node.js clusters for clustering users together (if one user is bad, then transfer
+				//  			all other users to a new cluster)
+				//  > Split execution into tasks; each task is put on a job list, and then handled by workers
+				//  			(child processes? domains?); either pass in environment object to
+				//  			process/domain (if possible) OR make tasks self-contained and return answer to
+				//  			master for applying. Note: this gets around exception handling issue. We can
+				//  			also keep track of changes made to the code, since everything outside of these
+				//  			tasks are predictable. We could potentially step backwards, or otherwise start
+				//  			at a previous snapshot and step forwards with these records
+				//  > render background canvas as ALL neighbour pages; then simply translate the canvas as you
+				//  			walk around (NOTE: drawImage on background takes up the most CPU in profiling;
+				//  			this would fix that completely)
 				//
 				// 	> WebRTC UDP approach ( && archive events)
 				// 	> Webworkers for maps/pages on server & Transferable objects
@@ -728,21 +744,31 @@ try{
 
 
 			startGame = function(){
-				var speed = 30,
+				var speed = 50,
 					gameLoop = function() {
 
 						time = new Date().getTime();
 
 						The.map.step(time);
 						The.scriptmgr.step(time);
-						The.camera.step(time);
-						renderer.ui.step(time);
-						renderer.render();
+						// The.camera.step(time);
+						// renderer.ui.step(time);
+						// renderer.render();
 						
 
 						// requestAnimationFrame(gameLoop);
 						setTimeout(gameLoop, speed);
-				};
+					}, render = function(){
+
+						var _time = new Date().getTime();
+						The.camera.step(_time);
+						renderer.ui.step(_time);
+						renderer.render();
+						// requestAnimationFrame(render);
+						setTimeout(render, 20);
+					};
+				render();
+
 
 
 

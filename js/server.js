@@ -2,12 +2,12 @@ var domain = require('domain');
 var d = domain.create();
 
 d.on('error', function(e){
-	console.log(e);
+	console.log('Domain Error: '+e.message);
 	console.trace();
 });
 
 d.run(function(){
-try{
+
 	var requirejs = require('requirejs');
 
 	requirejs.config({
@@ -428,7 +428,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   });
 			   Log('Server running at http://127.0.0.1:1337/');
 
-			   var stepTimer=10,
+			   var stepTimer=30,
 			   step=function(){
 				   time=now();
 
@@ -546,7 +546,4 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	};
 
 });
-}catch(e){
-	console.error(e);
-}
 });
