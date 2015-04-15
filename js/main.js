@@ -7,6 +7,7 @@
 				//
 				// 	> server.js (refactoring)
 				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
+				// 	> server.js on error, crash & restart..email JB w/ notification
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
 				//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
@@ -1095,6 +1096,17 @@ try{
 
 				// Start gameloop
 				gameLoop();
+				ui.postMessage("Game has started.. Welcome to MyQuest!..", MESSAGE_PROGRAM);
+				ui.postMessage("\
+             __  __        ____                  _   \n\
+            |  \\/  |      / __ \\                | |  \n\
+            | \\  / |_   _| |  | |_   _  ___  ___| |_ \n\
+            | |\\/| | | | | |  | | | | |/ _ \\/ __| __|\n\
+            | |  | | |_| | |__| | |_| |  __/\\__ \\ |_ \n\
+            |_|  |_|\\__, |\\___\\_\\\\__,_|\\___||___/\__|\n\
+                     __/ |                           \n\
+                    |___/                            ", MESSAGE_PROGRAM);
+				ui.postMessage("\t\t A simply web based multiplayer RPG game", MESSAGE_PROGRAM);
 			}
 
 
