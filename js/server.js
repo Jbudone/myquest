@@ -1,12 +1,12 @@
-var domain = require('domain');
-var d = domain.create();
-
-d.on('error', function(e){
-	console.log('Domain Error: '+e.message);
-	console.trace();
-});
-
-d.run(function(){
+// var domain = require('domain');
+// var d = domain.create();
+// 
+// d.on('error', function(e){
+// 	console.log('Domain Error: '+e.message);
+// 	console.trace();
+// });
+// 
+// d.run(function(){
 
 	var requirejs = require('requirejs');
 
@@ -37,8 +37,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	var _ = require('underscore'),
 		$ = require('jquery'),
 		fs=require('fs'),
-		Promise = require('promise'), // TODO: which promise driver is more preferable?
-		// Promise = require('es6-promise').Promise,
+		Promise = require('bluebird'),
 		http = require('http'), // TODO: need this?
 		WebSocketServer = require('ws').Server;
 
@@ -503,6 +502,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   for (var clientID in players) {
 					   var player = players[clientID],
 							client = player.client;
+					   if (client.readyState !== 1) continue; // Not open (probably in the middle of d/c)
 						player.step(time);
 						for (var pageID in player.pages){
 						   var page   = pageID;
@@ -546,4 +546,4 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	};
 
 });
-});
+// });

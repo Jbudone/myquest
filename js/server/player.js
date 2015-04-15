@@ -403,6 +403,12 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			this.Log('websocket connection close ['+this.id+']');
 		}).bind(this));
 
+		// FIXME: do we need to disconnect them from all errors ??
+		client.on('error', (function() {
+			this.onDisconnected();
+			this.Log('websocket connection error.. disconnecting user ['+this.id+']');
+		}).bind(this));
+
 		client.on('message', (function(evt) {
 			this.Log(evt, LOG_DEBUG);
 			var evt = JSON.parse(evt);

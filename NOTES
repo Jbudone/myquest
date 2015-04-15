@@ -140,6 +140,11 @@ SERVER
 			nohup ./runserver &
 			(update jbud.me)
 
+DB
+	* Setup (from scratch)
+		- use myquest   -- will create db myquest
+		- db.players.insert({ id: 1, position: { y: 60, x: 53 }, respawn: { map: "main", position: { y: 60, x: 53 }}, map: "main" })
+
 ====== Promises
 
 	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
