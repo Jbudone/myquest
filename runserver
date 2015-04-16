@@ -5,5 +5,11 @@ do
 	nodejs js/server.js
 
 	echo "Server Shutdown... restarting in 5 seconds"
+
+	mail -s "Myquest - Error!" "Jbud@live.ca" <<EOF
+	Hello master. The server just crashed.
+	
+	Please login and find the error when you have a moment.
+EOF
 	sleep 5
 done
