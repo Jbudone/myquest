@@ -15,7 +15,7 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 				console.log("Chatter is for Server");
 
 				var game = this._script;
-				game.hook('addedplayer', this).then(function(entity){
+				game.hook('addedplayer', this).after(function(entity){
 					console.log("Chatter would like to listen to ["+entity.id+"] for messages..");
 					
 					var player = entity.player;
@@ -49,11 +49,11 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		this.client = {
 			initialize: function(){
 				console.log("Chatter is for Client");
-				UI.hook('input', this).first(function(msg){
+				UI.hook('input', this).before(function(msg){
 					console.log("Chatter[pre]: "+msg);
 					if (msg == "1234") return false;
 					return true;
-				}).then(function(msg){
+				}).after(function(msg){
 					console.log("Chatter[post]: "+msg);
 					server.request(EVT_TESTJB, {
 						message: msg
@@ -61,7 +61,9 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 						console.log("Success in sending message! "+msg);
 					}, function(){
 						console.error("Fail in message! "+msg);
-					});
+					})
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 				});
 
 				server.registerHandler(EVT_TESTJB, 'chat');

@@ -49,18 +49,20 @@ requirejs.config({
 		// "jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
 		"jquery": "lib/jquery-2.1.1.min",
 		// "underscore": "//underscorejs.org/underscore",
-		"underscore": "lib/underscore-min"
+		"underscore": "lib/underscore-min",
+		"bluebird": "lib/bluebird.min"
 	}
 });
 
 // Load the main app module to start the app
-require(['underscore','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
+require(['bluebird','underscore','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
 
 	// TODO: why aren't The or Env global?
 	window['The']=The;
 	window['Env']=(new Env());
 	window['Ext']=Ext;
 	window['Stack']=Stack;
+	window['Promise']=Promise;
 
 	for(var util in Utils) {
 		window[util]=Utils[util];

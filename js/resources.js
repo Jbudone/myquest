@@ -47,10 +47,14 @@ define(['jquery', 'loggable'], function($, Loggable){
 							}
 						}.bind(this)), function(){
 							console.log("Error loading resources");
-						});
+						})
+						.catch(Error, function(e){ gameError(e); })
+						.error(function(e){ gameError(e); });
 					}.bind(this)));
 
-				}.bind(this)), failed);
+				}.bind(this)), failed)
+				.catch(Error, function(e){ gameError(e); })
+				.error(function(e){ gameError(e); });
 
 			}.bind(this));
 		}.bind(this)),

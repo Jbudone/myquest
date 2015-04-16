@@ -138,7 +138,9 @@ define(['dynamic','loggable'],function(Dynamic, Loggable){
 			var event;
 			if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { id: playerID }, null);
 			else          event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
-			return this.request(event).then(function(){}, this.onLoginFailed);;
+			return this.request(event).then(function(){}, this.onLoginFailed)
+										.catch(Error, function(e){ gameError(e); })
+										.error(function(e){ gameError(e); });
 		};
 
 		this.requestMap = function(){

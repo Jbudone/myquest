@@ -37,7 +37,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					}
 
 					++this.activeTiles[hash];
-					this.hook('tile-'+hash, context).then(callback);
+					this.hook('tile-'+hash, context).after(callback);
 				}.bind(this), stopListeningToTile = function(context){
 					if (!this.activeTiles.hasOwnProperty(hash)) return;
 
@@ -83,7 +83,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (!this.doHook('addedcharacter').pre(entity)) return;
 			this.characters[entityID] = character;
 
-			character.hook('die', this).then(function(){
+			character.hook('die', this).after(function(){
 				this.removeCharacter(character.entity);
 				if (character.isPlayer) {
 					this.removePlayer(character.entity);
@@ -99,7 +99,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				character.hook('die', this).remove();
 			});
 
-			character.hook('moved', this).then(function(){
+			character.hook('moved', this).after(function(){
 				var pos = character.entity.position.tile;
 				this.tile(pos.x, pos.y).trigger(character);
 			});
@@ -157,7 +157,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			this.registerHook('addedplayer');
 			this.registerHook('removedplayer');
 
-			map.hook('addedentity', this).then(function(entity){
+			map.hook('addedentity', this).after(function(entity){
 
 				// Create a new character object for this entity if one hasn't been created yet
 				if (!(entity.character instanceof Character)) {
@@ -168,9 +168,10 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				if (entity.playerID) {
 					this.addPlayer.call(this, entity);
 				}
+
 			});
 
-			map.hook('removedentity', this).then(function(entity){
+			map.hook('removedentity', this).after(function(entity){
 				this.removeCharacter.call(this, entity);
 				if (entity.playerID) {
 					this.removePlayer.call(this, entity);
@@ -316,7 +317,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 			handleItems: function(){
 
-				user.hook('clickedItem', this).then(function(item){
+				user.hook('clickedItem', this).after(function(item){
 					var page = map.pages[item.page],
 						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
 						x    = item.coord.x,//item.coord - y*Env.pageWidth,
@@ -331,12 +332,16 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 							}, function(){
 								// Couldn't get item
 								console.log("Couldn't get item");
-							});
+							})
+							.catch(Error, function(e){ gameError(e); })
+							.error(function(e){ gameError(e); });
 							
 						console.log("ZOMG I GOT THE ITEM!!");
 					}, function(){
 						console.log("Zawww I couldn't get the item :(");
-					});
+					})
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 				});
 
 				server.registerHandler(EVT_GET_ITEM);

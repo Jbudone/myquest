@@ -77,7 +77,7 @@ define(['loggable'], function(Loggable){
 				setPreHandler = function(callback){
 
 					this.pre_handler = callback;
-					return { then: setHandler };
+					return { after: setHandler };
 			},  setHandler = function(callback){
 
 					this.post_handler = callback;
@@ -86,8 +86,8 @@ define(['loggable'], function(Loggable){
 			};
 
 			return {
-				first: setPreHandler.bind(subscription),
-				then: setHandler.bind(subscription)
+				before: setPreHandler.bind(subscription),
+				after: setHandler.bind(subscription)
 			};
 		};
 

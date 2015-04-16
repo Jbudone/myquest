@@ -188,6 +188,15 @@ try{
 	this.setLogPrefix('(main) ');
 
 
+	var gameError = function(e){
+
+		Log(e, LOG_ERROR);
+		// FIXME: stop game! unexpected and uncaught error..
+	};
+
+
+	window.gameError = gameError;
+
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
@@ -301,7 +310,9 @@ try{
 						// The.player.lastMoved = null;
 						The.player.sprite.idle();
 						ui.updatePages();
-					});
+					})
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 
 				});
 			};
@@ -404,7 +415,9 @@ try{
 				server.login(id);
 			}, function(evt){
 				console.error(evt);
-			});
+			})
+			.catch(Error, function(e){ gameError(e); })
+			.error(function(e){ gameError(e); });
 
 		};
 
@@ -631,7 +644,9 @@ try{
 				// NOTE: save script loading/initialization until we've setup the scripting environment
 
 				loaded('resources');
-			});
+			})
+			.catch(Error, function(e){ gameError(e); })
+			.error(function(e){ gameError(e); });
 		};
 
 
@@ -701,7 +716,9 @@ try{
 				loaded();
 			}, function(){
 				console.error("Could not load scripts!");
-			});
+			})
+			.catch(Error, function(e){ gameError(e); })
+			.error(function(e){ gameError(e); });
 		};
 
 		// ----------------------------------------------------------------- //
@@ -976,7 +993,7 @@ try{
 				};
 
 
-				The.player.character.hook('die', this).then(function(){
+				The.player.character.hook('die', this).after(function(){
 					ui.fadeToBlack();
 				});
 
@@ -1302,6 +1319,7 @@ try{
 
 		};
 }catch(e){
+	console.error(e.stack);
 	printStackTrace();
 }
 });

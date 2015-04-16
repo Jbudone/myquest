@@ -41,6 +41,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		http = require('http'), // TODO: need this?
 		WebSocketServer = require('ws').Server;
 
+	Promise.longStackTraces();
+
 	Env = (new Env());
 	Env.isServer=true;
 
@@ -363,9 +365,19 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   process.exit();
 			   };
 
+			   GLOBAL.exitGame = exitGame;
+
 			   process.on('exit', exitGame);
 			   process.on('SIGINT', exitGame);
 			   process.on('uncaughtException', exitGame);
+
+
+			   var gameError = function(e){
+				   
+				   exitGame(e);
+			   };
+
+			   GLOBAL.gameError = gameError;
 
 			   websocket = new WebSocketServer({port:1338});
 			   websocket.on('connection', function(client){
@@ -391,7 +403,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							   resolved(newID);
 						   }, function(){
 							   failed();
-						   });
+						   })
+							.catch(Error, function(e){ gameError(e); })
+							.error(function(e){ gameError(e); });
 					   });
 				   };
 
@@ -406,7 +420,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							   });
 						   }, function(){
 							   failed();
-						   });
+						   })
+							.catch(Error, function(e){ gameError(e); })
+							.error(function(e){ gameError(e); });
 					   });
 				   };
 

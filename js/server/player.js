@@ -438,7 +438,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					}).bind(this), (function(){
 						this.Log("Could not create new player..", LOG_ERROR);
 						// TODO: tell user
-					}).bind(this));
+					}).bind(this))
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 				} else if (evt.evtType==EVT_LOGIN) {
 					var id = parseInt(evt.data.id);
 					if (isNaN(id)) {
@@ -474,7 +476,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					   var response     = new Response(evt.id);
 					   response.success = false;
 					   this.client.send(response.serialize());
-					}).bind(this));
+					}).bind(this))
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 				}
 
 				return;

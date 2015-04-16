@@ -125,7 +125,7 @@ define(function(){
 					_hook.setPreHook(listener, handler);
 					_hook.rebuildHandlers();
 					return {
-						then: setPostHook
+						after: setPostHook
 					};
 			},  setPostHook = function(handler){
 					_hook.setPostHook(listener, handler);
@@ -142,8 +142,8 @@ define(function(){
 			};
 
 			return {
-				first: setPreHook,
-				then: setPostHook,
+				before: setPreHook,
+				after: setPostHook,
 
 				removePre: remPreHook,
 				removePost: remPostHook,

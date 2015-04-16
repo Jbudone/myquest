@@ -41,7 +41,7 @@ define(['SCRIPTENV', 'hookable', 'scripts/character.ai.ability'], function(SCRIP
 
 			start: function(){
 
-				character.hook('moved', this).then(function(){
+				character.hook('moved', this).after(function(){
 					this.updatePosition();
 					this.look();
 				}.bind(this));

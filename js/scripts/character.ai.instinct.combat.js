@@ -281,7 +281,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				if (!_character.isPlayer) {
 					var sight = this.abilities['sight'];
 					sight.onReady = function(){
-						sight.hook('see', this).then(function(character){
+						sight.hook('see', this).after(function(character){
 							if (character.isPlayer) {
 								console.log("I WANT TO ATTACK YOU!!!");
 
@@ -296,7 +296,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				}
 
 				// TODO: upstream to listen to character
-				_script.listenTo(_character, EVT_ATTACKED).then(function(_character, enemy, amount){
+				_script.listenTo(_character, EVT_ATTACKED).after(function(_character, enemy, amount){
 					_combat.attackedBy(enemy, amount);
 
 					if (_character.isPlayer) {
@@ -306,7 +306,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					}
 				});
 
-				_script.listenTo(_character, EVT_DISTRACTED).then(function(){
+				_script.listenTo(_character, EVT_DISTRACTED).after(function(){
 					_combat.distracted();
 				});
 
@@ -508,7 +508,9 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					}.bind(this), function(){
 						console.error("FAILED TO ATTACK TARGET.."); // TODO: get error msg from server response
 						this.attackBusy = false;
-					}.bind(this));
+					}.bind(this))
+					.catch(Error, function(e){ gameError(e); })
+					.error(function(e){ gameError(e); });
 				}
 
 				return true;
@@ -532,16 +534,16 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				this.addMelee();
 
 				// TODO: upstream from characer
-				_script.listenTo(_character, EVT_ATTACKED).then(function(_character, enemy, amount){
+				_script.listenTo(_character, EVT_ATTACKED).after(function(_character, enemy, amount){
 					_combat.attackedBy(enemy, amount);
 					_combat.listenToTarget(enemy);
 				});
 
-				_script.listenTo(_character, EVT_DISTRACTED).then(function(){
+				_script.listenTo(_character, EVT_DISTRACTED).after(function(){
 					_combat.distracted();
 				});
 
-				user.hook('clickedEntity', user).then(function(entity){
+				user.hook('clickedEntity', user).after(function(entity){
 
 					var character = entity.character;
 					if (character.isPlayer) {
@@ -554,7 +556,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					_combat.setTarget(entity.character);
 				}.bind(this));
 
-				user.hook('clickedTile', user).then(function(){
+				user.hook('clickedTile', user).after(function(){
 					_combat.distracted();
 				}.bind(this));
 			},
