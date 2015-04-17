@@ -54,6 +54,7 @@ requirejs.config({
 	}
 });
 
+
 // Load the main app module to start the app
 require(['bluebird','underscore','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function(Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
 

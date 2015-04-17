@@ -104,6 +104,7 @@ Coding Style
 		* use === where applicable
 		* try/catch where necessary (outside of performance heavy functions) -- MUST try/catch at the highest level spot that will only break that specific routine, but nothing else in the game; must try/catch on anonymous functions; must try/catch within class initialization
 		* Function:
+			- Error handling technique: http://stackoverflow.com/questions/7310521/node-js-best-practice-exception-handling?rq=1
 			- sanitize args (set any undefined args to null; undefined == throws bugs)
 			- try/catch (if necessary)
 			- provide all variables (set default to null if necessary)
@@ -113,6 +114,11 @@ Coding Style
 
 	http://google-styleguide.googlecode.com/svn/trunk/javascriptguide.xml
 
+
+ERROR CHECKING/HANDLING
+utilities.js    ✓
+extensions.js   ✓
+serializable.js ✓
 
 
 LEARN THESE

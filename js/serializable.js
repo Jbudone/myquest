@@ -9,53 +9,59 @@ define(function(){
 					if (type == 'function') return null;
 					if (val == null) return null;
 					if (val instanceof Array) {
-						var jsonized = [];
+						var jsonized = [],
+							jsonizedVal = null;
 						for (i=0; i<val.length; ++i) {
-							jsonized.push( jsonizeValue(val[i]) );
+							jsonizedVal = jsonizeValue(val[i]);
+							if (_.isError(jsonizedVal)) return jsonizedVal;
+
+							jsonized.push( jsonizedVal );
 						}
 						return jsonized;
 					} else if (typeof val == 'object') {
 						if (val.hasOwnProperty('toJSON')) {
-							try {
-								var json = val.toJSON(),
-									attempt = JSON.stringify(json);
-								return json;
-							} catch(e) {
-								console.log("Error: could not toJSON on: "+key);
-								// return null;
-							}
+							var json = val.toJSON();
+							return json; // if error then returning error
 						}
-						var jsonized = {};
+						var jsonized = {},
+							jsonizedVal = null;
 						for (var key in val) {
-							jsonized[key] = jsonizeValue(val[key]);
+							jsonizedVal = jsonizeValue(val[key]);
+							if (_.isError(jsonizedVal)) return jsonizedVal;
+
+							jsonized[key] = jsonizedVal;
 						}
 						return jsonized;
 					} else {
 						return val;
 					}
-				};
+				},
+				keyVal = null,
+				jsonVal = null;
+
 			for (var key in this) {
-				var keyVal = this[key];
+				keyVal = this[key];
 				if (typeof keyVal != "function") {
-					json[key] = jsonizeValue(keyVal);
+					jsonVal = jsonizeValue(keyVal);
+					if (_.isError(jsonVal)) return jsonVal;
+
+					json[key] = jsonVal;
 				}
 			}
 			return json;
 		},
 		fromJSON:function(data){
-			var parse = function(json) {
-
-			};
 
 			if (_.isString(data)) {
+				// FIXME: look into if this try/catch is hurting performance
 				try {
 					data = JSON.parse(data);
 				} catch(e){
-					return UnexpectedError("Bad JSON given");
+					return Error("Bad JSON given");
 				}
 			}
 
-			if (!_.isObject(data)) return UnexpectedError("Data is not an object");
+			if (!_.isObject(data)) return Error("Data is not an object");
 
 			for (var key in data) {
 				this[key] = data[key];
@@ -63,6 +69,8 @@ define(function(){
 		},
 		serialize:function(){
 			var json = this.toJSON();
+			if (_.isError(json)) return json;
+
 			return JSON.stringify(json);
 		}
 	};

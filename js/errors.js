@@ -29,11 +29,14 @@ define(['lib/stacktrace'], function(Stack){
 
 	for (var i=0; i<errorTypes.length; ++i) {
 		var errorName = errorTypes[i];
-		allErrors[errorName] = function(error) {
-			this.name = errorName;
-			this.message = error;
-		};
-		allErrors[errorName].prototype = new GenericError;
+		allErrors[errorName] = Error;
+		// FIXME: decided to go with _.isError(e) which doesn't work on extended errors like this.. adjust as
+		// necessary
+		// allErrors[errorName] = function(error) {
+		// 	this.name = errorName;
+		// 	this.message = error;
+		// };
+		// allErrors[errorName].prototype = new GenericError;
 
 	}
 

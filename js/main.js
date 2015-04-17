@@ -7,7 +7,6 @@
 				//
 				// 	> server.js (refactoring)
 				// 		- clean requirejs (should only require once); define?  maybe requirejs inside loading() loaded() ? (breakpoints work immediately)
-				// 	> server.js on error, crash & restart..email JB w/ notification
 				//
 				//	> D/C queue; play player on D/C queue, D/C player when ready
 				//	> CLEAN: plan out: sprite, animable, movable, entity  object heirarchy... server doesn't need animable? what about special NPC's? Player objects?  ---- Player, Character, NPC, Mob
