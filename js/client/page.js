@@ -2,9 +2,6 @@ define(function(){
 	var Page = {
 		_init: function(){
 
-			this.listenTo(this, EVT_ADDED_ENTITY, function(page, entity){
-
-			});
 		},
 
 		checkZoningTile: function(y,x) {

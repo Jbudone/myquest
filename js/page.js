@@ -62,6 +62,8 @@ define(['eventful','movable'], function(Eventful,Movable){
 			this.stopListeningTo(entity);
 
 			// Add to new page
+			// NOTE: if newPage === null then this is probably a client w/out the page loaded
+			if (!newPage && Env.isServer) throw new Error("No new page given for entity zoning");
 			if (newPage) newPage.addEntity(entity);
 
 			// FIXME: WHY IS THIS NOT ENABLED FOR SERVER?!
@@ -72,6 +74,8 @@ define(['eventful','movable'], function(Eventful,Movable){
 
 		this.addEntity = function(entity) {
 			if (entity.step) {
+				if (this.movables[entity.id]) throw new Error("Entity ("+ entity.id +") already in movables");
+
 				this.updateList.push(entity);
 				this.movables[entity.id] = entity;
 				// FIXME: don't add the entity if he's already listed in movables....check that this doesn't
@@ -80,7 +84,7 @@ define(['eventful','movable'], function(Eventful,Movable){
 				// TODO: check if movable before checking zone_out
 				if (entity instanceof Movable) {
 					this.triggerEvent(EVT_ADDED_ENTITY, entity);
-					console.log("Adding Entity["+entity.id+"] to page: "+this.index);
+					this.Log("Adding Entity["+ entity.id +"] to page: "+ this.index);
 
 					/*
 					this.listenTo(entity, EVT_ZONE, function(entity, newPage, dir){
@@ -200,18 +204,14 @@ define(['eventful','movable'], function(Eventful,Movable){
 		};
 
 		this.step = function(time) {
+			var update  = null,
+				result  = null;
+
 			this.handlePendingEvents();
-			// TODO: process events queue
 			for (var i=0; i<this.updateList.length; ++i) {
-				var update = this.updateList[i];
-				try {
-					update.step(time);
-				} catch(e) {
-					console.log("Error stepping movable: "+i);
-					console.log(e);
-					console.log(e.stack);
-					if (process) process.exit();
-				}
+				update  = this.updateList[i];
+				result  = update.step(time);
+				if (_.isError(result)) return result;
 			}
 		}; 
 

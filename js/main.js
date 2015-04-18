@@ -1122,7 +1122,7 @@ try{
             |_|  |_|\\__, |\\___\\_\\\\__,_|\\___||___/\__|\n\
                      __/ |                           \n\
                     |___/                            ", MESSAGE_PROGRAM);
-				ui.postMessage("\t\t A simply web based multiplayer RPG game", MESSAGE_PROGRAM);
+				ui.postMessage("\t\t A simple web based multiplayer RPG game", MESSAGE_PROGRAM);
 			}
 
 
