@@ -20,8 +20,10 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 		this.characters = {};
 		this.players = {};
 		this.respawning = {};
-		this.delta = 0;
+		this.delta = 0;  // delta time since last update
+		this.deltaSecond = 0;  // same as delta, but this is used to update things which need updates every 1 second rather than every step.. TODO: probably a better way to handle this than having 2 deltas..
 
+		this.droppedItems = [];
 
 
 		this.activeTiles = {}; // Tiles which scripts are listening too (eg. characters listening to certain tiles)
@@ -205,6 +207,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				map.registerHandler('step');
 				map.handler('step').set(function(delta){
 					this.delta += delta;
+					this.deltaSecond += delta;
 
 					while (this.delta >= 100) {
 						this.delta -= 100;
@@ -246,6 +249,12 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 							}
 						}
 					}
+
+					while (this.deltaSecond >= 1000) {
+						this.deltaSecond -= 1000;
+						this.decayItems();
+					}
+
 				}.bind(_game));
 			},
 
@@ -262,7 +271,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					var page = character.entity.page,
 						position = character.entity.position.tile,
 						itm_id = "itm_potion",
-						item = null;
+						item = null,
+						decay = null;
 
 					page.broadcast(EVT_DROP_ITEM, {
 						position: {x: position.x, y: position.y},
@@ -274,12 +284,60 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						id: itm_id,
 						sprite: Resources.items.list[itm_id].sprite,
 						coord: {x: position.x, y: position.y},
-						page: page.index
+						page: page.index,
+					};
+
+					decay = {
+						coord: {x: position.x, y: position.y},
+						page: page.index,
+						decay: now() + 20000, // FIXME: put this somewhere.. NOTE: have to keep all decay rates the same, or otherwise change decayItems structure
 					};
 
 					page.items[(position.y-page.y)*Env.pageWidth + (position.x-page.x)] = item;
+					this.droppedItems.push(decay);
 				}
 			},
+
+			decayItems: function(){
+
+				var item  = null,
+					time  = now(),
+					index = null,
+					coord = null;
+				for (index=0; index<this.droppedItems.length; ++index) {
+					item = this.droppedItems[index];
+					if (item.decay < time) {
+						page = map.pages[item.page];
+						coord = (item.coord.y-page.y)*Env.pageWidth + (item.coord.x-page.x);
+						page.broadcast(EVT_GET_ITEM, {
+							coord: coord,
+							page: item.page
+						});
+
+						delete page.items[coord];
+					} else {
+						break;
+					}
+				}
+
+				if (index) {
+					this.droppedItems.splice(0, index);
+				}
+			},
+
+			removeItem: function(page, coord){
+				// Already removed this item from map/page, just need to remove from droppedItems list
+
+				var index = null;
+				for (index=0; index<this.droppedItems.length; ++index){
+					if (this.droppedItems[index].coord == coord &&
+						this.droppedItems[index].page == page) {
+
+						this.droppedItems.splice(index, 1);
+						break;
+					}
+				}
+			}
 		};
 
 		this.client = {

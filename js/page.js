@@ -1,4 +1,4 @@
-define(['eventful','movable'], function(Eventful,Movable){
+define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 
 
 
@@ -16,6 +16,7 @@ define(['eventful','movable'], function(Eventful,Movable){
 	 *********************************************************/
 	var Page = function(map){
 		extendClass(this).with(Eventful);
+		extendClass(this).with(Loggable);
 		Ext.extend(this,'page');
 
 		this.baseTile = null; // Base tile 

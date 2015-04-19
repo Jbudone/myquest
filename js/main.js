@@ -730,7 +730,8 @@ try{
 			The.player.page = The.map.curPage;
 			The.player.position.local = playerPosition;
 
-			The.map.curPage.addEntity( The.player );
+			if (!The.map.curPage.movables[The.player.id]) throw new Error("Player has not yet been added to page!");
+			// The.map.curPage.addEntity( The.player );
 
 			Log("Initializing UI");
 			ui = new UI();

@@ -324,10 +324,10 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					}
 				}
 
-			return ({then:function(success, failed){
+			return new Promise(function(success, failed){
 				if (_.isFunction(success)) this.path.onFinished = success;
 				if (_.isFunction(failed))  this.path.onFailed   = failed;
-			}.bind(this)});
+			}.bind(this));
 		};
 
 

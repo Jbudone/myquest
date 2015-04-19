@@ -261,6 +261,8 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							page: page.index,
 							coord: coord
 						});
+
+						page.map.game.removeItem(page.index, coord);
 					};
 				player.registerHandler(EVT_GET_ITEM);
 				player.handler(EVT_GET_ITEM).set(pickupItem);
