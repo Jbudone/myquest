@@ -41,7 +41,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return false;
 			}
 			var map            = The.world.maps[player.map],
-				playerPosition = map.localFromGlobalCoordinates(player.position.y, player.position.x),
+				playerPosition = map.localFromGlobalCoordinates(player.position.x, player.position.y),
 				respawnPoint   = null;
 
 			if (playerPosition instanceof Error) {
@@ -50,7 +50,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return false;
 			}
 
-			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.y, player.respawn.position.x);
+			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.x, player.respawn.position.y);
 
 			if (respawnPoint instanceof Error) {
 				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
@@ -123,7 +123,10 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			this.movable.addEventListener(EVT_ZONE_OUT, this, function(player, oldMap, oldPage, map, page, zone) {
 				this.Log("Zoned player from ("+oldMap.id+")["+oldPage.index+"] to ("+map.id+")["+page.index+"]");
-				map.zoneIn(player, zone);
+
+				// NOTE: the actual zoning process is already handled in world.js
+				// map.zoneIn(player, zone);
+
 				player.page = page;
 				this.pages = { };
 				this.pages[page.index] = page;
@@ -240,7 +243,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			k += (vert?your.page.y:your.page.x)*16;
 			// this.Log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
-			var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x);
+			var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
 				index            = null;
 				isSafe           = null;
 
@@ -270,7 +273,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
 						}
 
-						var localCoordinates = map.localFromGlobalCoordinates(nextTile.y, nextTile.x);
+						var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
 							index            = null;
 							isSafe           = null;
 
@@ -377,15 +380,15 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			this.movable.stopAllEventsAndListeners();
 
 			// TODO: find better way to remove movable from page
-			var page = this.movable.page;
-			page.map.unwatchEntity(this.movable);
-			delete page.movables[this.movable.id];
-			for (var i=0; i<page.updateList.length; ++i) {
-				if (page.updateList[i].id == this.movable.id) {
-					page.updateList.splice(i,1);
-					break;
-				}
-			}
+			// var page = this.movable.page;
+			// page.map.unwatchEntity(this.movable);
+			// delete page.movables[this.movable.id];
+			// for (var i=0; i<page.updateList.length; ++i) {
+			// 	if (page.updateList[i].id == this.movable.id) {
+			// 		page.updateList.splice(i,1);
+			// 		break;
+			// 	}
+			// }
 		};
 
 		this.attackTarget = function(targetID){

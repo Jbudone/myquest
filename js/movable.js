@@ -324,10 +324,10 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					}
 				}
 
-			return new Promise(function(success, failed){
+			return ({finished:function(success, failed){
 				if (_.isFunction(success)) this.path.onFinished = success;
 				if (_.isFunction(failed))  this.path.onFailed   = failed;
-			}.bind(this));
+			}.bind(this)});
 		};
 
 
@@ -340,7 +340,7 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					range         = range || 1,
 					myY           = this.page.y * Env.tileSize + this.position.local.y,
 					myX           = this.page.x * Env.tileSize + this.position.local.x,
-					myNearTiles   = this.page.map.findNearestTiles( myY, myX );
+					myNearTiles   = this.page.map.findNearestTiles( myX, myY );
 				
 				for (var i=0; i<myNearTiles.length; ++i) {
 					if (myNearTiles[i].y === target.y &&
@@ -360,8 +360,8 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					yourPage      = target.page,
 					yourY         = yourPage.y * Env.tileSize + target.position.local.y,
 					yourX         = yourPage.x * Env.tileSize + target.position.local.x,
-					yourNearTiles = this.page.map.findNearestTiles( yourY, yourX ),
-					myNearTiles   = this.page.map.findNearestTiles( myY, myX ),
+					yourNearTiles = this.page.map.findNearestTiles( yourX, yourY ),
+					myNearTiles   = this.page.map.findNearestTiles( myX, myY ),
 					tiles         = this.page.map.getTilesInRange( myNearTiles, range, true ),
 					safeTiles     = {},
 					magicNumber   = Env.pageWidth,

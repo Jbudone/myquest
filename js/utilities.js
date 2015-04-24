@@ -4,9 +4,9 @@ define(['serializable'], function(Serializable){
 	var numPaths=0,
 		localActionId=0;
 
-	var now=function(){
-		return (new Date()).getTime();
-	}, isObjectEmpty=function(obj){
+	var now=Date.now,
+		isObjectEmpty=function(obj){
+
 		if (!(obj instanceof Object)) return new MismatchError("Expected object");
 
 		var empty=true;

@@ -35,6 +35,17 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 			return setCallbacks;
 		};
 
+		this.goToTile = function(tile, range){
+			if (!(tile instanceof Tile)) return new UnexpectedError("Target not a tile");
+
+			var path = character.entity.page.map.pathfinding.findPath(character.entity, tile, { range: range, maxWeight: 0 });
+			if (path && !_.isError(path)) {
+				character.entity.addPath(path);
+			}
+
+			return path;
+		};
+
 		this.inRangeOf = function(target, range, options){
 
 			if (typeof options === undefined) options = {};

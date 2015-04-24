@@ -189,7 +189,7 @@ define(['movable'], function(Movable){
 			return JSON.stringify(serialized);
 		},
 
-		checkZoningTile: function(y,x) {
+		checkZoningTile: function(x,y) {
 			var index = y*Env.pageWidth+x;
 			if (this.zones[index]) {
 				return this.zones[index];

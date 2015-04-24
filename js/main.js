@@ -932,7 +932,7 @@ try{
 
 							Log("COULD NOT MOVE ENTITY THROUGH PATH!! Jumping entity directly to end", LOG_WARNING);
 
-							var localCoordinates = The.map.localFromGlobalCoordinates(pathState.globalY, pathState.globalX),
+							var localCoordinates = The.map.localFromGlobalCoordinates(pathState.globalX, pathState.globalY),
 								page             = The.map.pages[page];
 
 							if (localCoordinates instanceof Error) {
@@ -1223,8 +1223,8 @@ try{
 									 y: mouse.y - parseInt(The.camera.offsetY/Env.tileSize) },
 					playerY      = The.map.curPage.y * Env.tileSize + The.player.position.local.y,
 					playerX      = The.map.curPage.x * Env.tileSize + The.player.position.local.x,
-					nearestTiles = The.map.findNearestTiles(playerY, playerX),
-					toTile       = The.map.tileFromLocalCoordinates(walkTo.y, walkTo.x),
+					nearestTiles = The.map.findNearestTiles(playerX, playerY),
+					toTile       = The.map.tileFromLocalCoordinates(walkTo.x, walkTo.y),
 					time         = now(),
 					path         = The.map.findPath(nearestTiles, [toTile]);
 

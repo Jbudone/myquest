@@ -4,7 +4,7 @@ define(function(){
 
 		},
 
-		checkZoningTile: function(y,x) {
+		checkZoningTile: function(x,y) {
 			return false; // TODO: do we want clients to know about zoning spots?
 		},
 

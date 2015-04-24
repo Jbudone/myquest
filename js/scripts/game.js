@@ -21,9 +21,19 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 		this.players = {};
 		this.respawning = {};
 		this.delta = 0;  // delta time since last update
-		this.deltaSecond = 0;  // same as delta, but this is used to update things which need updates every 1 second rather than every step.. TODO: probably a better way to handle this than having 2 deltas..
 
 		this.droppedItems = [];
+
+
+		this.deltaSecond = 0;  // same as delta, but this is used to update things which need updates every 1 second rather than every step.. TODO: probably a better way to handle this than having 2 deltas..
+		this.registerHook('longStep');
+		this.longStep = function(){
+			this.doHook('longStep').pre();
+
+			this.decayItems();
+
+			this.doHook('longStep').post();
+		};
 
 
 		this.activeTiles = {}; // Tiles which scripts are listening too (eg. characters listening to certain tiles)
@@ -186,8 +196,6 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			initialize: function(){
 				console.log("INITIALIZING GAME!?");
 				extendClass(_game).with(Eventful);
-				extendClass(_game).with(Hookable);
-				extendClass(_game).with(Loggable);
 				
 				_script = this;
 				map = this.hookInto;
@@ -252,7 +260,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					while (this.deltaSecond >= 1000) {
 						this.deltaSecond -= 1000;
-						this.decayItems();
+						this.longStep();
 					}
 
 				}.bind(_game));
@@ -382,7 +390,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						tile = new Tile( y, x ),
 						path = map.pathfinding.findPath( player, tile );
 					console.log(item);
-					player.addPath(path).then(function(){
+					player.addPath(path).finished(function(){
 						server.request(EVT_GET_ITEM, { coord: ((item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x)), page: item.page })
 							.then(function(){
 								// Got item
@@ -397,9 +405,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						console.log("ZOMG I GOT THE ITEM!!");
 					}, function(){
 						console.log("Zawww I couldn't get the item :(");
-					})
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					});
 				});
 
 				server.registerHandler(EVT_GET_ITEM);

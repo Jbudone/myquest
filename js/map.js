@@ -29,26 +29,30 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		if (id) {
 			this.id = id;
 			this.map = Resources.maps[id];
+
+			if (!this.map) throw new Error("No map found: ("+ id +")");
 		}
 		this.eventsQueue = [];
-		this.pages = {};
-		this.pagesPerRow=null; // TODO: fetch this from server
-		this.mapWidth=null;
-		this.mapHeight=null;
+		this.pages       = {};
+		this.pagesPerRow = null; // TODO: fetch this from server
+		this.mapWidth    = null;
+		this.mapHeight   = null;
 
-		this.pageIndex=function(y,x){
+		this.pageIndex=function(x,y){
 			return this.pagesPerRow*y+x;
 		};
 
-		this.sheet = null;// Resources.findSheetFromFile('tilesheet.png'); // FIXME: should this be here?
+		this.sheet       = null;// Resources.findSheetFromFile('tilesheet.png'); // FIXME: should this be here?
 		this.pathfinding = new Pathfinding(this);
 		this.lastUpdated = now();
 
 		this.getEntityFromPage = function(page, entityID){
 			if (_.isNumber(page)) page = this.pages[page];
 			
-			if (page) {
+			if (page && page instanceof Page) {
 				return page.movables[entityID];
+			} else if (Env.isServer) {
+				return new Error("Could not find page to get entity");
 			}
 
 			return null;
@@ -75,34 +79,40 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			if (!(entity instanceof Movable)) {
 				this.Log("Checking for entity zoning, but not an entity..", LOG_ERROR);
-				return UnexpectedError("Checking for entity zoning, but not an entity..");
+				return new Error("Checking for entity zoning, but not an entity..");
 			}
 
 			// Check if entity in new page
 			var pageY   = parseInt(entity.position.global.y / (Env.tileSize*Env.pageHeight)),
 				pageX   = parseInt(entity.position.global.x / (Env.tileSize*Env.pageWidth)),
-				pageI   = this.pageIndex(pageY, pageX),
+				pageI   = this.pageIndex(pageX, pageY),
 				oldPage = null,
-				newPage = null;
+				newPage = null,
+				newPos  = null;
 
-			// Moved to a new pages, need to set the proper local position
+			// Zoned to new page?
 			if (pageI != entity.page.index) {
 				newPage = this.pages[ pageI ];
 
-				entity.position.local = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
+				// Moved to a new pages, need to set the proper local position
+				newPos = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
+				if (_.isError(newPos)) {
+					return newPos;
+				}
+				entity.position.local = newPos;
 			}
 
 			
 			// Zoned to new map?
-			var tY = parseInt(entity.position.local.y / Env.tileSize),
-				tX = parseInt(entity.position.local.x / Env.tileSize),
-				zoning = (newPage || entity.page).checkZoningTile(tY, tX);
+			var tY     = parseInt(entity.position.local.y / Env.tileSize),
+				tX     = parseInt(entity.position.local.x / Env.tileSize),
+				zoning = (newPage || entity.page).checkZoningTile(tX, tY);
 
 			if (zoning) {
 				newPage = zoning;
 			}
 
-//console.log("Player at: ["+this.position.tile.x+", "+this.position.tile.y+"]");
+			// Trigger appropriate zoning event
 			if (newPage) {
 				oldPage = entity.page;
 				if (zoning) {
@@ -110,74 +120,92 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					this.triggerEvent(EVT_ZONE_OUT, oldPage, entity, zoning);
 				} else {
 					this.Log("Zoning user ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
-					entity.page.zoneEntity(newPage, entity);
+					var result = entity.page.zoneEntity(newPage, entity);
+					if (_.isError(result)) return result;
+
 					entity.triggerEvent(EVT_ZONE, oldPage, newPage);
 					this.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
 				}
 			}
 		};
+
 		this.watchEntity = function(entity){
 
-			if (entity.step) {
-				if (entity instanceof Movable) {
-					if (this.movables[entity.id]) return; // Movable already being watched
-					if (!this.doHook('addedentity').pre(entity)) return;
-					this.Log("Adding Entity["+entity.id+"] to map");
-					this.movables[entity.id] = entity;
+			if (!(entity instanceof Movable)) throw new Error("entity is not a Movable");
+			if (!entity.step) throw new Error("entity doesn't have step");
+			if (this.movables[entity.id]) throw new Error("Already watching this entity!");
+			if (!this.doHook('addedentity').pre(entity)) return;
 
-					// Listen to the entity moving to new pages
-					this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
-						this.Log("Moving to tile.. ("+entity.position.tile.x+", "+entity.position.tile.y+")["+this.id+"]", LOG_DEBUG);
-						if (entity.hasOwnProperty('isZoning')) return;
-						this.checkEntityZoned(entity);
-					}, HIGH_PRIORITY);
+			this.Log("Adding Entity["+ entity.id +"] to map");
+			this.movables[entity.id] = entity;
 
-					this.listenTo(entity, EVT_DIED, function(entity){
-
-						/* NOTE: doing this would prevent any stepping for the dead entity. Better to keep
-						 * them in the page updateList and simply store them as dead (not sending any updates)
-						var page   = entity.page;
-						delete page.movables[entity.id];
-						for (var i=0; i<page.updateList.length; ++i) {
-							if (page.updateList[i] == entity) {
-								page.updateList.splice(i,1);
-								break;
-							}
-						}
-
-						page.stopListeningTo(entity);
-						this.unwatchEntity(entity);
-						*/
-					});
-					this.doHook('addedentity').post(entity);
+			// Listen to the entity moving to new pages
+			this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, function(entity){
+				this.Log("Moving to tile.. ("+entity.position.tile.x+", "+entity.position.tile.y+")["+this.id+"]", LOG_DEBUG);
+				if (entity.hasOwnProperty('isZoning')) return;
+				var result = this.checkEntityZoned(entity);
+				if (_.isError(result)) {
+					throw result;
 				}
-			}
+			}, HIGH_PRIORITY);
+
+			this.listenTo(entity, EVT_DIED, function(entity){
+
+				/* NOTE: doing this would prevent any stepping for the dead entity. Better to keep
+				 * them in the page updateList and simply store them as dead (not sending any updates)
+				var page   = entity.page;
+				delete page.movables[entity.id];
+				for (var i=0; i<page.updateList.length; ++i) {
+					if (page.updateList[i] == entity) {
+						page.updateList.splice(i,1);
+						break;
+					}
+				}
+
+				page.stopListeningTo(entity);
+				this.unwatchEntity(entity);
+				*/
+			});
+
+			this.doHook('addedentity').post(entity);
 		};
 
 		this.unwatchEntity = function(entity){
+
+			if (!(entity instanceof Movable)) throw new Error("entity is not a Movable");
+			if (!this.movables[entity.id]) throw new Error("Not currently watching entity: ("+ entity.id +")");
 
 			this.stopListeningTo(entity);
 			delete this.movables[entity.id];
 		};
 
 
+		// Remove the entity from the map/page
 		this.registerHook('removedentity');
 		this.removeEntity = function(entity){
-			if (!(entity instanceof Movable)) return UnexpectedError("Entity not a Movable");
+			if (!(entity instanceof Movable)) throw new Error("Entity not a Movable");
 
 			if (!this.doHook('removedentity').pre(entity)) return;
 
-			var page   = entity.page;
+			var page                    = entity.page,
+				foundEntityInUpdateList = false,
+				result                  = null;
+			if (!(page instanceof Page)) throw new Error("Entity does not have a page");
+			if (!page.movables.hasOwnProperty(entity.id)) throw new Error("Entity page does not contain entity");
+
 			delete page.movables[entity.id];
 			for (var i=0; i<page.updateList.length; ++i) {
 				if (page.updateList[i] == entity) {
 					page.updateList.splice(i,1);
+					foundEntityInUpdateList = true;
 					break;
 				}
 			}
+			if (!foundEntityInUpdateList) throw new Error("Could not find entity in page update list");
 
 			page.stopListeningTo(entity);
-			this.unwatchEntity(entity);
+			result = this.unwatchEntity(entity);
+			if (_.isError(result)) throw result;
 
 			this.doHook('removedentity').post(entity);
 		};
@@ -197,406 +225,426 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 
 
+		// Recalibrate a path from the movable's state to the starting point of the path
+		//	Server: When the user sends a path request, but we're slightly behind in their local position, then
+		//			we need to recalibrate the path to start from their server position to their expected
+		//			position, and add this into the path
+		//	Client: When the server sends us some path for an entity, but that entity isn't at the start path
+		//			position (most likely they're still walking there), then need to recalibrate the path from
+		//			the local entity position to the start of the path
+		//
+		//
+		// state: The (x, y) global real position
+		// pathState: Start position of path
+		// path: Path object
+		//
+		// NOTE: The recalibration will be injected into the path
 		this.recalibratePath=function(state, pathState, path, maxWalk){
 
-			// NOTE: state { x/y (global real) }
-			var map = this;
-		   try {
-			   // console.log("	Recalibrating path..");
-			   // console.log("	Path State: ("+pathState.y+","+pathState.x+")");
-			   // console.log("	Player (current) State: ("+state.y+","+state.x+")");
+			var map          = this,
+				debugLogging = false,
+				logWalk      = new Function(),
+				logPath      = new Function();
+
+			if (debugLogging) {
+				console.log("	Recalibrating path..");
+				console.log("	Path State: ("+pathState.y+","+pathState.x+")");
+				console.log("	Player (current) State: ("+state.y+","+state.x+")");
 
 
 
-			   var logWalk = function(walk) {
-				   var dir = null;
-						if (walk.direction == NORTH) dir = "NORTH";
-				   else if (walk.direction == SOUTH) dir = "SOUTH";
-				   else if (walk.direction == WEST)  dir = "WEST";
-				   else if (walk.direction == EAST)  dir = "EAST";
-				   // console.log("		Walk: "+dir+"  ("+walk.distance+")");
-			   }, logPath = function(path) {
-				   return;
-				   console.log("	Path:");
-				   for (var j=0; j<path.walks.length; ++j) {
-					   logWalk(path.walks[j]);
+				var logWalk = function(walk) {
+					var dir = null;
+					if (walk.direction == NORTH) dir = "NORTH";
+					else if (walk.direction == SOUTH) dir = "SOUTH";
+					else if (walk.direction == WEST)  dir = "WEST";
+					else if (walk.direction == EAST)  dir = "EAST";
+					console.log("		Walk: "+dir+"  ("+walk.distance+")");
+				}, logPath = function(path) {
+					console.log("	Path:");
+					for (var j=0; j<path.walks.length; ++j) {
+						logWalk(path.walks[j]);
+					}
+				}
+			}
+
+
+
+		   // 	> if state & reqstate not equal, extend path w/ position TO initial state
+		   ///////////////////////////////////////
+
+		   var findNearestTiles = function(posX, posY) {
+			   // NOTE: use global real coordinates
+			   var tiles = map.findNearestTiles(posX, posY);
+			   if (_.isError(tiles)) return tiles;
+
+			   // filter open tiles
+			   tiles.filter(function(tile){
+				   var localCoordinates = map.localFromGlobalCoordinates(tile.x, tile.y);
+				   if (_.isError(localCoordinates)) return false;
+
+				   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+			   });
+
+			   return tiles;
+		   }, findShortestPath = function(tilesStart, tilesEnd) {
+
+			   // TODO: remove this..
+			   var path = map.findPath(tilesStart, tilesEnd);
+			   if (_.isError(path)) return path;
+			   if (!path) return false;
+			   if (!path.path) {
+				   return {
+					   path: null,
+					   tile: path.start.tile
+				   };
+			   }
+
+			   return {
+				   path:      path.path,
+				   startTile: path.start,
+				   endTile:   path.end
+			   };
+
+		   }, recalibrationWalk = function(tile, posX, posY) {
+			   // NOTE: global real coordinates
+
+			   var path = [];
+
+			   if (posY != tile.y * Env.tileSize) {
+				   // Inject walk to this tile
+				   var distance    = -1*(posY - tile.y * Env.tileSize),
+					   walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), tile.offset(0, 0));
+				   path.unshift(walk);
+			   }
+
+			   if ( posX != tile.x * Env.tileSize) {
+				   // Inject walk to this tile
+				   var distance    = -1*(posX - tile.x * Env.tileSize),
+					   walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), tile.offset(0, 0));
+				   path.unshift(walk);
+			   }
+
+			   return path;
+		   };
+
+		   // Check Path
+		   //
+		   // If player is not currently standing on starting point for path, then inject a
+		   // path from current position to that starting point
+		   if (pathState.y != state.y || pathState.x != state.x) {
+
+			   // Need to inject any necessary walk from the player position to the starting
+			   // point for the path,
+			   //
+			   //  Player Position -> Near Tile/Player -> Near Tile/Path -> Path-Start Position
+			   //
+			   //
+			   // Player Position (real coordinates)
+			   // Nearest Tile to Player (discrete tile)
+			   // Nearest Tile to Path-Start (discrete tile)
+			   // Path-Start Position (real coordinates)
+
+
+			   // Recalibrate path if necessary
+			   // NOTE: use player.posY/posX since we need local real coordinates to
+			   // 		determine offsets from the tile
+			   var startTiles = findNearestTiles( state.x, state.y ),
+				   endTiles   = findNearestTiles( pathState.x, pathState.y ),
+				   startPath  = null,
+				   startTile  = null,
+				   endTile    = null;
+
+			   if (_.isError(startTiles)) return startTiles;
+			   if (_.isError(endTiles)) return endTiles;
+
+			   if (startTiles.length == 0) {
+				   console.log("	No startTiles found.."+now());
+				   console.log(player.position.local.y);
+				   console.log(player.position.local.x);
+				   return false;
+			   } else {
+				   startPath  = findShortestPath( startTiles, endTiles );
+				   if (_.isError(startPath)) return startPath;
+			   }
+
+			   if (startPath) {
+				   if (!startPath.path) {
+
+					   // Player Position -> Path-Start Position
+					   var tile               = startPath.tile;
+						   startTile          = tile;
+						   endTile            = tile,
+						   recalibrationStart = null;
+
+					   if (startTile.tile) return new Error("No startTile found..");
+					   recalibrationStart = recalibrationWalk(startTile, state.x, state.y);
+					   if (_.isError(recalibrationStart)) return recalibrationStart;
+
+					   // extend walk from position to start
+					   for (var j=recalibrationStart.length-1; j>=0; --j) {
+						   path.walks.unshift( recalibrationStart[j] );
+
+						   // This single walk is far too long
+						   if (recalibrationStart[j].distance > 32) {
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log(startTiles);
+							   console.log(endTiles);
+							   logPath(path);
+							   return false;
+						   }
+					   }
+
+					   // This entire path is greater than our maximum path length
+					   if (path.length() > maxWalk) {
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   logPath(path);
+						   return false;
+					   } else {
+
+						   return true;
+						   // var pathCpy = extendClass({}).with(path);
+						   // pathCpy.time = action.time;
+						   // pathCpy.state = action.state;
+						   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
+
+						   // your.player.path=null;
+						   // console.log("Adding Path..a");
+						   // logPath(path);
+						   // your.player.addPath(path);
+
+						   // var response = new Response(action.id),
+						   // client   = your.client;
+						   // response.success = true;
+						   // client.send(response.serialize());
+						   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
+
+						   // eventsArchive.addEvent(action);
+					   }
+
+				   } else {
+
+					   // Path length is greater than our maximum path length
+					   if (startPath.path.length() > maxWalk) {
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log(startTiles);
+						   console.log(endTiles);
+						   logPath(path);
+						   return false;
+
+					   }
+					   startTile = startPath.startTile;
+					   endTile   = startPath.endTile;
+
+					   var recalibrationStart = recalibrationWalk(startTile.tile, state.x, state.y),
+						   recalibrationEnd   = recalibrationWalk(endTile.tile, pathState.x, pathState.y);
+
+					   if (_.isError(recalibrationStart)) return recalibrationStart;
+					   if (_.isError(recalibrationEnd)) return recalibrationEnd;
+
+					   // extend walk from position to start
+					   for (var j=0; j<recalibrationStart.length; ++j) {
+						   startPath.path.walks.unshift( recalibrationStart[j] );
+
+						   // This single walk is too long
+						   if (recalibrationStart[j].distance > 32) {
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   logWalk(recalibrationStart);
+							   logWalk(recalibrationEnd);
+							   console.log(startTiles);
+							   console.log(endTiles);
+							   logPath(path);
+							   return false;
+						   }
+					   }
+
+					   // extend walk from end to req state
+					   for (var j=0; j<recalibrationEnd.length; ++j) {
+						   var dir = recalibrationEnd[j].direction;
+						   if (dir == NORTH) recalibrationEnd[j].direction = SOUTH;
+						   else if (dir == SOUTH) recalibrationEnd[j].direction = NORTH;
+						   else if (dir == WEST)  recalibrationEnd[j].direction = EAST;
+						   else if (dir == EAST)  recalibrationEnd[j].direction = WEST;
+						   startPath.path.walks.push( recalibrationEnd[j] );
+					   }
+
+
+					   // TODO TODO TODO
+					   // 			IF walk[0] AND adjusted walk are in same direction, add the steps
+					   // 			together
+
+					   for (var j=startPath.path.walks.length-1; j>=0; --j) {
+						   path.walks.unshift( startPath.path.walks[j] );
+					   }
+
+
+					   // This entire path is longer than our maximum path length
+					   if (path.length() > maxWalk) {
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log(startTiles);
+						   console.log(endTiles);
+						   logPath(path);
+						   return false;
+					   } else {
+						   return true;
+						   // var pathCpy = extendClass({}).with(path);
+						   // pathCpy.time = action.time;
+						   // pathCpy.state = action.state;
+						   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
+
+						   // your.player.path=null;
+						   // console.log("Adding Path..b");
+						   // logWalk(recalibrationStart);
+						   // logWalk(recalibrationEnd);
+						   // logPath(path);
+						   // your.player.addPath(path);
+
+						   // var response = new Response(action.id),
+							   // client   = your.client;
+						   // response.success = true;
+						   // client.send(response.serialize());
+						   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
+
+						   // // TODO: global event listener on sprites for starting new walk, add to eventsArchive
+						   // eventsArchive.addEvent(action);
+						   // continue;
+					   }
 				   }
+
+			   } else {
+				   console.log("No path found to get from current player position to req state..");
+				   console.log("--------------------------------");
+				   var startTiles = findNearestTiles( state.x, state.y ),
+					   endTiles   = findNearestTiles( pathState.x, pathState.y );
+				   console.log(startTiles);
+				   console.log(endTiles);
+				   console.log("--------------------------------");
+				   return false;
 			   }
 
 
-
-			   // 	> if state & reqstate not equal, extend path w/ position TO initial state
-			   ///////////////////////////////////////
-
-			   var findNearestTiles = function(posY, posX) {
-				   // NOTE: use global real coordinates
-				   // console.log("	Finding nearest tiles.. ("+ posY +","+ posX +")");
-				   var tiles = map.findNearestTiles(posY, posX);
-
-				   // filter open tiles
-				   tiles.filter(function(tile){
-					   var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x);
-
-					   if (localCoordinates instanceof Error) {
-						   return false;
-					   }
-
-					   return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-				   });
-
-				   return tiles;
-			   }, findShortestPath = function(tilesStart, tilesEnd) {
-				   console.log("	Finding shortest path..");
-
-				   // TODO: remove this..
-				   var path = map.findPath(tilesStart, tilesEnd);
-				   if (!path) return false;
-				   // console.log('found shortest path');
-				   // console.log(path);
-				   if (!path.path) {
-					   return {
-						   path: null,
-						   tile: path.start.tile
-					   };
-				   }
-
-				   return {
-					   path:      path.path,
-					   startTile: path.start,
-					   endTile:   path.end
-				   };
-
-			   }, recalibrationWalk = function(tile, posY, posX) {
-				   // NOTE: global real coordinates
-
-				   var path = [];
-
-				   if (posY != tile.y * Env.tileSize) {
-					   // Inject walk to this tile
-					   var distance    = -1*(posY - tile.y * Env.tileSize),
-						   walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), tile.offset(0, 0));
-					   path.unshift(walk);
-				   }
-
-				   if ( posX != tile.x * Env.tileSize) {
-					   // Inject walk to this tile
-					   var distance    = -1*(posX - tile.x * Env.tileSize),
-						   walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), tile.offset(0, 0));
-					   path.unshift(walk);
-				   }
-
-				   return path;
-			   };
-
-				   // Check Path
-				   //
-				   // If player is not currently standing on starting point for path, then inject a
-				   // path from current position to that starting point
-				   if (pathState.y != state.y ||  pathState.x != state.x) {
-
-					   // Need to inject any necessary walk from the player position to the starting
-					   // point for the path,
-					   //
-					   //  Player Position -> Near Tile/Player -> Near Tile/Path -> Path-Start Position
-					   //
-					   //
-					   // Player Position (real coordinates)
-					   // Nearest Tile to Player (discrete tile)
-					   // Nearest Tile to Path-Start (discrete tile)
-					   // Path-Start Position (real coordinates)
-
-
-					   // Recalibrate path if necessary
-					   // NOTE: use player.posY/posX since we need local real coordinates to
-					   // 		determine offsets from the tile
-					   var startTiles = findNearestTiles( state.y, state.x ),
-						   endTiles   = findNearestTiles( pathState.y, pathState.x ),
-						   startPath  = null,
-						   startTile  = null,
-						   endTile    = null;
-
-					   if (startTiles.length == 0) {
-						   console.log("	No startTiles found.."+now());
-						   console.log(player.position.local.y);
-						   console.log(player.position.local.x);
-						   return false;
-					   } else {
-						   startPath  = findShortestPath( startTiles, endTiles );
-					   }
-					   if (startPath) {
-						   if (!startPath.path) {
-
-							   // Player Position -> Path-Start Position
-							   var tile      = startPath.tile;
-								   startTile = tile;
-								   endTile   = tile;
-
-							   if (startTile.tile) throw "No startTile found..";
-							   var recalibrationStart = recalibrationWalk(startTile, state.y, state.x);
-
-							   // extend walk from position to start
-							   for (var j=recalibrationStart.length-1; j>=0; --j) {
-								   path.walks.unshift( recalibrationStart[j] );
-								   if (recalibrationStart[j].distance > 32) {
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log("ISSUE HERE A!!!");
-									   console.log(startTiles);
-									   console.log(endTiles);
-									   logPath(path);
-									   return false;
-									   // throw new Error("ISSUES");
-								   }
-							   }
-
-							   if (path.length() > maxWalk) {
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   console.log("ISSUE HERE D!!!");
-								   logPath(path);
-								   return false;
-							   } else {
-
-								   return true;
-								   // var pathCpy = extendClass({}).with(path);
-								   // pathCpy.time = action.time;
-								   // pathCpy.state = action.state;
-								   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
-
-								   // your.player.path=null;
-								   // console.log("Adding Path..a");
-								   // logPath(path);
-								   // your.player.addPath(path);
-
-								   // var response = new Response(action.id),
-								   // client   = your.client;
-								   // response.success = true;
-								   // client.send(response.serialize());
-								   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-
-								   // eventsArchive.addEvent(action);
-							   }
-
-						   } else {
-							   if (startPath.path.length() > maxWalk) {
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log("ISSUE HERE C!!!");
-								   console.log(startTiles);
-								   console.log(endTiles);
-								   logPath(path);
-								   return false;
-								   // throw new Error("ISSUES");
-
-							   }
-							   startTile = startPath.startTile;
-							   endTile   = startPath.endTile;
-
-							   var recalibrationStart = recalibrationWalk(startTile.tile, state.y, state.x),
-								   recalibrationEnd   = recalibrationWalk(endTile.tile, pathState.y, pathState.x);
-
-							   // extend walk from position to start
-							   for (var j=0; j<recalibrationStart.length; ++j) {
-								   startPath.path.walks.unshift( recalibrationStart[j] );
-								   if (recalibrationStart[j].distance > 32) {
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   console.log("ISSUE HERE B!!!");
-									   logWalk(recalibrationStart);
-									   logWalk(recalibrationEnd);
-									   console.log(startTiles);
-									   console.log(endTiles);
-									   logPath(path);
-									   return false;
-									   // throw new Error("ISSUES");
-								   }
-							   }
-
-							   // extend walk from end to req state
-							   for (var j=0; j<recalibrationEnd.length; ++j) {
-								   var dir = recalibrationEnd[j].direction;
-								   if (dir == NORTH) recalibrationEnd[j].direction = SOUTH;
-								   else if (dir == SOUTH) recalibrationEnd[j].direction = NORTH;
-								   else if (dir == WEST)  recalibrationEnd[j].direction = EAST;
-								   else if (dir == EAST)  recalibrationEnd[j].direction = WEST;
-								   startPath.path.walks.push( recalibrationEnd[j] );
-							   }
-
-
-							   // TODO TODO TODO
-							   // 			IF walk[0] AND adjusted walk are in same direction, add the steps
-							   // 			together
-
-							   for (var j=startPath.path.walks.length-1; j>=0; --j) {
-								   path.walks.unshift( startPath.path.walks[j] );
-							   }
-
-
-							   if (path.length() > maxWalk) {
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log("ISSUE HERE E!!!");
-								   console.log(startTiles);
-								   console.log(endTiles);
-								   logPath(path);
-								   return false;
-							   } else {
-								   return true;
-								   // var pathCpy = extendClass({}).with(path);
-								   // pathCpy.time = action.time;
-								   // pathCpy.state = action.state;
-								   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
-
-								   // your.player.path=null;
-								   // console.log("Adding Path..b");
-								   // logWalk(recalibrationStart);
-								   // logWalk(recalibrationEnd);
-								   // logPath(path);
-								   // your.player.addPath(path);
-
-								   // var response = new Response(action.id),
-									   // client   = your.client;
-								   // response.success = true;
-								   // client.send(response.serialize());
-								   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-
-								   // // TODO: global event listener on sprites for starting new walk, add to eventsArchive
-								   // eventsArchive.addEvent(action);
-								   // continue;
-							   }
-						   }
-
-					   } else {
-						   console.log("No path found to get from current player position to req state..");
-						   console.log("--------------------------------");
-						   var startTiles = findNearestTiles( state.y, state.x ),
-							   endTiles   = findNearestTiles( pathState.y, pathState.x );
-						   console.log(startTiles);
-						   console.log(endTiles);
-						   console.log("--------------------------------");
-						   return false;
-					   }
-
-
-					   // var response = new Response(action.id),
-						   // client   = your.client;
-					   // response.success = false;
-					   // client.send(response.serialize());
-					   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-					   return false;
-
-
-					   // TODO: pathfind from tile to tile
-					   // TODO: adjust walk[0] from curState to path start
-					   // 			IF walk[0] AND adjusted walk are in same direction, add the steps
-					   // 			together
-					   // TODO: adjust path end to req state
-
-
-					   // 	> if extension is TOO large, disallow
-				   } else {
-
-					   // use this path
-					   return true;
-					   // var path = new Path(),
-					   // walk = new Walk();
-
-					   // walk.fromJSON(action.data);
-					   // path.walks.push(walk);
-
-					   // var pathCpy = extendClass({}).with(path);
-					   // pathCpy.time = action.time;
-					   // pathCpy.state = action.state;
-					   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
-
-					   // your.player.path=null;
-					   // console.log("Adding Path..c");
-					   // logPath(path);
-					   // your.player.addPath(path);
-
-					   // var response = new Response(action.id),
-					   // client   = your.client;
-					   // response.success = true;
-					   // client.send(response.serialize());
-					   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
-
-					   // // TODO: split path into multiple walks of size <= 2
-					   // // TODO: global event listener on sprites for starting new walk, add to eventsArchive
-					   // eventsArchive.addEvent(action);
-					   // continue;
-				   }
-
-				   return false;
-		   } catch(e) {
-			   console.log("Error figuring out user path..");
-			   console.log(e.message);
 			   return false;
+
+
+			   // TODO: pathfind from tile to tile
+			   // TODO: adjust walk[0] from curState to path start
+			   // 			IF walk[0] AND adjusted walk are in same direction, add the steps
+			   // 			together
+			   // TODO: adjust path end to req state
+
+
+			   // 	> if extension is TOO large, disallow
+		   } else {
+
+			   // use this path
+			   return true;
+			   // var path = new Path(),
+			   // walk = new Walk();
+
+			   // walk.fromJSON(action.data);
+			   // path.walks.push(walk);
+
+			   // var pathCpy = extendClass({}).with(path);
+			   // pathCpy.time = action.time;
+			   // pathCpy.state = action.state;
+			   // you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
+
+			   // your.player.path=null;
+			   // console.log("Adding Path..c");
+			   // logPath(path);
+			   // your.player.addPath(path);
+
+			   // var response = new Response(action.id),
+			   // client   = your.client;
+			   // response.success = true;
+			   // client.send(response.serialize());
+			   // your.responseArchive.addEvent(response); // TODO: need to pushArchive for client sometimes
+
+			   // // TODO: split path into multiple walks of size <= 2
+			   // // TODO: global event listener on sprites for starting new walk, add to eventsArchive
+			   // eventsArchive.addEvent(action);
+			   // continue;
 		   }
+
+		   return false;
 		};
 		
-		this.findPath=function(fromTiles, toTiles){
+		this.findPath=function(fromTiles, toTiles, _maxWeight){
 
-			if (!fromTiles.length) throw "No tiles to start from..";
+			if (!_.isArray(fromTiles) || !fromTiles.length) return new Error("No tiles to start from..");
+			if (!_.isArray(toTiles) || !toTiles.length) return new Error("No tiles to walk to..");
 
-			function TileNode(tile, directionToTile, walkTime, previousTile, ignoreHeuristics){
-				this.tile=tile;
-				this.checked=false;
-				this.previousDirection=directionToTile;
-				this.weight=walkTime;
-				this.nextTile=[];
-				this.previousTile=previousTile;
-				this.nearestDestination=null;
+			if (_maxWeight === 0) _maxWeight = 10000000;
+
+			var TileNode = function(tile, directionToTile, walkTime, previousTile, ignoreHeuristics){
+				this.tile               = tile;
+				this.checked            = false;
+				this.previousDirection  = directionToTile;
+				this.weight             = walkTime;
+				this.nextTile           = [];
+				this.previousTile       = previousTile;
+				this.nearestDestination = null;
 				this.estimateCost = function(endTile){
 					if (!endTile) endTile = this.nearestDestination.tile;
 					if (!endTile) return null;
@@ -617,6 +665,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						for (var i=0; i<toTiles.length; ++i) {
 							var endTile = toTiles[i],
 								estimatedWeight = this.estimateCost(endTile);
+							if (!_.isNumber(estimatedWeight)) return new Error("path heuristic NaN");
 							if (estimatedWeight < cheapestWeight) {
 								nearestEnd = endTile;
 							}
@@ -639,22 +688,18 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				this.time = weightWhenDecided;
 			};
 
-			var start = [],
-				end   = [],
-				nearestEnd = null,
-				openTiles = {},
+			var start                     = [],
+				end                       = [],
+				nearestEnd                = null,
+				openTiles                 = {},
 				weightToRecheckHeuristics = 1, // TODO: fix this
-				totalCostOfPathfind = 0,
-				maxWeight = 100, // TODO: better place to store this
-				neighbours = {},
-				// destination = {y: toTile.y, x: toTile.x},
-				map = this,
+				totalCostOfPathfind       = 0,
+				maxWeight                 = _maxWeight || 100, // TODO: better place to store this
+				neighbours                = {},
+				map                       = this,
 				isOpenTile = function(tile){
-					var localCoordinates = map.localFromGlobalCoordinates(tile.y, tile.x);
-
-					if (localCoordinates instanceof Error) {
-						return false;
-					}
+					var localCoordinates = map.localFromGlobalCoordinates(tile.x, tile.y);
+					if (_.isError(localCoordinates)) return false;
 
 					return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 				}, getNeighbours = function(tileNode){
@@ -667,22 +712,18 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						neighbours = [],
 						weight = tileNode.weight+1;
 
-						try { north = map.tileFromGlobalCoordinates(tile.y-1, tile.x); }   catch(e){};
-						try { east  = map.tileFromGlobalCoordinates(tile.y,   tile.x+1); } catch(e){};
-						try { south = map.tileFromGlobalCoordinates(tile.y+1, tile.x); }   catch(e){};
-						try { west  = map.tileFromGlobalCoordinates(tile.y,   tile.x-1); } catch(e){};
+					west  = map.tileFromGlobalCoordinates(tile.x-1, tile.y);
+					south = map.tileFromGlobalCoordinates(tile.x,   tile.y+1);
+					east  = map.tileFromGlobalCoordinates(tile.x+1, tile.y);
+					north = map.tileFromGlobalCoordinates(tile.x,   tile.y-1);
 
-					if (north) neighbours.push( new TileNode(north,'n',weight,tileNode) );
-					if (east)  neighbours.push( new TileNode(east,'e',weight,tileNode) );
-					if (south) neighbours.push( new TileNode(south,'s',weight,tileNode) );
-					if (west)  neighbours.push( new TileNode(west,'w',weight,tileNode) );
+					if (north instanceof Tile) { ++totalCostOfPathfind; neighbours.push( new TileNode(north,'n',weight,tileNode) ); }
+					if (east  instanceof Tile) { ++totalCostOfPathfind; neighbours.push( new TileNode(east,'e',weight,tileNode) );  }
+					if (south instanceof Tile) { ++totalCostOfPathfind; neighbours.push( new TileNode(south,'s',weight,tileNode) ); }
+					if (west  instanceof Tile) { ++totalCostOfPathfind; neighbours.push( new TileNode(west,'w',weight,tileNode) );  }
 
-					if (north) ++totalCostOfPathfind;
-					if (east) ++totalCostOfPathfind;
-					if (south) ++totalCostOfPathfind;
-					if (west) ++totalCostOfPathfind;
 					return neighbours;
-				}, hashCoordinates = function(y,x){
+				}, hashCoordinates = function(x,y){
 					var magicNumber = maxWeight+Env.pageWidth;
 					return y*magicNumber+x;
 				};
@@ -694,7 +735,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				var toTile          = toTiles[i],
 					toCoordinates   = { y: toTile.y, x: toTile.x },
 					toNode          = new TileNode(toTile, null, 9999, null, true),
-					index           = hashCoordinates(toCoordinates.y, toCoordinates.x);
+					index           = hashCoordinates(toCoordinates.x, toCoordinates.y);
+				if (!_.isNumber(index)) return new Error("index of ("+ toCoordinates.x +", "+ toCoordinates.y +") NaN!");
 
 				toNode.end = true;
 				neighbours[index] = toNode;
@@ -704,7 +746,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				var fromTile        = fromTiles[i],
 					fromCoordinates = { y: fromTile.y, x: fromTile.x },
 					fromNode        = new TileNode(fromTile, null, 0, null),
-					index           = hashCoordinates(fromCoordinates.y, fromCoordinates.x);
+					index           = hashCoordinates(fromCoordinates.x, fromCoordinates.y);
+				if (!_.isNumber(index)) return new Error("index of ("+ fromCoordinates.x +", "+ fromCoordinates.y +") NaN!");
 
 				for (var j=0; j<toTiles.length; ++j) { 
 					var toTile          = toTiles[j],
@@ -724,6 +767,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				start.push( fromNode );
 				neighbours[index] = fromNode;
 				var estimatedCost = fromNode.estimateCost();
+				if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
 				if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 				openTiles[estimatedCost].push( fromNode );
 			}
@@ -750,7 +794,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				for(i=0; i<tileNeighbours.length; ++i){
 					var neighbourNode = tileNeighbours[i],
 						neighbour     = neighbourNode.tile,
-						neighbourHash = hashCoordinates(neighbour.y, neighbour.x);
+						neighbourHash = hashCoordinates(neighbour.x, neighbour.y);
+					if (!_.isNumber(neighbourHash)) return new Error("index of ("+ neighbour.x +", "+ neighbour.y +") NaN!");
 
 					if (neighbours[neighbourHash]) {
 
@@ -758,10 +803,10 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						var existingNeighbour = neighbours[neighbourHash];// neighbours[neighbourPage][neighbour.y][neighbour.x];
 						if (existingNeighbour.hasOwnProperty('end')) {
 							// Found path to end
-							nearestEnd = existingNeighbour;
+							nearestEnd                   = existingNeighbour;
 							nearestEnd.previousDirection = neighbourNode.previousDirection;
-							nearestEnd.weight = neighbourNode.weight;
-							nearestEnd.previousTile = neighbourNode.previousTile;
+							nearestEnd.weight            = neighbourNode.weight;
+							nearestEnd.previousTile      = neighbourNode.previousTile;
 							break;
 						} else if (existingNeighbour.weight <= neighbourNode.weight) {
 							continue; // This neighbour is a cheaper path, ignore our current path..
@@ -769,6 +814,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 							existingNeighbour.expired = true;
 							neighbours[neighbourHash] = neighbourNode;
 							var estimatedCost = neighbourNode.estimateCost();
+							if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
 							if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 							openTiles[estimatedCost].push( neighbourNode );
 							// This existing neighbour has a faster path than ours
@@ -779,6 +825,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						// add neighbour
 						neighbours[neighbourHash] = neighbourNode;
 						var estimatedCost = neighbourNode.estimateCost();
+						if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
 						if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 						openTiles[estimatedCost].push( neighbourNode );
 					}
@@ -860,7 +907,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			globalFromLocal: (function(x, y, page, isReal){
 
 				if (!(page instanceof Page)) {
-					return UnexpectedError("No page provided");
+					return new Error("No page provided");
 				}
 
 				if (!isReal) {
@@ -874,7 +921,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					globalX = x+pageX;
 
 				if (isNaN(globalY) || isNaN(globalX)) {
-					return UnexpectedError("Bad coordinated calculated");
+					return new Error("Bad coordinated calculated");
 				}
 
 				return {
@@ -887,7 +934,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			globalTileFromLocal: (function(x, y, page, isReal){
 
 				if (!(page instanceof Page)) {
-					return UnexpectedError("No page provided");
+					return new Error("No page provided");
 				}
 
 				if (isReal) {
@@ -901,7 +948,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					globalX = x+pageX;
 
 				if (isNaN(globalY) || isNaN(globalX)) {
-					return UnexpectedError("Bad coordinated calculated");
+					return new Error("Bad coordinated calculated");
 				}
 
 				return {
@@ -922,14 +969,14 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 				var pageY  = parseInt( localTileY/Env.pageHeight ),
 					pageX  = parseInt( localTileX/Env.pageWidth ),
-					pageI  = this.pageIndex(pageY, pageX),
+					pageI  = this.pageIndex(pageX, pageY),
 					page   = null,
 					localY = y % (Env.tileSize*Env.pageHeight),
 					localX = x % (Env.tileSize*Env.pageWidth);
 
 				if (isNaN(pageI) || !this.pages[pageI]) {
 					this.Log("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]", LOG_ERROR);
-					return new UnexpectedError("Bad page found");
+					return new Error("Bad page found");
 				}
 
 				page = this.pages[pageI];
@@ -937,12 +984,12 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (page.y != pageY*Env.pageHeight ||
 					page.x != pageX*Env.pageWidth) {
 						this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
-						return new MismatchError("Bad page found");
+						return new Error("Bad page found");
 				}
 
 
 				if (isNaN(localY) || isNaN(localX)) {
-					return UnexpectedError("Bad coordinated calculated");
+					return new Error("Bad coordinated calculated");
 				}
 
 
@@ -962,7 +1009,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 				var pageY  = parseInt( y/Env.pageHeight ),
 					pageX  = parseInt( x/Env.pageWidth ),
-					pageI  = this.pageIndex(pageY, pageX),
+					pageI  = this.pageIndex(pageX, pageY),
 					page   = null,
 					localY = y % (Env.pageHeight),
 					localX = x % (Env.pageWidth);
@@ -970,7 +1017,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 				if (isNaN(pageI) || !this.pages[pageI]) {
 					this.Log("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]", LOG_ERROR);
-					return new UnexpectedError("Bad page found");
+					return new Error("Bad page found");
 				}
 
 				page = this.pages[pageI];
@@ -978,11 +1025,11 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (page.y != pageY*Env.pageHeight ||
 					page.x != pageX*Env.pageWidth) {
 						this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
-						return new MismatchError("Bad page found");
+						return new Error("Bad page found");
 				}
 
 				if (isNaN(localY) || isNaN(localX)) {
-					return UnexpectedError("Bad coordinated calculated");
+					return new Error("Bad coordinated calculated");
 				}
 
 
@@ -996,16 +1043,16 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		}.bind(this)());
 
 
-		this.localFromGlobalCoordinates = function(y, x){
+		this.localFromGlobalCoordinates = function(x, y){
 			var pageY  = parseInt( y/Env.pageHeight ),
 				pageX  = parseInt( x/Env.pageWidth ),
-				pageI  = this.pageIndex(pageY, pageX),
+				pageI  = this.pageIndex(pageX, pageY),
 				page   = null,
 				localY = y % (Env.pageHeight),
 				localX = x % (Env.pageWidth);
 
 			if (isNaN(pageI) || !this.pages[pageI]) {
-				return new RangeError("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
+				return new Error("Page index out of range: ("+ pageY +","+ pageX +")["+ pageI +"]");
 			}
 
 			page = this.pages[pageI];
@@ -1013,11 +1060,11 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			if (page.y != pageY*Env.pageHeight ||
 				page.x != pageX*Env.pageWidth) {
 					this.Log("Mismatched page fetched: ("+ page.y +","+ page.x +") found. Expected: ["+ pageY*Env.pageHeight +","+ pageX*Env.pageWidth +"]", LOG_ERROR);
-					return new MismatchError("Bad page found");
+					return new Error("Bad page found");
 			}
 
 			if (isNaN(localY) || isNaN(localX)) {
-				return UnexpectedError("Bad coordinated calculated");
+				return new Error("Bad coordinated calculated");
 			}
 
 
@@ -1028,10 +1075,10 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			};
 		};
 
-		this.globalFromLocalCoordinates=function(y, x, page){
+		this.globalFromLocalCoordinates=function(x, y, page){
 
 			if (!(page instanceof Page)) {
-				return UnexpectedError("No page provided");
+				return new Error("No page provided");
 			}
 
 			var pageY   = page.y,
@@ -1040,7 +1087,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				globalX = x+pageX;
 
 			if (isNaN(globalY) || isNaN(globalX)) {
-				return UnexpectedError("Bad coordinated calculated");
+				return new Error("Bad coordinated calculated");
 			}
 
 
@@ -1052,7 +1099,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 		this.isTileInRange=function(tile){
 			if (isNaN(tile.x) || isNaN(tile.y)) {
-				return UnexpectedError("Tile has bad coordinates");
+				return new Error("Tile has bad coordinates");
 			}
 
 			if (tile.x > this.mapWidth ||
@@ -1063,7 +1110,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			return true;
 		};
 
-		this.tileFromGlobalCoordinates = function(y, x){
+		this.tileFromGlobalCoordinates = function(x, y){
 			var tile    = new Tile(y, x),
 				inRange = this.isTileInRange(tile);
 
@@ -1071,13 +1118,14 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				return tile;
 			} else if (inRange instanceof Error) {
 				inRange.print();
+				return inRange;
 			} else {
-				return new RangeError("Bad tile range: ("+ y +", "+ x +")");
+				return new Error("Bad tile range: ("+ y +", "+ x +")");
 			}
 		};
 
 
-		this.tileFromLocalCoordinates=function(y, x, page){
+		this.tileFromLocalCoordinates=function(x, y, page){
 
 			var page              = page || this.curPage,
 				globalCoordinates = null,
@@ -1085,10 +1133,10 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				inRange           = null;
 			
 			if (!(page instanceof Page)) {
-				return UnexpectedError("No page provided, and no current page loaded");
+				return new Error("No page provided, and no current page loaded");
 			}
 
-			globalCoordinates = this.globalFromLocalCoordinates(y, x, page);
+			globalCoordinates = this.globalFromLocalCoordinates(x, y, page);
 			if (globalCoordinates instanceof Error) {
 				return globalCoordinates;
 			}
@@ -1101,12 +1149,12 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			} else if (inRange instanceof Error) {
 				return inRange;
 			} else {
-				return new RangeError("Bad range: ("+ tile.y +","+ tile.x +")");
+				return new Error("Bad range: ("+ tile.y +","+ tile.x +")");
 			}
 			return tile;
 		};
 
-		this.findNearestTile=function(posY, posX) {
+		this.findNearestTile=function(posX, posY) {
 			// NOTE: global real coordinates return tile nearest to position
 			var tileY   = Math.round(posY/Env.tileSize),
 				tileX   = Math.round(posX/Env.tileSize),
@@ -1122,7 +1170,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			}
 		};
 
-		this.findNearestTiles = function(posY, posX) {
+		this.findNearestTiles = function(posX, posY) {
 			// NOTE: global real coordinates
 			var tiles   = [],
 				onTileY = (posY % Env.tileSize === 0),
@@ -1132,15 +1180,15 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			if (!onTileY && !onTileX) {
 
 				this.Log("On this tile: "+ posX +", "+ posY, LOG_ERROR);
-				debugger;
-				return new UnexpectedError("findNearestTiles when not on a proper tileY NOR tileX");
+				debugger; // NOTE: this seems to occur on client side, for other entities than the user
+				return new Error("findNearestTiles when not on a proper tileY NOR tileX");
 
 			} else if (onTileY && onTileX) {
 
-				var nearestTile = this.findNearestTile(posY, posX);
+				var nearestTile = this.findNearestTile(posX, posY);
 				if (nearestTile instanceof Tile) {
 					tiles.push( nearestTile );
-				} else if (nearestTile instanceof Error) {
+				} else if (_.isError(nearestTile)) {
 					return nearestTile;
 				}
 
@@ -1172,7 +1220,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		};
 
 		this.isTileOpen = function(tile){
-		   var localCoordinates = this.localFromGlobalCoordinates(tile.y, tile.x);
+		   var localCoordinates = this.localFromGlobalCoordinates(tile.x, tile.y);
 
 		   if (localCoordinates instanceof Error) {
 			   return false;
@@ -1183,7 +1231,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 		this.getTilesInRange = function(tile, range, filterOpenTiles){
 
-			if (isNaN(range) || range < 0) return new RangeError("getTilesInRange expects range >= 0: "+range);
+			if (isNaN(range) || range < 0) return new Error("getTilesInRange expects range >= 0: "+range);
 			
 			var left   = null,
 				right  = null,
@@ -1193,7 +1241,6 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			if (tile instanceof Array) {
 				_.each(tile, function(t){
-					// console.log("	getTilesInRange including tile("+t.y+","+t.x+")");
 					if (left==null  || t.x < left)   left   = t.x;
 					if (right==null || t.x > right)  right  = t.x;
 					if (top==null   || t.y < top)    top    = t.y;

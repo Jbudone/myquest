@@ -22,6 +22,8 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				if (result === false) {
 					this.state.leave();
 					this.state = null;
+
+					if (this.onStateless) this.onStateless();
 				}
 			}
 		};
@@ -65,6 +67,14 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 			this.state.enter.apply(this.state, arguments);
 		};
 
+		// As soon as we leave a state, we trigger this. This enables other states to take action when AI is
+		// not busy w/ other stuff. But mostly just used for allowing NPC's to be bored after combat and
+		// stumble back to their spawn spot
+		//
+		// TODO: improve this to enable multiple hooks on stateless without states colliding with each other..
+		// either through hooks or giving an array of callbacks
+		this.onStateless = new Function();
+
 		this.leaveState = function(instinct){
 			this.Log("Leaving state: "+instinct);
 			if (this.state != null &&
@@ -73,6 +83,8 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				// leave state
 				this.state.leave();
 				this.state = null;
+
+				if (this.onStateless) this.onStateless();
 			}
 		};
 

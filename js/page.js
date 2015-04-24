@@ -75,7 +75,7 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 
 		this.addEntity = function(entity) {
 			if (entity.step) {
-				if (this.movables[entity.id]) throw new Error("Entity ("+ entity.id +") already in movables");
+				if (this.movables[entity.id]) throw new Error("Entity ("+ entity.id +") already in movables"); // FIXME: OCCURS WHEN USER ZONES FROM MAP TO HOME; map.js:watchEntity() is called first
 
 				this.updateList.push(entity);
 				this.movables[entity.id] = entity;

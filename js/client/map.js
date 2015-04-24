@@ -133,17 +133,23 @@ FIXME FIXME FIXME FIXME FIXME
 							entity.page         = this.pages[pageI];
 							entity.updatePosition();
 
+							var result = null;
 							if (movable.path) {
 								var path = JSON.parse(movable.path);
 								// for (var j=0; j<path.walks.length; ++j) { // TODO: is this necessary? 
 								// 	var walk = path.walks[j];
 								// 	walk.started = false; // in case walk has already started on server
 								// }
-								entity.addPath(path);
+								result = entity.addPath(path);
+								if (_.isError(result)) {
+									debugger;
+								}
 							}
 
-							this.pages[pageI].addEntity(entity);
-							this.watchEntity(entity);
+							result = this.pages[pageI].addEntity(entity);
+							if (_.isError(result)) debugger;
+							result = this.watchEntity(entity);
+							if (_.isError(result)) debugger;
 						}
 
 					}

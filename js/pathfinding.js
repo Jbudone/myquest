@@ -20,7 +20,8 @@ define(['movable'], function(Movable){
 			if (_.isUndefined(options)) options = {};
 			_.defaults(options, {
 				range: 0,
-				adjacent: true
+				adjacent: true,
+				maxWeight: 100
 			});
 
 
@@ -48,7 +49,7 @@ define(['movable'], function(Movable){
 
 			if (fromTiles.length === 0 || toTiles.length === 0) return false;
 
-			var path = this.map.findPath( fromTiles, toTiles );
+			var path = this.map.findPath( fromTiles, toTiles, options.maxWeight );
 
 			if (path && path.path) {
 
@@ -147,7 +148,7 @@ define(['movable'], function(Movable){
 		};
 
 		this.isOpenTile = function(tile){
-			var localCoordinates = this.map.localFromGlobalCoordinates(tile.y, tile.x);
+			var localCoordinates = this.map.localFromGlobalCoordinates(tile.x, tile.y);
 
 			if (localCoordinates instanceof Error) {
 				return false;

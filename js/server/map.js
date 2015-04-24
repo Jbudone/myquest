@@ -230,7 +230,7 @@ define(['page', 'movable'], function(Page, Movable){
 									}
 
 									if (sheet == null) {
-										return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+										return new Error("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
 									}
 
 									// set collision mask if necessary
@@ -287,15 +287,15 @@ define(['page', 'movable'], function(Page, Movable){
 						}
 
 						if (sheet == null) {
-							return UnexpectedError("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
+							return new Error("Unexpected sprite ("+ sprite +") doesn't match any spritesheet gid range");
 						}
 
 						if (!sheet.hasOwnProperty('data')) {
-							return UnexpectedError("Sheet ("+ sheet.file +") does not have data property");
+							return new Error("Sheet ("+ sheet.file +") does not have data property");
 						}
 
 						if (!sheet.data.hasOwnProperty('objects')) {
-							return UnexpectedError("Sheet ("+ sheet.file +") does not have any objects; yet item ("+ sprite +") references sheet");
+							return new Error("Sheet ("+ sheet.file +") does not have any objects; yet item ("+ sprite +") references sheet");
 						}
 
 						
@@ -431,11 +431,11 @@ define(['page', 'movable'], function(Page, Movable){
 		zoneIn: function(entity, zone){
 			var tile = null;
 
-			if (!(entity instanceof Movable)) return UnexpectedError("Entity not a movable");
-			if (!zone || !zone.spawn) return UnexpectedError("No zone provided");
+			if (!(entity instanceof Movable)) return new Error("Entity not a movable");
+			if (!zone || !zone.spawn) return new Error("No zone provided");
 
-			if (!this.zones) return UnexpectedError("Zones not set!");
-			if (!_.isArray(this.zones.in)) return UnexpectedError("Zones-in not set!");
+			if (!this.zones) return new Error("Zones not set!");
+			if (!_.isArray(this.zones.in)) return new Error("Zones-in not set!");
 
 
 			for (var i=0; i<this.zones.in.length; ++i) {
@@ -443,12 +443,12 @@ define(['page', 'movable'], function(Page, Movable){
 				if (localZone.spot == zone.spawn) {
 					this.Log("Found localZone");
 					this.Log(localZone);
-					tile = this.localFromGlobalCoordinates(localZone.y, localZone.x);
+					tile = this.localFromGlobalCoordinates(localZone.x, localZone.y);
 					break;
 				}
 			}
 
-			if (!(tile instanceof Error)) {
+			if (!_.isError(tile)) {
 				if (entity.path && _.isFunction(entity.path.onFailed)) entity.path.onFailed();
 				entity.path = null;
 				entity.position = {
@@ -457,12 +457,17 @@ define(['page', 'movable'], function(Page, Movable){
 					local: null
 				};
 				entity.position.local  = { x: tile.x * Env.tileSize, y: tile.y * Env.tileSize };
-				entity.position.global = this.coordinates.globalFromLocal( entity.position.local.x, entity.position.local.x, tile.page, true );
+				entity.position.global = this.coordinates.globalFromLocal( entity.position.local.x, entity.position.local.y, tile.page, true );
 				tile.page.addEntity(entity);
-				if (!this.movables[entity.id]) this.watchEntity(entity);
+				if (!this.movables[entity.id]) {
+					var result = this.watchEntity(entity);
+					if (_.isError(result)) {
+						return result;
+					}
+				}
 				entity.zoning = false;
 				return tile.page;
-			} else if (tile instanceof Error) {
+			} else if (_.isError(tile)) {
 				this.Log(zone, LOG_ERROR);
 				return tile;
 			}

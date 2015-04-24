@@ -8,7 +8,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		extendClass(this).with(Loggable);
 		this.setLogGroup('Character');
 
-		this._instincts = ['movement', 'combat'];
+		this._instincts = ['movement', 'combat', 'boredom'];
 
 		this.entity = entity;
 		this.brain = null;

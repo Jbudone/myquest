@@ -18,7 +18,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 		var _combat = this,
 			brain = brain,
 			_game = game,
-			_character = brain.character;
+			_character = brain.character,
 			_script = null;
 
 		this.target = null;
@@ -146,7 +146,10 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 					return false;
 				}
+			} else {
+				return false;
 			}
+
 			this.doHook('update').post();
 		};
 
