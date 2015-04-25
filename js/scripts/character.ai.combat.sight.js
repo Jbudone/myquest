@@ -56,7 +56,6 @@ define(['SCRIPTENV', 'hookable', 'scripts/character.ai.ability'], function(SCRIP
 			updatePosition: function(){
 				var pos = character.entity.position.tile;
 				this.tile = pos;
-				console.log("NOW I'm here: ("+pos.x+", "+pos.y+")");
 			},
 
 			addTile: function(tile){

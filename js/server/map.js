@@ -366,18 +366,32 @@ define(['page', 'movable'], function(Page, Movable){
 
 
 
-			// this.interactables = {};
-			// console.log("Interactables: ");
-			// var pagesWithInteractables = {};
-			// for (var interactableID in this.interactables) {
-			// 	var interactable = interactables[interactableID];
+			console.log("Interactables: ");
+			for (var interactableID in interactables) {
+				var interactable = interactables[interactableID],
+					positions = null;
 
-			// 	for (var i=0; i<interactable.tiles.length; ++i) {
-			// 		var tile = interactable.tiles[i],
-			// 			ty   = parseInt(tile.y
+				this.interactables[interactableID] = {
+					positions: [],
+					script: interactable.type
+				};
+				positions = this.interactables[interactableID].positions;
 
-			// 	}
-			// }
+				for (var i=0; i<interactable.tiles.length; ++i) {
+					var mapTile = interactable.tiles[i],
+						localY  = mapTile.y % (Env.pageHeight),
+						localX  = mapTile.x % (Env.pageWidth),
+						pageY   = parseInt(mapTile.y/Env.pageHeight),
+						pageX   = parseInt(mapTile.x/Env.pageWidth),
+						pageI   = this.pagesPerRow*pageY+pageX,
+						tile    = new Tile(localX, localY);
+					tile.page = pages[pageI];
+					positions.push(tile);
+
+					// Add to page
+					tile.page.interactables[localY*Env.pageWidth+localX] = interactableID;
+				}
+			}
 
 
 			// page octree

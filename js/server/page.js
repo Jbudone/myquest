@@ -139,10 +139,11 @@ define(['movable'], function(Movable){
 				serialized.y     = this.y;
 				serialized.x     = this.x;
 
-				serialized.tiles       = this.tiles;
-				serialized.sprites     = this.sprites;
-				serialized.collidables = this.collidables;
-				serialized.items       = this.items;
+				serialized.tiles         = this.tiles;
+				serialized.sprites       = this.sprites;
+				serialized.collidables   = this.collidables;
+				serialized.items         = this.items;
+				serialized.interactables = this.interactables;
 			}
 
 			if (options |= PAGE_SERIALIZE_MOVABLES) {

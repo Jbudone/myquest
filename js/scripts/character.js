@@ -154,7 +154,6 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		var _character = this;
 		this.server = {
 			initialize: function(){
-				console.log("Initializing character..");
 				_character._script = this;
 				_character.characterInit.bind(_character)();
 			},

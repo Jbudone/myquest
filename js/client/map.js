@@ -53,15 +53,16 @@ define(['page','movable'], function(Page,Movable){
 				page = this.pages[pageI];
 
 				this.Log("Adding page to map ("+pageI+")");
-				page.index       = pageI;
-				if (isNaN(evtPage.y)) this.Log("Bad page coordinates", LOG_ERROR);
-				if (isNaN(evtPage.x)) this.Log("Bad page coordinates", LOG_ERROR);
-				page.y           = evtPage.y;
-				page.x           = evtPage.x;
-				page.tiles       = evtPage.tiles;
-				page.sprites     = evtPage.sprites;
-				page.collidables = evtPage.collidables;
-				page.items       = evtPage.items;
+				page.index         = pageI;
+				if (isNaN(evtPage  .y)) this.Log("Bad page coordinates", LOG_ERROR);
+				if (isNaN(evtPage  .x)) this.Log("Bad page coordinates", LOG_ERROR);
+				page.y             = evtPage.y;
+				page.x             = evtPage.x;
+				page.tiles         = evtPage.tiles;
+				page.sprites       = evtPage.sprites;
+				page.collidables   = evtPage.collidables;
+				page.items         = evtPage.items;
+				page.interactables = evtPage.interactables;
 				
 				
 				
@@ -152,6 +153,26 @@ FIXME FIXME FIXME FIXME FIXME
 							if (_.isError(result)) debugger;
 						}
 
+					}
+				}
+
+
+				if (evtPage.interactables) {
+					
+					for (var interactableCoord in evtPage.interactables) {
+						var interactableID = evtPage.interactables[interactableCoord],
+							tileY          = parseInt(interactableCoord / Env.pageWidth),
+							tileX          = interactableCoord - (tileY*Env.pageWidth),
+							tile           = new Tile(tileX, tileY);
+
+						tile.page = evtPage;
+						if (!this.interactables.hasOwnProperty(interactableID)) {
+							this.interactables[interactableID] = {
+								positions: [], 
+							};
+						}
+
+						this.interactables[interactableID].positions.push(tile);
 					}
 				}
 

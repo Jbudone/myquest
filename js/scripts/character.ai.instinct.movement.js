@@ -73,7 +73,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 
 		this.server = {
 			initialize: function(){
-				console.log("I can move!!");
 			}
 		};
 	};

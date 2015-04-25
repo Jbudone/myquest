@@ -96,18 +96,14 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			this.abilities = {};
 			for (var i=0; i<this._abilities.length; ++i) {
 				var _ability = this._abilities[i];
-				console.log("Loading ability: "+_ability);
 				var ability = Resources.scripts.ai.instincts[this.name].components[_ability];
 				if (ability.script) ability = ability.script;
 				this.abilities[_ability] = _script.addScript( new ability(_game, this, _character) );
-				console.log("Loaded ability");
 			}
 		};
 
 
 		this.onEnter = function(instinct, data){
-			this.Log("IM READY TO FIGHT!!!");
-
 			this.state = this.states['melee'];
 			this.state.enter(data.enemy);
 		};
@@ -441,7 +437,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 				this.addMelee();
 
-				console.log("IM READY TO FIGHT");
 			},
 
 			attackTarget: function(target){

@@ -70,6 +70,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		 ***********************************************************************************************/
 
 		this.movables = {};
+		this.interactables = {};
 
 		// Watch Entity
 		//

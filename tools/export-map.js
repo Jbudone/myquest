@@ -79,10 +79,9 @@ fs.readFile('../data/world.json', function(err, data) {
 				 * TODO:
 				 * 	> auto convert .tmx to .json
 				 * 	> make use of areas
-				 * 	> doors & triggers layers
 				 *******************************************************/
 
-				var mapJSON = { MapFile: { Map: {'id':mapID, pages:{}, spawns:{}}, properties: {pageWidth:null, pageHeight:null, width:null, height:null, tilesets:[]} } },
+				var mapJSON = { MapFile: { Map: {'id':mapID, pages:{}, spawns:{}, interactables:{}}, properties: {pageWidth:null, pageHeight:null, width:null, height:null, tilesets:[]} } },
 					map = mapJSON.MapFile.Map,
 					tilesets = json.tilesets,
 					pageWidth = 30,
@@ -94,8 +93,10 @@ fs.readFile('../data/world.json', function(err, data) {
 						zoning: null,
 						spawns: null,
 						items: null,
+						interactables: null,
 						areas: null // TODO
-					};
+					},
+					interactableNameCount = {};
 
 	
 				mapJSON.MapFile.properties.width      = null;
@@ -143,6 +144,7 @@ fs.readFile('../data/world.json', function(err, data) {
 				layers['sprites'].data  = layers['sprites'].data.data;
 				if (layers['spawns'] !== null) layers['spawns'].data = layers['spawns'].data.objects;
 				if (layers['items'] !== null) layers['items'].data = layers['items'].data.data;
+				if (layers['interactables'] !== null) layers['interactables'].data = layers['interactables'].data.objects;
 
 
 				mapJSON.MapFile.properties.height = layers.base.height;
@@ -185,7 +187,8 @@ fs.readFile('../data/world.json', function(err, data) {
 						var page = {
 							tiles: [],
 							sprites: {},
-							items: {}
+							items: {},
+							interactables: {}
 						};
 						map.pages[y][x] = page;
 
@@ -285,6 +288,56 @@ fs.readFile('../data/world.json', function(err, data) {
 							};
 
 						map.spawns[ty*layers.base.width+tx] = spawnObj;
+					}
+				}
+
+
+				// Interactables Layer
+				///////////////////
+				if (layers.interactables) {
+
+					for (var i=0; i<layers.interactables.data.length; ++i) {
+						var interactable = layers.interactables.data[i],
+							tx           = (interactable.x / tileSize),
+							ty           = (interactable.y / tileSize),
+							txE          = (interactable.x+interactable.width) / tileSize,
+							tyE          = (interactable.y+interactable.height) / tileSize,
+							tiles        = [],
+							name         = interactable.name,
+							type         = interactable.type;
+
+						if (interactable.x % tileSize !== 0 || interactable.y % tileSize !== 0) {
+							throw new Error("Bad interactable tile: ("+interactable.y+","+interactable.x+") for map ["+mapID+"]");
+						}
+
+						if ((interactable.x+interactable.width) % tileSize !== 0 || (interactable.y+interactable.height) % tileSize !== 0) {
+							throw new Error("Bad interactable tile end: ("+(interactable.y+interactable.height)+","+(interactable.x+interactable.width)+") for map ["+mapID+"]");
+						}
+
+						if (!name) throw new Error("No name given for interactable");
+						if (!type) throw new Error("No type given for interactable");
+
+						if (name.indexOf('#') != -1) {
+							if (!interactableNameCount.hasOwnProperty(name)) interactableNameCount[name] = 0;
+							var count = interactableNameCount[name]++;
+							name = name.replace(/#/count/g);
+						}
+						if (map.interactables.hasOwnProperty(name)) throw new Error("Duplicate interactable found: "+name);
+							
+						// create rect array of tiles from tileStart to tileEnd (if zoning is a spot, only use start tile)
+						for (var iy=0; iy<(tyE-ty); ++iy) {
+							for (var ix=0; ix<(txE-tx); ++ix) {
+								var tile = { y: (ty+iy), x: (tx+ix) };
+								tiles.push(tile);
+							}
+						}
+
+						map.interactables[name] = {
+							tiles: tiles,
+							script: type
+						};
+
+
 					}
 				}
 

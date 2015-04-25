@@ -116,7 +116,6 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				this.tile(pos.x, pos.y).trigger(character);
 			});
 
-			console.log("Added character to Game: "+entityID);
 			this.doHook('addedcharacter').post(entity);
 		};
 
