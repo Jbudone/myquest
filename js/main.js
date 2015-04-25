@@ -129,7 +129,6 @@
 				// 	> better sprite representation
 				// 	> abstract rendering
 				// 	> cleanup main
-				// 	> y direction protocol
 				// 	> define direction (not "north" "east" etc) & allow (northeast == north | east)
 				// 	> resource handling protocol (load everything at beginning - store locally if possible)
 				// 	> awkward camera skiterring on zone
@@ -335,7 +334,7 @@ try{
 				The.player.id   = player.id;
 
 				The.player.position = {
-					tile: new Tile(player.position.y, player.position.x),
+					tile: new Tile(player.position.x, player.position.y),
 					global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
 					local: null,
 				};
@@ -1055,7 +1054,7 @@ try{
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.position.local.y/Env.tileSize) + The.map.curPage.y, parseInt(player.position.local.x/Env.tileSize) + The.map.curPage.x ),
+						tile: new Tile( parseInt(player.position.local.x/Env.tileSize) + The.map.curPage.x, parseInt(player.position.local.y/Env.tileSize) + The.map.curPage.y ),
 						global: { y: player.position.local.y + The.map.curPage.y * Env.tileSize, x: player.position.local.x + The.map.curPage.x * Env.tileSize },
 						local: { y: player.position.local.y, x: player.position.local.x },
 					};
@@ -1093,7 +1092,7 @@ try{
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.localY/Env.tileSize) + The.map.curPage.y, parseInt(player.localX/Env.tileSize) + The.map.curPage.x ),
+						tile: new Tile( parseInt(player.localX/Env.tileSize) + The.map.curPage.x, parseInt(player.localY/Env.tileSize) + The.map.curPage.y ),
 						global: { y: player.localY + The.map.curPage.y * Env.tileSize, x: player.localX + The.map.curPage.x * Env.tileSize },
 						local: { y: player.localY, x: player.localX },
 					};
@@ -1151,7 +1150,7 @@ try{
 
 				try {
 
-					ui.tileHover = new Tile(mouse.y, mouse.x);
+					ui.tileHover = new Tile(mouse.x, mouse.y);
 
 					ui.hoveringEntity = false;
 					for (var pageID in The.map.pages) {

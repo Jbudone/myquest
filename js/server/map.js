@@ -18,6 +18,7 @@ define(['page', 'movable'], function(Page, Movable){
 				spawns        = this.map.data.spawns,
 				map           = this.map.data.pages,
 				zones         = this.map.data.zones,
+				interactables = this.map.data.interactables,
 				mapPageHeight = this.map.properties.pageHeight,
 				mapPageWidth  = this.map.properties.pageWidth,
 				pages         = this.pages;
@@ -319,7 +320,7 @@ define(['page', 'movable'], function(Page, Movable){
 					pageI  = this.pagesPerRow*pageY+pageX,
 					localY = zone.y % (Env.pageHeight),
 					localX = zone.x % (Env.pageWidth),
-					tile   = new Tile(localY, localX);
+					tile   = new Tile(localX, localY);
 				tile.page = pages[pageI];
 
 
@@ -334,8 +335,8 @@ define(['page', 'movable'], function(Page, Movable){
 			// }
 
 			this.spawns = spawns;
-			console.log("Spawns: ");
-			console.log(this.spawns);
+			// console.log("Spawns: ");
+			// console.log(this.spawns);
 			var pagesWithSpawns = {};
 			for (var spawnCoord in this.spawns) {
 				var spawn = this.spawns[spawnCoord],
@@ -346,10 +347,10 @@ define(['page', 'movable'], function(Page, Movable){
 					pageI  = this.pagesPerRow*pageY+pageX,
 					localY = ty % (Env.pageHeight),
 					localX = tx % (Env.pageWidth),
-					tile   = new Tile(localY, localX);
+					tile   = new Tile(localX, localY);
 				tile.page = pages[pageI];
-				console.log(spawn);
-				console.log("   ("+ty+","+tx+")");
+				// console.log(spawn);
+				// console.log("   ("+ty+","+tx+")");
 
 				tile.page.spawns[localY*Env.pageWidth+localX] = spawn;
 				if (!pagesWithSpawns[tile.page.index]) pagesWithSpawns[tile.page.index] = tile.page;
@@ -362,6 +363,22 @@ define(['page', 'movable'], function(Page, Movable){
 				// 	this.triggerEvent(EVT_ZONE_OUT, entity, zone);
 				// });
 			}
+
+
+
+			// this.interactables = {};
+			// console.log("Interactables: ");
+			// var pagesWithInteractables = {};
+			// for (var interactableID in this.interactables) {
+			// 	var interactable = interactables[interactableID];
+
+			// 	for (var i=0; i<interactable.tiles.length; ++i) {
+			// 		var tile = interactable.tiles[i],
+			// 			ty   = parseInt(tile.y
+
+			// 	}
+			// }
+
 
 			// page octree
 			var farTopLeft=pages[0],
@@ -452,7 +469,7 @@ define(['page', 'movable'], function(Page, Movable){
 				if (entity.path && _.isFunction(entity.path.onFailed)) entity.path.onFailed();
 				entity.path = null;
 				entity.position = {
-					tile: new Tile(tile.y + tile.page.y, tile.x + tile.page.x),
+					tile: new Tile(tile.x + tile.page.x, tile.y + tile.page.y),
 					global: null,
 					local: null
 				};

@@ -55,7 +55,7 @@ define(['serializable'], function(Serializable){
 		extendClass(this).with(Serializable);
 		this.x=x;
 		this.y=y;
-	}, Tile=function(y, x, map){
+	}, Tile=function(x, y, map){
 		if (!_.isNumber(y)) return new Error("Expects y to be a number");
 		if (!_.isNumber(x)) return new Error("Expects x to be a number");
 		extendClass(this).with(Serializable);
@@ -84,7 +84,7 @@ define(['serializable'], function(Serializable){
 			var y = this.y + yOff,
 				x = this.x + xOff;
 			if (y < 0 || x < 0) return new Error("Bad offset from tile.."); // TODO: check y/x too far?
-			return new Tile(y, x);
+			return new Tile(x, y);
 		};
 		this.localizeTile=function(){
 			if (!this.page) return false;

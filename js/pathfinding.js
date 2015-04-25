@@ -112,7 +112,7 @@ define(['movable'], function(Movable){
 				if (isAdjacent) {
 					var x = centerTile.x;
 					for (var y=centerTile.y - range; y<=centerTile.y + range; ++y) {
-						var tile = new Tile(y, x),
+						var tile = new Tile(x, y),
 							hash = tileHash(tile);
 						if (hashList[hash]) continue; // Has this tile been added yet?
 						hashList[hash] = true; // Hash this tile to avoid checking it again
@@ -122,7 +122,7 @@ define(['movable'], function(Movable){
 
 					var y = centerTile.y;
 					for (var x=centerTile.x - range; x<=centerTile.x + range; ++x) {
-						var tile = new Tile(y, x),
+						var tile = new Tile(x, y),
 							hash = tileHash(tile);
 						if (hashList[hash]) continue; // Has this tile been added yet?
 						hashList[hash] = true; // Hash this tile to avoid checking it again
@@ -133,7 +133,7 @@ define(['movable'], function(Movable){
 					// Create a box range about this center tile
 					for (var y=centerTile.y - range; y<=centerTile.y + range; ++y) {
 						for (var x=centerTile.x - range; x<=centerTile.x + range; ++x) {
-							var tile = new Tile(y, x),
+							var tile = new Tile(x, y),
 								hash = tileHash(tile);
 							if (hashList[hash]) continue; // Has this tile been added yet?
 							hashList[hash] = true; // Hash this tile to avoid checking it again
@@ -168,12 +168,12 @@ define(['movable'], function(Movable){
 				var x = obj.position.global.x / Env.tileSize,
 					y = obj.position.global.y / Env.tileSize,
 					tile = obj.position.tile,
-					tiles = [new Tile(tile.y, tile.x)];
+					tiles = [new Tile(tile.x, tile.y)];
 
-				if (Math.ceil(x)  > tile.x && Math.ceil(x)  <= this.map.mapWidth)  tiles.push( new Tile( tile.y, tile.x + 1 ) );
-				if (Math.floor(x) < tile.x && Math.floor(x) >= 0)                  tiles.push( new Tile( tile.y, tile.x - 1 ) );
-				if (Math.ceil(y)  > tile.y && Math.ceil(y)  <= this.map.mapHeight) tiles.push( new Tile( tile.y + 1, tile.x ) );
-				if (Math.floor(y) < tile.y && Math.floor(y) >= 0)                  tiles.push( new Tile( tile.y - 1, tile.x ) );
+				if (Math.ceil(x)  > tile.x && Math.ceil(x)  <= this.map.mapWidth)  tiles.push( new Tile( tile.x + 1, tile.x ) );
+				if (Math.floor(x) < tile.x && Math.floor(x) >= 0)                  tiles.push( new Tile( tile.x - 1, tile.x ) );
+				if (Math.ceil(y)  > tile.y && Math.ceil(y)  <= this.map.mapHeight) tiles.push( new Tile( tile.x, tile.y + 1 ) );
+				if (Math.floor(y) < tile.y && Math.floor(y) >= 0)                  tiles.push( new Tile( tile.x, tile.y - 1 ) );
 				return tiles;
 			} else if (obj instanceof Tile) {
 				return [obj];

@@ -387,7 +387,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					var page = map.pages[item.page],
 						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
 						x    = item.coord.x,//item.coord - y*Env.pageWidth,
-						tile = new Tile( y, x ),
+						tile = new Tile( x, y ),
 						path = map.pathfinding.findPath( player, tile );
 					console.log(item);
 					player.addPath(path).finished(function(){

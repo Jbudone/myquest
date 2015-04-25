@@ -1111,7 +1111,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		};
 
 		this.tileFromGlobalCoordinates = function(x, y){
-			var tile    = new Tile(y, x),
+			var tile    = new Tile(x, y),
 				inRange = this.isTileInRange(tile);
 
 			if (inRange === true) {
@@ -1141,7 +1141,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				return globalCoordinates;
 			}
 
-			tile    = new Tile(globalCoordinates.y, globalCoordinates.x);
+			tile    = new Tile(globalCoordinates.x, globalCoordinates.y);
 			inRange = this.isTileInRange(tile);
 
 			if (inRange === true) {
@@ -1158,7 +1158,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			// NOTE: global real coordinates return tile nearest to position
 			var tileY   = Math.round(posY/Env.tileSize),
 				tileX   = Math.round(posX/Env.tileSize),
-				tile    = (new Tile(tileY, tileX)),
+				tile    = (new Tile(tileX, tileY)),
 				inRange = this.isTileInRange(tile);
 
 			if (inRange === true) {
@@ -1197,8 +1197,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (!onTileY) {
 					var tileYfloor = Math.floor(posY/Env.tileSize), // global coordinates
 						tileX      = Math.floor(posX/Env.tileSize),
-						tileNorth  = (new Tile(tileYfloor, tileX)),
-						tileSouth  = (new Tile(tileYfloor+1, tileX));
+						tileNorth  = (new Tile(tileX, tileYfloor)),
+						tileSouth  = (new Tile(tileX, tileYfloor+1));
 
 					if (tileNorth instanceof Tile && this.isTileInRange(tileNorth) === true) tiles.push( tileNorth );
 					if (tileSouth instanceof Tile && this.isTileInRange(tileSouth) === true) tiles.push( tileSouth );
@@ -1207,8 +1207,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (!onTileX) {
 					var tileXfloor = Math.floor(posX/Env.tileSize), // global coordinates
 						tileY      = Math.floor(posY/Env.tileSize),
-						tileWest   = (new Tile(tileY, tileXfloor)),
-						tileEast   = (new Tile(tileY, tileXfloor+1));
+						tileWest   = (new Tile(tileXfloor, tileY)),
+						tileEast   = (new Tile(tileXfloor+1, tileY));
 
 					if (tileWest instanceof Tile && this.isTileInRange(tileWest) === true) tiles.push( tileWest );
 					if (tileEast instanceof Tile && this.isTileInRange(tileEast) === true) tiles.push( tileEast );
@@ -1262,7 +1262,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			for (var y=top; y<=bottom; ++y) {
 				for (var x=left; x<=right; ++x) {
-					var tile = new Tile(y, x);
+					var tile = new Tile(x, y);
 					if (!filterOpenTiles || this.isTileOpen(tile) === true) tiles.push( tile );
 				}
 			}

@@ -60,12 +60,12 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			this.movable          = new Movable('player', playerPosition.page, {
 												position: {
-													tile: new Tile(player.position.y, player.position.x),
+													tile: new Tile(player.position.x, player.position.y),
 													global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
 													local: { y: playerPosition.y * Env.tileSize, x: playerPosition.x * Env.tileSize }
 												},
-												respawnPoint: new Tile( respawnPoint.y + respawnPoint.page.y,
-																		respawnPoint.x + respawnPoint.page.x,
+												respawnPoint: new Tile( respawnPoint.x + respawnPoint.page.x,
+																		respawnPoint.y + respawnPoint.page.y,
 																		respawnPoint.page.map ) });
 			this.movable.playerID = player.id;
 			this.movable.player = this;
@@ -224,7 +224,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			//
 			////////////////////////////////////////
 
-			var start     = new Tile(reqState.globalY, reqState.globalX),
+			var start     = new Tile(reqState.globalX, reqState.globalY),
 				vert      = (walk.direction == NORTH || walk.direction == SOUTH),
 				positive  = (walk.direction == SOUTH || walk.direction == EAST),
 				walked    = 0,
