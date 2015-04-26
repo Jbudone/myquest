@@ -9,6 +9,7 @@ define(['page','movable'], function(Page,Movable){
 
 		loadMap: function(map){
 
+			var result = null;
 			if (map) {
 				this.id          = map.id;
 				this.pagesPerRow = map.pagesPerRow;
@@ -32,19 +33,23 @@ define(['page','movable'], function(Page,Movable){
 				var movable = this.movables[entID];
 				if (entID == The.player.id) continue;
 				delete this.movables[entID];
-				this.unwatch(movable);
+				result = this.unwatch(movable);
+				if (_.isError(result)) return result;
 			}
 
 			this.stopListeningTo(this, EVT_ZONE);
 			this.listenTo(this, EVT_ZONE, function(map, entity, oldPage, newPage){
 				if (!newPage) {
-					this.unwatchEntity(entity);
+					var result = null;
+					result = this.unwatchEntity(entity);
+					if (_.isError(result)) throw result;
 				}
 			});
 		},
 
 		addPages: function(addedPages, isZoning){
 
+			var result = null;
 			for (var pageI in addedPages) {
 				var page             = null,
 					pageI            = parseInt(pageI),
@@ -54,8 +59,6 @@ define(['page','movable'], function(Page,Movable){
 
 				this.Log("Adding page to map ("+pageI+")");
 				page.index         = pageI;
-				if (isNaN(evtPage  .y)) this.Log("Bad page coordinates", LOG_ERROR);
-				if (isNaN(evtPage  .x)) this.Log("Bad page coordinates", LOG_ERROR);
 				page.y             = evtPage.y;
 				page.x             = evtPage.x;
 				page.tiles         = evtPage.tiles;
@@ -110,31 +113,26 @@ FIXME FIXME FIXME FIXME FIXME
 								The.player.sprite.state = movable.state;
 								The.player.zoning       = false;
 								//The.player.page         = this.pages[pageI];
-								this.pages[pageI].addEntity(The.player);
-								if (!this.movables[entityID]) this.watchEntity(The.player);
-
-							} else {
-
-								// FIXME: is this necessary here ??
-								// The.player.posY         = movable.posY;
-								// The.player.posX         = movable.posX;
-								// The.player.page.zoneEntity(this.pages[pageI], The.player);
-								// The.map.curPage = this.pages[pageI];
+								result = this.pages[pageI].addEntity(The.player);
+								if (_.isError(result)) throw result;
+								if (!this.movables[entityID]) {
+									result = this.watchEntity(The.player);
+									if (_.isError(result)) throw result;
+								}
 
 							}
 						} else {
 							this.Log("	Adding movable to page");
 							var entity = new Movable(movable.spriteID, page);
-							entity.id           = movable.id;
-							entity.position.local.y         = movable.localY;
-							entity.position.local.x         = movable.localX;
-							entity.sprite.state = movable.state;
-							entity.zoning       = movable.zoning;
-							entity.health       = movable.health;
-							entity.page         = this.pages[pageI];
+							entity.id               = movable.id;
+							entity.position.local.y = movable.localY;
+							entity.position.local.x = movable.localX;
+							entity.sprite.state     = movable.state;
+							entity.zoning           = movable.zoning;
+							entity.health           = movable.health;
+							entity.page             = this.pages[pageI];
 							entity.updatePosition();
 
-							var result = null;
 							if (movable.path) {
 								var path = JSON.parse(movable.path);
 								// for (var j=0; j<path.walks.length; ++j) { // TODO: is this necessary? 
@@ -144,13 +142,20 @@ FIXME FIXME FIXME FIXME FIXME
 								result = entity.addPath(path);
 								if (_.isError(result)) {
 									debugger;
+									return result;
 								}
 							}
 
 							result = this.pages[pageI].addEntity(entity);
-							if (_.isError(result)) debugger;
+							if (_.isError(result)) {
+								debugger;
+								return result;
+							}
 							result = this.watchEntity(entity);
-							if (_.isError(result)) debugger;
+							if (_.isError(result)) {
+								debugger;
+								return result;
+							}
 						}
 
 					}
@@ -231,15 +236,18 @@ FIXME FIXME FIXME FIXME FIXME
 		step: function(time) {
 			// process events queue
 			this.handlePendingEvents();
+			var result = null;
 			for (var i in this.pages) {
 				var page = this.pages[i];
-				page.step(time);
+				result = page.step(time);
+				if (_.isError(result)) return result;
 			}
 			this.handlePendingEvents(); // events from pages
 
 			var dynamicHandler = this.handler('step');
 			if (dynamicHandler) {
-				dynamicHandler.call(time - this.lastUpdated);
+				result = dynamicHandler.call(time - this.lastUpdated);
+				if (_.isError(result)) return result;
 			}
 			this.lastUpdated = time;
 

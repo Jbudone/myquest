@@ -330,8 +330,9 @@ try{
 
 				Log("Logged in as player "+player.id);
 				The.player      = true; // NOTE: this is used to help the initiatilization of Movable below to determine that it is our player (The.player === true)
-				The.player      = new Movable('player');
-				The.player.id   = player.id;
+				The.player           = new Movable('player');
+				The.player.id        = player.id;
+				The.player.playerID  = player.id;
 
 				The.player.position = {
 					tile: new Tile(player.position.x, player.position.y),
@@ -1187,12 +1188,31 @@ try{
 								py      = localY * Env.tileSize - offY;
 							if (mouse.canvasX >= px && mouse.canvasX <= px + 16 &&
 								mouse.canvasY >= py && mouse.canvasY <= py + 16) {
-									// Hovering movable
+									// Hovering item
 									ui.hoveringItem = item;
 									break;
 							}
 						}
 						if (ui.hoveringItem) break;
+					}
+
+					ui.hoveringInteractable = false;
+					for (var pageID in The.map.pages) {
+						var page = The.map.pages[pageID],
+							offY = (The.map.curPage.y - page.y)*Env.tileSize - The.camera.offsetY,
+							offX = (The.map.curPage.x - page.x)*Env.tileSize + The.camera.offsetX,
+							localY = ui.tileHover.y + parseInt(offY/Env.tileSize),
+							localX = ui.tileHover.x + parseInt(offX/Env.tileSize),
+							localCoord = null;
+
+						if (localY < 0 || localX < 0 || localY > Env.pageHeight || localX > Env.pageWidth) continue;
+						localCoord = localY*Env.pageWidth + localX;
+
+						if (page.interactables[localCoord]) {
+							console.log("ZOMG: "+ page.interactables[localCoord]);
+							ui.hoveringInteractable = page.interactables[localCoord];
+							break;
+						}
 					}
 
 					ui.updateCursor();

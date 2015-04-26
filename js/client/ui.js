@@ -15,6 +15,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 		this.tileHover = null;
 		this.hoveringEntity = null;
 		this.hoveringItem = null;
+		this.hoveringInteractable = null;
 
 		this.messageBox = null;
 
@@ -93,6 +94,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 		this.updateCursor = function(){
 			if (this.hoveringEntity) this.canvas.style.cursor = 'crosshair'; // TODO: custom cursors
+			else if (this.hoveringInteractable) this.canvas.style.cursor = 'pointer';
 			else this.canvas.style.cursor = '';
 		};
 

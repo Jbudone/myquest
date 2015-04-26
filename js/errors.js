@@ -17,7 +17,7 @@ define(['lib/stacktrace'], function(Stack){
 			}
 		}
 	};
-	GenericError.prototype = new Error;
+	// GenericError.prototype = new Error;
 
 	var errorTypes = [
 		'MismatchError',
@@ -39,6 +39,26 @@ define(['lib/stacktrace'], function(Stack){
 		// allErrors[errorName].prototype = new GenericError;
 
 	}
+
+	var GameError = function(error, data) {
+		this.name    = "Error";
+		this.message = error;
+		this.data    = (data || null);
+		this.print   = function() {
+			if (console.error) {
+				console.error(this.name + ': ' + this.message);
+				if (this.data) console.error(data);
+				console.trace();
+				console.log(this.stack);
+			} else {
+				console.log(this.name + ': ' + this.message);
+				console.log(this.stack);
+				if (this.data) console.log(data);
+			}
+		}
+	};
+
+	allErrors['GameError'] = GameError; // NOTE: a Game error is not an error in code; its an error specific to within the game (eg. a player requests to pickup an item which is not there)
 
 	return allErrors;
 });

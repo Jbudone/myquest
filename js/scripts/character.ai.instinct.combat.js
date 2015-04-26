@@ -15,13 +15,13 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 		this.name = "combat";
 
-		var _combat = this,
-			brain = brain,
-			_game = game,
+		var _combat    = this,
+			brain      = brain,
+			_game      = game,
 			_character = brain.character,
-			_script = null;
+			_script    = null;
 
-		this.target = null;
+		this.target    = null;
 
 		// The time since we last hit something. This is set as now by default to avoid having to check in
 		// every routine when considering the delta.
@@ -41,13 +41,8 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			meleeState.onEnter = function(target){
 				console.log("Entered melee state");
 
-				if (!(target instanceof Character)) {
-					debugger;
-					console.log("Target is not a character", LOG_ERROR);
-					return UnexpectedError("Target is not a character");
-				}
-
-				if (target.isPlayer && _character.isPlayer) debugger;
+				if (!(target instanceof Character)) return new Error("Target is not a character");
+				if (target.isPlayer && _character.isPlayer) return new Error("PvP triggered");
 				_combat.target = target;
 			};
 
@@ -62,29 +57,30 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					return false;
 				}
 
-				if (brain.instincts['movement'].inRangeOf( _combat.target, 1, { range: ADJACENT_RANGE } )) {
-					//console.log("   IM IN RANGE OF YOU!");
+				var result = null;
+				result = brain.instincts['movement'].inRangeOf( _combat.target, 1, { range: ADJACENT_RANGE } );
+				if (_.isError(result)) return result;
+				if (result) {
 
 					if (!_character.entity.path && !_combat.attackBusy) {
 						var time    = now(),
-							delta   = time - _combat.timeSinceLastAttack,
-							success = false;
+							delta   = time - _combat.timeSinceLastAttack;
 
 						// FIXME: get this number from npc
 						if (delta > 500) {
 							
 							// Attack enemy
-							success = _combat.attackTarget(_combat.target);
-							return success;
+							result = _combat.attackTarget(_combat.target);
+							if (_.isError(result)) return result;
+							return result;
 						}
 					}
 
 				} else {
-					//console.log("   Not in range of you :(!");
+					// Not in range, are we already on a path to the target?
 					if (!_character.entity.path) {
-						brain.instincts['movement'].chase( _combat.target, 1 );
-					} else {
-						//console.log("      ....I'll get there");
+						result = brain.instincts['movement'].chase( _combat.target, 1 );
+						if (_.isError(result)) return result;
 					}
 				}
 
@@ -93,26 +89,33 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 		this.setAbilities = function(_abilities){
 
+			var result = null;
 			this.abilities = {};
 			for (var i=0; i<this._abilities.length; ++i) {
 				var _ability = this._abilities[i];
 				var ability = Resources.scripts.ai.instincts[this.name].components[_ability];
 				if (ability.script) ability = ability.script;
-				this.abilities[_ability] = _script.addScript( new ability(_game, this, _character) );
+				result = _script.addScript( new ability(_game, this, _character) );
+				if (_.isError(result)) return result;
+				this.abilities[_ability] = result;
 			}
 		};
 
 
 		this.onEnter = function(instinct, data){
 			this.state = this.states['melee'];
-			this.state.enter(data.enemy);
+			var result = null;
+			result = this.state.enter(data.enemy);
+			if (_.isError(result)) return result;
 		};
 		
 		this.onLeave = function(){
 			// TODO: cleanup, leave state
 
+			var result = null;
 			if (this.state) {
-				this.state.leave();
+				result = this.state.leave();
+				if (_.isError(result)) return result;
 				this.state = null;
 			}
 
@@ -136,8 +139,10 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			if (this.state) {
 				var result = this.state.update();
 
+				if (_.isError(result)) return result;
 				if (result === false) {
-					this.state.leave();
+					result = this.state.leave();
+					if (_.isError(result)) return result;
 					this.state = null;
 
 					return false;
@@ -167,7 +172,9 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					amount: amount
 				};
 
-				brain.postNews(news);
+				var result = null;
+				result = brain.postNews(news);
+				if (_.isError(result)) return result;
 			} else {
 
 				// TODO: not attacking this guy? reconsider targets
@@ -181,10 +188,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 		this.setTarget = function(target){
 
 			this.Log("You really want to attack him ??", LOG_INFO);
-			if (!(target instanceof Character)) {
-				this.Log("Target is not a character", LOG_ERROR);
-				return UnexpectedError("Target is not a character");
-			}
+			if (!(target instanceof Character)) return new Error("Target is not a character");
 
 			if (this.isActive) {
 
@@ -201,15 +205,19 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					aggro: true
 				};
 
-				brain.postNews(news);
+				var result = null;
+				result = brain.postNews(news);
+				if (_.isError(result)) return result;
 			}
 		};
 
 		this.stopListeningToTarget = function(target){
-			if (!(target instanceof Character)) return UnexpectedError("Target not a Character");
+			if (!(target instanceof Character)) return new Error("Target not a Character");
 
+			var result = null;
 			this.stopListeningTo(target);
-			brain.neuralNet.remove(target.entity.id);
+			result = brain.neuralNet.remove(target.entity.id);
+			if (_.isError(result)) return result;
 
 			// FIXME: what if we have news items regarding this character? Need to remove
 			// those, or have a setTarget check that the target has died?
@@ -219,7 +227,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 		};
 
 		this.listenToTarget = function(target){
-			if (!(target instanceof Character)) return UnexpectedError("Target not a Character");
+			if (!(target instanceof Character)) return new Error("Target not a Character");
 
 			// If the entity is already in our neural net, then we're already listening to him
 			if (brain.neuralNet.has(target.entity.id)) return;
@@ -229,13 +237,12 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 			// listen to entity
 			this.listenTo(target, EVT_DIED, function(target){
-				console.log("AWWW YOU DIED!!! :( :(");
 				this.Log("You died :(");
 				this.stopListeningToTarget(target);
 			});
 
 			this.listenTo(target.entity, EVT_ZONE_OUT, function(target){
-				console.log("Aww you ran away! :(");
+				this.Log("Aww you ran away! :(");
 				this.stopListeningToTarget(target.character);
 			});
 
@@ -250,7 +257,8 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			if (this.isActive) {
 				// TODO: Leave combat; forget neural network of enemies
 				brain.leaveState('combat');
-				brain.neuralNet.reset();
+				var result = brain.neuralNet.reset();
+				if (_.isError(result)) return result;
 			}
 		};
 
@@ -275,7 +283,9 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					this._abilities = ['melee', 'sight'];
 				}
 
-				this.setAbilities(this._abilities);
+				var result = null;
+				result = this.setAbilities(this._abilities);
+				if (_.isError(result)) return result;
 
 				if (!_character.isPlayer) {
 					var sight = this.abilities['sight'];
@@ -286,8 +296,11 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 								// TODO: fix this; should be a better way to enable aggro
 								if (!this.target) {
-									_combat.attackedBy(character, 0);
-									_combat.listenToTarget(character);
+									var result = null;
+									result = _combat.attackedBy(character, 0);
+									if (_.isError(result)) throw result;
+									result = _combat.listenToTarget(character);
+									if (_.isError(result)) throw result;
 								}
 							}
 						});
@@ -301,12 +314,14 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					if (_character.isPlayer) {
 
 					} else {
-						_combat.listenToTarget(enemy);
+						var result = _combat.listenToTarget(enemy);
+						if (_.isError(result)) throw result;
 					}
 				});
 
 				_script.listenTo(_character, EVT_DISTRACTED).after(function(){
-					_combat.distracted();
+					var result = _combat.distracted();
+					if (_.isError(result)) throw result;
 				});
 
 				if (_character.isPlayer) {
@@ -321,12 +336,13 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 							   // Attempt to handle each request
 							   // NOTE: must handle requests in order
 							   var request = this.requests[0],
-								   success = false,
+								   result  = null,
 								   handler = this.handler(request.request);
 							   if (handler) {
-								   success = handler.call(request);
+								   result = handler.call(request);
 
-								   if (success !== true) {
+								   if (_.isError(result)) return result;
+								   if (result !== true) {
 									   var time = now();
 									   if (time - request.time > 3000) {
 
@@ -362,23 +378,26 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 				   _combat.registerHandler(EVT_ATTACK);
 				   _combat.handler(EVT_ATTACK).set(function(request){
 
-					   if (!_.isObject(request)) return UnexpectedError("Request is not well defined");
-					   if (!(request.target instanceof Character)) return UnexpectedError("Target is not a character");
+					   if (!_.isObject(request)) return new Error("Request is not well defined");
+					   if (!(request.target instanceof Character)) return new Error("Target is not a character");
 					   var target = request.target;
 
 
 					   // FIXME: have a canAttack function; maybe canAttack returns an object of pass/fail
 					   // params
-					   if (brain.instincts['movement'].inRangeOf( target, 1, { range: ADJACENT_RANGE } )) {
+					   var result = null;
+					   result = brain.instincts['movement'].inRangeOf( target, 1, { range: ADJACENT_RANGE } );
+					   if (_.isError(result)) return result;
+					   if (result) {
 						   if (!_character.entity.path && !this.attackBusy) {
 								var time    = now(),
-									delta   = time - _combat.timeSinceLastAttack,
-									success = false;
+									delta   = time - _combat.timeSinceLastAttack;
 
 								// FIXME: get this number from npc
 								if (delta > 500) {
-								   success = this.attackTarget(target);
-								   return success;
+								   result = this.attackTarget(target);
+								   if (_.isError(result)) return result;
+								   return result;
 								}
 						   }
 					   }
@@ -391,9 +410,9 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					   this.Log("Player attempting to attack someone..");
 					   this.Log("Target: "+data.target);
 
-					   var target = _character.entity.page.map.movables[data.target],
+					   var target    = _character.entity.page.map.movables[data.target],
 						   character = null,
-						   err = null;
+						   err       = null;
 
 					   if (!_.isObject(target)) err = "Target not found";
 					   if (!(target.character instanceof Character)) err = "Target does not have a character reference";
@@ -419,16 +438,15 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 					   });
 
 					   if (!_combat.isActive) {
-						   if (brain.state && brain.state.name == "combat") {
-							   debugger;
-						   }
+
 							var news = {
 								instinct: 'combat',
 								enemy: character,
 								aggro: true
 							};
 
-							brain.postNews(news);
+							var result = brain.postNews(news);
+							if (_.isError(result)) return result;
 					   }
 
 				   });
@@ -440,10 +458,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			},
 
 			attackTarget: function(target){
-				if (!(target instanceof Character)) {
-					this.Log("Target is not a character!", LOG_ERROR);
-					return UnexpectedError("Target is not a character..");
-				}
+				if (!(target instanceof Character)) return new Error("Target is not a character..");
 					   
 				if (!target.isAttackable()) {
 					return false;
@@ -452,10 +467,12 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 				this.Log("ATTACKING YOU: "+target);
 
-				var DAMAGE = 10;
+				var DAMAGE = 10,
+					result = null;
 				this.Log(" I TOTALLY SCRATCHED YOU FOR " + DAMAGE);
 
-				target.hurt(DAMAGE, _character);
+				result = target.hurt(DAMAGE, _character);
+				if (_.isError(result)) return result;
 
 				this.timeSinceLastAttack = now();
 
@@ -516,16 +533,19 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 			setToUser: function(){
 
+				var result = null;
 				this._abilities = [];// TODO: fetch this from NPC
 				if (_character.isUser) {
 					this._abilities = ['melee'];
-					this.setAbilities(this._abilities);
+					result = this.setAbilities(this._abilities);
+					if (_.isError(result)) return result;
 				}
 
 				for (var abilityID in this.abilities) {
 					var ability = this.abilities[abilityID];
 					if (ability.hasOwnProperty('setToUser')) {
-						ability.setToUser();
+						result = ability.setToUser();
+						if (_.isError(result)) return result;
 					}
 				}
 
@@ -533,12 +553,17 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 				// TODO: upstream from characer
 				_script.listenTo(_character, EVT_ATTACKED).after(function(_character, enemy, amount){
-					_combat.attackedBy(enemy, amount);
-					_combat.listenToTarget(enemy);
+					var result = null;
+					result = _combat.attackedBy(enemy, amount);
+					if (_.isError(result)) throw result;
+					result = _combat.listenToTarget(enemy);
+					if (_.isError(result)) throw result;
 				});
 
 				_script.listenTo(_character, EVT_DISTRACTED).after(function(){
-					_combat.distracted();
+					var result = null;
+					result = _combat.distracted();
+					if (_.isError(result)) throw result;
 				});
 
 				user.hook('clickedEntity', user).after(function(entity){
@@ -549,13 +574,17 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 						return;
 					}
 
-					_combat.listenToTarget(character);
-
-					_combat.setTarget(entity.character);
+					var result = null;
+					result = _combat.listenToTarget(character);
+					if (_.isError(result)) return result;
+					result = _combat.setTarget(entity.character);
+					if (_.isError(result)) return result;
 				}.bind(this));
 
 				user.hook('clickedTile', user).after(function(){
-					_combat.distracted();
+					var result = null;
+					result = _combat.distracted();
+					if (_.isError(result)) return result;
 				}.bind(this));
 			},
 

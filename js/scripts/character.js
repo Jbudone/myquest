@@ -21,6 +21,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.delta = 0;
 
 		// FIXME: get these stats from npc
+		if (!_.isNumber(entity.npc.health) || entity.npc.health <= 0) throw new Error("Bad health for NPC");
 		this.health = entity.npc.health;
 		this.alive  = true;
 		this.respawnTime = null;
@@ -42,6 +43,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			if (_.isUndefined(health)) {
 				this.health -= amount;
 			} else {
+				if (Env.isServer) return new Error("Unexpected setting health on server");
 				this.health = health;
 			}
 
@@ -50,13 +52,15 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 			if (!Env.isServer) {
 				if (this.entity.hasOwnProperty('ui')) {
-					this.entity.ui.hurt();
+					var result = this.entity.ui.hurt();
+					if (_.isError(result)) return result;
 				}
 			}
 			
 			if (this.health <= 0) {
-				this.die();
-				return;
+				var result = this.die();
+				if (_.isError(result)) return result;
+				return; // do not post hurt since we've died
 			}
 
 			this.doHook('hurt').post();
@@ -64,14 +68,15 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 		this.registerHook('die');
 		this.die = function(){
-			if (!this.alive) return;
+			if (!this.alive) return new Error("Dying when already died");
 			if (!this.doHook('die').pre()) return;
 
 				this.Log("Its time to die :(");
-				// this.physicalState.transition(STATE_DEAD);
 				this.alive = false;
+				if (!_.isNumber(this.entity.npc.spawn) || this.entity.npc.spawn < 0) return new Error("NPC has bad respawn timer value");
 				this.respawnTime = this.entity.npc.spawn;
-				this.brain.die();
+				var result = this.brain.die();
+				if (_.isError(result)) return result;
 				this.triggerEvent(EVT_DIED);
 
 
@@ -83,7 +88,6 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			if (!this.doHook('respawning').pre()) return;
 
 			this.Log("Respawning");
-			//this.entity.physicalState.transition(STATE_ALIVE);
 			this.entity.path = null;
 			this.entity.zoning = false;
 			this.entity.lastMoved=now();
@@ -92,8 +96,10 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			this.entity.pendingEvents=[];
 
 			this.alive = true;
+			if (!_.isNumber(this.entity.npc.health) || this.entity.npc.health <= 0) return new Error("NPC has bad health value");
 			this.health = this.entity.npc.health;
-			this.brain.reset();
+			var result = this.brain.reset();
+			if (_.isError(result)) return result;
 
 			this.doHook('respawning').post();
 		};
@@ -102,10 +108,13 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.respawned = function(){
 			if (!this.doHook('respawned').pre()) return;
 
+			var result = null;
 			this.entity.position.local.y = this.respawnPoint.y;
 			this.entity.position.local.x = this.respawnPoint.x;
-			this.entity.updatePosition();
-			this.characterHasMoved();
+			result = this.entity.updatePosition();
+			if (_.isError(result)) return result;
+			result = this.characterHasMoved();
+			if (_.isError(result)) return result;
 			this.Log("Respawned");
 
 			this.doHook('respawned').post();
@@ -119,7 +128,10 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 			this.doHook('moved').post();
 		};
-		this.listenTo(this.entity, EVT_MOVED_TO_NEW_TILE, this.characterHasMoved);
+		this.listenTo(this.entity, EVT_MOVED_TO_NEW_TILE, function(){
+			var result = this.characterHasMoved();
+			if (_.isError(result)) throw result;
+		});
 
 
 
@@ -141,14 +153,16 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 				while (this.delta >= 50) {
 					this.delta -= 50;
 					this.handlePendingEvents();
-					this.brain.step();
+					var result = this.brain.step();
+					if (_.isError(result)) return result;
 				}
 			}.bind(this));
 		};
 
 		this.unload = function(){
 			this.stopAllEventsAndListeners();
-			if (this.entity instanceof Movable) this.entity.handler('step').unset();
+			if (!(this.entity instanceof Movable)) throw new Error("Entity not a Movable");
+			this.entity.handler('step').unset();
 		}
 
 		var _character = this;
@@ -159,8 +173,13 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			},
 
 			characterInit: function(){
-				this.brain = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
-				this.initListeners();
+				var result = null;
+				result = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
+				if (_.isError(result)) throw result;
+				this.brain = result;
+
+				result = this.initListeners();
+				if (_.isError(result)) throw result;
 			},
 
 			setAsPlayer: function(){
@@ -178,27 +197,22 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							itmBase = null,
 							result  = null;
 
-						if (!_.isObject(data)) err = "No args given";
+						if (!_.isObject(data)) return new Error("No args given");
+						if (!data.hasOwnProperty('coord')) return new Error("No coordinates given for item");
+						if (isNaN(data.coord)) return new Error("Bad coordinates given for item");
+						if (!data.hasOwnProperty('page')) return new Error("No page given");
+						if (isNaN(data.page)) return new Error("Bad page given"); 
 
-						if (err === null) {
-							if (!data.hasOwnProperty('coord')) err = "No coordinates given for item";
-							if (isNaN(data.coord)) err = "Bad coordinates given for item";
-							if (!data.hasOwnProperty('page')) err = "No page given";
-							if (isNaN(data.page)) err = "Bad page given";
-						}
+						coord = parseInt(data.coord);
+						page = player.movable.page.map.pages[data.page];
+						if (!page.items.hasOwnProperty(coord)) err = "No item found at " + coord;
 
-						if (err === null) {
-							coord = parseInt(data.coord);
-							page = player.movable.page.map.pages[data.page];
-							if (!page.items.hasOwnProperty(coord)) err = "No item found at " + coord;
-						}
-
-						if (err === null) {
+						if (!err) {
 							item = page.items[coord];
 
 							// Is character in range?
-							y = parseInt(coord / Env.pageWidth);
-							x = coord - y*Env.pageWidth;
+							y     = parseInt(coord / Env.pageWidth);
+							x     = coord - y*Env.pageWidth;
 							myPos = player.movable.position.tile;
 
 							if ((y+page.y) !== myPos.y || (x+page.x) !== myPos.x) {
@@ -218,18 +232,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 									err = "Player not in range of item: ("+x+","+y+") -> ("+myPos.x+","+myPos.y+")";
 								}
 							}
-						}
 
-						if (err === null) {
-							itmRef = Resources.items.list[item.id];
-
-							if (!itmRef.hasOwnProperty('base')) err = "Item does not contain a base script";
-							if (err === null && !Resources.items.base.hasOwnProperty(itmRef.base)) err = "Base script("+ itmRef.base +") not found";
-						}
-
-						if (err === null) {
-							itmBase = Resources.items.base[itmRef.base];
-							if (!itmBase.hasOwnProperty('invoke')) err = "Base item script not prepared";
 						}
 
 						if (err) {
@@ -242,11 +245,22 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						}
 
 
+						itmRef = Resources.items.list[item.id];
+
+						if (!itmRef.hasOwnProperty('base')) return new Error("Item does not contain a base script");
+						if (err === null && !Resources.items.base.hasOwnProperty(itmRef.base)) return new Error("Base script("+ itmRef.base +") not found");
+
+						itmBase = Resources.items.base[itmRef.base];
+						if (!itmBase.hasOwnProperty('invoke')) return new Error("Base item script not prepared");
+
+
 						this.Log("Requesting to pickup item");
 						delete page.items[coord];
 						result = itmBase.invoke(_character, itmRef.args);
 
-						if (result instanceof Error) {
+						if (_.isError(result)) return result;
+
+						if (typeof result == 'GameError') {
 							result.print();
 							player.respond(evt.id, false, {
 								msg: result.message
@@ -261,7 +275,8 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							coord: coord
 						});
 
-						page.map.game.removeItem(page.index, coord);
+						result = page.map.game.removeItem(page.index, coord);
+						if (_.isError(result)) return result;
 					};
 				player.registerHandler(EVT_GET_ITEM);
 				player.handler(EVT_GET_ITEM).set(pickupItem);
@@ -277,13 +292,20 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			},
 
 			characterInit: function(){
-				this.brain = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
-				this.initListeners();
+				var result = null;
+				result = this._script.addScript( new AI(game, _character) ); // NOTE: brain will be initialized automatically after character is initialized
+				if (_.isError(result)) throw result;
+
+				this.brain = result;
+				result = this.initListeners();
+				if (_.isError(result)) throw result;
 			},
 
 			setToUser: function(){
+				var result = null;
 				this.isUser = true;
-				this.brain.setToUser();
+				result = this.brain.setToUser();
+				if (_.isError(result)) return result;
 
 				if (The.player !== true) {
 

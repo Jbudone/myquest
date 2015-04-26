@@ -19,22 +19,31 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 			if (this.state) {
 				var result = this.state.update();
 
+				if (_.isError(result)) return result;
+
 				if (result === false) {
-					this.state.leave();
+					result = this.state.leave();
+					if (_.isError(result)) return result;
 					this.state = null;
 
-					if (this.onStateless) this.onStateless();
+					if (this.onStateless) {
+						result = this.onStateless();
+						if (_.isError(result)) return result;
+					}
 				}
 			}
 		};
 
 		this.die = function(){
+			var result = null;
 			if (this.state) {
-				this.state.leave();
+				result = this.state.leave();
+				if (_.isError(result)) return result;
 				this.state = null;
 			}
 
-			this.neuralNet.reset();
+			result = this.neuralNet.reset();
+			if (_.isError(result)) return result;
 		};
 
 		this.reset = function(){
@@ -45,6 +54,7 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 		this.instincts = {};
 		this.state = null;
 		this.enterState = function(instinct){
+			var result = null;
 			this.Log("Entering state: "+instinct);
 			if (this.state != null) {
 				// leave state
@@ -53,18 +63,19 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 					return;
 				}
 
-				this.state.leave();
+				result = this.state.leave();
+				if (_.isError(result)) return result;
 				this.state = null;
 			}
 
 			if (!this.instincts[instinct]) {
-				this.Log('No instinct found: '+instinct, LOG_ERROR);
 				this.Log(this.instincts);
-				return;
+				return new Error('No instinct found: '+instinct);
 			}
 
 			this.state = this.instincts[instinct];
-			this.state.enter.apply(this.state, arguments);
+			result = this.state.enter.apply(this.state, arguments);
+			if (_.isError(result)) return result;
 		};
 
 		// As soon as we leave a state, we trigger this. This enables other states to take action when AI is
@@ -81,10 +92,15 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				this.instincts[instinct] == this.state) {
 
 				// leave state
-				this.state.leave();
+				var result = null;
+				result = this.state.leave();
+				if (_.isError(result)) return result;
 				this.state = null;
 
-				if (this.onStateless) this.onStateless();
+				if (this.onStateless) {
+					result = this.onStateless();
+					if (_.isError(result)) return result;
+				}
 			}
 		};
 
@@ -109,20 +125,21 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 
 			if (!this.character.alive) return;
 			if (!news || _.isUndefined(news.instinct)) {
-				this.Log("Bad news item given", LOG_ERROR);
-				return new UnexpectedError("Bad news item given..");
+				return new Error("Bad news item given..");
 			}
 
+			var result = null;
 			if (this.state) {
 
 				if (news.instinct === this.state.name) {
-					debugger;
-					this.Log("This state is already active! "+this.state.name, LOG_ERROR);
+					return new Error("This state is already active! "+this.state.name);
 				} else {
-					var result = this.state.inform(news);
+					result = this.state.inform(news);
+					if (_.isError(result)) return result;
 					if (result && result.accept === true) {
 
-						this.enterState(news.instinct, news);
+						result = this.enterState(news.instinct, news);
+						if (_.isError(result)) return result;
 
 					} else {
 						// TODO: store in memory?
@@ -132,7 +149,8 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 			} else {
 				
 				// No state set yet, lets go to this one
-				this.enterState(news.instinct, news);
+				result = this.enterState(news.instinct, news);
+				if (_.isError(result)) return result;
 			}
 		};
 
@@ -154,11 +172,14 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				// List of instincts
 				// We can only be in one instinct (state) at a time. We must call enterState() to switch to another
 				// state
+				var result = null;
 				for (var i=0; i<character._instincts.length; ++i) {
 					var _instinct = character._instincts[i];
 					var instinct = Resources.scripts.ai.instincts[_instinct];
 					if (instinct.script) instinct = instinct.script;
-					this.instincts[_instinct] = _script.addScript( new instinct(game, this) );
+					result = _script.addScript( new instinct(game, this) );
+					if (_.isError(result)) return result;
+					this.instincts[_instinct] = result;
 				}
 			},
 		};
@@ -166,7 +187,6 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 		this.client = {
 			initialize: function(){
 				_script = this;
-				console.log("AI: Shush! I'm thinking..");
 				_brain.brainInit.bind(_brain)();
 			},
 
@@ -179,13 +199,14 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				// List of instincts
 				// We can only be in one instinct (state) at a time. We must call enterState() to switch to another
 				// state
+				var result = null;
 				for (var i=0; i<character._instincts.length; ++i) {
 					var _instinct = character._instincts[i];
-					console.log("Loading instinct: "+_instinct);
 					var instinct = Resources.scripts.ai.instincts[_instinct];
 					if (instinct.script) instinct = instinct.script;
-					this.instincts[_instinct] = _script.addScript( new instinct(game, this) );
-					console.log("Loaded instinct");
+					result = _script.addScript( new instinct(game, this) );
+					if (_.isError(result)) return result;
+					this.instincts[_instinct] = result;
 				}
 			},
 
@@ -193,11 +214,12 @@ define(['SCRIPTENV', 'scripts/character.ai.neuralnet', 'loggable'], function(SCR
 				// TODO: for each instinct, try to set them as user; for each ability try to set as user;
 				// (specialized listening)
 
-				console.log("I'm a real boy ??");
+				var result = null;
 				for (var instinctName in this.instincts) {
 					var instinct = this.instincts[instinctName];
 					if (instinct.hasOwnProperty('setToUser')) {
-						instinct.setToUser();
+						result = instinct.setToUser();
+						if (_.isError(result)) return result;
 					}
 				}
 

@@ -24,6 +24,7 @@ define(function(){
 				handler: function(){
 					if (!preHandle(arguments)) return;
 					var result = _this._dynamicHandles[_id].mainHandle.apply(_this, arguments);//bind(this)(arguments); // FIXME: are we safe to use apply & this?
+					if (_.isError(result)) return result; // Immediately escape from error
 					evtHandle(arguments);
 					postHandle(arguments);
 					return result;

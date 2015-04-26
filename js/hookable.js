@@ -99,7 +99,7 @@ define(function(){
 		registerHook: function(name){
 			if (this._hooks[name]) {
 				console.error("ERROR! HOOK ("+name+") ALREADY DEFINED!");
-				return false;
+				return new Error("Hook ("+ name +") already registered");
 			}
 
 			this._hooks[name] = new Hook(name);
@@ -114,7 +114,7 @@ define(function(){
 		hook: function(name, listener){
 			if (!this._hooks[name]) {
 				console.error("ERROR! HOOK NOT AVAILABLE ("+name+")");
-				return false;
+				return new Error("Hook ("+ name +") not registered");
 			}
 
 			if (!listener) listener = arguments.callee.caller; // TODO: is this a ptr to the object?

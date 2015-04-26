@@ -507,10 +507,12 @@ define(['page', 'movable'], function(Page, Movable){
 		step: function(time) {
 			// process events queue
 			this.handlePendingEvents();
-			var eventsBuffer = {};
+			var eventsBuffer = {},
+				result = null;
 			for (var i in this.pages) {
 				var page = this.pages[i];
-				page.step(time);
+				result = page.step(time);
+				if (_.isError(result)) return result;
 				var pageEvents = page.fetchEventsBuffer();
 				if (pageEvents) eventsBuffer[page.index] = pageEvents;
 			}
@@ -518,7 +520,8 @@ define(['page', 'movable'], function(Page, Movable){
 
 			var dynamicHandler = this.handler('step');
 			if (dynamicHandler) {
-				dynamicHandler.call(time - this.lastUpdated);
+				result = dynamicHandler.call(time - this.lastUpdated);
+				if (_.isError(result)) return result;
 			}
 			this.lastUpdated = time;
 
