@@ -9,6 +9,7 @@ define(['eventful','map'], function(Eventful,Map){
 			if (!this.maps[id]) {
 				console.log("Adding map to world: "+id);
 				var map = new Map(id);
+				map.loadMap();
 				this.maps[id] = map;
 
 				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {

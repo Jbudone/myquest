@@ -83,6 +83,8 @@ define(function(){
 	addKey('EVT_USE_ITEM');
 	addKey('EVT_DROP_ITEM');
 
+	addKey('EVT_INTERACT');
+
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Misc. Keys

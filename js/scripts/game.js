@@ -421,6 +421,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 				result = _game.handleItems.bind(_game)();
 				if (_.isError(result)) throw result;
+				result = _game.handleInteractables.bind(_game)();
+				if (_.isError(result)) throw result;
 
 				window['game'] = _game; // FIXME: user debugging script for this
 			},
@@ -528,6 +530,65 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					page.items[(position.y-page.y)*Env.pageWidth + (position.x-page.x)] = item;
 				});
+			},
+
+
+			handleInteractables: function(){
+
+				user.hook('clickedInteractable', this).after(function(interactableID){
+					if (!map.interactables.hasOwnProperty(interactableID)) throw new Error("Interactable ("+ interactableID +") not found!");
+					var interactable = map.interactables[interactableID],
+						path         = map.pathfinding.findPath( player, interactable.positions, { range: 1, adjacent: false }),
+						destination  = null;
+
+					debugger;
+					if (_.isError(path)) throw path;
+					if (!path) {
+						// FIXME: handle no path found
+					}
+
+					destination = _.last(path.walks).destination; // The tile which we are going to walk to
+					if (!destination) throw new Error("No destination provided from walk/path");
+					player.addPath(path).finished(function(){
+						server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: destination.x, y: destionation.y, page: destionation.page} })
+							.then(function(){
+								console.log("Clicked the interactable!");
+							}, function(){
+								console.log("Couldn't click the interactable");
+							})
+							.catch(Error, function(e){ gameError(e); })
+							.error(function(e){ gameError(e); });
+							
+						console.log("ZOMG I GOT INTERACTED WITH THE INTERACTABLE!!");
+					}, function(){
+						console.log("Awww I couldn't interact with the interactable thingy :(");
+					});
+				});
+
+				server.registerHandler(EVT_INTERACT);
+				server.handler(EVT_INTERACT).set(function(evt, data){
+					debugger;
+					var base      = null,
+						character = null,
+						args      = null,
+						result    = null;
+
+					if (!_.isObject(data)) return new Error("Interactable is not an object");
+					if (!data.hasOwnProperty('base')) return new Error("Interactable does not have base property");
+					if (!data.hasOwnProperty('character')) return new Error("Interactable user does not have character property");
+
+					if (!Resources.items.base.hasOwnProperty(data.base)) return new Error("Interactable base does not exist in Resources");
+					if (!The.map.movables.hasOwnProperty(data.character)) return new Error("Interactable user character does not exist in map movables list");
+
+					base      = Resources.interactables.base[data.base];
+					character = The.map.movables[data.character].character;
+
+					if (!base.hasOwnProperty('invoke')) return new Error("Interactable base does not have the invoke property");
+					result = base.invoke(character, data);
+
+					if (_.isError(result)) return result;
+				});
+
 			},
 
 

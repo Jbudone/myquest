@@ -1237,6 +1237,13 @@ try{
 					return;
 				}
 
+				// Pickup item we're currently hovering
+				if (ui.hoveringInteractable) {
+					The.user.clickedInteractable( ui.hoveringInteractable );
+					return;
+				}
+
+
 				// 	click to move player creates path for player
 				var walkTo       = { x: mouse.x + parseInt(The.camera.offsetX/Env.tileSize),
 									 y: mouse.y - parseInt(The.camera.offsetY/Env.tileSize) },

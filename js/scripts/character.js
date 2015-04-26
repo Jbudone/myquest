@@ -281,6 +281,103 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 				player.registerHandler(EVT_GET_ITEM);
 				player.handler(EVT_GET_ITEM).set(pickupItem);
 				
+				var interact = function(evt, data){
+						var err              = null,
+							coord            = null,
+							page             = null,
+							interactable     = null,
+							y                = null,
+							x                = null,
+							myPos            = null,
+							interactableRef  = null,
+							interactableBase = null,
+							result           = null;
+
+						debugger;
+						if (!_.isObject(data)) return new Error("No args given");
+						if (!data.hasOwnProperty('coord')) return new Error("No coordinates given for interactable");
+						if (isNaN(data.coord)) return new Error("Bad coordinates given for interactable");
+						if (!data.hasOwnProperty('page')) return new Error("No page given");
+						if (isNaN(data.page)) return new Error("Bad page given"); 
+
+						coord = parseInt(data.coord);
+						page = player.movable.page.map.pages[data.page];
+						if (!page.interactable.hasOwnProperty(coord)) err = "No interactable found at " + coord;
+
+						if (!err) {
+							interactable = page.interactable[coord];
+
+							// Is character in range?
+							y     = parseInt(coord / Env.pageWidth);
+							x     = coord - y*Env.pageWidth;
+							myPos = player.movable.position.tile;
+
+							if ((y+page.y) !== myPos.y || (x+page.x) !== myPos.x) {
+								if (player.movable.path && !data.hasOwnProperty('retrying')) {
+									player.movable.path.onFinished = (function(){ 
+										console.log("Character not near item.. Trying again after movable finishes path");
+										data.retrying = true;
+										pickupItem.call(_character, evt, data);
+									});
+									player.movable.path.onFailed = (function(){
+										player.respond(evt.id, false, {
+											msg: "Player not near item"
+										});
+									});
+									return;
+								} else {
+									err = "Player not in range of item: ("+x+","+y+") -> ("+myPos.x+","+myPos.y+")";
+								}
+							}
+
+						}
+
+						if (err) {
+							this.Log("Could not pickup item: " + err);
+							player.respond(evt.id, false, {
+								msg: err
+							});
+
+							return false;
+						}
+
+
+						itmRef = Resources.items.list[item.id];
+
+						if (!itmRef.hasOwnProperty('base')) return new Error("Item does not contain a base script");
+						if (err === null && !Resources.items.base.hasOwnProperty(itmRef.base)) return new Error("Base script("+ itmRef.base +") not found");
+
+						itmBase = Resources.items.base[itmRef.base];
+						if (!itmBase.hasOwnProperty('invoke')) return new Error("Base item script not prepared");
+
+
+						this.Log("Requesting to pickup item");
+						delete page.items[coord];
+						result = itmBase.invoke(_character, itmRef.args);
+
+						if (_.isError(result)) return result;
+
+						if (typeof result == 'GameError') {
+							result.print();
+							player.respond(evt.id, false, {
+								msg: result.message
+							});
+							return false;
+						}
+
+
+						player.respond(evt.id, true);
+						page.broadcast(EVT_GET_ITEM, {
+							page: page.index,
+							coord: coord
+						});
+
+						result = page.map.game.removeItem(page.index, coord);
+						if (_.isError(result)) return result;
+				};
+
+				player.registerHandler(EVT_INTERACT);
+				player.handler(EVT_INTERACT).set(interact);
 			},
 		};
 

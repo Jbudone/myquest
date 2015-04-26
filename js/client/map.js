@@ -9,6 +9,7 @@ define(['page','movable'], function(Page,Movable){
 
 		loadMap: function(map){
 
+			debugger;
 			var result = null;
 			if (map) {
 				this.id          = map.id;

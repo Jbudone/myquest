@@ -59,8 +59,8 @@ define(['serializable'], function(Serializable){
 		if (!_.isNumber(y)) return new Error("Expects y to be a number");
 		if (!_.isNumber(x)) return new Error("Expects x to be a number");
 		extendClass(this).with(Serializable);
-		this.y=y;
 		this.x=x;
+		this.y=y;
 
 
 		if (map) {

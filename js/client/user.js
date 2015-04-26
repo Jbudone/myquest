@@ -14,6 +14,7 @@ define(['hookable', 'dynamic', 'loggable'], function(Hookable, Dynamic, Loggable
 		this.registerHook('clickedEntity');
 		this.registerHook('clickedTile');
 		this.registerHook('clickedItem');
+		this.registerHook('clickedInteractable');
 		this.clickedEntity = function(entity){
 			if (!this.doHook('clickedEntity').pre(entity)) return;
 			this.Log("Clicked entity");
@@ -24,6 +25,12 @@ define(['hookable', 'dynamic', 'loggable'], function(Hookable, Dynamic, Loggable
 			if (!this.doHook('clickedItem').pre(item)) return;
 			this.Log("Clicked item");
 			this.doHook('clickedItem').post(item);
+		};
+
+		this.clickedInteractable = function(interactable){
+			if (!this.doHook('clickedInteractable').pre(interactable)) return;
+			this.Log("Clicked interactable");
+			this.doHook('clickedInteractable').post(interactable);
 		};
 
 		this.clickedTile = function(tile){
