@@ -695,7 +695,7 @@ try{
 				}
 
 				if (new_item.hasOwnProperty('initialize')) {
-					new_item.initialize(character, args);
+					return new_item.initialize(character, args);
 				}
 			};
 		};
@@ -726,7 +726,7 @@ try{
 				}
 
 				if (new_interactable.hasOwnProperty('initialize')) {
-					new_interactable.initialize(character, args);
+					return new_interactable.initialize(character, args);
 				}
 			};
 			this.handledBy = interactableBase.handledBy;

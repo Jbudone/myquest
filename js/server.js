@@ -317,7 +317,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 					if (new_item.hasOwnProperty('initialize')) {
-						new_item.initialize(character, args);
+						return new_item.initialize(character, args);
 					}
 				};
 			};
@@ -337,7 +337,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 			var InteractableBase = function(interactableBase){
-				var interactable = interactableBase;
+				var interactable = interactableBase.base;
 				this.invoke = function(character, args){
 					var new_interactable = new interactable(character, args);
 					if (new_interactable.hasOwnProperty('server')) {
@@ -349,9 +349,10 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 					if (new_interactable.hasOwnProperty('initialize')) {
-						new_interactable.initialize(character, args);
+						return new_interactable.initialize(character, args);
 					}
 				};
+				this.handledBy = interactableBase.handledBy;
 			};
 
 			loadInteractableScripts = function(){
@@ -361,7 +362,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					var baseFile = 'scripts/interactables.'+interactableBase;
 					++interactablesToLoad;
 					requirejs([baseFile], function(baseScript){
-						Resources.interactables.base[interactableBase] = new ItemBase(baseScript);
+						Resources.interactables.base[interactableBase] = new InteractableBase(baseScript);
 						if (--interactablesToLoad === 0) loaded('interactables');
 					});
 				});

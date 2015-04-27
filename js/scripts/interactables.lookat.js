@@ -52,6 +52,7 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 
 	return {
 		handledBy: CLIENT_ONLY,
+		dynamic: false,
 		base: Lookat
 	};
 });
