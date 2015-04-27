@@ -1,0 +1,22 @@
+{"interactables": [
+	{
+		"id": "window",
+		"base": "lookat",
+		"args": { "description": "What a shiny looking window" }
+	},
+	{
+		"id": "chair",
+		"base": "lookat",
+		"args": { "description": "What a comfy looking couch" }
+	},
+	{
+		"id": "tv",
+		"base": "lookat",
+		"args": { "description": "zomg is that Lord Zod?!" }
+	},
+	{
+		"id": "carpet",
+		"base": "lookat",
+		"args": { "description": "Why am I looking at a carpet?" }
+	}
+]}

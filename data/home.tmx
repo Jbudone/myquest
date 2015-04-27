@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" width="100" height="100" tilewidth="16" tileheight="16">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="13">
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16">
   <image source="../tilesheet.png" trans="ff00ff" width="320" height="1568"/>
  </tileset>
@@ -13,17 +13,28 @@
    eJzt1clqU3EYxuETiimOe+/AW7B6AyoOa3FA3TtiHZaKiq26VFQcoQ4VFUdwXDqBgi6dQEHvwHHlKyQ0TU70mEpXzwM/Djk55MD/60dHphTFuXQ+XZjgdU5/9ecvptHEeHdyJnfTvXR/gtf5/dWff5AemkeH5zmTF+n30TQrs7WvKAbTtr7y75fXi2JZ5rGiPv7+nnzem/a13X+ZF70yjw4fciYf0+xirDL7M4ehNNxlHutz3hvSxrZzP5rPx9Lxtvuf8s7P5tGh6n7MzRwG0rySeQzWsjdpe9qRdtbGvrucOVxJV+1HJVX3Y3HmsCQtLZnHUM5/OB1IB9OhWucz7exHueZ+/M2azGFtWtc2jxM5+5PpVDqdzqSzLfNYkL1YmBbZj0qa+9Grazn76+lGuplupdst81iZOaxKqxvz2JXr7rr96KZ1P+qN/tWjnP/j9CQ9Tc9a5rEpP7g5bWn88OFcj9TtRzet+9HrPF7n/N+kt+ldev+H/x+jecEl+9HVl5zJ1/QtfZ/E64/00zw6TM3f6rQ0Pc2YxOvMNKuXZQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgv/oFD3OVjQ==
   </data>
  </layer>
- <objectgroup name="zoning" width="0" height="0">
-  <object x="304" y="96" width="16" height="16">
+ <objectgroup name="zoning">
+  <object id="1" x="304" y="96" width="16" height="16">
    <properties>
     <property name="spot" value="1"/>
    </properties>
   </object>
-  <object x="304" y="32" width="16" height="16">
+  <object id="2" x="304" y="32" width="16" height="16">
    <properties>
     <property name="map" value="main"/>
     <property name="spawn" value="1"/>
    </properties>
   </object>
+  <object id="6" x="304" y="16" width="16" height="16">
+   <properties>
+    <property name="map" value="main"/>
+    <property name="spawn" value="1"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup name="interactables">
+  <object id="7" name="chair" type="lookat" x="176" y="32" width="16" height="32"/>
+  <object id="9" name="tv" type="lookat" x="384" y="32" width="32" height="32"/>
+  <object id="11" name="carpet" type="lookat" x="176" y="80" width="16" height="16"/>
  </objectgroup>
 </map>

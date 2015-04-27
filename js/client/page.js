@@ -35,7 +35,11 @@ define(function(){
 
 
 			for (var movableID in this.movables) {
-				this.map.unwatchEntity(this.movables[movableID]);
+				// NOTE: all we want is to unwatchEntity from the map, since removeEntity also removes it from
+				// this page which is completely unecessary. However, removeEntity contains a hook which is
+				// hooked by the game to remove the character script as well. So, we must remove the entity
+				// this way
+				this.map.removeEntity(this.movables[movableID]);
 			}
 
 

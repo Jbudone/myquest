@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" width="100" height="100" tilewidth="16" tileheight="16">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="29">
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16">
   <image source="../tilesheet.png" width="320" height="1568"/>
  </tileset>
@@ -16,44 +16,47 @@
    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
   </data>
  </layer>
- <objectgroup name="zoning" width="100" height="100">
-  <object x="880" y="864" width="16" height="16">
+ <objectgroup name="zoning">
+  <object id="1" x="880" y="864" width="16" height="16">
    <properties>
     <property name="map" value="home"/>
     <property name="spawn" value="1"/>
    </properties>
   </object>
-  <object x="864" y="960" width="16" height="16">
+  <object id="2" x="864" y="960" width="16" height="16">
    <properties>
     <property name="spot" value="1"/>
    </properties>
   </object>
  </objectgroup>
- <objectgroup name="spawns" width="100" height="100">
-  <object gid="1962" x="1103" y="1077"/>
-  <object gid="1962" x="1136" y="1106"/>
-  <object gid="1962" x="1170" y="1076"/>
-  <object gid="1963" x="649" y="267"/>
-  <object gid="1963" x="648" y="183"/>
-  <object gid="1963" x="720" y="147"/>
-  <object gid="1963" x="805" y="191"/>
-  <object gid="1963" x="887" y="248"/>
-  <object gid="1963" x="824" y="312"/>
-  <object gid="1963" x="989" y="135"/>
-  <object gid="1963" x="428" y="133"/>
-  <object gid="1963" x="454" y="274"/>
-  <object gid="1963" x="559" y="135"/>
-  <object gid="1962" x="1350" y="1421"/>
-  <object gid="1962" x="1375" y="1463"/>
-  <object gid="1962" x="1448" y="1433"/>
-  <object gid="1962" x="1374" y="1359"/>
-  <object gid="1962" x="1131" y="259"/>
-  <object gid="1962" x="1193" y="294"/>
-  <object gid="1962" x="1358" y="406"/>
-  <object gid="1962" x="1365" y="668"/>
-  <object gid="1962" x="1445" y="690"/>
-  <object gid="1962" x="1436" y="972"/>
-  <object gid="1962" x="1287" y="1159"/>
-  <object gid="1962" x="1330" y="1160"/>
+ <objectgroup name="spawns">
+  <object id="3" gid="1962" x="1103" y="1077"/>
+  <object id="4" gid="1962" x="1136" y="1106"/>
+  <object id="5" gid="1962" x="1170" y="1076"/>
+  <object id="6" gid="1963" x="649" y="267"/>
+  <object id="7" gid="1963" x="648" y="183"/>
+  <object id="8" gid="1963" x="720" y="147"/>
+  <object id="9" gid="1963" x="805" y="191"/>
+  <object id="10" gid="1963" x="887" y="248"/>
+  <object id="11" gid="1963" x="824" y="312"/>
+  <object id="12" gid="1963" x="989" y="135"/>
+  <object id="13" gid="1963" x="428" y="133"/>
+  <object id="14" gid="1963" x="454" y="274"/>
+  <object id="15" gid="1963" x="559" y="135"/>
+  <object id="16" gid="1962" x="1350" y="1421"/>
+  <object id="17" gid="1962" x="1375" y="1463"/>
+  <object id="18" gid="1962" x="1448" y="1433"/>
+  <object id="19" gid="1962" x="1374" y="1359"/>
+  <object id="20" gid="1962" x="1131" y="259"/>
+  <object id="21" gid="1962" x="1193" y="294"/>
+  <object id="22" gid="1962" x="1358" y="406"/>
+  <object id="23" gid="1962" x="1365" y="668"/>
+  <object id="24" gid="1962" x="1445" y="690"/>
+  <object id="25" gid="1962" x="1436" y="972"/>
+  <object id="26" gid="1962" x="1287" y="1159"/>
+  <object id="27" gid="1962" x="1330" y="1160"/>
+ </objectgroup>
+ <objectgroup name="interactables">
+  <object id="28" name="window" type="lookat" x="848" y="848" width="16" height="32"/>
  </objectgroup>
 </map>

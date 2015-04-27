@@ -4,5 +4,6 @@
 	"npcs": "npcs.new.json",
 	"world": "world.json",
 	"items": "items.new.json",
+	"interactables": "interactables.new.json",
 	"scripts": "scripts.json"
 }

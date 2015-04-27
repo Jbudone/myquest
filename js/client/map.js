@@ -9,7 +9,6 @@ define(['page','movable'], function(Page,Movable){
 
 		loadMap: function(map){
 
-			debugger;
 			var result = null;
 			if (map) {
 				this.id          = map.id;
@@ -171,7 +170,7 @@ FIXME FIXME FIXME FIXME FIXME
 							tileX          = interactableCoord - (tileY*Env.pageWidth),
 							tile           = new Tile(tileX, tileY);
 
-						tile.page = evtPage;
+						tile.page = evtPage.index;
 						if (!this.interactables.hasOwnProperty(interactableID)) {
 							this.interactables[interactableID] = {
 								positions: [], 

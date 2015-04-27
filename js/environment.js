@@ -44,6 +44,7 @@ define(function(){
 			'Combat': (logVerbose),
 			'Movement': (logVerbose),
 			'Item': (logVerbose),
+			'Interactable': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};

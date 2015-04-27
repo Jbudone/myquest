@@ -176,7 +176,12 @@ define(['movable'], function(Movable){
 				if (Math.floor(y) < tile.y && Math.floor(y) >= 0)                  tiles.push( new Tile( tile.x, tile.y - 1 ) );
 				return tiles;
 			} else if (obj instanceof Tile) {
-				return [obj];
+				if (obj.hasOwnProperty('page')) {
+					var page = this.map.pages[obj.page];
+					return [new Tile(obj.x + page.x, obj.y + page.y)];
+				} else {
+					return [obj];
+				}
 			} else {
 				return new UnexpectedError("Provided object is neither a Movable nor a Tile");
 			}

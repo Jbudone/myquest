@@ -23,16 +23,19 @@
          "y":0
         }, 
         {
+         "draworder":"topdown",
          "height":0,
          "name":"zoning",
          "objects":[
                 {
                  "height":16,
+                 "id":1,
                  "name":"",
                  "properties":
                     {
                      "spot":"1"
                     },
+                 "rotation":0,
                  "type":"",
                  "visible":true,
                  "width":16,
@@ -41,17 +44,92 @@
                 }, 
                 {
                  "height":16,
+                 "id":2,
                  "name":"",
                  "properties":
                     {
                      "map":"main",
                      "spawn":"1"
                     },
+                 "rotation":0,
                  "type":"",
                  "visible":true,
                  "width":16,
                  "x":304,
                  "y":32
+                }, 
+                {
+                 "height":16,
+                 "id":6,
+                 "name":"",
+                 "properties":
+                    {
+                     "map":"main",
+                     "spawn":"1"
+                    },
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":16,
+                 "x":304,
+                 "y":16
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "width":0,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "height":0,
+         "name":"interactables",
+         "objects":[
+                {
+                 "height":32,
+                 "id":7,
+                 "name":"chair",
+                 "properties":
+                    {
+
+                    },
+                 "rotation":0,
+                 "type":"lookat",
+                 "visible":true,
+                 "width":16,
+                 "x":176,
+                 "y":32
+                }, 
+                {
+                 "height":32,
+                 "id":9,
+                 "name":"tv",
+                 "properties":
+                    {
+
+                    },
+                 "rotation":0,
+                 "type":"lookat",
+                 "visible":true,
+                 "width":32,
+                 "x":384,
+                 "y":32
+                }, 
+                {
+                 "height":16,
+                 "id":11,
+                 "name":"carpet",
+                 "properties":
+                    {
+
+                    },
+                 "rotation":0,
+                 "type":"lookat",
+                 "visible":true,
+                 "width":16,
+                 "x":176,
+                 "y":80
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -60,11 +138,13 @@
          "x":0,
          "y":0
         }],
+ "nextobjectid":13,
  "orientation":"orthogonal",
  "properties":
     {
 
     },
+ "renderorder":"right-down",
  "tileheight":16,
  "tilesets":[
         {

@@ -293,47 +293,56 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							interactableBase = null,
 							result           = null;
 
-						debugger;
 						if (!_.isObject(data)) return new Error("No args given");
 						if (!data.hasOwnProperty('coord')) return new Error("No coordinates given for interactable");
-						if (isNaN(data.coord)) return new Error("Bad coordinates given for interactable");
+						if (!_.isNumber(data.coord)) return new Error("Bad coordinates given for interactable");
 						if (!data.hasOwnProperty('page')) return new Error("No page given");
-						if (isNaN(data.page)) return new Error("Bad page given"); 
+						if (!_.isNumber(data.page)) return new Error("Bad page given"); 
+						if (!data.hasOwnProperty('tile')) return new Error("No tile given");
+						if (!_.isObject(data.tile)) return new Error("Bad tile given"); 
+						if (!_.isNumber(data.tile.x)) return new Error("Bad tile x coordinate given"); 
+						if (!_.isNumber(data.tile.y)) return new Error("Bad tile y coordinate given"); 
 
 						coord = parseInt(data.coord);
 						page = player.movable.page.map.pages[data.page];
-						if (!page.interactable.hasOwnProperty(coord)) err = "No interactable found at " + coord;
+						if (!page) return new Error("Bad page given");
+						if (!page.interactables.hasOwnProperty(coord)) err = "No interactable found at " + coord;
 
 						if (!err) {
-							interactable = page.interactable[coord];
+							interactable = page.interactables[coord];
 
 							// Is character in range?
 							y     = parseInt(coord / Env.pageWidth);
 							x     = coord - y*Env.pageWidth;
 							myPos = player.movable.position.tile;
+							y += page.y;
+							x += page.x;
 
-							if ((y+page.y) !== myPos.y || (x+page.x) !== myPos.x) {
+							if (x < myPos.x - 1 || x > myPos.x + 1 ||
+								y < myPos.y - 1 || y > myPos.y + 1) {
+
+								// Not within range...lets retry when we're finished our current path
 								if (player.movable.path && !data.hasOwnProperty('retrying')) {
 									player.movable.path.onFinished = (function(){ 
-										console.log("Character not near item.. Trying again after movable finishes path");
+										console.log("Character not near interactable.. Trying again after movable finishes path");
 										data.retrying = true;
-										pickupItem.call(_character, evt, data);
+										interact.call(_character, evt, data);
 									});
 									player.movable.path.onFailed = (function(){
 										player.respond(evt.id, false, {
-											msg: "Player not near item"
+											msg: "Player not near interactable"
 										});
 									});
 									return;
 								} else {
-									err = "Player not in range of item: ("+x+","+y+") -> ("+myPos.x+","+myPos.y+")";
+									err = "Player not in range of interactable: ("+x+","+y+") -> ("+myPos.x+","+myPos.y+")";
 								}
 							}
 
 						}
 
 						if (err) {
-							this.Log("Could not pickup item: " + err);
+							this.Log("Could not interact with interactable: " + err);
 							player.respond(evt.id, false, {
 								msg: err
 							});
@@ -342,18 +351,18 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						}
 
 
-						itmRef = Resources.items.list[item.id];
+						interactableRef = Resources.interactables.list[interactable];
 
-						if (!itmRef.hasOwnProperty('base')) return new Error("Item does not contain a base script");
-						if (err === null && !Resources.items.base.hasOwnProperty(itmRef.base)) return new Error("Base script("+ itmRef.base +") not found");
+						if (!interactableRef) return new Error("No resource for interactable: "+ interactable);
+						if (!interactableRef.hasOwnProperty('base')) return new Error("Interactable does not contain a base script");
+						if (err === null && !Resources.interactables.base.hasOwnProperty(interactableRef.base)) return new Error("Base script("+ interactableRef.base +") not found");
 
-						itmBase = Resources.items.base[itmRef.base];
-						if (!itmBase.hasOwnProperty('invoke')) return new Error("Base item script not prepared");
+						interactableBase = Resources.interactables.base[interactableRef.base];
+						if (!interactableBase.hasOwnProperty('invoke')) return new Error("Base interactable script not prepared");
 
 
-						this.Log("Requesting to pickup item");
-						delete page.items[coord];
-						result = itmBase.invoke(_character, itmRef.args);
+						this.Log("Requesting to interact with interactable ("+ interact +")");
+						result = interactableBase.invoke(_character, interactableRef.args);
 
 						if (_.isError(result)) return result;
 
@@ -365,15 +374,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 							return false;
 						}
 
-
 						player.respond(evt.id, true);
-						page.broadcast(EVT_GET_ITEM, {
-							page: page.index,
-							coord: coord
-						});
-
-						result = page.map.game.removeItem(page.index, coord);
-						if (_.isError(result)) return result;
 				};
 
 				player.registerHandler(EVT_INTERACT);

@@ -539,18 +539,64 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					if (!map.interactables.hasOwnProperty(interactableID)) throw new Error("Interactable ("+ interactableID +") not found!");
 					var interactable = map.interactables[interactableID],
 						path         = map.pathfinding.findPath( player, interactable.positions, { range: 1, adjacent: false }),
-						destination  = null;
+						destination  = null,
+						nearestTile  = null,
+						coord        = null;
 
-					debugger;
 					if (_.isError(path)) throw path;
 					if (!path) {
-						// FIXME: handle no path found
+						// No path was found.. either we couldn't find a path to the interactable, or we're
+						// already standing on an acceptable tile. Assume that we're standing on an acceptable
+						// tile, and check afterwards if that was the case
+						destination = The.player.position.tile;
+					} else {
+						destination = _.last(path.walks).destination; // The tile which we are going to walk to
+						if (!destination) throw new Error("No destination provided from walk/path");
+					}
+					
+					// NOTE: we need to tell the server which tile in particular we've clicked. Since we're
+					// only walking up to the interactable (and not ontop of it), our destination tile is a
+					// neighbour tile. The server needs to know exactly which tile we're walking up to, so
+					// find that tile here
+					for (var i=0; i<interactable.positions.length; ++i) {
+						var tile     = interactable.positions[i],
+							page     = map.pages[tile.page],
+							globalX  = tile.x + page.x,
+							globalY  = tile.y + page.y;
+						if (destination.x >= globalX - 1 && destination.x <= globalX + 1 &&
+							destination.y >= globalY - 1 && destination.y <= globalY + 1) {
+
+							nearestTile = tile;
+							coord = (globalY - page.y)*Env.pageWidth + (globalX - page.x); // local coordinate
+							break;
+						}
 					}
 
-					destination = _.last(path.walks).destination; // The tile which we are going to walk to
-					if (!destination) throw new Error("No destination provided from walk/path");
-					player.addPath(path).finished(function(){
-						server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: destination.x, y: destionation.y, page: destionation.page} })
+					if (nearestTile === null) {
+						if (!path) {
+							throw new Error("No path found to interactable");
+						} else {
+							throw new Error("Could not find tile of interactable");
+						}
+					}
+
+					if (path) {
+						player.addPath(path).finished(function(){
+							server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: nearestTile.x, y: nearestTile.y}, coord: coord, page: nearestTile.page })
+								.then(function(){
+									console.log("Clicked the interactable!");
+								}, function(){
+									console.log("Couldn't click the interactable");
+								})
+								.catch(Error, function(e){ gameError(e); })
+								.error(function(e){ gameError(e); });
+								
+							console.log("ZOMG I GOT INTERACTED WITH THE INTERACTABLE!!");
+						}, function(){
+							console.log("Awww I couldn't interact with the interactable thingy :(");
+						});
+					} else {
+						server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: nearestTile.x, y: nearestTile.y}, coord: coord, page: nearestTile.page })
 							.then(function(){
 								console.log("Clicked the interactable!");
 							}, function(){
@@ -558,16 +604,11 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 							})
 							.catch(Error, function(e){ gameError(e); })
 							.error(function(e){ gameError(e); });
-							
-						console.log("ZOMG I GOT INTERACTED WITH THE INTERACTABLE!!");
-					}, function(){
-						console.log("Awww I couldn't interact with the interactable thingy :(");
-					});
+					}
 				});
 
 				server.registerHandler(EVT_INTERACT);
 				server.handler(EVT_INTERACT).set(function(evt, data){
-					debugger;
 					var base      = null,
 						character = null,
 						args      = null,
@@ -577,7 +618,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					if (!data.hasOwnProperty('base')) return new Error("Interactable does not have base property");
 					if (!data.hasOwnProperty('character')) return new Error("Interactable user does not have character property");
 
-					if (!Resources.items.base.hasOwnProperty(data.base)) return new Error("Interactable base does not exist in Resources");
+					if (!Resources.interactables.base.hasOwnProperty(data.base)) return new Error("Interactable base does not exist in Resources");
 					if (!The.map.movables.hasOwnProperty(data.character)) return new Error("Interactable user character does not exist in map movables list");
 
 					base      = Resources.interactables.base[data.base];
@@ -594,6 +635,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 			unload: function(){
 				var result = map.unhook(this);
+				if (_.isError(result)) throw result;
+				var result = user.unhook(this);
 				if (_.isError(result)) throw result;
 			}
 		};

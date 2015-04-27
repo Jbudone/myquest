@@ -116,9 +116,19 @@ Coding Style
 
 
 ERROR CHECKING/HANDLING
-utilities.js    ✓
-extensions.js   ✓
-serializable.js ✓
+  ✓ utilities.js
+  ✓ extensions.js
+  ✓ serializable.js
+  ✓ page.js
+  ✓ client/page.js
+  ✓ server/page.js
+  ✓ map.js
+  ✓ client/map.js
+  ✓ server/map.js
+  ✓ scripts/game.js
+  ✓ scripts/character.js
+  ✓ scripts/character.ai.js
+  ✓ scripts/character.ai.instinct.combat.js
 
 
 LEARN THESE
@@ -154,22 +164,32 @@ DB
 ====== Promises
 
 	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
+	* Not error safe; must throw and use .catch() on promise
 
 ====== Eventful
 
 	* triggeredEvents will append the event callback to the CONTEXT's event_callback_queue
 	* REQUIRES an update function to handle pending requests regularly
+	* Not error safe; must throw errors
 
 ====== Subscription
 	
 	* Essentially Eventful, but the Eventful is all handled within the scriptmgr and propagated to the script
+	* Not error safe; must throw errors
 
 ====== Dynamic
+
+	* Error safe: return Error and the caller will be able to handle it accordingly
+	- registerHandler, handler set
 
 ====== Hookable
 
 	* Can only have 1 (id, context) pair per hook
 	* MUST provide context
+	* Not error safe; must throw errors
+	- triggerer: registerHook('name'), unregisterHook('name'),  doHook('name').pre|post()
+	- listener: hook('name', this).before|after|removePre|removePost|remove()
+	- Cleanup: make sure to run  hookable.unhook(this)  when unloading this  (eg. map.unhook(this))
 
 ====== Prototype
 
@@ -182,3 +202,10 @@ DB
 
 	* Various scripts could be attached to an object in the Engine (eg. Character & Movable)
 	* Engine object should NEVER listen to or access scripts
+
+
+
+ERRORS
+	* When things are allowed to go wrong in a function: return new Error(...)    .. this way the caller can handle it accordingly,
+		eg.   function getTile(x, y){ if (x<0 || y<0) return new Error("Bad tile coordinates"); ... }
+	* When things are unexpected, cannot go wrong, or handled within a promise/hook:  throw new Error(...)

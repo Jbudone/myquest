@@ -128,7 +128,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				loading('resources');
 				Resources = (new Resources());
 				GLOBAL['Resources'] = Resources;
-				Resources.initialize(['world', 'sheets', 'npcs', 'items', 'scripts']).then(function(assets){
+				Resources.initialize(['world', 'sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
 
 					try {
 					// TODO: include map loading with world
@@ -242,6 +242,24 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 
+
+					// Interactables
+					res = JSON.parse(assets.interactables).interactables;
+
+					Resources.interactables.list = {};
+					Resources.interactables.base = {};
+					for (var i=0; i<res.length; ++i) {
+						var interactable = res[i];
+						Resources.interactables.list[interactable.id] = interactable;
+						if (!Resources.interactables.base.hasOwnProperty(interactable.base)) {
+							Resources.interactables.base[interactable.base] = null;
+						}
+					}
+					Resources.interactables['interactables-not-loaded'] = true;
+					// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
+					// scripting environment
+
+
 					// Scripts
 					var scripts = JSON.parse(assets.scripts);
 					Resources._scriptRes = scripts;
@@ -318,6 +336,38 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			};
 
 
+			var InteractableBase = function(interactableBase){
+				var interactable = interactableBase;
+				this.invoke = function(character, args){
+					var new_interactable = new interactable(character, args);
+					if (new_interactable.hasOwnProperty('server')) {
+						for (var itm_key in new_interactable.server) {
+							new_interactable[itm_key] = new_interactable.server[itm_key];
+						}
+						delete new_interactable.client;
+						delete new_interactable.server;
+					}
+
+					if (new_interactable.hasOwnProperty('initialize')) {
+						new_interactable.initialize(character, args);
+					}
+				};
+			};
+
+			loadInteractableScripts = function(){
+				loading('interactables');
+				var interactablesToLoad = 0;
+				_.each(Resources.interactables.base, function(nothing, interactableBase){
+					var baseFile = 'scripts/interactables.'+interactableBase;
+					++interactablesToLoad;
+					requirejs([baseFile], function(baseScript){
+						Resources.interactables.base[interactableBase] = new ItemBase(baseScript);
+						if (--interactablesToLoad === 0) loaded('interactables');
+					});
+				});
+			};
+
+
 			loadScripts = function(){
 
 				loading('scripts');
@@ -332,6 +382,11 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					if (Resources.items.hasOwnProperty('items-not-loaded')) {
 						delete Resources.items['items-not-loaded'];
 						loadItemScripts();
+					}
+
+					if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
+						delete Resources.interactables['interactables-not-loaded'];
+						loadInteractableScripts();
 					}
 
 					loaded('scripts');

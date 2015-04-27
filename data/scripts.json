@@ -23,7 +23,8 @@
 					"sight": "character.ai.combat.sight"
 				}
 			},
-			"movement": "character.ai.instinct.movement"
+			"movement": "character.ai.instinct.movement",
+			"boredom": "character.ai.instinct.bored"
 		}
 	}
 }

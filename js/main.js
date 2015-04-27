@@ -429,7 +429,7 @@ try{
 			Resources = (new Resources());
 			window['Resources'] = Resources;
 			// FIXME: initialize with array of resources? Shouldn't this be apart of client/server specific Resources.js?
-			Resources.initialize(['sheets', 'npcs', 'items', 'scripts']).then(function(assets){
+			Resources.initialize(['sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
 
 
 				var res = JSON.parse(assets.sheets),
@@ -637,6 +637,25 @@ try{
 				// scripting environment
 
 
+
+				// Interactables
+				res = JSON.parse(assets.interactables).interactables;
+
+				Resources.interactables.list = {};
+				Resources.interactables.base = {};
+				for (var i=0; i<res.length; ++i) {
+					var interactable = res[i];
+					Resources.interactables.list[interactable.id] = interactable;
+					if (!Resources.interactables.base.hasOwnProperty(interactable.base)) {
+						Resources.interactables.base[interactable.base] = null;
+					}
+				}
+				Resources.interactables['interactables-not-loaded'] = true;
+				// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
+				// scripting environment
+
+
+
 				// Scripts
 				var scripts = JSON.parse(assets.scripts);
 				Resources._scriptRes = scripts;
@@ -694,6 +713,38 @@ try{
 			});
 		};
 
+		var InteractableBase = function(interactableBase){
+			var interactable = interactableBase;
+			this.invoke = function(character, args){
+				var new_interactable = new interactable(character, args);
+				if (new_interactable.hasOwnProperty('client')) {
+					for (var itm_key in new_interactable.client) {
+						new_interactable[itm_key] = new_interactable.client[itm_key];
+					}
+					delete new_interactable.client;
+					delete new_interactable.server;
+				}
+
+				if (new_interactable.hasOwnProperty('initialize')) {
+					new_interactable.initialize(character, args);
+				}
+			};
+		};
+
+		loadInteractableScripts = function(){
+			loading('interactables');
+			var interactablesToLoad = 0;
+			_.each(Resources.interactables.base, function(nothing, interactableBase){
+				var baseFile = 'scripts/interactables.'+interactableBase;
+				++interactablesToLoad;
+				requirejs([baseFile], function(baseScript){
+					Resources.interactables.base[interactableBase] = new ItemBase(baseScript);
+					if (--interactablesToLoad === 0) loaded('interactables');
+				});
+			});
+		};
+
+
 		reloadScripts = function(){
 
 			console.log("Reloading scripts..");
@@ -711,6 +762,11 @@ try{
 				if (Resources.items.hasOwnProperty('items-not-loaded')) {
 					delete Resources.items['items-not-loaded'];
 					loadItemScripts();
+				}
+
+				if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
+					delete Resources.interactables['interactables-not-loaded'];
+					loadInteractableScripts();
 				}
 				loaded();
 			}, function(){
