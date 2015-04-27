@@ -580,8 +580,28 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						}
 					}
 
-					if (path) {
-						player.addPath(path).finished(function(){
+					var readyToInteract = function(){
+						
+						var interactableDetails  = Resources.interactables.list[interactableID],
+							interactableScriptID = null
+							args                 = null,
+							interactable         = null;
+						if (!interactableDetails || !interactableDetails.base) throw new Error("No type script found for interactable ("+ interactableID +")");
+						args                 = interactableDetails.args || {};
+						interactableScriptID = interactableDetails.base;
+						interactable         = Resources.interactables.base[interactableScriptID];
+						if (!interactable) throw new Error("No base script found for interactable script ("+ interactableScriptID +")");
+						if (interactable.handledBy == CLIENT_ONLY) {
+
+							var data = _.extend({
+								base: interactableScriptID,
+								character: The.player.id,
+							}, args);
+							var result = interact(null, data);
+
+							if (_.isError(result)) throw result;
+
+						} else {
 							server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: nearestTile.x, y: nearestTile.y}, coord: coord, page: nearestTile.page })
 								.then(function(){
 									console.log("Clicked the interactable!");
@@ -592,23 +612,19 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 								.error(function(e){ gameError(e); });
 								
 							console.log("ZOMG I GOT INTERACTED WITH THE INTERACTABLE!!");
-						}, function(){
+						}
+					};
+
+					if (path) {
+						player.addPath(path).finished(readyToInteract, function(){
 							console.log("Awww I couldn't interact with the interactable thingy :(");
 						});
 					} else {
-						server.request(EVT_INTERACT, { interactable: interactableID, tile: {x: nearestTile.x, y: nearestTile.y}, coord: coord, page: nearestTile.page })
-							.then(function(){
-								console.log("Clicked the interactable!");
-							}, function(){
-								console.log("Couldn't click the interactable");
-							})
-							.catch(Error, function(e){ gameError(e); })
-							.error(function(e){ gameError(e); });
+						readyToInteract(); // Already there
 					}
 				});
 
-				server.registerHandler(EVT_INTERACT);
-				server.handler(EVT_INTERACT).set(function(evt, data){
+				var interact = function(evt, data){
 					var base      = null,
 						character = null,
 						args      = null,
@@ -626,9 +642,11 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					if (!base.hasOwnProperty('invoke')) return new Error("Interactable base does not have the invoke property");
 					result = base.invoke(character, data);
-
 					if (_.isError(result)) return result;
-				});
+				};
+
+				server.registerHandler(EVT_INTERACT);
+				server.handler(EVT_INTERACT).set(interact);
 
 			},
 

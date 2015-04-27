@@ -11,7 +11,6 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.static         = false;
 		var _interactable   = this,
 			_script         = null;
-
 		
 		this.server = {
 			initialize: function(character, args){
@@ -51,5 +50,8 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 
 	};
 
-	return Lookat;
+	return {
+		handledBy: CLIENT_ONLY,
+		base: Lookat
+	};
 });

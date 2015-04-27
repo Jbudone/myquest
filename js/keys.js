@@ -111,5 +111,9 @@ define(function(){
 
 	addKey('ADJACENT_RANGE'); // Pathfinding
 
+	addKey('CLIENT_ONLY'); // Interactable handlers
+	addKey('SERVER_ONLY');
+	addKey('CLIENT_AND_SERVER');
+
 	return keys;
 });

@@ -714,7 +714,7 @@ try{
 		};
 
 		var InteractableBase = function(interactableBase){
-			var interactable = interactableBase;
+			var interactable = interactableBase.base;
 			this.invoke = function(character, args){
 				var new_interactable = new interactable(character, args);
 				if (new_interactable.hasOwnProperty('client')) {
@@ -729,6 +729,7 @@ try{
 					new_interactable.initialize(character, args);
 				}
 			};
+			this.handledBy = interactableBase.handledBy;
 		};
 
 		loadInteractableScripts = function(){
@@ -738,7 +739,7 @@ try{
 				var baseFile = 'scripts/interactables.'+interactableBase;
 				++interactablesToLoad;
 				requirejs([baseFile], function(baseScript){
-					Resources.interactables.base[interactableBase] = new ItemBase(baseScript);
+					Resources.interactables.base[interactableBase] = new InteractableBase(baseScript);
 					if (--interactablesToLoad === 0) loaded('interactables');
 				});
 			});
