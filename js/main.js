@@ -105,6 +105,7 @@
 				//	> CLEAN: switch from loops to maps/forEach/...
 				//	> CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
 				//	> CLEAN: switch to ES6 syntax -- https://github.com/lukehoban/es6features http://babeljs.io/docs/learn-es6/
+				//	> CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
 				//
 				//
 				//	
@@ -198,6 +199,7 @@
 				//		- node: red errors
 				//		- unload helpers: automatically keep track of hooks/listeners/etc. and unload all of those
 				//		- Combat: D/C
+				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 
 define(['jquery','resources','entity','movable','map','page','client/camera','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr','client/user'], function($,Resources,Entity,Movable,Map,Page,Camera,ServerHandler,Loggable,Renderer,UI,ScriptMgr,User) {
 try{

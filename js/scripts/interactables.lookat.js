@@ -15,7 +15,7 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.client = {
 			initialize: function(name, character, args){
 				_script = this;
-				this.interact.bind(_interactable)(name, character, args);
+				return this.interact.bind(_interactable)(name, character, args);
 			},
 
 			interact: function(name, character, args){

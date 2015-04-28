@@ -7,25 +7,19 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 		this.setLogGroup('Player');
 		this.setLogPrefix('(Player)[null] ');
 
-		this.id           = null;
-		this.movable      = null;
-		this.lastActionId = 0;
-		this.client       = client;
+		this.id                    = null;
+		this.movable               = null;
+		this.lastActionId          = 0;
+		this.client                = client;
 
-		this.onDisconnected = new Function();
+		this.onDisconnected        = new Function();
 		this.onRequestNewCharacter = new Function();
-		this.onLogin = new Function();
+		this.onLogin               = new Function();
 
-		this.onPreparingToWalk = new Function();
-		this.onSomeEvent = new Function();
+		this.onPreparingToWalk     = new Function();
+		this.onSomeEvent           = new Function();
 
-		this.pages = { }; // Visible pages
-
-		// TODO: add archiving later?
-		// this.responseArchive = new EventsArchive();
-		// this.pathArchive = new EventsArchive();
-		// you.responseArchive.pushArchive();
-		// you.pathArchive.pushArchive();
+		this.pages                 = { }; // Visible pages
 
 
 		this.setPlayer = function(player){
@@ -37,25 +31,24 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			// Set players position
 			if (!The.world.maps[player.map]) {
-				this.Log("Map ("+player.map+") not found in world!", LOG_ERROR);
-				return false;
+				return new Error("Map ("+player.map+") not found in world!");
 			}
 			var map            = The.world.maps[player.map],
 				playerPosition = map.localFromGlobalCoordinates(player.position.x, player.position.y),
 				respawnPoint   = null;
 
-			if (playerPosition instanceof Error) {
+			if (_.isError(playerPosition)) {
 				this.Log("Could not get correct position for player..", LOG_ERROR);
 				playerPosition.print();
-				return false;
+				return new Error("Could not get correct position for player..");
 			}
 
 			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.x, player.respawn.position.y);
 
-			if (respawnPoint instanceof Error) {
+			if (_.isError(respawnPoint)) {
 				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
 				respawnPoint.print();
-				return false;
+				return new Error("Could not get local coordinates for respawn point..");
 			}
 
 			this.movable          = new Movable('player', playerPosition.page, {
@@ -70,8 +63,11 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			this.movable.playerID = player.id;
 			this.movable.player = this;
 
-			this.movable.page.addEntity(this.movable);
-			map.watchEntity(this.movable);
+			var result = null;
+			result = this.movable.page.addEntity(this.movable);
+			if (_.isError(result)) return result;
+			result = map.watchEntity(this.movable);
+			if (_.isError(result)) return result;
 
 			this.pages = { };
 			this.pages[this.movable.page.index] = this.movable.page;
@@ -259,43 +255,40 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			if (isSafe) {
 				while (walked<walk.distance) {
 					var distanceToTile = (positive? (kT+1)*16 - k : k - ((kT)*16 - 1));
-					try {
-						if (vert) {
-							nextTile = nextTile.offset((positive?1:-1), 0);
-						}  else {
-							nextTile = nextTile.offset(0, (positive?1:-1));
-						}
+					if (vert) {
+						nextTile = nextTile.offset((positive?1:-1), 0);
+					}  else {
+						nextTile = nextTile.offset(0, (positive?1:-1));
+					}
 
-						// check tile
-						// console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
+					// check tile
+					// console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
 
-						if (!map.isTileInRange(nextTile)) {
-							throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
-						}
-
-						var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
-							index            = null;
-							isSafe           = null;
-
-						if (localCoordinates instanceof Error) {
-							safePath = false;
-							break;
-						}
-
-						index = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-						isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-						if (!isSafe) {
-							safePath = false;
-							break;
-						}
-
-						walked += distanceToTile;
-						k += distanceToTile;
-						kT += (positive?1:-1);
-					} catch(e) {
+					if (!map.isTileInRange(nextTile)) {
+						//throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
 						safePath = false;
 						break;
 					}
+
+					var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
+						index            = null;
+						isSafe           = null;
+
+					if (localCoordinates instanceof Error) {
+						safePath = false;
+						break;
+					}
+
+					index = localCoordinates.y*Env.pageWidth + localCoordinates.x,
+					isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
+					if (!isSafe) {
+						safePath = false;
+						break;
+					}
+
+					walked += distanceToTile;
+					k += distanceToTile;
+					kT += (positive?1:-1);
 				}
 
 			}
@@ -345,26 +338,16 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				player.path=null;
 				player.addPath(path);
 
-				// TODO: Clean try/catch
-				try {
-					var response = new Response(action.id);
-					response.success = true;
-					this.client.send(response.serialize());
-				} catch(e) {
-					console.log("Player not even here..");
-				}
+				var response = new Response(action.id);
+				response.success = true;
+				this.client.send(response.serialize());
 				return;
 			} else {
 
-				// TODO: Clean try/catch
-				try {
-					var response = new Response(action.id);
-					response.success = false;
-					response.state = { x: movableState.x, y: movableState.y };
-					this.client.send(response.serialize());
-				} catch(e) {
-					console.log("Player not even here..");
-				}
+				var response = new Response(action.id);
+				response.success = false;
+				response.state = { x: movableState.x, y: movableState.y };
+				this.client.send(response.serialize());
 				return;
 			}
 

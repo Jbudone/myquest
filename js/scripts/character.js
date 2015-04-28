@@ -220,7 +220,13 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 									player.movable.path.onFinished = (function(){ 
 										console.log("Character not near item.. Trying again after movable finishes path");
 										data.retrying = true;
-										pickupItem.call(_character, evt, data);
+										var result = pickupItem.call(_character, evt, data);
+										if (_.isError(result)) {
+											this.Log("Error in retrying to pickup item: " + result.message, LOG_ERROR);
+											player.respond(evt.id, false, {
+												msg: result.message
+											});
+										}
 									});
 									player.movable.path.onFailed = (function(){
 										player.respond(evt.id, false, {
@@ -236,7 +242,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						}
 
 						if (err) {
-							this.Log("Could not pickup item: " + err);
+							this.Log("Could not pickup item: " + err, LOG_ERROR);
 							player.respond(evt.id, false, {
 								msg: err
 							});
@@ -279,7 +285,15 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						if (_.isError(result)) return result;
 					};
 				player.registerHandler(EVT_GET_ITEM);
-				player.handler(EVT_GET_ITEM).set(pickupItem);
+				player.handler(EVT_GET_ITEM).set(function(evt, data){
+					var result = pickupItem(evt, data);
+					if (_.isError(result)) {
+						this.Log("Error in player picking up item: " + result.message, LOG_ERROR);
+						player.respond(evt.id, false, {
+							msg: err
+						});
+					}
+				});
 				
 				var interact = function(evt, data){
 						var err              = null,
@@ -326,7 +340,13 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 									player.movable.path.onFinished = (function(){ 
 										console.log("Character not near interactable.. Trying again after movable finishes path");
 										data.retrying = true;
-										interact.call(_character, evt, data);
+										var result = interact.call(_character, evt, data);
+										if (_.isError(result)) {
+											this.Log("Error in retrying to interact: " + result.message, LOG_ERROR);
+											player.respond(evt.id, false, {
+												msg: result.message
+											});
+										}
 									});
 									player.movable.path.onFailed = (function(){
 										player.respond(evt.id, false, {
@@ -378,7 +398,15 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 				};
 
 				player.registerHandler(EVT_INTERACT);
-				player.handler(EVT_INTERACT).set(interact);
+				player.handler(EVT_INTERACT).set(function(evt, data){
+					var result = interact(evt, data);
+					if (_.isError(result)) {
+						this.Log("Error trying to interact: " + result.message, LOG_ERROR);
+						player.respond(evt.id, false, {
+							msg: result.message
+						});
+					}
+				});
 			},
 		};
 

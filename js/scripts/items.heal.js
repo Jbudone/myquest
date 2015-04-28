@@ -16,7 +16,7 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.server = {
 			initialize: function(name, character, args){
 				_script = this;
-				this.heal.bind(_item)(name, character, args);
+				return this.heal.bind(_item)(name, character, args);
 			},
 
 			heal: function(name, character, args){
@@ -42,7 +42,7 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.client = {
 			initialize: function(name, character, args){
 				_script = this;
-				this.heal.bind(_item)(name, character, args);
+				return this.heal.bind(_item)(name, character, args);
 			},
 
 			heal: function(name, character, args){
