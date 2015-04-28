@@ -45,6 +45,7 @@ define(function(){
 			'Movement': (logVerbose),
 			'Item': (logVerbose),
 			'Interactable': (logVerbose),
+			'Redis': (logVerbose),
 			'Default': (logVerbose)
 		};
 	};

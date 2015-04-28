@@ -27,8 +27,12 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 			};
 
 			var path = character.entity.page.map.pathfinding.findPath(character.entity, target.entity, { range: range });
-			if (path) {
-				character.entity.addPath(path);
+			if (path && !_.isError(path)) {
+				if (path == ALREADY_THERE) {
+					// We're already there..
+				} else {
+					character.entity.addPath(path);
+				}
 			}
 
 			this.onlyonce=true;
@@ -40,7 +44,11 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'mova
 
 			var path = character.entity.page.map.pathfinding.findPath(character.entity, tile, { range: range, maxWeight: 0 });
 			if (path && !_.isError(path)) {
-				character.entity.addPath(path);
+				if (path == ALREADY_THERE) {
+					// We're already there..
+				} else {
+					character.entity.addPath(path);
+				}
 			}
 
 			return path;

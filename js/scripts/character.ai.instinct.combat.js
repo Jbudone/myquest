@@ -414,15 +414,17 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 						   character = null,
 						   err       = null;
 
-					   if (!_.isObject(target)) err = "Target not found";
-					   if (!(target.character instanceof Character)) err = "Target does not have a character reference";
-					   character = target.character;
-					   
-					   if (!character.isAttackable()) err = "Character is not attackable";
+					   if (!target) err = "No target currently";
+					   else if (!_.isObject(target)) err = "Target not found";
+					   else if (!(target.character instanceof Character)) err = "Target does not have a character reference";
+
+					   if (!err) {
+						   character = target.character;
+						   if (!character.isAttackable()) err = "Character is not attackable";
+					   }
 
 					   if (err) {
 						   this.Log("Disallowing user attack", LOG_ERROR);
-						   this.Log(err, LOG_ERROR);
 						   player.respond(evt.id, false, {
 							   reason: err
 						   });
@@ -524,8 +526,8 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 						console.error("FAILED TO ATTACK TARGET.."); // TODO: get error msg from server response
 						this.attackBusy = false;
 					}.bind(this))
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
 				}
 
 				return true;

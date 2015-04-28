@@ -225,7 +225,7 @@ define(['loggable'], function(Loggable){
 				if (!spriteObj.sheet) spriteObj.sheet = sheetData;
 				// try {
 					if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) { // FIXME: static!?
-						if (floating !== 'undefined' &&
+						if (floating !== undefined &&
 							floating.indexOf(sprite) >= 0) {
 							floatingSprites.push({
 								sprite: sprite,
@@ -313,7 +313,7 @@ define(['loggable'], function(Loggable){
 					if (!spriteObj.sheet) spriteObj.sheet = sheetData;
 					// try {
 						if (sy!=-1 && sx!=-1 && sprite && !spriteObj.hasOwnProperty('static')) {
-							if (floating !== 'undefined' &&
+							if (floating !== undefined &&
 								floating.indexOf(sprite) >= 0) {
 
 								floatingSprites.push({

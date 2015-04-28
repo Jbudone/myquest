@@ -442,8 +442,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						this.Log("Could not create new player..", LOG_ERROR);
 						// TODO: tell user
 					}).bind(this))
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
 				} else if (evt.evtType==EVT_LOGIN) {
 					var id = parseInt(evt.data.id);
 					if (isNaN(id)) {
@@ -480,8 +480,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					   response.success = false;
 					   this.client.send(response.serialize());
 					}).bind(this))
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
 				}
 
 				return;
@@ -535,6 +535,12 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			this.client.send(response.serialize());
 		};
 
+		this.send = function(evt, args){
+			this.client.send(JSON.stringify({
+				evtType: evt,
+				data: args
+			}));
+		};
 
 		this.step = function(time) {
 			this.handlePendingEvents();

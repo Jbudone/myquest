@@ -52,5 +52,16 @@
 		"health":80,
 		"damage":3,
 		"AI":true
+	},
+	{
+		"id":"king",
+		"name":"king",
+		"sheet":"king",
+		"spawn":1,
+		"killable":false,
+		"speed":10,
+		"health":100,
+		"damage":0,
+		"AI":false
 	}
 ] }

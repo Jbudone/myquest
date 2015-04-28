@@ -56,8 +56,8 @@ define(['serializable'], function(Serializable){
 		this.x=x;
 		this.y=y;
 	}, Tile=function(x, y, map){
-		if (!_.isNumber(y)) return new Error("Expects y to be a number");
-		if (!_.isNumber(x)) return new Error("Expects x to be a number");
+		if (!_.isFinite(y)) return new Error("Expects y to be a number");
+		if (!_.isFinite(x)) return new Error("Expects x to be a number");
 		extendClass(this).with(Serializable);
 		this.x=x;
 		this.y=y;
@@ -79,8 +79,8 @@ define(['serializable'], function(Serializable){
 			if (this.hasOwnProperty('page')) tile.page = this.page.index;
 		};
 		this.offset=function(yOff, xOff) {
-			if (!_.isNumber(yOff)) return new Error("Expects yOff to be a number");
-			if (!_.isNumber(xOff)) return new Error("Expects xOff to be a number");
+			if (!_.isFinite(yOff)) return new Error("Expects yOff to be a number");
+			if (!_.isFinite(xOff)) return new Error("Expects xOff to be a number");
 			var y = this.y + yOff,
 				x = this.x + xOff;
 			if (y < 0 || x < 0) return new Error("Bad offset from tile.."); // TODO: check y/x too far?
@@ -125,7 +125,7 @@ define(['serializable'], function(Serializable){
 		};
 
 		this.addWalk=function(direction, distance, destination){
-			if (!_.isNumber(direction) || !_.isNumber(distance)) return new Error("Expected direction/distance as numbers");
+			if (!_.isFinite(direction) || !_.isFinite(distance)) return new Error("Expected direction/distance as numbers");
 			this.walks.push((new Walk(direction, distance, destination)));
 		};
 

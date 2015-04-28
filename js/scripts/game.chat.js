@@ -62,8 +62,8 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 					}, function(){
 						console.error("Fail in message! "+msg);
 					})
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
 				});
 
 				server.registerHandler(EVT_TESTJB, 'chat');

@@ -51,13 +51,17 @@ define(['movable'], function(Movable){
 
 			var path = this.map.findPath( fromTiles, toTiles, options.maxWeight );
 
-			if (path && path.path) {
+			if (path) {
+				if (path.path) {
 
-				if (recalibrateFrom) {
-					this.recalibratePath(path, recalibrateFrom);
+					if (recalibrateFrom) {
+						this.recalibratePath(path, recalibrateFrom);
+					}
+
+					return path.path;
+				} else {
+					return ALREADY_THERE;
 				}
-
-				return path.path;
 			}
 			return false;
 		};

@@ -107,19 +107,13 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 			character.hook('die', this).after(function(){
 				var result = null;
-				result = this.removeCharacter(character.entity);
-				if (_.isError(result)) throw result;
-
-				if (character.isPlayer) {
-					result = this.removePlayer(character.entity);
+				if (Env.isServer) {
+					result = this.handleLoot(character);
 					if (_.isError(result)) throw result;
-				} else {
-					if (Env.isServer) {
-						result = this.handleLoot(character);
-						if (_.isError(result)) throw result;
-					}
 				}
 
+				// NOTE: removeEntity hooks 'removeentity' which is hooked here to removeCharacter &
+				// removePlayer
 				result = character.entity.page.map.removeEntity(character.entity);
 				if (_.isError(result)) throw result;
 				if (this.respawning.hasOwnProperty(character.entity.id)) throw new Error("Character ("+ entity.entity.id +") already respawning");
@@ -448,25 +442,31 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
 						x    = item.coord.x,//item.coord - y*Env.pageWidth,
 						tile = new Tile( x, y ),
-						path = map.pathfinding.findPath( player, tile );
+						path = map.pathfinding.findPath( player, tile ),
+						pickupItem = function(){
+							server.request(EVT_GET_ITEM, { coord: ((item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x)), page: item.page })
+								.then(function(){
+									// Got item
+									console.log("Got item!");
+								}, function(){
+									// Couldn't get item
+									console.log("Couldn't get item");
+								})
+								.catch(Error, function(e){ errorInGame(e); })
+								.error(function(e){ errorInGame(e); });
+								
+							console.log("ZOMG I GOT THE ITEM!!");
+						};
 
 					if (_.isError(path)) throw path;
-					player.addPath(path).finished(function(){
-						server.request(EVT_GET_ITEM, { coord: ((item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x)), page: item.page })
-							.then(function(){
-								// Got item
-								console.log("Got item!");
-							}, function(){
-								// Couldn't get item
-								console.log("Couldn't get item");
-							})
-							.catch(Error, function(e){ gameError(e); })
-							.error(function(e){ gameError(e); });
-							
-						console.log("ZOMG I GOT THE ITEM!!");
-					}, function(){
-						console.log("Awww I couldn't get the item :(");
-					});
+
+					if (path == ALREADY_THERE) {
+						pickupItem();
+					} else {
+						player.addPath(path).finished(pickupItem, function(){
+							console.log("Awww I couldn't get the item :(");
+						});
+					}
 				});
 
 				server.registerHandler(EVT_GET_ITEM);
@@ -492,6 +492,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					if (!_.isObject(data)) return new Error("Item is not an object");
 					if (!data.hasOwnProperty('base')) return new Error("Item does not have base property");
+					if (!data.hasOwnProperty('name')) return new Error("Item does not include name property");
 					if (!data.hasOwnProperty('character')) return new Error("Item usage does not have character property");
 
 					if (!Resources.items.base.hasOwnProperty(data.base)) return new Error("Item base does not exist in Resources");
@@ -501,7 +502,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					character = The.map.movables[data.character].character;
 
 					if (!base.hasOwnProperty('invoke')) return new Error("Item base does not have the invoke property");
-					result = base.invoke(character, data);
+					result = base.invoke(data.name, character, data);
 
 					if (_.isError(result)) return result;
 				});
@@ -545,13 +546,15 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					if (_.isError(path)) throw path;
 					if (!path) {
-						// No path was found.. either we couldn't find a path to the interactable, or we're
-						// already standing on an acceptable tile. Assume that we're standing on an acceptable
-						// tile, and check afterwards if that was the case
+						console.log("No path found to interactable");
+						return;
+					}
+
+					if (path == ALREADY_THERE) {
 						destination = The.player.position.tile;
 					} else {
 						destination = _.last(path.walks).destination; // The tile which we are going to walk to
-						if (!destination) throw new Error("No destination provided from walk/path");
+						if (!destination) return; // No destination provided from walk/path
 					}
 					
 					// NOTE: we need to tell the server which tile in particular we've clicked. Since we're
@@ -573,11 +576,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					}
 
 					if (nearestTile === null) {
-						if (!path) {
-							throw new Error("No path found to interactable");
-						} else {
-							throw new Error("Could not find tile of interactable");
-						}
+						throw new Error("Could not find tile of interactable");
 					}
 
 					var readyToInteract = function(){
@@ -596,6 +595,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 							var data = _.extend({
 								base: interactableScriptID,
 								character: The.player.id,
+								name: interactableID
 							}, args);
 							var result = interact(null, data);
 
@@ -608,19 +608,19 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 								}, function(){
 									console.log("Couldn't click the interactable");
 								})
-								.catch(Error, function(e){ gameError(e); })
-								.error(function(e){ gameError(e); });
+								.catch(Error, function(e){ errorInGame(e); })
+								.error(function(e){ errorInGame(e); });
 								
 							console.log("ZOMG I GOT INTERACTED WITH THE INTERACTABLE!!");
 						}
 					};
 
-					if (path) {
+					if (path == ALREADY_THERE) {
+						readyToInteract(); // Already there
+					} else {
 						player.addPath(path).finished(readyToInteract, function(){
 							console.log("Awww I couldn't interact with the interactable thingy :(");
 						});
-					} else {
-						readyToInteract(); // Already there
 					}
 				});
 
@@ -632,6 +632,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 					if (!_.isObject(data)) return new Error("Interactable is not an object");
 					if (!data.hasOwnProperty('base')) return new Error("Interactable does not have base property");
+					if (!data.hasOwnProperty('name')) return new Error("Interactable does not include name property");
 					if (!data.hasOwnProperty('character')) return new Error("Interactable user does not have character property");
 
 					if (!Resources.interactables.base.hasOwnProperty(data.base)) return new Error("Interactable base does not exist in Resources");
@@ -641,7 +642,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					character = The.map.movables[data.character].character;
 
 					if (!base.hasOwnProperty('invoke')) return new Error("Interactable base does not have the invoke property");
-					result = base.invoke(character, data);
+					result = base.invoke(data.name, character, data);
 					if (_.isError(result)) return result;
 				};
 

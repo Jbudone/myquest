@@ -47,7 +47,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		this.lastUpdated = now();
 
 		this.getEntityFromPage = function(page, entityID){
-			if (_.isNumber(page)) page = this.pages[page];
+			if (_.isFinite(page)) page = this.pages[page];
 			
 			if (page && page instanceof Page) {
 				return page.movables[entityID];
@@ -631,6 +631,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		   return false;
 		};
 		
+		// NOTE: returns { path: null } if we're already there
 		this.findPath=function(fromTiles, toTiles, _maxWeight){
 
 			if (!_.isArray(fromTiles) || !fromTiles.length) return new Error("No tiles to start from..");
@@ -666,7 +667,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						for (var i=0; i<toTiles.length; ++i) {
 							var endTile = toTiles[i],
 								estimatedWeight = this.estimateCost(endTile);
-							if (!_.isNumber(estimatedWeight)) return new Error("path heuristic NaN");
+							if (!_.isFinite(estimatedWeight)) return new Error("path heuristic NaN");
 							if (estimatedWeight < cheapestWeight) {
 								nearestEnd = endTile;
 							}
@@ -737,7 +738,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					toCoordinates   = { y: toTile.y, x: toTile.x },
 					toNode          = new TileNode(toTile, null, 9999, null, true),
 					index           = hashCoordinates(toCoordinates.x, toCoordinates.y);
-				if (!_.isNumber(index)) return new Error("index of ("+ toCoordinates.x +", "+ toCoordinates.y +") NaN!");
+				if (!_.isFinite(index)) return new Error("index of ("+ toCoordinates.x +", "+ toCoordinates.y +") NaN!");
 
 				toNode.end = true;
 				neighbours[index] = toNode;
@@ -748,7 +749,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					fromCoordinates = { y: fromTile.y, x: fromTile.x },
 					fromNode        = new TileNode(fromTile, null, 0, null),
 					index           = hashCoordinates(fromCoordinates.x, fromCoordinates.y);
-				if (!_.isNumber(index)) return new Error("index of ("+ fromCoordinates.x +", "+ fromCoordinates.y +") NaN!");
+				if (!_.isFinite(index)) return new Error("index of ("+ fromCoordinates.x +", "+ fromCoordinates.y +") NaN!");
 
 				for (var j=0; j<toTiles.length; ++j) { 
 					var toTile          = toTiles[j],
@@ -768,7 +769,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				start.push( fromNode );
 				neighbours[index] = fromNode;
 				var estimatedCost = fromNode.estimateCost();
-				if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
+				if (!_.isFinite(estimatedCost)) return new Error("path heuristic NaN");
 				if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 				openTiles[estimatedCost].push( fromNode );
 			}
@@ -796,7 +797,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					var neighbourNode = tileNeighbours[i],
 						neighbour     = neighbourNode.tile,
 						neighbourHash = hashCoordinates(neighbour.x, neighbour.y);
-					if (!_.isNumber(neighbourHash)) return new Error("index of ("+ neighbour.x +", "+ neighbour.y +") NaN!");
+					if (!_.isFinite(neighbourHash)) return new Error("index of ("+ neighbour.x +", "+ neighbour.y +") NaN!");
 
 					if (neighbours[neighbourHash]) {
 
@@ -815,7 +816,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 							existingNeighbour.expired = true;
 							neighbours[neighbourHash] = neighbourNode;
 							var estimatedCost = neighbourNode.estimateCost();
-							if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
+							if (!_.isFinite(estimatedCost)) return new Error("path heuristic NaN");
 							if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 							openTiles[estimatedCost].push( neighbourNode );
 							// This existing neighbour has a faster path than ours
@@ -826,7 +827,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						// add neighbour
 						neighbours[neighbourHash] = neighbourNode;
 						var estimatedCost = neighbourNode.estimateCost();
-						if (!_.isNumber(estimatedCost)) return new Error("path heuristic NaN");
+						if (!_.isFinite(estimatedCost)) return new Error("path heuristic NaN");
 						if (!openTiles[ estimatedCost ]) openTiles[estimatedCost] = [];
 						openTiles[estimatedCost].push( neighbourNode );
 					}

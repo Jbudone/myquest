@@ -79,7 +79,6 @@
 				//	> aggro K.O.S.
 				//
 				//
-				//	> CLEAN: throw as much as possible; exception handling on ALL potential throwable statements
 				//	> CLEAN: sometimes buggy path movement?
 				//	> CLEAN: any chance of missing page events after zoning in?
 				//	> CLEAN: spam clicking movement lags out the entire game (server should ignore noisy players; client should temporarily ignore input between processing)
@@ -103,6 +102,9 @@
 				//	> CLEAN: resources initialization routine (in client/server resources.js?)
 				//	> CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
 				//	> CLEAN: convert server tiles to Uint8Array; each references an index of tileRefs which specify the gid; cache and send page data as a blob (for compression/throughput)
+				//	> CLEAN: switch from loops to maps/forEach/...
+				//	> CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
+				//	> CLEAN: switch to ES6 syntax -- https://github.com/lukehoban/es6features http://babeljs.io/docs/learn-es6/
 				//
 				//
 				//	
@@ -178,6 +180,24 @@
 				// 	> Webworkers for maps/pages on server & Transferable objects
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
+				//
+				//
+				//
+				//	TOP PRIORITY
+				//		- Chat system
+				//		- Account: register/login, show character on startup, password, respawn spot, periodic
+				//					saving, client refreshes page when server crashes (notified when server
+				//					ready)
+				//		- XP/Leveling
+				//		- Items: hardcoded values (loot chance, loot items, decay rate); inventory, UI
+				//		- UI: game+inventory+character-sheet+chat
+				//
+				//	ERRORS
+				//		- ALL Files!
+				//		- GameError in all player input type stuff
+				//		- node: read errors
+				//		- unload helpers: automatically keep track of hooks/listeners/etc. and unload all of those
+				//		- Combat: D/C
 
 define(['jquery','resources','entity','movable','map','page','client/camera','client/serverHandler','loggable','client/renderer','client/ui','scriptmgr','client/user'], function($,Resources,Entity,Movable,Map,Page,Camera,ServerHandler,Loggable,Renderer,UI,ScriptMgr,User) {
 try{
@@ -186,14 +206,14 @@ try{
 	this.setLogPrefix('(main) ');
 
 
-	var gameError = function(e){
+	var errorInGame = function(e){
 
 		Log(e, LOG_ERROR);
 		// FIXME: stop game! unexpected and uncaught error..
 	};
 
 
-	window.gameError = gameError;
+	window.errorInGame = errorInGame;
 
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
@@ -309,8 +329,8 @@ try{
 						The.player.sprite.idle();
 						ui.updatePages();
 					})
-					.catch(Error, function(e){ gameError(e); })
-					.error(function(e){ gameError(e); });
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
 
 				});
 			};
@@ -415,8 +435,8 @@ try{
 			}, function(evt){
 				console.error(evt);
 			})
-			.catch(Error, function(e){ gameError(e); })
-			.error(function(e){ gameError(e); });
+			.catch(Error, function(e){ errorInGame(e); })
+			.error(function(e){ errorInGame(e); });
 
 		};
 
@@ -663,8 +683,8 @@ try{
 
 				loaded('resources');
 			})
-			.catch(Error, function(e){ gameError(e); })
-			.error(function(e){ gameError(e); });
+			.catch(Error, function(e){ errorInGame(e); })
+			.error(function(e){ errorInGame(e); });
 		};
 
 
@@ -684,7 +704,7 @@ try{
 		// TODO: make an item base object which the item scripts inherit from
 		var ItemBase = function(itemBase){
 			var item = itemBase;
-			this.invoke = function(character, args){
+			this.invoke = function(name, character, args){
 				var new_item = new item(character, args);
 				if (new_item.hasOwnProperty('client')) {
 					for (var itm_key in new_item.client) {
@@ -695,7 +715,7 @@ try{
 				}
 
 				if (new_item.hasOwnProperty('initialize')) {
-					return new_item.initialize(character, args);
+					return new_item.initialize(name, character, args);
 				}
 			};
 		};
@@ -715,7 +735,7 @@ try{
 
 		var InteractableBase = function(interactableBase){
 			var interactable = interactableBase.base;
-			this.invoke = function(character, args){
+			this.invoke = function(name, character, args){
 				var new_interactable = new interactable(character, args);
 				if (new_interactable.hasOwnProperty('client')) {
 					for (var itm_key in new_interactable.client) {
@@ -726,7 +746,7 @@ try{
 				}
 
 				if (new_interactable.hasOwnProperty('initialize')) {
-					return new_interactable.initialize(character, args);
+					return new_interactable.initialize(name, character, args);
 				}
 			};
 			this.handledBy = interactableBase.handledBy;
@@ -773,8 +793,8 @@ try{
 			}, function(){
 				console.error("Could not load scripts!");
 			})
-			.catch(Error, function(e){ gameError(e); })
-			.error(function(e){ gameError(e); });
+			.catch(Error, function(e){ errorInGame(e); })
+			.error(function(e){ errorInGame(e); });
 		};
 
 		// ----------------------------------------------------------------- //
@@ -1360,6 +1380,8 @@ try{
 
 					ui.tilePathHighlight = toTile;
 
+				} else if (path) {
+					console.log("Aready there!");
 				} else {
 					console.log("Bad path :(");
 				}

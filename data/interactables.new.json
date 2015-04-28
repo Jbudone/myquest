@@ -7,12 +7,36 @@
 	{
 		"id": "chair",
 		"base": "lookat",
-		"args": { "description": "What a comfy looking couch" }
+		"args": { "description": "What a comfy looking chair" }
 	},
 	{
 		"id": "tv",
-		"base": "lookat",
-		"args": { "description": "zomg is that Lord Zod?!" }
+		"base": "talkto",
+		"args": {
+			"name": "tv",
+			"messages": [
+				"*static*", "*kkrrcchhhhh*", "I am yo*kchhhrr*", "*kchchhrr*ur master"
+		] }
+	},
+	{
+		"id": "king",
+		"base": "talkto",
+		"args": {
+			"name": "king",
+			"messages": [
+				"I'm the king",
+				"I like to do king stuff",
+				"You know.. like a boss",
+				"I like to watch people work",
+				"Like a boss",
+				"I like to sit on a throne",
+				"Like a boss",
+				"I like to stand around all day",
+				"Like a boss",
+				"No leave me to my kingly lifestyle",
+				"Like a boss"
+			]
+		}
 	},
 	{
 		"id": "carpet",

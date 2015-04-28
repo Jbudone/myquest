@@ -209,3 +209,17 @@ ERRORS
 	* When things are allowed to go wrong in a function: return new Error(...)    .. this way the caller can handle it accordingly,
 		eg.   function getTile(x, y){ if (x<0 || y<0) return new Error("Bad tile coordinates"); ... }
 	* When things are unexpected, cannot go wrong, or handled within a promise/hook:  throw new Error(...)
+
+
+MAP EDITING
+==========
+
+==== NPCs
+
+	* add spritesheet in tools editor to automatically update the avatars.png image
+	* create a tilesheet called 'npcs' it must be called npcs otherwise it will be parsed as a tilesheet
+	* if possible, prefer to set static npcs as sprites
+
+==== Sprites
+
+	* Sprites will be drawn out as 16x16; to get larger objects you need to specify the sheets as smaller tiles and draw each sprite as multiple tiles

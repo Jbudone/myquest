@@ -84,7 +84,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 	var loadedEnvironment = function(){
 
-		requirejs(['resources','movable','world','map','server/db','loggable','server/player','scriptmgr'], function(Resources,Movable,World,Map,DB,Loggable,Player,ScriptMgr) {
+		requirejs(['resources','movable','world','map','server/db','server/redis','loggable','server/player','scriptmgr'], function(Resources,Movable,World,Map,DB,Redis,Loggable,Player,ScriptMgr) {
 			extendClass(this).with(Loggable);
 
 			var modulesToLoad={},
@@ -119,6 +119,17 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				console.error("Cannot startup server..");
 				process.exit();
 			});
+
+
+			loading('redis');
+			var redis = new Redis();
+			redis.initialize();
+			redis.onError = function(err){
+				console.error("Error w/ Redis: "+err);
+				console.error("Cannot startup server..");
+				process.exit();
+			};
+			loaded('redis');
 
 
 			// Load game resources
@@ -306,7 +317,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			var ItemBase = function(itemBase){
 				var item = itemBase;
-				this.invoke = function(character, args){
+				this.invoke = function(name, character, args){
 					var new_item = new item(character, args);
 					if (new_item.hasOwnProperty('server')) {
 						for (var itm_key in new_item.server) {
@@ -317,7 +328,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 					if (new_item.hasOwnProperty('initialize')) {
-						return new_item.initialize(character, args);
+						return new_item.initialize(name, character, args);
 					}
 				};
 			};
@@ -338,8 +349,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			var InteractableBase = function(interactableBase){
 				var interactable = interactableBase.base;
-				this.invoke = function(character, args){
-					var new_interactable = new interactable(character, args);
+				this.invoke = function(name, character, args){
+					var new_interactable = new interactable(name, character, args);
 					if (new_interactable.hasOwnProperty('server')) {
 						for (var itm_key in new_interactable.server) {
 							new_interactable[itm_key] = new_interactable.server[itm_key];
@@ -349,7 +360,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					}
 
 					if (new_interactable.hasOwnProperty('initialize')) {
-						return new_interactable.initialize(character, args);
+						return new_interactable.initialize(name, character, args);
 					}
 				};
 				this.handledBy = interactableBase.handledBy;
@@ -375,6 +386,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				// Scripts
 				The.scripting.world = The.world;
+				The.scripting.redis = redis;
 				Resources.loadScripts(Resources._scriptRes).then(function(){
 					console.log("Starting script manager..");
 					delete Resources._scriptRes;
@@ -430,12 +442,20 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   process.on('uncaughtException', exitGame);
 
 
-			   var gameError = function(e){
+			   var errorInGame = function(e){
 				   
 				   exitGame(e);
 			   };
 
-			   GLOBAL.gameError = gameError;
+			   GLOBAL.errorInGame = errorInGame;
+
+
+			   // change redis error handling to use errorInGame instead
+			   redis.onError = function(err){
+				   console.error("Error w/ Redis: "+err);
+				   console.error("Cannot startup server..");
+				   errorInGame(err);
+			   };
 
 			   websocket = new WebSocketServer({port:1338});
 			   websocket.on('connection', function(client){
@@ -462,8 +482,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   }, function(){
 							   failed();
 						   })
-							.catch(Error, function(e){ gameError(e); })
-							.error(function(e){ gameError(e); });
+							.catch(Error, function(e){ errorInGame(e); })
+							.error(function(e){ errorInGame(e); });
 					   });
 				   };
 
@@ -479,8 +499,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 						   }, function(){
 							   failed();
 						   })
-							.catch(Error, function(e){ gameError(e); })
-							.error(function(e){ gameError(e); });
+							.catch(Error, function(e){ errorInGame(e); })
+							.error(function(e){ errorInGame(e); });
 					   });
 				   };
 

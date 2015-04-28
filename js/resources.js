@@ -49,13 +49,13 @@ define(['jquery', 'loggable'], function($, Loggable){
 						}.bind(this)), function(){
 							console.log("Error loading resources");
 						})
-						.catch(Error, function(e){ gameError(e); })
-						.error(function(e){ gameError(e); });
+						.catch(Error, function(e){ errorInGame(e); })
+						.error(function(e){ errorInGame(e); });
 					}.bind(this)));
 
 				}.bind(this)), failed)
-				.catch(Error, function(e){ gameError(e); })
-				.error(function(e){ gameError(e); });
+				.catch(Error, function(e){ errorInGame(e); })
+				.error(function(e){ errorInGame(e); });
 
 			}.bind(this));
 		}.bind(this)),

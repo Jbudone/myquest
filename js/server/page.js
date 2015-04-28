@@ -24,8 +24,8 @@ define(['movable'], function(Movable){
 
 				console.log("Added entity["+entity.id+"]("+entity.spriteID+") to page ("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
-					if (!_.isNumber(entity.position.local.y) || !_.isNumber(entity.position.local.x)) throw new Error("Entity local position is illegal!");
-					if (!_.isNumber(this.x) || !_.isNumber(this.y)) throw new Error("Page has illegal position!");
+					if (!_.isFinite(entity.position.local.y) || !_.isFinite(entity.position.local.x)) throw new Error("Entity local position is illegal!");
+					if (!_.isFinite(this.x) || !_.isFinite(this.y)) throw new Error("Page has illegal position!");
 
 					var movablePosition = { y: entity.position.local.y + this.y * Env.tileSize,
 										   x: entity.position.local.x + this.x * Env.tileSize,
@@ -61,7 +61,7 @@ define(['movable'], function(Movable){
 			});
 
 			this.listenTo(this, EVT_ZONE_OUT, function(page, entity){
-				if (!_.isNumber(entity.id)) throw new Error("Entity does not have a legal id");
+				if (!_.isFinite(entity.id)) throw new Error("Entity does not have a legal id");
 
 				this.eventsBuffer.push({
 					evtType: EVT_REMOVED_ENTITY,
@@ -77,7 +77,7 @@ define(['movable'], function(Movable){
 				_.each(this.spawns, function(spawn, spawnCoord){
 					spawnCoord = parseInt(spawnCoord);
 
-					if (!_.isNumber(spawnCoord)) throw new Error("spawnCoord not a number: "+spawnCoord);
+					if (!_.isFinite(spawnCoord)) throw new Error("spawnCoord not a number: "+spawnCoord);
 					if (!Resources.npcs[spawn.id]) throw new Error("Could not find spawn unit: "+ spawn.id);
 
 					var localY = parseInt(spawnCoord/Env.pageWidth),

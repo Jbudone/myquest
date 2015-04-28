@@ -110,10 +110,12 @@ define(function(){
 	addKey('PAGE_SERIALIZE_MOVABLES');
 
 	addKey('ADJACENT_RANGE'); // Pathfinding
+	addKey('ALREADY_THERE');
 
 	addKey('CLIENT_ONLY'); // Interactable handlers
 	addKey('SERVER_ONLY');
 	addKey('CLIENT_AND_SERVER');
+
 
 	return keys;
 });

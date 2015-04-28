@@ -21,7 +21,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.delta = 0;
 
 		// FIXME: get these stats from npc
-		if (!_.isNumber(entity.npc.health) || entity.npc.health <= 0) throw new Error("Bad health for NPC");
+		if (!_.isFinite(entity.npc.health) || entity.npc.health <= 0) throw new Error("Bad health for NPC");
 		this.health = entity.npc.health;
 		this.alive  = true;
 		this.respawnTime = null;
@@ -73,7 +73,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 				this.Log("Its time to die :(");
 				this.alive = false;
-				if (!_.isNumber(this.entity.npc.spawn) || this.entity.npc.spawn < 0) return new Error("NPC has bad respawn timer value");
+				if (!_.isFinite(this.entity.npc.spawn) || this.entity.npc.spawn < 0) return new Error("NPC has bad respawn timer value");
 				this.respawnTime = this.entity.npc.spawn;
 				var result = this.brain.die();
 				if (_.isError(result)) return result;
@@ -96,7 +96,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			this.entity.pendingEvents=[];
 
 			this.alive = true;
-			if (!_.isNumber(this.entity.npc.health) || this.entity.npc.health <= 0) return new Error("NPC has bad health value");
+			if (!_.isFinite(this.entity.npc.health) || this.entity.npc.health <= 0) return new Error("NPC has bad health value");
 			this.health = this.entity.npc.health;
 			var result = this.brain.reset();
 			if (_.isError(result)) return result;
@@ -256,7 +256,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 						this.Log("Requesting to pickup item");
 						delete page.items[coord];
-						result = itmBase.invoke(_character, itmRef.args);
+						result = itmBase.invoke(item.id, _character, itmRef.args);
 
 						if (_.isError(result)) return result;
 
@@ -295,13 +295,13 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 
 						if (!_.isObject(data)) return new Error("No args given");
 						if (!data.hasOwnProperty('coord')) return new Error("No coordinates given for interactable");
-						if (!_.isNumber(data.coord)) return new Error("Bad coordinates given for interactable");
+						if (!_.isFinite(data.coord)) return new Error("Bad coordinates given for interactable");
 						if (!data.hasOwnProperty('page')) return new Error("No page given");
-						if (!_.isNumber(data.page)) return new Error("Bad page given"); 
+						if (!_.isFinite(data.page)) return new Error("Bad page given"); 
 						if (!data.hasOwnProperty('tile')) return new Error("No tile given");
 						if (!_.isObject(data.tile)) return new Error("Bad tile given"); 
-						if (!_.isNumber(data.tile.x)) return new Error("Bad tile x coordinate given"); 
-						if (!_.isNumber(data.tile.y)) return new Error("Bad tile y coordinate given"); 
+						if (!_.isFinite(data.tile.x)) return new Error("Bad tile x coordinate given"); 
+						if (!_.isFinite(data.tile.y)) return new Error("Bad tile y coordinate given"); 
 
 						coord = parseInt(data.coord);
 						page = player.movable.page.map.pages[data.page];
@@ -361,8 +361,8 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 						if (!interactableBase.hasOwnProperty('invoke')) return new Error("Base interactable script not prepared");
 
 
-						this.Log("Requesting to interact with interactable ("+ interact +")");
-						result = interactableBase.invoke(_character, interactableRef.args);
+						this.Log("Requesting to interact with interactable ("+ interactable +")");
+						result = interactableBase.invoke(interactable, _character, interactableRef.args);
 
 						if (_.isError(result)) return result;
 
