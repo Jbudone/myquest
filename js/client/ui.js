@@ -42,6 +42,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 						top = Env.tileScale * movable.position.local.y + // game top
 								movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
+								-1 * movable.sprite.tileSize + // sprite size
 								1 * Env.tileScale * _UI.camera.offsetY + // camera offset
 								1 * Env.tileScale * (movable.page.y - The.map.curPage.y) * Env.tileSize + // page offset
 								-1 * this.ui.height(); // floating above head
