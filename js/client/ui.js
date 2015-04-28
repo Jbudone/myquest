@@ -37,16 +37,14 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 								-1 * Env.tileScale * movable.sprite.offset_x + // offset sprite
 								-1 * Env.tileScale * _UI.camera.offsetX + // camera offset
 								1 * Env.tileScale * (movable.page.x - The.map.curPage.x) * Env.tileSize + // page offset
-								-1 * this.ui.width() + // centered
-								$('#game').offset().left, // canvas offset
+								-1 * this.ui.width(), // centered
 
 						top = Env.tileScale * movable.position.local.y + // game top
 								movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
 								1 * Env.tileScale * _UI.camera.offsetY + // camera offset
 								1 * Env.tileScale * (movable.page.y - The.map.curPage.y) * Env.tileSize + // page offset
-								-1 * this.ui.height() + // floating above head
-								$('#game').offset().top; // canvas offset
+								-1 * this.ui.height(); // floating above head
 
 					this.ui.css('left', left + 'px');
 					this.ui.css('top', top + 'px');

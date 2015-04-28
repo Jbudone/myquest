@@ -23,6 +23,8 @@ h3 {
 
 #canvas {
 	height: 512px;
+	position: relative;
+	overflow: hidden;
 }
 
 #messages {
