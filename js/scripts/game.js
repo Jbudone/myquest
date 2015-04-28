@@ -108,8 +108,10 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			character.hook('die', this).after(function(){
 				var result = null;
 				if (Env.isServer) {
-					result = this.handleLoot(character);
-					if (_.isError(result)) throw result;
+					if (!character.isPlayer) {
+						result = this.handleLoot(character);
+						if (_.isError(result)) throw result;
+					}
 				}
 
 				// NOTE: removeEntity hooks 'removeentity' which is hooked here to removeCharacter &

@@ -16,10 +16,10 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.server = {
 			initialize: function(name, character, args){
 				_script = this;
-				this.heal.bind(_item)(character, args);
+				this.heal.bind(_item)(name, character, args);
 			},
 
-			heal: function(character, args){
+			heal: function(name, character, args){
 				if (!(character instanceof Character)) return new UnexpectedError("Character is not a character");
 				if (!_.isObject(args)) return new UnexpectedError("Provided args is not an object");
 				if (!args.hasOwnProperty('amt')) return new UnexpectedError("Arguments does not provide amount");
@@ -33,7 +33,8 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 				character.entity.page.broadcast(EVT_USE_ITEM, {
 					base: 'heal',
 					character: character.entity.id,
-					health: character.health
+					health: character.health,
+					name: name
 				});
 			}
 		};
@@ -41,10 +42,10 @@ define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Logga
 		this.client = {
 			initialize: function(name, character, args){
 				_script = this;
-				this.heal.bind(_item)(character, args);
+				this.heal.bind(_item)(name, character, args);
 			},
 
-			heal: function(character, args){
+			heal: function(name, character, args){
 				character.health = args.health;
 				if (character.entity.id === The.player.id) {
 					UI.postMessage("You healed up!");

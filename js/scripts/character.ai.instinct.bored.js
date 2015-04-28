@@ -69,7 +69,6 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			},
 
 			goBackToSpawn: function(){
-				debugger;
 				var respawn = _character.respawnPoint,
 					page	= _character.entity.page.map.pages[ respawn.page ],
 					x		= parseInt(respawn.x / Env.tileSize) + page.x,

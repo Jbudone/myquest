@@ -195,7 +195,7 @@
 				//	ERRORS
 				//		- ALL Files!
 				//		- GameError in all player input type stuff
-				//		- node: read errors
+				//		- node: red errors
 				//		- unload helpers: automatically keep track of hooks/listeners/etc. and unload all of those
 				//		- Combat: D/C
 
