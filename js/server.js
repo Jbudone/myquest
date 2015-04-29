@@ -41,7 +41,8 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		fs=require('fs'),
 		Promise = require('bluebird'),
 		http = require('http'), // TODO: need this?
-		WebSocketServer = require('ws').Server;
+		WebSocketServer = require('ws').Server,
+		chalk = require('chalk');
 
 	Promise.longStackTraces();
 
@@ -54,6 +55,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 	GLOBAL['Env']=Env;
 	GLOBAL['The']=The;
 	GLOBAL['Promise']=Promise;
+	GLOBAL['chalk']=chalk;
 
 	for(var util in Utils) {
 		GLOBAL[util]=Utils[util];
@@ -81,6 +83,14 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 		// error loading extensions..
 		process.exit();
 	});
+
+	errorInGame = function(e){
+		console.error(chalk.red(e));
+		process.exit();
+	};
+
+	GLOBAL.errorInGame = errorInGame;
+
 
 	var loadedEnvironment = function(){
 
@@ -141,145 +151,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				GLOBAL['Resources'] = Resources;
 				Resources.initialize(['world', 'sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
 
-					try {
-					// TODO: include map loading with world
-					// TODO: handle sheets, sprites, npcs, world/maps internally in resource mgr
-
-
-
-					var res = JSON.parse(assets.sheets);
-
-					var makeSheet = function(_sheet){
-						var sheet = {
-							file: _sheet.image,
-							offset: {
-								x: parseInt(_sheet.sheet_offset.x),
-								y: parseInt(_sheet.sheet_offset.y),
-							},
-							tileSize: {
-								width: parseInt(_sheet.tilesize),
-								height: parseInt(_sheet.tilesize),
-							},
-							image: null,
-							tilesPerRow: parseInt(_sheet.columns),
-							data: { },
-							gid: {}
-						};
-
-						return sheet;
-					};
-					var gid = 0;
-					for (var i=0; i<res.tilesheets.list.length; ++i) {
-						var _sheet = res.tilesheets.list[i],
-							sheet  = makeSheet( _sheet );
-
-
-						sheet.gid.first = gid;
-						gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
-						sheet.gid.last = gid - 1;
-						if (_sheet.data.objects) {
-							sheet.data.objects = {};
-							for (var objCoord in _sheet.data.objects) {
-								var id = _sheet.data.objects[objCoord];
-								sheet.data.objects[ parseInt(objCoord) ] = id;
-							}
-						}
-
-						if (_sheet.data.collisions) {
-							sheet.data.collisions = [];
-							for (var j=0; j<_sheet.data.collisions.length; ++j) {
-								sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
-							}
-						}
-
-						if (_sheet.data.floating) {
-							sheet.data.floating = [];
-							for (var j=0; j<_sheet.data.floating.length; ++j) {
-								sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
-							}
-						}
-
-						Resources.sheets[_sheet.id] = sheet;
-					}
-
-					for (var i=0; i<res.spritesheets.list.length; ++i) {
-						var _sheet = res.spritesheets.list[i],
-							sheet  = makeSheet( _sheet );
-
-						sheet.data.animations = {};
-						Resources.sprites[_sheet.id] = sheet;
-					}
-
-
-					// NPCS
-					res = JSON.parse(assets.npcs).npcs;
-
-					// Load NPC's
-					for (var i=0; i<res.length; ++i) {
-						var npc = res[i];
-						Resources.npcs[npc.id]=npc;
-					}
-
-
-
-					// Items
-					res = JSON.parse(assets.items).items;
-
-					Resources.items.list = {};
-					Resources.items.base = {};
-					for (var i=0; i<res.length; ++i) {
-						var item = res[i];
-						Resources.items.list[item.id] = item;
-						if (!Resources.items.base.hasOwnProperty(item.base)) {
-							Resources.items.base[item.base] = null;
-						}
-						for (var sheetName in Resources.sheets) {
-							var sheet = Resources.sheets[sheetName];
-							if (!sheet.hasOwnProperty('data')) continue;
-							if (!sheet.data.hasOwnProperty('objects')) continue;
-
-							for (var sprite in sheet.data.objects) {
-								if (sheet.data.objects[sprite] == item.id) {
-									item.sprite = parseInt(sprite) + sheet.gid.first;
-									break;
-								}
-							}
-							if (item.hasOwnProperty('sprite')) break;
-						}
-					}
-					Resources.items['items-not-loaded'] = true;
-					// NOTE: save item base scripts (like scripts) loading/initialization until we've setup the
-					// scripting environment
-
-
-
-
-					// Interactables
-					res = JSON.parse(assets.interactables).interactables;
-
-					Resources.interactables.list = {};
-					Resources.interactables.base = {};
-					for (var i=0; i<res.length; ++i) {
-						var interactable = res[i];
-						Resources.interactables.list[interactable.id] = interactable;
-						if (!Resources.interactables.base.hasOwnProperty(interactable.base)) {
-							Resources.interactables.base[interactable.base] = null;
-						}
-					}
-					Resources.interactables['interactables-not-loaded'] = true;
-					// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
-					// scripting environment
-
-
-					// Scripts
-					var scripts = JSON.parse(assets.scripts);
-					Resources._scriptRes = scripts;
-					// NOTE: save script loading/initialization until we've setup the scripting environment
-
-
 					// Load World
-					var data = assets.world;
-					var json = JSON.parse(data),
+					var data = assets.world,
+						json = JSON.parse(data),
 						world = new World();
 					The.world = world;
 					_.each(json.maps, function(mapFile, mapID) {
@@ -303,81 +177,13 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					});
 
 					loaded('resources');
-
-					} catch(e) {
-						console.log(e);
-					}
 				}, function(err){
-					Log(err);
-					throw new Error("Could not load resources!");
-				});
+					Log(err, LOG_ERROR);
+					errorInGame("Could not load resources");
+				}).catch(Error, errorInGame);
 
 			};
 
-
-			var ItemBase = function(itemBase){
-				var item = itemBase;
-				this.invoke = function(name, character, args){
-					var new_item = new item(character, args);
-					if (new_item.hasOwnProperty('server')) {
-						for (var itm_key in new_item.server) {
-							new_item[itm_key] = new_item.server[itm_key];
-						}
-						delete new_item.client;
-						delete new_item.server;
-					}
-
-					if (new_item.hasOwnProperty('initialize')) {
-						return new_item.initialize(name, character, args);
-					}
-				};
-			};
-
-			loadItemScripts = function(){
-				loading('items');
-				var itemsToLoad = 0;
-				_.each(Resources.items.base, function(nothing, itemBase){
-					var baseFile = 'scripts/items.'+itemBase;
-					++itemsToLoad;
-					requirejs([baseFile], function(baseScript){
-						Resources.items.base[itemBase] = new ItemBase(baseScript);
-						if (--itemsToLoad === 0) loaded('items');
-					});
-				});
-			};
-
-
-			var InteractableBase = function(interactableBase){
-				var interactable = interactableBase.base;
-				this.invoke = function(name, character, args){
-					var new_interactable = new interactable(name, character, args);
-					if (new_interactable.hasOwnProperty('server')) {
-						for (var itm_key in new_interactable.server) {
-							new_interactable[itm_key] = new_interactable.server[itm_key];
-						}
-						delete new_interactable.client;
-						delete new_interactable.server;
-					}
-
-					if (new_interactable.hasOwnProperty('initialize')) {
-						return new_interactable.initialize(name, character, args);
-					}
-				};
-				this.handledBy = interactableBase.handledBy;
-			};
-
-			loadInteractableScripts = function(){
-				loading('interactables');
-				var interactablesToLoad = 0;
-				_.each(Resources.interactables.base, function(nothing, interactableBase){
-					var baseFile = 'scripts/interactables.'+interactableBase;
-					++interactablesToLoad;
-					requirejs([baseFile], function(baseScript){
-						Resources.interactables.base[interactableBase] = new InteractableBase(baseScript);
-						if (--interactablesToLoad === 0) loaded('interactables');
-					});
-				});
-			};
 
 
 			loadScripts = function(){
@@ -394,12 +200,20 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 					if (Resources.items.hasOwnProperty('items-not-loaded')) {
 						delete Resources.items['items-not-loaded'];
-						loadItemScripts();
+						loading('items');
+						Resources.loadItemScripts().then(function(){
+							loaded('items');
+						}, function(err){ errorInGame(err); })
+						.catch(Error, errorInGame);
 					}
 
 					if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
 						delete Resources.interactables['interactables-not-loaded'];
-						loadInteractableScripts();
+						loading('interactables');
+						Resources.loadInteractableScripts().then(function(){
+							loaded('interactables');
+						}, function(err){ errorInGame(err); })
+						.catch(Error, errorInGame);
 					}
 
 					loaded('scripts');
@@ -442,7 +256,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   process.on('uncaughtException', exitGame);
 
 
-			   var errorInGame = function(e){
+			   errorInGame = function(e){
 				   
 				   exitGame(e);
 			   };

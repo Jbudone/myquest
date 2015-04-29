@@ -452,237 +452,6 @@ try{
 			window['Resources'] = Resources;
 			// FIXME: initialize with array of resources? Shouldn't this be apart of client/server specific Resources.js?
 			Resources.initialize(['sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
-
-
-				var res = JSON.parse(assets.sheets),
-					makeSheet = function(_sheet){
-						var sheet = {
-							file: _sheet.image,
-							offset: {
-								x: parseInt(_sheet.sheet_offset.x),
-								y: parseInt(_sheet.sheet_offset.y),
-							},
-							tileSize: {
-								width: parseInt(_sheet.tilesize),
-								height: parseInt(_sheet.tilesize),
-							},
-							image: (new Image()),
-							tilesPerRow: parseInt(_sheet.columns),
-							data: { },
-							gid: {}
-						};
-
-						sheet.image.src = location.origin + location.pathname + sheet.file;
-						return sheet;
-					};
-
-				var gid = 0;
-				for (var i=0; i<res.tilesheets.list.length; ++i) {
-					var _sheet = res.tilesheets.list[i],
-						sheet  = makeSheet( _sheet );
-
-
-
-					sheet.gid.first = gid;
-					gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
-					sheet.gid.last = gid - 1;
-					if (_sheet.data.objects) {
-						sheet.data.objects = {};
-						for (var objCoord in _sheet.data.objects) {
-							var id = _sheet.data.objects[objCoord];
-							sheet.data.objects[ parseInt(objCoord) ] = id;
-						}
-					}
-
-					if (_sheet.data.collisions) {
-						sheet.data.collisions = [];
-						for (var j=0; j<_sheet.data.collisions.length; ++j) {
-							sheet.data.collisions.push( parseInt( _sheet.data.collisions[j] ) );
-						}
-					}
-
-					if (_sheet.data.floating) {
-						sheet.data.floating = [];
-						for (var j=0; j<_sheet.data.floating.length; ++j) {
-							sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
-						}
-					}
-
-					Resources.sheets[_sheet.id] = sheet;
-				}
-
-				for (var i=0; i<res.spritesheets.list.length; ++i) {
-					var _sheet = res.spritesheets.list[i],
-						sheet  = makeSheet( _sheet );
-
-					sheet.data.animations = {};
-
-					var env = {
-						animations: _sheet.data.animations,
-						_sheet: _sheet,
-						sheet: sheet
-					};
-
-					var NOFLIPX = 1<<0,
-						FLIPX   = 1<<1;
-					var prepareImage = (function(){
-
-						var animations = this.animations,
-							_sheet     = this._sheet,
-							sheet      = this.sheet;
-
-
-						// Figure out the dimensions of our spritesheet
-						var canvas  = document.createElement('canvas'),
-							ctx     = canvas.getContext('2d'),
-							allRows = {},
-							rows    = 0,
-							cols    = 0,
-							tWidth  = sheet.tileSize.width,
-							tHeight = sheet.tileSize.height;
-						for (var key in animations){
-							var ani   = animations[key],
-								row   = parseInt(ani.row),
-								len   = parseInt(ani.length),
-								flipX = (ani.hasOwnProperty('flipX') && ani.flipX == "true");
-							if (!allRows[row]) {
-								allRows[row] = { flipX: (ani.flipX?FLIPX:NOFLIPX) };
-								++rows;
-							} else if (!(allRows[row].flipX & (flipX?FLIPX:NOFLIPX))) {
-								allRows[row].flipX |= (flipX?FLIPX:NOFLIPX);
-								++rows;
-							}
-
-							if (len > cols) {
-								cols = len;
-							}
-						}
-
-						canvas.height = tHeight * rows;
-						canvas.width  = tWidth  * cols;
-
-						// Draw animations to sheet
-						var iRow = 0;
-						for(var key in animations){
-							var ani = animations[key],
-								row   = parseInt(ani.row),
-								len   = parseInt(ani.length);
-							if (ani.hasOwnProperty('flipX')) {
-
-
-								try {
-									// For Chrome
-									ctx.save();
-									ctx.scale(-1,1);
-									for(var i=len-1, j=0; i>=0; --i, ++j) {
-										ctx.drawImage(sheet.image, i*tWidth - sheet.offset.x, row*tHeight - sheet.offset.y, tWidth, tHeight, -i*tWidth, iRow*tHeight, -tWidth, tHeight);
-									}
-									ctx.restore();
-								} catch(e) {
-									// For Firefox
-									// ctx.scale(-1,1);
-									ctx.restore();
-									ctx.save();
-									ctx.scale(-1,1);
-									for(var i=len-1, j=0; i>=0; --i, ++j) {
-										ctx.drawImage(sheet.image, j*tWidth, row*tHeight, tWidth, tHeight, -(j+1)*tWidth, iRow*tHeight, tWidth, tHeight);
-									}
-									ctx.restore();
-									// for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
-									// 	ctx.drawImage(sheet.image, j*32, ani.row*32, 32, 32, j*32, 0, 32, 32);
-									// }
-									// ctx.transform(-1,0,0,1,0,0);  
-								}
-
-							} else {
-								ctx.drawImage(sheet.image, -sheet.offset.x, row*tHeight - sheet.offset.y, tWidth*len, tHeight, 0, iRow*tHeight, tWidth*len, tHeight);
-							}
-
-							ani.row = (iRow++);
-							ani.length = len;
-							delete ani.flipX;
-							sheet.data.animations[key] = ani;
-						}
-
-						sheet.image = new Image();
-						sheet.image.src = canvas.toDataURL("image/png");
-
-					}.bind(env));
-
-					sheet.image.onload = prepareImage;
-					if (sheet.image.complete) prepareImage(); // In case its already loaded
-
-					Resources.sprites[_sheet.id] = sheet;
-				}
-
-
-
-
-
-
-				res = JSON.parse(assets.npcs).npcs;
-
-				// Load NPC's
-				for (var i=0; i<res.length; ++i) {
-					var npc = res[i];
-					Resources.npcs[npc.id]=npc;
-				}
-
-
-				// Items
-				res = JSON.parse(assets.items).items;
-
-				Resources.items.list = {};
-				Resources.items.base = {};
-				for (var i=0; i<res.length; ++i) {
-					var item = res[i];
-					Resources.items.list[item.id] = item;
-					if (!Resources.items.base.hasOwnProperty(item.base)) {
-						Resources.items.base[item.base] = null;
-					}
-					for (var sheetName in Resources.sheets) {
-						var sheet = Resources.sheets[sheetName];
-						if (!sheet.hasOwnProperty('data')) continue;
-						if (!sheet.data.hasOwnProperty('objects')) continue;
-
-						for (var sprite in sheet.data.objects) {
-							if (sheet.data.objects[sprite] == item.id) {
-								item.sprite = parseInt(sprite) + sheet.gid.first;
-								break;
-							}
-						}
-						if (item.hasOwnProperty('sprite')) break;
-					}
-				}
-				Resources.items['items-not-loaded'] = true;
-				// NOTE: save item base scripts (like scripts) loading/initialization until we've setup the
-				// scripting environment
-
-
-
-				// Interactables
-				res = JSON.parse(assets.interactables).interactables;
-
-				Resources.interactables.list = {};
-				Resources.interactables.base = {};
-				for (var i=0; i<res.length; ++i) {
-					var interactable = res[i];
-					Resources.interactables.list[interactable.id] = interactable;
-					if (!Resources.interactables.base.hasOwnProperty(interactable.base)) {
-						Resources.interactables.base[interactable.base] = null;
-					}
-				}
-				Resources.interactables['interactables-not-loaded'] = true;
-				// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
-				// scripting environment
-
-
-
-				// Scripts
-				var scripts = JSON.parse(assets.scripts);
-				Resources._scriptRes = scripts;
-				// NOTE: save script loading/initialization until we've setup the scripting environment
-
 				loaded('resources');
 			})
 			.catch(Error, function(e){ errorInGame(e); })
@@ -703,70 +472,6 @@ try{
 		ready=true;
 		loaded(); // In case tiles somehow loaded INSTANTLY fast
 
-		// TODO: make an item base object which the item scripts inherit from
-		var ItemBase = function(itemBase){
-			var item = itemBase;
-			this.invoke = function(name, character, args){
-				var new_item = new item(character, args);
-				if (new_item.hasOwnProperty('client')) {
-					for (var itm_key in new_item.client) {
-						new_item[itm_key] = new_item.client[itm_key];
-					}
-					delete new_item.client;
-					delete new_item.server;
-				}
-
-				if (new_item.hasOwnProperty('initialize')) {
-					return new_item.initialize(name, character, args);
-				}
-			};
-		};
-
-		loadItemScripts = function(){
-			loading('items');
-			var itemsToLoad = 0;
-			_.each(Resources.items.base, function(nothing, itemBase){
-				var baseFile = 'scripts/items.'+itemBase;
-				++itemsToLoad;
-				require([baseFile], function(baseScript){
-					Resources.items.base[itemBase] = new ItemBase(baseScript);
-					if (--itemsToLoad === 0) loaded('items');
-				});
-			});
-		};
-
-		var InteractableBase = function(interactableBase){
-			var interactable = interactableBase.base;
-			this.invoke = function(name, character, args){
-				var new_interactable = new interactable(character, args);
-				if (new_interactable.hasOwnProperty('client')) {
-					for (var itm_key in new_interactable.client) {
-						new_interactable[itm_key] = new_interactable.client[itm_key];
-					}
-					delete new_interactable.client;
-					delete new_interactable.server;
-				}
-
-				if (new_interactable.hasOwnProperty('initialize')) {
-					return new_interactable.initialize(name, character, args);
-				}
-			};
-			this.handledBy = interactableBase.handledBy;
-		};
-
-		loadInteractableScripts = function(){
-			loading('interactables');
-			var interactablesToLoad = 0;
-			_.each(Resources.interactables.base, function(nothing, interactableBase){
-				var baseFile = 'scripts/interactables.'+interactableBase;
-				++interactablesToLoad;
-				requirejs([baseFile], function(baseScript){
-					Resources.interactables.base[interactableBase] = new InteractableBase(baseScript);
-					if (--interactablesToLoad === 0) loaded('interactables');
-				});
-			});
-		};
-
 
 		reloadScripts = function(){
 
@@ -784,13 +489,22 @@ try{
 
 				if (Resources.items.hasOwnProperty('items-not-loaded')) {
 					delete Resources.items['items-not-loaded'];
-					loadItemScripts();
+					loading('items');
+					Resources.loadItemScripts().then(function(){
+						loaded('items');
+					}, function(err){ errorInGame(err); })
+					.catch(Error, errorInGame);
 				}
 
 				if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
 					delete Resources.interactables['interactables-not-loaded'];
-					loadInteractableScripts();
+					loading('interactables');
+					Resources.loadInteractableScripts().then(function(){
+						loaded('interactables');
+					}, function(err){ errorInGame(err); })
+					.catch(Error, errorInGame);
 				}
+
 				loaded();
 			}, function(){
 				console.error("Could not load scripts!");
