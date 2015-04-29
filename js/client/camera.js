@@ -25,14 +25,16 @@ define(['eventful'], function(Eventful){
 			The.camera.offsetX = The.player.position.local.x - Env.pageWidth * Env.tileSize / 2;
 		};
 
-		this.listenTo(The.map, EVT_ZONE, function(map,direction){
-			console.log("CAMERA ZONING: "+direction);
+		this.initialize = function(){
+			this.listenTo(The.map, EVT_ZONE, function(map,direction){
+				console.log("CAMERA ZONING: "+direction);
 
-			     if (direction=='n') this.offsetY = -(Env.pageHeight-Env.pageBorder) * Env.tileSize;
-			else if (direction=='w') this.offsetX = (Env.pageWidth-Env.pageBorder)   * Env.tileSize;
-			else if (direction=='e') this.offsetX = -(Env.pageWidth-Env.pageBorder)  * Env.tileSize;
-			else if (direction=='s') this.offsetY = (Env.pageHeight-Env.pageBorder)  * Env.tileSize;
-		});
+					 if (direction=='n') this.offsetY = -(Env.pageHeight-Env.pageBorder) * Env.tileSize;
+				else if (direction=='w') this.offsetX = (Env.pageWidth-Env.pageBorder)   * Env.tileSize;
+				else if (direction=='e') this.offsetX = -(Env.pageWidth-Env.pageBorder)  * Env.tileSize;
+				else if (direction=='s') this.offsetY = (Env.pageHeight-Env.pageBorder)  * Env.tileSize;
+			});
+		};
 
 		this.step=function(time){
 			var move=this.moveSpeed,

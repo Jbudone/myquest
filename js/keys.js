@@ -116,6 +116,9 @@ define(function(){
 	addKey('SERVER_ONLY');
 	addKey('CLIENT_AND_SERVER');
 
+	addKey('BAD_POSITION'); // User error
+	addKey('BAD_COORDINATES'); 
+
 
 	return keys;
 });
