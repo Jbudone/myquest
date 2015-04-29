@@ -118,7 +118,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				// removePlayer
 				result = character.entity.page.map.removeEntity(character.entity);
 				if (_.isError(result)) throw result;
-				if (this.respawning.hasOwnProperty(character.entity.id)) throw new Error("Character ("+ entity.entity.id +") already respawning");
+				if (this.respawning.hasOwnProperty(character.entity.id)) throw new Error("Character ("+ character.entity.id +") already respawning");
 				this.respawning[character.entity.id] = character;
 
 				character.hook('die', this).remove();
