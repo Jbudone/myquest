@@ -16,6 +16,7 @@ define(['dynamic','loggable'],function(Dynamic, Loggable){
 			var server = this;
 			this.requestBuffer.pushArchive();
 			return new Promise(function(connected, failed){
+
 				server.websocket = new WebSocket(link);
 				server.Log("Connecting to: "+link);
 

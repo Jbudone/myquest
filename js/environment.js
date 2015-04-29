@@ -3,6 +3,7 @@ define(function(){
 
 	var Environment=function(cfg){
 		this.server=false;
+		this.isBot=false;
 
 		// Page Border
 		// 	Pages which are neighbours will share the same tiles across their borders, with a depth of

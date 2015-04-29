@@ -177,17 +177,21 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 			Log("Initializing UI");
 			ui = _ui;
-			ui.initialize( document.getElementById('entities') );
+			if (!Env.isBot) {
+				ui.initialize( document.getElementById('entities') );
+			}
 			ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
 			ui.camera = The.camera;
 			ui.updatePages();
 
 
 			renderer = _renderer;
-			renderer.canvasEntities    = document.getElementById('entities');
-			renderer.canvasBackground  = document.getElementById('background');
-			renderer.ctxEntities       = renderer.canvasEntities.getContext('2d');
-			renderer.ctxBackground     = renderer.canvasBackground.getContext('2d');
+			if (!Env.isBot) {
+				renderer.canvasEntities    = document.getElementById('entities');
+				renderer.canvasBackground  = document.getElementById('background');
+				renderer.ctxEntities       = renderer.canvasEntities.getContext('2d');
+				renderer.ctxBackground     = renderer.canvasBackground.getContext('2d');
+			}
 			renderer.camera            = The.camera;
 			renderer.ui                = ui;
 			renderer.setMap( The.map );

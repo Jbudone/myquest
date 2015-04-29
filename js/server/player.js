@@ -29,9 +29,14 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			this.Log("Logged in player ["+player.id+"]");
 			this.Log(player, LOG_DEBUG);
 
+			var err = null;
+
 			// Set players position
 			if (!The.world.maps[player.map]) {
-				return new Error("Map ("+player.map+") not found in world!");
+				err = new GameError("Map ("+player.map+") not found in world!");
+				err.reason = BAD_POSITION;
+				err.becauseOf = 'map';
+				return err;
 			}
 			var map            = The.world.maps[player.map],
 				playerPosition = map.localFromGlobalCoordinates(player.position.x, player.position.y),
@@ -40,7 +45,10 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			if (_.isError(playerPosition)) {
 				this.Log("Could not get correct position for player..", LOG_ERROR);
 				playerPosition.print();
-				return new Error("Could not get correct position for player..");
+				err = new GameError("Could not get correct position for player..");
+				err.reason = BAD_POSITION;
+				err.becauseOf = 'position';
+				return err;
 			}
 
 			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.x, player.respawn.position.y);
@@ -48,7 +56,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			if (_.isError(respawnPoint)) {
 				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
 				respawnPoint.print();
-				return new Error("Could not get local coordinates for respawn point..");
+				err = new GameError("Could not get local coordinates for respawn point..");
+				err.reason = BAD_POSITION;
+				err.becauseOf = 'respawn';
 			}
 
 			this.movable          = new Movable('player', playerPosition.page, {
@@ -83,15 +93,16 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				var oldPage       = oldPage,
 					oldNeighbours = {};
 
+				if (!oldPage) throw new Error("No oldPage defined");
 				oldNeighbours[oldPage.index] = oldPage;
 				for (var neighbour in oldPage.neighbours) {
 					if (oldPage.neighbours[neighbour]) {
-						oldNeighbours[oldPage.neighbours[neighbour].index]  = oldPage.neighbours[neighbour];
+						oldNeighbours[oldPage.neighbours[neighbour].index] = oldPage.neighbours[neighbour];
 					}
 				}
 
-				this.movable.page = page;
-				this.pages = { };
+				this.movable.page      = page;
+				this.pages             = {};
 				this.pages[page.index] = page;
 
 
@@ -101,16 +112,20 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				var initialization = {
 					zone:true,
 					pages:{}
-				};
+				}, result = null;
 
 				if (!oldNeighbours[page.index]) {
-					initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+					result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+					if (_.isError(result)) throw result;
+					initialization.pages[page.index] = result;
 				}
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
 					if (npage) this.pages[npage.index] = npage;
 					if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
-						initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+						result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+						if (_.isError(result)) throw result;
+						initialization.pages[npage.index] = result;
 					}
 				}
 
@@ -141,13 +156,19 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							page: this.movable.page.index
 						},
 						pages:{}
-					};
+					}, result = null;
 
-				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				if (_.isError(result)) throw result;
+				initialization.pages[page.index] = result;
 				for (var neighbour in page.neighbours) {
 					var npage = page.neighbours[neighbour];
-					if (npage) this.pages[npage.index] = npage;
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+					if (npage) {
+						this.pages[npage.index] = npage;
+						result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+						if (_.isError(result)) throw result;
+						initialization.pages[npage.index] = result;
+					}
 				}
 
 				this.client.send(JSON.stringify(initialization));
@@ -158,7 +179,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 		this.respawn = function(){
 
-			this.pages = { };
+			this.pages = {};
 			this.pages[this.movable.page.index] = this.movable.page;
 			var page = this.movable.page,
 				map = page.map,
@@ -178,15 +199,19 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						health: this.movable.health
 					},
 					pages:{}
-			};
+			}, result = null;
 
-			initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+			result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+			if (_.isError(result)) return result;
+			initialization.pages[page.index] = result;
 			for (var neighbour in page.neighbours) {
 				var npage = page.neighbours[neighbour];
-				if (npage) this.pages[npage.index] = npage;
-				if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+				if (npage) {
+					this.pages[npage.index] = npage;
+					result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+					initialization.pages[npage.index] = result;
+				}
 			}
-
 
 			this.client.send(JSON.stringify(initialization));
 		};
@@ -202,16 +227,23 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				your     = player,
 				map      = player.page.map,
 				reqState = action.state,
-				maxWalk  = 1500/player.moveSpeed; // 5*Env.tileSize; // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
+				maxWalk  = 1500/player.moveSpeed, // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
+				err      = null,
+				result   = null;
 
-			walk.fromJSON(action.data);
+			result = walk.fromJSON(action.data);
+			if (_.isError(result)) {
+				err = new GameError(result.message);
+				return err;
+			}
 			walk.walked = 0;
 			path.walks.push(walk);
 
 			if (path.length() > maxWalk) {
 				this.Log("Path longer than maxwalk..", LOG_ERROR);
 				this.Log(path, LOG_ERROR);
-				return;
+				err = new GameError("Path longer than maxwalk");
+				return err;
 			}
 
 
@@ -234,19 +266,20 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			if (!map.isTileInRange(start)) {
 				this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
-				return;
+				err = new GameError("Bad start of path");
+				return err;
 			}
 
 			k += (vert?your.page.y:your.page.x)*16;
-			// this.Log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
 			var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
 				index            = null;
 				isSafe           = null;
 
-			if (localCoordinates instanceof Error) {
+			if (_.isError(localCoordinates)) {
 				this.Log("Error finding tile for coordinates", LOG_ERROR);
 				localCoordinates.print();
-				return false;
+				err = new GameError("Error finding tile for coordinates");
+				return err;
 			}
 
 			index  = localCoordinates.y*Env.pageWidth + localCoordinates.x,
@@ -262,10 +295,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					}
 
 					// check tile
-					// console.log("	Checking tile ("+nextTile.y+","+nextTile.x+")");
-
 					if (!map.isTileInRange(nextTile)) {
-						//throw new RangeError("Bad start of path! ("+start.y+","+start.x+")");
+						this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
 						safePath = false;
 						break;
 					}
@@ -274,12 +305,12 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						index            = null;
 						isSafe           = null;
 
-					if (localCoordinates instanceof Error) {
+					if (_.isError(localCoordinates)) {
 						safePath = false;
 						break;
 					}
 
-					index = localCoordinates.y*Env.pageWidth + localCoordinates.x,
+					index  = localCoordinates.y*Env.pageWidth + localCoordinates.x,
 					isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
 					if (!isSafe) {
 						safePath = false;
@@ -290,7 +321,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					k += distanceToTile;
 					kT += (positive?1:-1);
 				}
-
 			}
 
 			var movableState = {
@@ -308,13 +338,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					globalY: reqState.globalY,
 					globalX: reqState.globalX
 				};
-
-			if (_.isUndefined(movableState.localY)) {
-				// FIXME: an issue seems to occur when local.x/local.y < 0 (haven't moved to next page yet)
-				// and later causes local.x and local.y to be undefined
-				debugger;
-				console.error("POSITION PROBLEM: Player position has become undefined..");
-			}
 
 			if (!safePath) {
 				this.Log("Path is not safe for user... cancelling!");
@@ -361,24 +384,12 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 		this.disconnectPlayer = function(){
 			this.Log("Disconnecting player..");
 			this.movable.stopAllEventsAndListeners();
-
-			// TODO: find better way to remove movable from page
-			// var page = this.movable.page;
-			// page.map.unwatchEntity(this.movable);
-			// delete page.movables[this.movable.id];
-			// for (var i=0; i<page.updateList.length; ++i) {
-			// 	if (page.updateList[i].id == this.movable.id) {
-			// 		page.updateList.splice(i,1);
-			// 		break;
-			// 	}
-			// }
 		};
 
 		this.attackTarget = function(targetID){
 			this.Log("Player requesting to attack entity["+targetID+"]..");
 			var target = this.movable.page.movables[targetID];
 			if (target && target.playerID) {
-				console.log('	NO Player Killing!!');
 				return; // NO player killing!
 			}
 			this.movable.triggerEvent(EVT_AGGRO, this.movable.page.map.movables[targetID]);
@@ -386,7 +397,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 		client.on('close', (function() {
 			this.onDisconnected();
-			this.Log('websocket connection close ['+this.id+']');
+			this.Log('websocket connection close ['+ this.id +']');
 		}).bind(this));
 
 		// FIXME: do we need to disconnect them from all errors ??
@@ -398,13 +409,13 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 		client.on('message', (function(evt) {
 			this.Log(evt, LOG_DEBUG);
 			var evt = JSON.parse(evt);
-			if (!evt) {
-				Log("			BAD MESSAGE!? Weird..", LOG_ERROR);
+			if (!evt || _.isError(evt)) {
+				this.Log("			BAD MESSAGE!? Weird..", LOG_ERROR);
 				// TODO: tell client that the message was misunderstood?
 				return;
 			}
 			if (evt.id!=this.lastActionId+1) {
-				Log("			Sorry user("+this.id+")..we may have missed some of your messages..  "+evt.id+"!="+(this.lastActionId+1), LOG_ERROR);
+				this.Log("			Sorry user("+this.id+")..we may have missed some of your messages..  "+evt.id+"!="+(this.lastActionId+1), LOG_ERROR);
 				// TODO: tell client we're missing some messages..
 				return;
 			}

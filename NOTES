@@ -209,6 +209,7 @@ ERRORS
 	* When things are allowed to go wrong in a function: return new Error(...)    .. this way the caller can handle it accordingly,
 		eg.   function getTile(x, y){ if (x<0 || y<0) return new Error("Bad tile coordinates"); ... }
 	* When things are unexpected, cannot go wrong, or handled within a promise/hook:  throw new Error(...)
+	* return GameError when its an error that's likely due to the user; GameError.reason = REASON_KEY  which allows the function to hint to the caller what the errors reason is; GameError.becauseOf = '..'   or ['..', '..', ..]  to indicate precisely the details behind this error/reasoning  (eg. reason is BAD_POSITION but .becauseOf = 'map' means the map id doesn't exist, or .becauseOf = 'page' means the pageID doesn't exist)
 
 
 MAP EDITING

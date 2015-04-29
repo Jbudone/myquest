@@ -1,5 +1,4 @@
-
-define(['jquery', 'loggable'], function($, Loggable){
+define(['loggable'], function(Loggable){
 
 
 	var Resources = (function(){
@@ -236,13 +235,13 @@ define(['jquery', 'loggable'], function($, Loggable){
 						width: parseInt(_sheet.tilesize),
 						height: parseInt(_sheet.tilesize),
 					},
-					image: (Env.isServer? null : (new Image())),
+					image: ((Env.isServer||Env.isBot)? null : (new Image())),
 					tilesPerRow: parseInt(_sheet.columns),
 					data: { },
 					gid: {}
 				};
 
-				if (!Env.isServer) {
+				if (!Env.isServer && !Env.isBot) {
 					sheet.image.src = location.origin + location.pathname + sheet.file;
 				}
 				return sheet;
@@ -281,7 +280,7 @@ define(['jquery', 'loggable'], function($, Loggable){
 				this.sheets[_sheet.id] = sheet;
 			}
 
-			if (Env.isServer) {
+			if (Env.isServer || Env.isBot) {
 
 				for (var i=0; i<res.spritesheets.list.length; ++i) {
 					var _sheet = res.spritesheets.list[i],

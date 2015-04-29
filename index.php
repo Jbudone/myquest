@@ -84,6 +84,7 @@ require(['bluebird','underscore','objectmgr','environment','keys','utilities','e
 		window[FSM['states'][i]]=i;
 	}
 
+	Env.isBot = false;
 
 	window['printStackTrace'] = printStackTrace;
 
