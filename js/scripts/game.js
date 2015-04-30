@@ -415,6 +415,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					}
 				}.bind(this));
 
+				result = _game.handleMoving.bind(_game)();
+				if (_.isError(result)) throw result;
 				result = _game.handleItems.bind(_game)();
 				if (_.isError(result)) throw result;
 				result = _game.handleInteractables.bind(_game)();
@@ -435,6 +437,73 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				if (_.isError(result)) return result;
 				result = this.characters[entity.id].setToUser();
 				if (_.isError(result)) return result;
+			},
+
+			handleMoving: function(){
+
+				user.hook('clickedTile', this).after(function(toTile){
+
+					// 	click to move player creates path for player
+					var playerY      = The.map.curPage.y * Env.tileSize + The.player.position.local.y,
+						playerX      = The.map.curPage.x * Env.tileSize + The.player.position.local.x,
+						nearestTiles = The.map.findNearestTiles(playerX, playerY),
+						time         = now(),
+						path         = The.map.findPath(nearestTiles, [toTile]);
+
+					if (path && path.path) {
+						//this.Log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")", LOG_DEBUG);
+						//this.Log(path, LOG_DEBUG);
+
+						// inject walk to beginning of path depending on where player is relative to start tile
+						var startTile = path.start.tile,
+							recalibrateY = false,
+							recalibrateX = false,
+							path = path.path,
+							playerPosition = { y: The.player.position.local.y + The.map.curPage.y * Env.tileSize,
+											   x: The.player.position.local.x + The.map.curPage.x * Env.tileSize };
+						if (The.player.position.local.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
+						if (The.player.position.local.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
+						if (playerPosition.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
+						if (playerPosition.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
+
+						path.splitWalks();
+
+						if (recalibrateY) {
+							// Inject walk to this tile
+							var distance    = -1*(playerPosition.y - startTile.y * Env.tileSize),
+								walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), startTile.offset(0, 0));
+							this.Log("Recalibrating Walk (Y): ", LOG_DEBUG);
+							this.Log("	steps: "+distance, LOG_DEBUG);
+							path.walks.unshift(walk);
+						}
+						if (recalibrateX) {
+							// Inject walk to this tile
+							var distance    = -1*(playerPosition.x - startTile.x * Env.tileSize),
+								walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
+							this.Log("Recalibrating Walk (X): ", LOG_DEBUG);
+							this.Log("	steps: "+distance+" FROM ("+The.player.position.local.x+") TO ("+startTile.x*Env.tileSize+")", LOG_DEBUG);
+							path.walks.unshift(walk);
+						}
+						path.walks[0].time = time;
+
+						for (i=0; i<path.walks.length; ++i) {
+							var walk = path.walks[i];
+							this.Log("Walk: ("+walk.direction+", "+walk.distance+", "+walk.steps+")", LOG_DEBUG);
+						}
+
+						if (path.walks.length) {
+							The.player.addPath(path, true);
+						}
+
+						The.UI.tilePathHighlight = toTile;
+
+					} else if (path) {
+						console.log("Aready there!");
+					} else {
+						console.log("Bad path :(");
+					}
+
+				});
 			},
 
 			handleItems: function(){

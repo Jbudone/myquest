@@ -192,6 +192,8 @@
 				//		- XP/Leveling
 				//		- Items: hardcoded values (loot chance, loot items, decay rate); inventory, UI
 				//		- UI: game+inventory+character-sheet+chat
+				//		- Test: Bot interface; abstract Test base script (allow for easily adding multiple
+				//				test scripts); get errors from Bots; run through Grunt; speed time
 				//
 				//	ERRORS
 				//		- ALL Files!
@@ -356,6 +358,7 @@ try{
 
 			var ui       = new UI(),
 				renderer = new Renderer();
+			The.UI   = ui;
 			The.user = User;
 			Game.start(ui, renderer);
 		};

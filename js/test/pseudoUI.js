@@ -37,7 +37,9 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 		
 		this.initialize = function(canvas){ };
 
-		this.postMessage = function(message, messageType){ };
+		this.postMessage = function(message, messageType){
+			console.log(message);
+		};
 
 		this.movables = {};
 

@@ -8,6 +8,7 @@ define(['loggable'], function(Loggable){
 		this.setLogGroup('Resources');
 		this.setLogPrefix('(Resources) ');
 
+		var Log = this.Log.bind(this);
 		var interface = {
 
 			sprites: {},
@@ -188,7 +189,7 @@ define(['loggable'], function(Loggable){
 					succeeded();
 				}
 			}.bind(this));
-		}.bind(this));
+		}.bind(this)),
 
 		initializeAssets = (function(assets, orderOfInitialization){
 

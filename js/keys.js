@@ -21,7 +21,6 @@ define(function(){
 				console.error("ERROR: KEY ["+key+"] ALREADY DEFINED!");
 				return;
 			}
-			console.log("Adding key ["+key+"]");
 			keys[key] = (keyValue++);
 			global[key]=keys[key];
 		}, addKeys = function(keys){
@@ -118,6 +117,9 @@ define(function(){
 
 	addKey('BAD_POSITION'); // User error
 	addKey('BAD_COORDINATES'); 
+
+	addKey('BOT_CONNECT'); // Bot commands
+	addKey('BOT_MOVE');
 
 
 	return keys;

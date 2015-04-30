@@ -22,6 +22,9 @@
 <body>
 
 	<div id="game">
+		<div id="character">
+
+		</div>
 		<div id="canvas">
 			<canvas id="background" width="2000px" height="2000px"></canvas>
 			<canvas id="entities" width="2000px" height="2000px"></canvas>

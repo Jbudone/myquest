@@ -1,28 +1,28 @@
-	var requirejs = require('requirejs');
+var requirejs = require('requirejs');
 
-	requirejs.config({
-		nodeRequire: require,
-		baseUrl: "js",
-		paths: {
-			//"jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
-			"underscore": "http://underscorejs.org/underscore",
-		},
-	});
+requirejs.config({
+	nodeRequire: require,
+	baseUrl: "js",
+	paths: {
+		//"jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
+		"underscore": "http://underscorejs.org/underscore",
+	},
+});
 
 
 
-	var couldNotStartup = function(e){
-	   console.log("Could not startup server");
-	   if (e) {
-		   console.log(e);
-		   console.log(e.stack);
-	   }
-	   process.exit();
-	};
+var couldNotStartup = function(e){
+   console.log("Could not startup server");
+   if (e) {
+	   console.log(e);
+	   console.log(e.stack);
+   }
+   process.exit();
+};
 
-	process.on('exit', couldNotStartup);
-	process.on('SIGINT', couldNotStartup);
-	process.on('uncaughtException', couldNotStartup);
+process.on('exit', couldNotStartup);
+process.on('SIGINT', couldNotStartup);
+process.on('uncaughtException', couldNotStartup);
 
 
 requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
@@ -77,20 +77,36 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 	var errorInGame = function(e){
 
-		Log(e, LOG_ERROR);
+		console.error(chalk.red(e));
+		console.trace();
 		// FIXME: stop game! unexpected and uncaught error..
+		process.exit();
 	};
 
 
 	window.errorInGame = errorInGame;
 
+requirejs(['resources','client/camera','client/serverHandler','loggable','test/pseudoRenderer','test/pseudoUI','client/user','client/game'], function(Resources, Camera, ServerHandler, Loggable, PseudoRenderer, PseudoUI, User, Game) {
 
-	requirejs(['keys','resources','client/camera','client/serverHandler','loggable','test/pseudoRenderer','test/pseudoUI','client/user','client/game'], function(Keys, Resources, Camera, ServerHandler, Loggable, PseudoRenderer, PseudoUI, User, Game) {
+	var Bot = function(id){
 
 		extendClass(this).with(Loggable);
 		this.setLogPrefix('(main) ');
 
+		GLOBAL['Log'] = this.Log;
 
+		var whenReadySucceeded = new Function(),
+			botHasFailed       = new Function(),
+			botIsReady = function(){
+				whenReadySucceeded();
+			};
+
+		this.whenReady = function(){
+			return new Promise(function(finished, failed){
+				whenReadySucceeded = finished;
+				botHasFailed = failed;
+			});
+		};
 
 		try {
 
@@ -147,7 +163,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			server.onNewCharacter = function(player){
 				Log("Created new character "+player.id);
 				var id = player.id;
-				//localStorage.setItem('id', id);
 				server.login(id);
 			};
 
@@ -183,9 +198,6 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			server.connect(link).then(function(){
 				// Connected
 
-				// FIXME: interface to connect w/ id OR create new
-				// Attempt to login under id from localStorage (if none then creates new character)
-				var id = 2;//localStorage.getItem('id');
 				server.login(id);
 			}, function(evt){
 				console.error(evt);
@@ -238,11 +250,53 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			var ui       = new PseudoUI(),
 				renderer = new PseudoRenderer();
 			The.user = User;
+			The.bot = User;
+			The.UI   = ui;
+			Game.onStarted = botIsReady;
 			Game.start(ui, renderer);
 		};
 		}catch(e){
 			console.error(e.stack);
 			printStackTrace();
+			botHasFailed();
+		}
+
+	};
+
+
+	var bot = null;
+	process.on('message', function(message){
+
+		console.log("Bot: "+ message.msg);
+		if (message.command == BOT_CONNECT) {
+			id = message.id;
+			bot = new Bot(id);
+			bot.whenReady().then(function(){
+				process.send({msg:'connected'});
+			}, function(){
+				process.send({msg:'failed'});
+			});
+		} else if (message.command == BOT_MOVE) {
+			tile = message.tile;
+			The.bot.clickedTile(new Tile(tile.x, tile.y));
+
+			setTimeout(function(){
+				if (The.player.path) {
+					The.player.path.onFinished = function(){
+						process.send({msg:'finished'});
+					};
+					The.player.path.onFailed = function(){
+						process.send({msg:'failed'});
+					};
+				} else {
+					process.send({msg:'failed'});
+				}
+			}, 500);
 		}
 	});
+	process.send({msg:'ready'});
+	console.log("I got here");
+
+});
+
 });
