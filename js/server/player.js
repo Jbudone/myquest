@@ -70,6 +70,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 												respawnPoint: new Tile( respawnPoint.x + respawnPoint.page.x,
 																		respawnPoint.y + respawnPoint.page.y,
 																		respawnPoint.page.map ) });
+			this.movable.name = player.username;
 			this.movable.playerID = player.id;
 			this.movable.player = this;
 
@@ -441,12 +442,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				} else if (evt.evtType==EVT_LOGIN) {
 					var username = evt.data.username,
 						password = evt.data.password;
-					// var id = parseInt(evt.data.id);
-					// if (isNaN(id)) {
-					// 	this.Log("User attempting to login under a bad id ("+id+")", LOG_ERROR);
-					// 	// TODO: tell the user they're being bad
-					// 	return;
-					// }
 					this.Log("User logging in as ["+username+"]");
 					this.onLogin(username, password).then((function(details){
 						var savedState = details.savedState,
@@ -466,6 +461,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 							position: savedState.position,
 							playerID: this.movable.playerID,
 							id: this.movable.id,
+							name: this.movable.name,
 						};
 						this.client.send(response.serialize());
 

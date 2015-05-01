@@ -74,7 +74,7 @@ define(['loggable'], function(Loggable){
 
 				db
 				.collection('players')
-				.findOne({'$or':[{username:username}, {email:email}]}, function(err, player){
+				.findOne({username:username}, function(err, player){
 
 					// Player already exists?
 					if (err) {
@@ -82,9 +82,11 @@ define(['loggable'], function(Loggable){
 						this.Log(username);
 						finished(err);
 					} else if (player) {
-						finished('Player already exists')
+						finished('Player already exists');
+						return;
 					}
 
+					console.log("No player ("+username+") found..creating new user");
 					var shasum = crypto.createHash('sha1');
 					shasum.update('SALTY'+password);
 

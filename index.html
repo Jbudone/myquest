@@ -25,7 +25,7 @@
 		<div id="loginScreen">
 			<div id="overlay"></div>
 			<div id="loginOrRegister">
-			<div id="register">
+			<form id="register">
 				<div class="loginTitle">Create New Character</div>
 				<div class="loginDescription">
 					Create a new character to start playing!
@@ -33,26 +33,26 @@
 					<span class="loginDescriptionSwitch">To login, click: </span><a href="#" class="loginSwitch" id="registerToLogin">Here</a>
 				</div>
 				<div class="field">
-					<input id="registerUsername" type="text" class="fieldInput" placeholder="Username" />
+					<input id="registerUsername" type="text" class="fieldInput" placeholder="Username"  required/>
 					<span id="registerUsernameMessage" class="fieldMessage">
 				</div>
 				<div class="field">
-					<input id="registerEmail" type="text" class="fieldInput" placeholder="Email" />
+					<input id="registerEmail" type="email" class="fieldInput" placeholder="Email" required/>
 					<span id="registerEmailMessage" class="fieldMessage">
 				</div>
 				<div class="field">
-					<input id="registerPassword" type="password" class="fieldInput" placeholder="Password" />
+					<input id="registerPassword" type="password" class="fieldInput" placeholder="Password"  required/>
 					<span id="registerPasswordMessage" class="fieldMessage">
 				</div>
 				<div class="field">
-					<input id="registerPasswordConfirm" type="password" class="fieldInput" placeholder="Password Confirmation" />
+					<input id="registerPasswordConfirm" type="password" class="fieldInput" placeholder="Password Confirmation"  required/>
 					<span id="registerPasswordConfirmMessage" class="fieldMessage">
 				</div>
 				<img src="firefox_big_img.png" class="loginFirefoxAvatar" />
-				<a href="#" id="registerButton">Create</a>
+				<input type="submit" value="Create" id="registerButton" />
 				<div id="registerMessage"></div>
-			</div>
-			<div id="login">
+			</form>
+			<form id="login">
 				<div class="loginTitle">Login or Create New Character</div>
 				<div class="loginDescription">
 					Enter your username/password to continue playing
@@ -60,16 +60,16 @@
 					<span class="loginDescriptionSwitch">To login, click: </span><a href="#" class="loginSwitch" id="loginToRegister">Here</a>
 				</div>
 				<div class="field">
-					<input id="loginUsername" type="text" class="fieldInput" placeholder="Username" />
+					<input id="loginUsername" type="text" class="fieldInput" placeholder="Username"  required/>
 					<span id="loginUsernameMessage" class="fieldMessage">
 				</div>
 				<div class="field">
-					<input id="loginPassword" type="password" class="fieldInput" placeholder="Password" />
+					<input id="loginPassword" type="password" class="fieldInput" placeholder="Password"  required/>
 					<span id="loginPasswordMessage" class="fieldMessage">
 				</div>
-				<a href="#" id="loginButton">Login</a>
+				<input type="submit" value="Login" id="loginButton" />
 				<div id="loginMessage"></div>
-			</div>
+			</form>
 			</div>
 		</div>
 		<div id="character">

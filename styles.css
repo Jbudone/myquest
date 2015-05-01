@@ -23,7 +23,7 @@ h3 {
 
 #loginOrRegister {
 	width: 400px;
-	height: 260px;
+	height: 290px;
 	position: absolute;
 	top: 200px;
 	left: calc((100% / 2) - 200px);
@@ -66,8 +66,14 @@ h3 {
 }
 
 .loginSwitch {
-	color: #003;
+	color: #33F;
+	text-decoration: none;
 	font-weight: bold;
+	font-size: 20px;
+}
+
+.loginSwitch:hover {
+	color: #77F;
 }
 
 #registerButton {
@@ -78,6 +84,41 @@ h3 {
 	margin-top:20px;
 	font-size: 24px;
 	text-decoration: none;
+
+	margin: 10px auto;
+
+	border:2px groove #7c93ba;
+	cursor:pointer; /*forces the cursor to change to a hand when the button is hovered*/
+	padding: 5px 25px;
+	/*give the background a gradient - see cssdemos.tupence.co.uk/gradients.htm for more info*/
+	background-color:#6b6dbb; /*required for browsers that don't support gradients*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#88add7), to(#6b6dbb));
+	background: -webkit-linear-gradient(top, #88add7, #6b6dbb);
+	background: -moz-linear-gradient(top, #88add7, #6b6dbb);
+	background: -o-linear-gradient(top, #88add7, #6b6dbb);
+	background: linear-gradient(top, #88add7, #6b6dbb);
+	/*style to the text inside the button*/
+	font-family:Andika, Arial, sans-serif; /*Andkia is available at http://www.google.com/webfonts/specimen/Andika*/
+	color:#fff;
+	font-size:1.1em;
+	letter-spacing:.1em;
+	font-variant:small-caps;
+	/*give the corners a small curve*/
+	-webkit-border-radius: 0 15px 15px 0;
+	-moz-border-radius: 0 15px 15px 0;
+	border-radius: 0 15px 15px 0;
+	/*add a drop shadow to the button*/
+	-webkit-box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+	-moz-box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+	box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+}
+
+#registerButton:hover, #registerButton:focus {
+	color:#edebda;
+	/*reduce the spread of the shadow to give a pushed effect*/
+	-webkit-box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
+	-moz-box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
+	box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
 }
 
 #loginButton {
@@ -88,6 +129,41 @@ h3 {
 	margin-top:20px;
 	font-size: 24px;
 	text-decoration: none;
+
+	margin: 10px auto;
+
+	border:2px groove #7c93ba;
+	cursor:pointer; /*forces the cursor to change to a hand when the button is hovered*/
+	padding: 5px 25px;
+	/*give the background a gradient - see cssdemos.tupence.co.uk/gradients.htm for more info*/
+	background-color:#6b6dbb; /*required for browsers that don't support gradients*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#88add7), to(#6b6dbb));
+	background: -webkit-linear-gradient(top, #88add7, #6b6dbb);
+	background: -moz-linear-gradient(top, #88add7, #6b6dbb);
+	background: -o-linear-gradient(top, #88add7, #6b6dbb);
+	background: linear-gradient(top, #88add7, #6b6dbb);
+	/*style to the text inside the button*/
+	font-family:Andika, Arial, sans-serif; /*Andkia is available at http://www.google.com/webfonts/specimen/Andika*/
+	color:#fff;
+	font-size:1.1em;
+	letter-spacing:.1em;
+	font-variant:small-caps;
+	/*give the corners a small curve*/
+	-webkit-border-radius: 0 15px 15px 0;
+	-moz-border-radius: 0 15px 15px 0;
+	border-radius: 0 15px 15px 0;
+	/*add a drop shadow to the button*/
+	-webkit-box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+	-moz-box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+	box-shadow: rgba(0, 0, 0, .75) 0 2px 6px;
+}
+
+#loginButton:hover, #loginButton:focus {
+	color:#edebda;
+	/*reduce the spread of the shadow to give a pushed effect*/
+	-webkit-box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
+	-moz-box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
+	box-shadow: rgba(0, 0, 0, .25) 0 1px 0px;
 }
 
 .fieldInput {
@@ -176,10 +252,12 @@ h3 {
 	font-family: Georgia;
 	font-weight: bold;
 	font-size: 16px;
+	text-align: center;
 }
 
 .movable-healthbar {
 	width: 100%;
+	min-width: 40px;
 	background: black;
 	height: 8px;
 	border-radius: 4px;

@@ -16,7 +16,10 @@ define(['movable'], function(Movable){
 					zoning: entity.zoning,
 					path: (entity.path? entity.path.serialize() : null),
 				}
-				if (entity.hasOwnProperty('playerID')) ent.playerID = entity.playerID;
+				if (entity.hasOwnProperty('playerID')) {
+					ent.playerID = entity.playerID;
+					ent.name = entity.name;
+				}
 				this.eventsBuffer.push({
 					evtType: EVT_ADDED_ENTITY,
 					entity: ent
@@ -169,6 +172,9 @@ define(['movable'], function(Movable){
 						path: path,
 						health: entity.health,
 					};
+					if (entity.hasOwnProperty('name')) {
+						ent.name = entity.name;
+					}
 
 					if (entity.path) {
 						// adjust path

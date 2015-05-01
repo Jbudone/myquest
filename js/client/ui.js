@@ -70,7 +70,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 							.addClass('movable-ui');
 				this.ui_name = $('<div/>')
 									.addClass('movable-name')
-									.text( movable.spriteID )
+									.text( movable.name || movable.spriteID )
 									.appendTo( this.ui );
 				this.ui_healthbar = $('<div/>')
 										.addClass('movable-healthbar')

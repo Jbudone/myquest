@@ -62,9 +62,26 @@ $(document).ready(function(){
 
 
 		$.getJSON(location.origin+':8124', {request:REQ_REGISTER, username: username, password: password, email: email}, function(reply){
+
+			if (!reply || !_.isObject(reply)) {
+				$('#registerMessage').text("Server error..");
+				return;
+			}
+
+			if (reply.success != true) {
+				$('#registerMessage').text("Error " + reply.reason);
+				return;
+			}
+
 			$('#registerMessage').text("Successfully created character!");
 
-			Login(username, password);
+			Login(username, password, function(err){
+				if (err) {
+					$('#loginMessage').text("Error: could not login.. please report this error");
+				} else {
+					hideLogin();
+				}
+			});
 		}, function(err){
 			console.error(err);
 			$('#registerMessage').text("Error: "+err);

@@ -131,6 +131,9 @@ FIXME FIXME FIXME FIXME FIXME
 							entity.zoning           = movable.zoning;
 							entity.health           = movable.health;
 							entity.page             = this.pages[pageI];
+							if (movable.hasOwnProperty('name')) {
+								entity.name = movable.name;
+							}
 							entity.updatePosition();
 
 							if (movable.path) {

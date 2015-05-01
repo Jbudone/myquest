@@ -165,6 +165,7 @@ DB
 
 	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
 	* Not error safe; must throw and use .catch() on promise
+	* Continues on after calling resolve() or reject()  (must explicitly return after calling those unless you want to continue)
 
 ====== Eventful
 

@@ -107,6 +107,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			The.player          = new Movable('player');
 			The.player.id       = player.id;
 			The.player.playerID = player.id;
+			The.player.name     = player.name;
 
 			The.player.position = {
 				tile: new Tile(player.position.x, player.position.y),
