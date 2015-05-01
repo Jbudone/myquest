@@ -80,6 +80,11 @@ $(document).ready(function(){
 					$('#loginMessage').text("Error: could not login.. please report this error");
 				} else {
 					hideLogin();
+
+					if (localStorage.getItem('autologin') === "true") {
+						localStorage.setItem('username', username);
+						localStorage.setItem('password', password);
+					}
 				}
 			});
 		}, function(err){
@@ -100,6 +105,11 @@ $(document).ready(function(){
 				$('#loginMessage').text("Error: "+err.reason);
 			} else {
 				hideLogin();
+
+				if (localStorage.getItem('autologin') === "true") {
+					localStorage.setItem('username', username);
+					localStorage.setItem('password', password);
+				}
 			}
 		});
 
@@ -114,4 +124,21 @@ $(document).ready(function(){
 	window['hideLogin'] = hideLogin;
 
 
+	// Autologin functionality (for quick dev)
+	if (localStorage.getItem('autologin') === "true" &&
+		localStorage.getItem('username') &&
+		localStorage.getItem('password')) {
+
+		var username = localStorage.getItem('username'),
+			password = localStorage.getItem('password');
+
+		Login(username, password, function(err){
+			if (err) {
+				console.error("Error autologging in!!!");
+				console.error(err);
+			} else {
+				hideLogin();
+			}
+		});
+	}
 });
