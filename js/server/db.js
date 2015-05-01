@@ -43,7 +43,7 @@ define(['loggable'], function(Loggable){
 			return new Promise((function(resolved, failed){
 
 				if (!_.isString(username) || !_.isString(password)) {
-					failed('Bad username/password');
+					failed('Invalid username/password');
 					return;
 				}
 
@@ -56,7 +56,7 @@ define(['loggable'], function(Loggable){
 
 					if (err || !player) {
 						this.Log("Could not find player ("+username+")");
-						failed();
+						failed("Bad username/password");
 					}  else {
 						this.Log("Found player ("+username+")");
 						this.Log(player);

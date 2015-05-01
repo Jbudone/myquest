@@ -97,7 +97,7 @@ $(document).ready(function(){
 
 		Login(username, password, function(err){
 			if (err) {
-				$('#loginMessage').text("Error: Bad username/password");
+				$('#loginMessage').text("Error: "+err.reason);
 			} else {
 				hideLogin();
 			}

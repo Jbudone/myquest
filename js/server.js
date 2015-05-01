@@ -306,14 +306,35 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   you.onLogin = function(username, password){
 					   return new Promise(function(resolved, failed){
 						   db.loginPlayer(username, password).then(function(savedState){
+
+							   // Are you already online?
+							   for (var clientID in players) {
+								   var player = players[clientID],
+									   client = player.client;
+								   if (player.movable.name == username) {
+
+									   // Are you in a connected state?
+									   if (client.readyState !== 1) {
+										   // FIXME: SOMETHING WEIRD HAPPENED TO THIS USER!
+										   // User must have d/c'd without being cleaned up somehow.. Should
+										   // d/c existing user and login this user
+										   console.error("USER IS ALREADY CONNECTED BUT ALSO DISCONNECTED!?");
+									   }
+
+									   failed('Already connected!');
+									   return;
+								   }
+							   }
+
+							   // User is not online already..safe to connect
 							   resolved({
 								   savedState: savedState,
 								   callback: function(){
 									   players[savedState.id] = you;
 								   }
 							   });
-						   }, function(){
-							   failed();
+						   }, function(err){
+							   failed(err);
 						   })
 							.catch(Error, function(e){ errorInGame(e); })
 							.error(function(e){ errorInGame(e); });

@@ -466,10 +466,11 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						this.client.send(response.serialize());
 
 						callback();
-					}).bind(this), (function(){
+					}).bind(this), (function(err){
 					   this.Log("Could not login player..");
 					   var response     = new Response(evt.id);
 					   response.success = false;
+					   response.reason  = err;
 					   this.client.send(response.serialize());
 					}).bind(this))
 					.catch(Error, function(e){ errorInGame(e); })
