@@ -36,13 +36,13 @@
 
 requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
 
-	var _ = require('underscore'),
-		$ = require('jquery'),
-		fs=require('fs'),
-		Promise = require('bluebird'),
-		http = require('http'), // TODO: need this?
+	var _               = require('underscore'),
+		$               = require('jquery'),
+		fs              = require('fs'),
+		Promise         = require('bluebird'),
+		http            = require('http'),
 		WebSocketServer = require('ws').Server,
-		chalk = require('chalk');
+		chalk           = require('chalk');
 
 	Promise.longStackTraces();
 
@@ -94,7 +94,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 	var loadedEnvironment = function(){
 
-		requirejs(['resources','movable','world','map','server/db','server/redis','loggable','server/player','scriptmgr'], function(Resources,Movable,World,Map,DB,Redis,Loggable,Player,ScriptMgr) {
+		requirejs(['resources','movable','world','map','server/db','server/redis','loggable','server/player','scriptmgr','server/login'], function(Resources,Movable,World,Map,DB,Redis,Loggable,Player,ScriptMgr,LoginHandler) {
 			extendClass(this).with(Loggable);
 
 			var modulesToLoad={},
@@ -290,6 +290,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				   };
 
 				   you.onRequestNewCharacter = function(){
+					   /*
 					   return new Promise(function(resolved, failed){
 						   db.createNewPlayer({map:'main', position:{y:60, x:53}}).then(function(newID){
 							   resolved(newID);
@@ -299,11 +300,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 							.catch(Error, function(e){ errorInGame(e); })
 							.error(function(e){ errorInGame(e); });
 					   });
+					   */
 				   };
 
-				   you.onLogin = function(id){
+				   you.onLogin = function(username, password){
 					   return new Promise(function(resolved, failed){
-						   db.loginPlayer(id).then(function(savedState){
+						   db.loginPlayer(username, password).then(function(savedState){
 							   resolved({
 								   savedState: savedState,
 								   callback: function(){
@@ -334,6 +336,9 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 			   });
 			   Log('Server running at http://127.0.0.1:1337/');
+
+			   // Listen for login/register related requests
+			   var loginHandler = new LoginHandler(http, db);
 
 			   var stepTimer=30,
 			   step=function(){

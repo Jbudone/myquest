@@ -8,6 +8,8 @@ define(['loggable'], function(Loggable){
 		var mongo = null,
 			db    = null;
 
+		var crypto = require('crypto');
+
 		this.connect = function(){
 
 			var me = this;
@@ -36,19 +38,27 @@ define(['loggable'], function(Loggable){
 		};
 
 
-		this.loginPlayer = function(loginID){
+		this.loginPlayer = function(username, password){
 
 			return new Promise((function(resolved, failed){
 
+				if (!_.isString(username) || !_.isString(password)) {
+					failed('Bad username/password');
+					return;
+				}
+
+				var shasum = crypto.createHash('sha1');
+				shasum.update('SALTY'+password);
+
 				db
 				.collection('players')
-				.findOne({id:loginID}, (function(err, player) {
+				.findOne({'$and':[{username:username}, {password: shasum.digest('hex')}]}, (function(err, player) {
 
 					if (err || !player) {
-						this.Log("Could not find player ("+loginID+")", LOG_ERROR);
+						this.Log("Could not find player ("+username+")");
 						failed();
 					}  else {
-						this.Log("Found player ("+loginID+")");
+						this.Log("Found player ("+username+")");
 						this.Log(player);
 						resolved(player);
 					}
@@ -59,9 +69,42 @@ define(['loggable'], function(Loggable){
 		};
 
 
+		this.registerUser = function(username, password, email){
+			return new Promise(function(finished, failed){
+
+				db
+				.collection('players')
+				.findOne({'$or':[{username:username}, {email:email}]}, function(err, player){
+
+					// Player already exists?
+					if (err) {
+						this.Log("Error finding player");
+						this.Log(username);
+						finished(err);
+					} else if (player) {
+						finished('Player already exists')
+					}
+
+					var shasum = crypto.createHash('sha1');
+					shasum.update('SALTY'+password);
+
+					// No player exists with these credentials.. register new user
+					this.createNewPlayer({map:'main', position:{y:60, x:53}}, username, shasum.digest('hex'), email).then(function(newID){
+						finished(null, newID);
+					}, function(err){
+						failed(err);
+					}).catch(Error, function(err){
+						console.error(err);
+						failed(err);
+					});
+
+				}.bind(this));
+			}.bind(this));
+		};
+
 
 		// Attempt to create a new player in the db
-		this.createNewPlayer = function(playerAttributes){
+		this.createNewPlayer = function(playerAttributes, username, password, email){
 
 			return new Promise((function(succeeded, failed){
 				db
@@ -90,6 +133,9 @@ define(['loggable'], function(Loggable){
 						var player = _.defaults(playerAttributes, {
 							// Default player values
 							id: id,
+							username: username,
+							password: password,
+							email: email,
 							position: {
 								y: 60, x: 53
 							},

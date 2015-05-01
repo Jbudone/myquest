@@ -133,12 +133,13 @@ define(['dynamic','loggable'],function(Dynamic, Loggable){
 
 
 
-		this.login = function(playerID){
+		this.login = function(username, password){
 			this.Log("Logging in..");
 			
 			var event;
-			if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { id: playerID }, null);
-			else          event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
+			// if (playerID) event = new Event((++this.requestsId), EVT_LOGIN, { id: playerID }, null);
+			// else          event = new Event((++this.requestsId), EVT_NEW_CHARACTER, {}, null);
+			event = new Event((++this.requestsId), EVT_LOGIN, { username: username, password: password }, null);
 			return this.request(event).then(function(){}, this.onLoginFailed)
 										.catch(Error, function(e){ errorInGame(e); })
 										.error(function(e){ errorInGame(e); });

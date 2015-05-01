@@ -21,6 +21,120 @@ h3 {
 	background: #000;
 }
 
+#loginOrRegister {
+	width: 400px;
+	height: 260px;
+	position: absolute;
+	top: 200px;
+	left: calc((100% / 2) - 200px);
+	background: rgba(250, 250, 250, 0.6);
+	padding: 20px;
+	-webkit-box-shadow: 0 0 6px 2px #000000;
+	box-shadow: 0 0 6px 4px #000000;
+	border-radius: 8px;
+	z-index: 1;
+	overflow: hidden;
+}
+
+#loginScreen {
+	position: absolute;
+	width: 1024px;
+	height: 817px;
+}
+
+#login {
+	position: absolute;
+	left: 600px;
+	width: 100%;
+}
+
+#register {
+	position: absolute;
+	width: 100%;
+}
+
+.loginTitle {
+	color: #111;
+	font-weight: bold;
+	text-align: center;
+	font-size: 24px;
+}
+
+.loginDescription {
+	color: #111;
+	margin-bottom: 10px;
+}
+
+.loginSwitch {
+	color: #003;
+	font-weight: bold;
+}
+
+#registerButton {
+	color: #00D;
+	font-weight: bold;
+	display:block;
+	text-align: center;
+	margin-top:20px;
+	font-size: 24px;
+	text-decoration: none;
+}
+
+#loginButton {
+	color: #00D;
+	font-weight: bold;
+	display:block;
+	text-align: center;
+	margin-top:20px;
+	font-size: 24px;
+	text-decoration: none;
+}
+
+.fieldInput {
+	box-shadow: rgb(0, 0, 0) 0px 1px 6px 0px inset;
+	border: thin solid rgb(85, 85, 85);
+	padding: 6px 10px;
+	font-family: Georgia;
+	background: transparent;
+	color: #222;
+	border-radius: 6px;
+	margin: 4px;
+}
+
+.fieldInput:hover {
+	background: rgba(250, 250, 250, 0.02);
+	color: #000;
+}
+
+.fieldInput:active, .fieldInput:focus {
+	background: rgba(250, 250, 250, 0.1);
+	color: #000;
+}
+
+.fieldInput::-webkit-input-placeholder {
+	color: #888;
+}
+
+.fieldInput::-moz-placeholder {
+	color: #DDD;
+}
+
+.loginFirefoxAvatar {
+	position: absolute;
+	right: 110px;
+	top: 100px;
+	width: 58px;
+}
+
+#overlay {
+	width: 100%;
+	height: 100%;
+	background: url('http://fc09.deviantart.net/fs71/f/2013/050/0/c/level_background_for_a_mobile_game__by_bvigec-d5vi8b0.jpg');
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+	background-size: 100% 100%;
+}
+
 #canvas {
 	height: 512px;
 	position: relative;
@@ -89,4 +203,13 @@ h3 {
 	background: linear-gradient(135deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* W3C */
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#9a291e', endColorstr='#ca2320',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
 
+}
+
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }

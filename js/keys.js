@@ -121,6 +121,8 @@ define(function(){
 	addKey('BOT_CONNECT'); // Bot commands
 	addKey('BOT_MOVE');
 
+	addKey('REQ_REGISTER'); // Login requests
+
 
 	return keys;
 });

@@ -194,6 +194,7 @@
 				//		- UI: game+inventory+character-sheet+chat
 				//		- Test: Bot interface; abstract Test base script (allow for easily adding multiple
 				//				test scripts); get errors from Bots; run through Grunt; speed time
+				//		- Interaction: (talkto) Chat bubble
 				//
 				//	ERRORS
 				//		- ALL Files!
@@ -203,7 +204,7 @@
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 
-define(['jquery','resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function($,Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
+define(['resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function(Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
 try{
 
 	extendClass(this).with(Loggable);
@@ -269,12 +270,14 @@ try{
 				Game.disconnected();
 			};
 
-			server.onNewCharacter = function(player){
-				Log("Created new character "+player.id);
-				var id = player.id;
-				localStorage.setItem('id', id);
-				server.login(id);
-			};
+			// server.onNewCharacter = function(player){
+			// 	Log("Created new character "+player.id);
+			// 	var id = player.id;
+			// 	localStorage.setItem('id', id);
+			// 	server.login(id);
+			// };
+
+			var postLoginCallback = new Function();
 
 			server.onLogin = function(player){
 
@@ -283,6 +286,7 @@ try{
 				ready = false;
 				loaded('player');
 
+				postLoginCallback();
 				Game.loadedPlayer(player);
 
 				Log("Requesting map..");
@@ -291,9 +295,9 @@ try{
 				ready = true;
 			};
 
+
 			server.onLoginFailed = function(evt){
-				Log("Login failed", LOG_ERROR);
-				Log(evt, LOG_ERROR);
+				postLoginCallback(evt);
 			};
 			
 			server.onInitialization = function(evt){
@@ -308,9 +312,12 @@ try{
 			server.connect(link).then(function(){
 				// Connected
 
-				// Attempt to login under id from localStorage (if none then creates new character)
-				var id = localStorage.getItem('id');
-				server.login(id);
+
+				window['Login'] = function(username, password, callback){
+					server.login(username, password);
+					postLoginCallback = callback;
+				};
+
 			}, function(evt){
 				console.error(evt);
 			})
@@ -362,6 +369,8 @@ try{
 			The.user = User;
 			Game.start(ui, renderer);
 		};
+
+
 }catch(e){
 	console.error(e.stack);
 	printStackTrace();

@@ -439,14 +439,16 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 					.catch(Error, function(e){ errorInGame(e); })
 					.error(function(e){ errorInGame(e); });
 				} else if (evt.evtType==EVT_LOGIN) {
-					var id = parseInt(evt.data.id);
-					if (isNaN(id)) {
-						this.Log("User attempting to login under a bad id ("+id+")", LOG_ERROR);
-						// TODO: tell the user they're being bad
-						return;
-					}
-					this.Log("User logging in as ["+id+"]");
-					this.onLogin(id).then((function(details){
+					var username = evt.data.username,
+						password = evt.data.password;
+					// var id = parseInt(evt.data.id);
+					// if (isNaN(id)) {
+					// 	this.Log("User attempting to login under a bad id ("+id+")", LOG_ERROR);
+					// 	// TODO: tell the user they're being bad
+					// 	return;
+					// }
+					this.Log("User logging in as ["+username+"]");
+					this.onLogin(username, password).then((function(details){
 						var savedState = details.savedState,
 							callback   = details.callback,
 							succeeded  = this.setPlayer(savedState);
@@ -469,7 +471,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 						callback();
 					}).bind(this), (function(){
-					   this.Log("Could not login player..", LOG_ERROR);
+					   this.Log("Could not login player..");
 					   var response     = new Response(evt.id);
 					   response.success = false;
 					   this.client.send(response.serialize());
