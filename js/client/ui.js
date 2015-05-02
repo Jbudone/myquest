@@ -136,6 +136,11 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			});
 		};
 
+		this.unload = function(){
+			this.canvas.removeEventListener('mousemove');
+			this.canvas.removeEventListener('mousedown');
+		};
+
 		this.postMessage = function(message, messageType){
 			messageType = messageType || MESSAGE_INFO;
 			this.messageBox.append( $('<span/>').addClass('message').addClass('message-' + messageType).text(message) );

@@ -191,6 +191,7 @@ DB
 	- triggerer: registerHook('name'), unregisterHook('name'),  doHook('name').pre|post()
 	- listener: hook('name', this).before|after|removePre|removePost|remove()
 	- Cleanup: make sure to run  hookable.unhook(this)  when unloading this  (eg. map.unhook(this))
+	- Hooker Cleanup: if X is unloading then it needs to call hookable.unhook(this) on everything its hooked into; OR this.unhookAllHooks() for everything
 
 ====== Prototype
 

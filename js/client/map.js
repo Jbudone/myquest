@@ -254,6 +254,21 @@ FIXME FIXME FIXME FIXME FIXME
 			}
 			this.lastUpdated = time;
 
+		},
+
+		unload: function(){
+
+			for (var pageI in this.pages) {
+				this.pages[pageI].unload();
+			}
+
+			this.stopAllEventsAndListeners();
+			if (this.hasOwnProperty('unhookAllHooks')) {
+				this.unhookAllHooks();
+			}
+			this.unregisterAllHooks();
+
+			this.stopListeningTo(EVERYTHING);
 		}
 	};
 

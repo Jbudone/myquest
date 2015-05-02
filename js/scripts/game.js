@@ -513,7 +513,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
 						x    = item.coord.x,//item.coord - y*Env.pageWidth,
 						tile = new Tile( x, y ),
-						path = map.pathfinding.findPath( player, tile ),
+						path = map.pathfinding.findPath( The.player, tile ),
 						pickupItem = function(){
 							server.request(EVT_GET_ITEM, { coord: ((item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x)), page: item.page })
 								.then(function(){
@@ -534,7 +534,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					if (path == ALREADY_THERE) {
 						pickupItem();
 					} else {
-						player.addPath(path).finished(pickupItem, function(){
+						The.player.addPath(path).finished(pickupItem, function(){
 							console.log("Awww I couldn't get the item :(");
 						});
 					}
@@ -610,7 +610,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				user.hook('clickedInteractable', this).after(function(interactableID){
 					if (!map.interactables.hasOwnProperty(interactableID)) throw new Error("Interactable ("+ interactableID +") not found!");
 					var interactable = map.interactables[interactableID],
-						path         = map.pathfinding.findPath( player, interactable.positions, { range: 1, adjacent: false }),
+						path         = map.pathfinding.findPath( The.player, interactable.positions, { range: 1, adjacent: false }),
 						destination  = null,
 						nearestTile  = null,
 						coord        = null;
@@ -689,7 +689,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 					if (path == ALREADY_THERE) {
 						readyToInteract(); // Already there
 					} else {
-						player.addPath(path).finished(readyToInteract, function(){
+						The.player.addPath(path).finished(readyToInteract, function(){
 							console.log("Awww I couldn't interact with the interactable thingy :(");
 						});
 					}

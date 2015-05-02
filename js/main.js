@@ -220,6 +220,7 @@ try{
 
 	window.errorInGame = errorInGame;
 
+
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
 	// ----------------------------------------------------------------------------------------- //
@@ -252,6 +253,10 @@ try{
 				else if (loadingPhase==LOADING_CONNECTION) connectToServer();
 				else if (loadingPhase==LOADING_INITIALIZATION) initializeGame();
 			}
+		}, retryConnection=function(){
+
+			loadingPhase = LOADING_RESOURCES;
+			loaded();
 		}, connectToServer=function(){
 			// Connect to the server
 
@@ -267,7 +272,43 @@ try{
 
 			server.onDisconnect = function(){
 				Log("Disconnected from server..");
+
+				if (window['hasConnected']) {
+					// Server D/C'd
+					Disconnected("Server has disconnected", "Please try refreshing the page and starting again", "NOTE: it may take a moment for the server to come back online");
+				} else {
+					Disconnected("Server is not online", "Please try coming back later when the server is back online (it usually takes a few seconds)");
+				}
+
+
+				The.user.unhook(The.player.character.brain.instincts.combat)
+				The.user.unhook(game);
+				The.user.unhook(Game);
+				The.user.unhook(The.user);
+
+				The.user.unload();
+				The.map.unload();
+
 				Game.disconnected();
+				server.websocket.close();
+				delete server.websocket; // FIXME: anything else to do for cleanup?
+				delete server;
+
+				// The.UI.unload();
+				$('.movable-ui').remove();
+				The.UI.unload();
+				delete The.UI;
+				delete ui;
+
+				// The.renderer.unload();
+				delete The.renderer;
+				delete renderer;
+
+
+
+
+				// TODO: allow reconnecting..
+				//setTimeout(retryConnection, 1000);
 			};
 
 			// server.onNewCharacter = function(player){
@@ -318,6 +359,12 @@ try{
 					postLoginCallback = callback;
 				};
 
+				if (window['hasConnected']) {
+					Login(hasConnected.username, hasConnected.password, function(err){
+						hideDisconnected();
+					});
+				}
+
 			}, function(evt){
 				console.error(evt);
 			})
@@ -334,7 +381,6 @@ try{
 
 			Resources = (new Resources());
 			window['Resources'] = Resources;
-			// FIXME: initialize with array of resources? Shouldn't this be apart of client/server specific Resources.js?
 			Resources.initialize(['sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
 				loaded('resources');
 			})
@@ -366,6 +412,7 @@ try{
 			var ui       = new UI(),
 				renderer = new Renderer();
 			The.UI   = ui;
+			User.initialize();
 			The.user = User;
 			Game.start(ui, renderer);
 		};

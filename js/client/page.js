@@ -44,6 +44,11 @@ define(function(){
 
 
 			this.stopAllEventsAndListeners();
+			if (this.hasOwnProperty('unhookAllHooks')) {
+				this.unhookAllHooks();
+			}
+
+			this.stopListeningTo(EVERYTHING);
 		}
 	};
 

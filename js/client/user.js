@@ -11,10 +11,13 @@ define(['hookable', 'dynamic', 'loggable'], function(Hookable, Dynamic, Loggable
 			if (_.isUndefined(evt)) return;
 		};
 
-		this.registerHook('clickedEntity');
-		this.registerHook('clickedTile');
-		this.registerHook('clickedItem');
-		this.registerHook('clickedInteractable');
+		this.initialize = function(){
+			this.registerHook('clickedEntity');
+			this.registerHook('clickedTile');
+			this.registerHook('clickedItem');
+			this.registerHook('clickedInteractable');
+		}
+
 		this.clickedEntity = function(entity){
 			if (!this.doHook('clickedEntity').pre(entity)) return;
 			this.Log("Clicked entity");
@@ -38,6 +41,9 @@ define(['hookable', 'dynamic', 'loggable'], function(Hookable, Dynamic, Loggable
 			this.doHook('clickedTile').post(tile);
 		};
 
+		this.unload = function(){
+			this.unregisterAllHooks();
+		};
 	});
 
 	return User;

@@ -123,6 +123,7 @@ define(function(){
 
 	addKey('REQ_REGISTER'); // Login requests
 
+	addKey('EVERYTHING'); // Indicator
 
 	return keys;
 });

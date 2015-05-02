@@ -99,7 +99,14 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			};
 
 		this.connected = function(){
+		};
 
+		this.disconnected = function(){
+			The.player.stopAllEventsAndListeners(The.map);
+			The.scriptmgr.unload();
+			if (this.hasOwnProperty('unhookAllHooks')) this.unhookAllHooks();
+
+			window['isGameRunning'] = false;
 		};
 
 		this.loadedPlayer = function(player){
@@ -119,6 +126,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 		this.initialize = function(evt, _server){
 
 
+			window['isGameRunning'] = true;
 			Log("Initializing map");
 			The.map = new Map();
 			The.map.loadMap(evt.map);
@@ -162,10 +170,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					}
 				}
 			};
-		};
-
-		this.disconnected = function(){
-
 		};
 
 		this.start = function(_ui, _renderer){
@@ -213,6 +217,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				var speed = 50,
 					gameLoop = function() {
 
+						if (!isGameRunning) return;
+
 						time = new Date().getTime();
 
 						The.map.step(time);
@@ -225,6 +231,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 						// requestAnimationFrame(gameLoop);
 						setTimeout(gameLoop, speed);
 					}, render = function(){
+
+						if (!isGameRunning) return;
 
 						var _time = new Date().getTime();
 						The.camera.step(_time);
@@ -763,6 +771,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							if (--loading == 0) loaded();
 						}, function(err){ errorInGame(err); })
 						.catch(Error, errorInGame);
+					} else {
+						--loading;
 					}
 
 					if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
@@ -771,6 +781,12 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							if (--loading == 0) loaded();
 						}, function(err){ errorInGame(err); })
 						.catch(Error, errorInGame);
+					} else {
+						--loading;
+					}
+
+					if (loading === 0) {
+						loaded();
 					}
 
 				}, function(){

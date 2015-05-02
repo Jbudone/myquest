@@ -138,18 +138,28 @@ define(function(){
 		stopListeningTo:function(obj,id){
 			// FIXME: look through this.listeningTo for (obj,id) pair instead
 			if (id==null) {
-				var removedAny=false;
-				for (var id in obj.evtListeners) {
-					removedAny |= obj.removeEventListener(id,this);
-				}
-
-				for (var i=0; i<this.listeningTo.length; ++i) {
-					if (this.listeningTo[i].obj == obj) {
-						this.listeningTo.splice(i, 1);
-						--i;
+				if (obj==EVERYTHING) {
+					// Remove everything we're listening to
+					var removedAny=false;
+					for (var i=0; i<this.listeningTo.length; ++i) {
+						var eventfulData = this.listeningTo[i];
+						removedAny |= eventfulData.obj.removeEventListener(eventfulData.id, this);
 					}
+					this.listeningTo = [];
+				} else {
+					var removedAny=false;
+					for (var id in obj.evtListeners) {
+						removedAny |= obj.removeEventListener(id,this);
+					}
+
+					for (var i=0; i<this.listeningTo.length; ++i) {
+						if (this.listeningTo[i].obj == obj) {
+							this.listeningTo.splice(i, 1);
+							--i;
+						}
+					}
+					return removedAny;
 				}
-				return removedAny;
 			} else {
 				var result = obj.removeEventListener(id,this);
 
