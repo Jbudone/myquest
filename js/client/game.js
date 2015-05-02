@@ -236,6 +236,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 						var _time = new Date().getTime();
 						The.camera.step(_time);
+						The.camera.updated = true; // FIXME: this redraws the background, which is NOT acceptable!! this was already being updated automatically most of the time, but if you stand at (14,7) in the home then it doesn't update and you see the issue. Apparently this is due to static sprites being drawn to entities rather than background (simply update this)
 						renderer.ui.step(_time);
 						renderer.render();
 						// requestAnimationFrame(render);
@@ -569,6 +570,23 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 				// Start gameloop
 				gameLoop();
+				ui.postMessage("This game is under heavy development", MESSAGE_PROGRAM);
+				ui.postMessage("Updates are committed regularly to Github but uploaded only occasionally", MESSAGE_PROGRAM);
+				ui.postMessage("What's supported right now?", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Zoning (pages/maps)", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ NPCs & AI", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Combat (mostly working)", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Items", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Interaction (eg. clicking on king or TV)", MESSAGE_PROGRAM);
+				ui.postMessage("What's on the TODO list?", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Error handling", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Bots", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Periodic saving/backups", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ XP/Levelling", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ Character Inventory", MESSAGE_PROGRAM);
+				ui.postMessage(" ", MESSAGE_PROGRAM);
+				ui.postMessage(" ", MESSAGE_PROGRAM);
+				ui.postMessage(" ", MESSAGE_PROGRAM);
 				ui.postMessage("Game has started.. Welcome to MyQuest!..", MESSAGE_PROGRAM);
 				ui.postMessage("\
              __  __        ____                  _   \n\

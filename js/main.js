@@ -202,6 +202,7 @@
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
+				//		- The.camera.updated
 
 define(['resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function(Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
 try{

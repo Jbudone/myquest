@@ -296,7 +296,6 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 				});
 				
 				var interact = function(evt, data){
-					console.log('interaction');
 						var err              = null,
 							coord            = null,
 							page             = null,
