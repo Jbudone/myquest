@@ -214,16 +214,16 @@ define(['loggable'], function(Loggable){
 		this.initialize = function(){
 			// initialize this script
 			if (this.initialized) return;
-			try {
+			// try {
 				this.localizeScript(this._script);
 				if (this._script.hasOwnProperty('initialize')) {
 					this._script.initialize.bind(this)();
 				}
-			} catch(e){
-				console.error(e);
-				console.error(e.stack);
-				return false;
-			}
+			// } catch(e){
+			// 	console.error(e);
+			// 	console.error(e.stack);
+			// 	return false;
+			// }
 
 			for (var componentKey in this._script.components) {
 				var component = (new this._script.components[componentKey]());

@@ -220,7 +220,7 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 				}, function(e){
 					console.error("Could not load scripts!");
 					console.error(e);
-				});
+				}).catch(Error, errorInGame);
 
 			};
 
@@ -257,7 +257,18 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 
 			   errorInGame = function(e){
-				   
+
+				   try {
+					   if (_.isError(e)) {
+						   console.error(e.message);
+						   console.trace();
+					   } else if (_.isString(e)) {
+						   console.error(e);
+						   console.trace();
+					   } else {
+						   console.trace();
+					   }
+				   } catch(e){ }
 				   exitGame(e);
 			   };
 

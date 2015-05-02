@@ -57,7 +57,7 @@ define(function(){
 				try {
 					data = JSON.parse(data);
 				} catch(e){
-					return Error("Bad JSON given");
+					return new Error("Bad JSON given");
 				}
 			}
 

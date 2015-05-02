@@ -24,7 +24,6 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 						console.log("WE HEARD A MESSAGE?!");
 						console.log(data.message);
 						var success = true;
-						if (data.message == "123") success = false;
 						player.respond(evt.id, success, {
 							message: data.message
 						});
@@ -51,7 +50,6 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 				console.log("Chatter is for Client");
 				UI.hook('inputSubmit', this).before(function(msg){
 					console.log("Chatter[pre]: "+msg);
-					if (msg == "1234") return false;
 					return true;
 				}).after(function(msg){
 					console.log("Chatter[post]: "+msg);
