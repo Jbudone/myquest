@@ -193,6 +193,7 @@
 				//		- Test: Bot interface; abstract Test base script (allow for easily adding multiple
 				//				test scripts); get errors from Bots; run through Grunt; speed time
 				//		- Interaction: (talkto) Chat bubble
+				//		- Server configs: http://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
 				//
 				//	ERRORS
 				//		- ALL Files!

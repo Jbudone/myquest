@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+echo "Subject: Error on Myquest" > emailFile
+echo "Hello Master" >> emailFile
+echo "It appears the game has crashed.. When you have a moment out of your busy lifestyle, please look into this." >> emailFile
+echo " " >> emailFile
+echo " " >> emailFile
+echo " " >> emailFile
+tail -n 100 nohup.out >> emailFile
+sendmail Jbud@live.ca < emailFile
