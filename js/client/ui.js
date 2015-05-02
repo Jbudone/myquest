@@ -144,7 +144,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 		this.postMessage = function(message, messageType){
 			messageType = messageType || MESSAGE_INFO;
 			this.messageBox.append( $('<span/>').addClass('message').addClass('message-' + messageType).text(message) );
-			this.messageBox[0].scrollTop = this.messageBox.height();
+			this.messageBox[0].scrollTop = this.messageBox[0].scrollHeight;
 		};
 
 		// Movables list

@@ -186,9 +186,7 @@
 				//
 				//	TOP PRIORITY
 				//		- Chat system
-				//		- Account: register/login, show character on startup, password, respawn spot, periodic
-				//					saving, client refreshes page when server crashes (notified when server
-				//					ready)
+				//		- Account: respawn spot, periodic saving
 				//		- XP/Leveling
 				//		- Items: hardcoded values (loot chance, loot items, decay rate); inventory, UI
 				//		- UI: game+inventory+character-sheet+chat
@@ -203,6 +201,7 @@
 				//		- unload helpers: automatically keep track of hooks/listeners/etc. and unload all of those
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
+				//		- CLEAN: isGameRunning  in window
 
 define(['resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function(Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
 try{
