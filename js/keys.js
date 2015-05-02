@@ -101,7 +101,7 @@ define(function(){
 	addKey('SOUTH');
 	addKey('WEST');
 
-	addKey('EVT_TESTJB');
+	addKey('EVT_CHAT');
 
 	addKey('HOOK_INTO_MAP');
 

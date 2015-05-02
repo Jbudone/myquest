@@ -341,3 +341,8 @@ h3 {
 	font-size: 14px;
 	margin-top: 10px;
 }
+
+#input {
+	width: 100%;
+	height: 24px;
+}

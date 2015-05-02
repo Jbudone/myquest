@@ -19,8 +19,8 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 					console.log("Chatter would like to listen to ["+entity.id+"] for messages..");
 					
 					var player = entity.player;
-					player.registerHandler(EVT_TESTJB, 'chat');
-					player.handler(EVT_TESTJB).set(function(evt, data){
+					player.registerHandler(EVT_CHAT, 'chat');
+					player.handler(EVT_CHAT).set(function(evt, data){
 						console.log("WE HEARD A MESSAGE?!");
 						console.log(data.message);
 						var success = true;
@@ -31,9 +31,9 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 
 						if (success) {
 							// Broadcast to pages
-							player.movable.page.broadcast(EVT_TESTJB, {
+							player.movable.page.broadcast(EVT_CHAT, {
 								player: player.id,
-								message: "Player "+player.id+": "+data.message
+								message: entity.name+" says: "+data.message
 							});
 						}
 					});
@@ -49,13 +49,13 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		this.client = {
 			initialize: function(){
 				console.log("Chatter is for Client");
-				UI.hook('input', this).before(function(msg){
+				UI.hook('inputSubmit', this).before(function(msg){
 					console.log("Chatter[pre]: "+msg);
 					if (msg == "1234") return false;
 					return true;
 				}).after(function(msg){
 					console.log("Chatter[post]: "+msg);
-					server.request(EVT_TESTJB, {
+					server.request(EVT_CHAT, {
 						message: msg
 					}).then(function(){
 						console.log("Success in sending message! "+msg);
@@ -66,15 +66,15 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 					.error(function(e){ errorInGame(e); });
 				});
 
-				server.registerHandler(EVT_TESTJB, 'chat');
-				server.handler(EVT_TESTJB).set(function(evt, data){
+				server.registerHandler(EVT_CHAT, 'chat');
+				server.handler(EVT_CHAT).set(function(evt, data){
 					UI.postMessage(data.message, MESSAGE_INFO);
 				});
 			},
 
 			unload: function(){
 				if (!_.isUndefined(UI)) UI.unhook(this);
-				if (!_.isUndefined(server)) server.handler(EVT_TESTJB).unset();
+				if (!_.isUndefined(server)) server.handler(EVT_CHAT).unset();
 			}
 		};
 	};

@@ -130,9 +130,19 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 				var msg = $(this).val();
 				if (!that.doHook('input').pre(msg)) return;
 
-				console.log("Message: "+msg);
-
 				that.doHook('input').post(msg);
+			});
+
+			this.registerHook('inputSubmit')
+			$('#inputForm').on('submit', function(evt){
+				var msg = $('#input').val();
+				if (!that.doHook('inputSubmit').pre(msg)) return;
+
+				console.log("Message: "+msg);
+				$('#input').val('');
+				
+				that.doHook('inputSubmit').post(msg);
+				return false;
 			});
 		};
 
