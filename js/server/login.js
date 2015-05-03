@@ -19,8 +19,26 @@ define(function(){
 						password = request.password,
 						email    = request.email;
 
-					if (!_.isString(username) || !_.isString(password) || !_.isString(email)) {
-						reply = {success:false, reason:'Bad username/password/email'};
+
+					// Validation
+					var err = null;
+					var filteredUsername = Env.login.filterUsername.exec(username);
+					if (!_.isString(username) || !_.isArray(filteredUsername) || filteredUsername.length != 1 || filteredUsername[0] != username) {
+						err = "Bad username";
+					}
+
+					var filteredPassword = Env.login.filterPassword.exec(password);
+					if (!_.isString(password) || !_.isArray(filteredPassword) || filteredPassword.length != 1 || filteredPassword[0] != password) {
+						err = "Bad password";
+					}
+
+					var filteredEmail = Env.login.filterEmail.exec(email);
+					if (!_.isString(email) || !_.isArray(filteredEmail) || filteredEmail.length != 1 || filteredEmail[0] != email) {
+						err = "Bad email";
+					}
+
+					if (err) {
+						reply = {success:false, reason: err};
 						res.end(JSON.stringify(reply));
 					} else {
 						db.registerUser(username, password, email).then(function(err, id){

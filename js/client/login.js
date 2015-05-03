@@ -62,21 +62,38 @@ $(document).ready(function(){
 				email        = $('#registerEmail').val();
 
 			// Validation
-			if (!_.isString(username) || username.length < 1) {
+			var filteredUsername = Env.login.filterUsername.exec(username);
+			$('#registerUsername').removeClass('error');
+			$('#registerUsernameMessage').text("");
+			if (!_.isString(username) || !_.isArray(filteredUsername) || filteredUsername.length != 1 || filteredUsername[0] != username) {
 				$('#registerUsername').addClass('error');
-				$('#registerUsernameMessage').text("Invalid username");
+				$('#registerUsernameMessage').text("Invalid username. Expects alphanumeric string between {2,10} characters");
 				return false;
 			}
 
-			if (!_.isString(password) || password.length < 1) {
+			var filteredPassword = Env.login.filterPassword.exec(password);
+			$('#registerPassword').removeClass('error');
+			$('#registerPasswordMessage').text("");
+			if (!_.isString(password) || !_.isArray(filteredPassword) || filteredPassword.length != 1 || filteredPassword[0] != password) {
 				$('#registerPassword').addClass('error');
-				$('#registerPasswordMessage').text("Invalid password");
+				$('#registerPasswordMessage').text("Invalid password. Expects alphanumeric string between {0,100} characters");
 				return false;
 			}
 
+			$('#registerPasswordConfirm').removeClass('error');
+			$('#registerPasswordConfirmMessage').text("");
 			if (!_.isString(passwordConf) || password != passwordConf) {
 				$('#registerPasswordConfirm').addClass('error');
 				$('#registerPasswordConfirmMessage').text("Password is not the same");
+				return false;
+			}
+
+			$('#registerEmail').removeClass('error');
+			$('#registerEmailMessage').text("");
+			var filteredEmail = Env.login.filterEmail.exec(email);
+			if (!_.isString(email) || !_.isArray(filteredEmail) || filteredEmail.length != 1 || filteredEmail[0] != email) {
+				$('#registerEmail').addClass('error');
+				$('#registerEmailMessage').text("That's not your actual email, is it?");
 				return false;
 			}
 

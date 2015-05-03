@@ -30,6 +30,12 @@ define(function(){
 			serverTimeBetweenMessages: 400
 		};
 
+		this.login = {
+			filterUsername: /\w{2,10}/,
+			filterPassword: /\w{0,100}/, // Allow 0 length passwords for crazy/lazy people
+			filterEmail: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/i, // Found here: http://www.regular-expressions.info/email.html
+		};
+
 		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
 			logVerbose = logImportant | LOG_INFO | LOG_DEBUG;
 		this.logmask = {
