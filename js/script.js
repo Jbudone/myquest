@@ -52,6 +52,7 @@ define(['loggable'], function(Loggable){
 
 		this._script = null;
 		this.children = [];
+		this.components = [];
 		this.parent = null;
 		this.initialized = false;
 		this.getSubscription = function(obj, id){
@@ -232,6 +233,7 @@ define(['loggable'], function(Loggable){
 					var result = component.initialize.bind(this)();
 					if (result === false) return false;
 				}
+				this.components.push(component);
 			}
 
 			// initialize all child scripts
@@ -248,7 +250,12 @@ define(['loggable'], function(Loggable){
 
 		this.unload = function(){
 
-			// FIXME: unload components?
+			for (var i=0; i<this.components.length; ++i) {
+				var component = this.components[i];
+				if (component.hasOwnProperty('unload')) {
+					component.unload();
+				}
+			}
 			
 			for (var i=0; i<this.children.length; ++i) {
 				this.children[i].unload();

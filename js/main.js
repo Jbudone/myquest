@@ -188,7 +188,7 @@
 				//		- Chat system
 				//		- Account: respawn spot, periodic saving
 				//		- XP/Leveling
-				//		- Items: hardcoded values (loot chance, loot items, decay rate); inventory, UI
+				//		- Items: hardcoded values (loot chance, loot items, decay rate); inventory (belt?), UI
 				//		- UI: game+inventory+character-sheet+chat
 				//		- Test: Bot interface; abstract Test base script (allow for easily adding multiple
 				//				test scripts); get errors from Bots; run through Grunt; speed time
@@ -204,10 +204,15 @@
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
-				//		- The.camera.updated
-				//		- Game chat: listening multiple times on zone
 				//
-				//		- Uncaught Error: Character (17) already respawninggame.js:121 (anonymous function)hookable.js:121 posthookable.js:286 callPostHookcharacter.js:83 diecharacter.js:61 hurtgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
+				//		- The.camera.updated
+				//		- Health on zone / login
+				//		- Regen
+				//		- Firefox: king sprite
+				//		- Chat restrictions; Character name/email/password restrictions
+				//		- Health bar as long as character name (fixed length!)
+				//
+				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
 				//		- Uncaught ReferenceError: player is not definedmap.js:364 Map.recalibratePathgame.js:377 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage

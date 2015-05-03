@@ -205,6 +205,10 @@ DB
 	* Various scripts could be attached to an object in the Engine (eg. Character & Movable)
 	* Engine object should NEVER listen to or access scripts
 
+====== Script
+
+	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
+
 
 
 ERRORS

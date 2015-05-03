@@ -38,7 +38,11 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 					});
 				});
 
-				// FIXME: keep track of players & remove when necessary
+				game.hook('removedplayer', this).after(function(entity){
+					
+					var player = entity.player;
+					player.handler(EVT_CHAT).unset();
+				});
 			},
 
 			unload: function(){
@@ -48,7 +52,7 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		this.client = {
 			initialize: function(){
 				console.log("Chatter is for Client");
-				UI.hook('inputSubmit', this).before(function(msg){
+				UI.hook('inputSubmit', _self).before(function(msg){
 					console.log("Chatter[pre]: "+msg);
 					return true;
 				}).after(function(msg){
@@ -71,7 +75,7 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			},
 
 			unload: function(){
-				if (!_.isUndefined(UI)) UI.unhook(this);
+				if (!_.isUndefined(UI)) UI.unhook(_self);
 				if (!_.isUndefined(server)) server.handler(EVT_CHAT).unset();
 			}
 		};
