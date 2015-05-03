@@ -146,7 +146,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			this.registerHook('inputSubmit')
 			$('#inputForm').on('submit', function(evt){
 				var msg = $('#input').val();
-				if (!that.doHook('inputSubmit').pre(msg)) return;
+				if (!that.doHook('inputSubmit').pre(msg)) return false;
 
 				console.log("Message: "+msg);
 				$('#input').val('');

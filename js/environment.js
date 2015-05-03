@@ -24,6 +24,12 @@ define(function(){
 		this.tileScale=2;
 		this.isServer=false;
 
+		this.chat = {
+			maxMessageLength: 140,
+			clientTimeBetweenMessages: 500,
+			serverTimeBetweenMessages: 400
+		};
+
 		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
 			logVerbose = logImportant | LOG_INFO | LOG_DEBUG;
 		this.logmask = {

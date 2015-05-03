@@ -106,6 +106,8 @@
 				//	> CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
 				//	> CLEAN: switch to ES6 syntax -- https://github.com/lukehoban/es6features http://babeljs.io/docs/learn-es6/
 				//	> CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
+				//	> CLEAN: temporary movable._character property should be abstracted so that it doesn't
+				//				need to be copied in multiple places
 				//
 				//
 				//	
