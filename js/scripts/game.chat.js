@@ -29,6 +29,13 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 						player.timeSinceLastMessage = now();
 						console.log("WE HEARD A MESSAGE?!");
 						console.log(data.message);
+
+						var message = data.message.trim();
+						if (message.length == 0 || message.length > Env.chat.maxMessageLength) {
+							console.log("Ignoring user message.. too long OR blank");
+							return;
+						}
+
 						var success = true;
 						player.respond(evt.id, success, {
 							message: data.message
@@ -67,9 +74,17 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 						return false;
 					}
 					_self.timeSinceLastMessage = now();
+
+					msg = msg.trim();
+					if (msg.length == 0 || msg.length > Env.chat.maxMessageLength) {
+						console.log("Ignoring user message.. too long OR blank");
+						return false;
+					}
+
 					return true;
 				}).after(function(msg){
 					console.log("Chatter[post]: "+msg);
+					msg = msg.trim();
 					server.request(EVT_CHAT, {
 						message: msg
 					}).then(function(){
