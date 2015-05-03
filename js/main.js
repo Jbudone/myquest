@@ -204,8 +204,8 @@
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
+				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
 				//
-				//		- Health on zone / login
 				//		- Regen
 				//		- Firefox: king sprite
 				//		- Chat restrictions; Character name/email/password restrictions

@@ -112,6 +112,7 @@ FIXME FIXME FIXME FIXME FIXME
 							if (!isZoning) {
 
 								this.Log("	Adding player (me) to page");
+								The.player._character       = movable._character;
 								The.player.position.local = {
 									y: movable.localY,
 									x: movable.localX
@@ -135,7 +136,7 @@ FIXME FIXME FIXME FIXME FIXME
 							entity.position.local.x = movable.localX;
 							entity.sprite.state     = movable.state;
 							entity.zoning           = movable.zoning;
-							entity.health           = movable.health;
+							entity._character       = movable._character;
 							entity.page             = this.pages[pageI];
 							if (movable.hasOwnProperty('name')) {
 								entity.name = movable.name;

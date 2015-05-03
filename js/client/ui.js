@@ -50,10 +50,20 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 					this.ui.css('left', left + 'px');
 					this.ui.css('top', top + 'px');
 
-					var health = 100;
-					if (this.movable.hasOwnProperty('character')) {
-						health = 100 * Math.max(0, this.movable.character.health) / this.movable.npc.health;
+					var health     = 100,
+						realHealth = null;
+					if (this.movable.hasOwnProperty('_character')) {
+						// In case the movable is loading for the first time, the older character object has
+						// not yet been replaced with the new character, so use the new character parameters
+						// before they're transferred to the new character object
+						realHealth = this.movable._character.health;
+					} else if (this.movable.hasOwnProperty('character')) {
+						realHealth = this.movable.character.health;
+					} else {
+						realHealth = 0;
 					}
+
+					health = 100 * Math.max(0, realHealth) / this.movable.npc.health;
 					this.ui_healthbar_health.css('width', health + '%');
 				};
 				this.clear = function(){

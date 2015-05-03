@@ -153,13 +153,18 @@ define(['movable'], function(Movable){
 				// movables, paths on movables
 				serialized.movables = {};
 				for (var entityID in this.movables) {
-					var entity = this.movables[entityID],
-						path   = null,
-						ent    = null;
+					var entity     = this.movables[entityID],
+						path       = null,
+						ent        = null,
+						_character = null;
 
 					if (entity.path) {
 						path = entity.path.serialize();
 						if (_.isError(path)) return path;
+					}
+
+					_character = {
+						health: entity.character.health
 					}
 
 					ent = {
@@ -170,7 +175,7 @@ define(['movable'], function(Movable){
 						state: entity.sprite.state,
 						zoning: entity.zoning,
 						path: path,
-						health: entity.health,
+						_character: _character,
 					};
 					if (entity.hasOwnProperty('name')) {
 						ent.name = entity.name;

@@ -9,8 +9,6 @@ define(function(){
 		},
 
 		unload: function(){
-			console.warn("Unloading Page ["+this.index+"]");
-
 
 			for (var interactableCoord in this.interactables) {
 				var interactableID = this.interactables[interactableCoord],

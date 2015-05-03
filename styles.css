@@ -241,6 +241,7 @@ h3 {
 
 .movable-ui {
 	position: absolute;
+	pointer-events: none;
 }
 
 .movable-name {

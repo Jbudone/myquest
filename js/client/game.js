@@ -510,7 +510,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				server.onRespawn = function(map, pages, player){
 
 					Log("Respawning..");
-					The.player.health = player.health;
+					The.player._character = player._character;
 					The.player.physicalState.transition( STATE_ALIVE );
 
 					var oldMap = The.map;

@@ -105,6 +105,11 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (!this.doHook('addedcharacter').pre(entity)) return;
 			this.characters[entityID] = character;
 
+			if (!Env.isServer && entity.hasOwnProperty('_character')) {
+				character.health = entity._character.health;
+				delete entity._character;
+			}
+
 			character.hook('die', this).after(function(){
 				var result = null;
 				if (Env.isServer) {
@@ -401,6 +406,14 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				map = this.hookInto;
 				result = _game.detectEntities();
 				if (_.isError(result)) throw result;
+
+				// We need to re-create the character for the player; so copy over certain attributes here
+				// which will be loaded into the new character
+				if (The.player.hasOwnProperty('character') && !The.player.hasOwnProperty('_character')) {
+					The.player._character = {
+						health: The.player.character.health
+					}
+				}
 				result = _game.addUser();
 				if (_.isError(result)) throw result;
 

@@ -197,7 +197,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						localY: this.movable.position.local.y,
 						localX: this.movable.position.local.x,
 						page: this.movable.page.index,
-						health: this.movable.health
+						_character: {
+							health: this.movable.character.health
+						}
 					},
 					pages:{}
 			}, result = null;
