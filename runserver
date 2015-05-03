@@ -2,7 +2,10 @@
 
 while true
 do
-	nodejs js/server.js
+
+	# Source for node configs
+	# http://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+	nodejs --nouse-idle-notification --expose-gc --max-new-space-size=2048 --max-old-space-size=8192 js/server.js
 
 	echo "Server Shutdown... restarting in 5 seconds"
 	./emailcrash
