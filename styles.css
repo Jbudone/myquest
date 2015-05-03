@@ -253,13 +253,15 @@ h3 {
 }
 
 .movable-healthbar {
-	width: 100%;
-	min-width: 40px;
+	/* width: 100%; */
+	/* min-width: 40px; */
 	background: black;
 	height: 8px;
 	border-radius: 4px;
 	border: 1px solid #999;
 	overflow: hidden;
+	margin: auto;
+	width: 40px;
 }
 
 .movable-health {

@@ -209,7 +209,6 @@
 				//		- Regen
 				//		- Firefox: king sprite
 				//		- Chat restrictions; Character name/email/password restrictions
-				//		- Health bar as long as character name (fixed length!)
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
