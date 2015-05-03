@@ -41,10 +41,16 @@ define(['page','movable'], function(Page,Movable){
 			this.listenTo(this, EVT_ZONE, function(map, entity, oldPage, newPage){
 				if (!newPage) {
 					var result = null;
-					result = this.unwatchEntity(entity);
+					result = this.removeEntity(entity);
 					if (_.isError(result)) throw result;
 				}
 			});
+
+			this.listenTo(this, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {
+				var result = null;
+				result = this.removeEntity(entity);
+				if (_.isError(result)) throw result;
+			}, HIGH_PRIORITY);
 		},
 
 		addPages: function(addedPages, isZoning){

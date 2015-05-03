@@ -18,6 +18,8 @@
 	"mongodb": "*",
 	"redis": "*",
 	"hiredis": "*",
-	"ws": "*"
+	"ws": "*",
+	"requirejs": "*",
+	"underscore": "*"
   }
 }

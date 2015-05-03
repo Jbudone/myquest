@@ -314,20 +314,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 					var page   = The.map.pages[page],
 						entity = page.movables[removedEntity.id];
-					delete page.movables[removedEntity.id];
-					for (var i=0; i<page.updateList.length; ++i) {
-						if (page.updateList[i] == entity) {
-							page.updateList.splice(i,1);
-							break;
-						}
-					}
-
-					The.map.unwatchEntity(entity);
-					// TODO: stopListeningTo everything?
-					page.stopListeningTo(entity, EVT_FINISHED_WALK);
-					page.stopListeningTo(entity, EVT_STEP);
-					page.stopListeningTo(entity, EVT_PREPARING_WALK);
-
+					The.map.removeEntity(entity);
 				};
 
 				server.onEntityWalking = function(page, event){

@@ -5,13 +5,13 @@ A simple RPG game built for the web.
 RPG Game
 =================
 
-For lack of a better name, this is my RPG game. Its a web-based, scalable, multiplayer rpg game. And perhaps someday it will be defined as an mmorpg. This game is running on ***nodejs*** and ***mongodb*** for the serverside, it uses ***websockets*** for communication, and takes advantage of ***underscore***, ***jquery*** and ***requirejs***. I'm using ***tiled map editor*** for making my maps, and a homebrewed spritesheet & tilesheet editor found in the tools folder. Development testing is done almost entirely in Google Chrome for Linux; so if you have anything else than that, be ready for bugs :)  The game is running 24/7 on AWS.
+For lack of a better name, this is myquest. Its a web-based, scalable, multiplayer rpg game. And perhaps someday it will be defined as an mmorpg. This game is running on ***nodejs***, ***mongodb***, and ***redis*** for the serverside, it utilizes ***websockets*** for communication, and takes advantage of ***underscore***, ***jquery***, ***requirejs***, and ***bluebird*** libraries. I'm using ***tiled map editor*** for making my maps, and a homebrewed spritesheet & tilesheet editor found in the tools folder. Development testing is done almost entirely in Google Chrome for Linux; so if you have anything else than that, be ready for bugs :)  The game is running 24/7 on AWS EC2.
 
 
 Play now
 ------------
 
-The game is under heavy active development, and will not be playable until the end of summer 2014. However you are free to test the current functionality of the game over at, [myquest](http://jbud.me/playground/myquest)
+The game is under heavy active development, and contains many bugs. If something unexpected happens, the server crashes, reports the error, and restarts automatically. If this happens simply refresh the page and login again. I expect the game will be in a more playable state by the end of 2015. Create a character and play at: [myquest](http://jbud.me/playground/myquest)
 
 
 Client/Server

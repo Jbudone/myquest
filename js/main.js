@@ -194,6 +194,7 @@
 				//				test scripts); get errors from Bots; run through Grunt; speed time
 				//		- Interaction: (talkto) Chat bubble
 				//		- Server configs: http://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+				//		- testingLocal in Env  && hardCoded IP address
 				//
 				//	ERRORS
 				//		- ALL Files!
@@ -204,6 +205,13 @@
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
 				//		- The.camera.updated
+				//		- Game chat: listening multiple times on zone
+				//
+				//		- Uncaught Error: Character (17) already respawninggame.js:121 (anonymous function)hookable.js:121 posthookable.js:286 callPostHookcharacter.js:83 diecharacter.js:61 hurtgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
+				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
+				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
+				//		- Uncaught ReferenceError: player is not definedmap.js:364 Map.recalibratePathgame.js:377 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage
+				//
 
 define(['resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function(Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
 try{

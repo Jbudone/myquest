@@ -80,9 +80,16 @@ $(document).ready(function(){
 				return false;
 			}
 
+			var testingLocal = true,
+				url = null;
+			if (testingLocal) {
+				url = location.origin;
+			} else {
+				url = 'http://54.86.213.238';
+			}
 
 
-			$.getJSON(location.origin+':8124', {request:REQ_REGISTER, username: username, password: password, email: email}, function(reply){
+			$.getJSON(url+':8124', {request:REQ_REGISTER, username: username, password: password, email: email}, function(reply){
 
 				if (!reply || !_.isObject(reply)) {
 					$('#registerMessage').text("Server error..");

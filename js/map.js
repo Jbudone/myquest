@@ -95,6 +95,14 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			if (pageI != entity.page.index) {
 				newPage = this.pages[ pageI ];
 
+				if (!newPage && !Env.isServer) {
+					// Entity has zoned to another page which we don't have loaded yet
+					// There's no need to finish the rest of this, simply trigger a zone out
+					entity.page.triggerEvent(EVT_ZONE, entity, null);
+					this.triggerEvent(EVT_ZONE, entity, entity.page, null);
+					return;
+				}
+
 				// Moved to a new pages, need to set the proper local position
 				newPos = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
 				if (_.isError(newPos)) {
