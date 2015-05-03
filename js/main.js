@@ -196,7 +196,6 @@
 				//				test scripts); get errors from Bots; run through Grunt; speed time
 				//		- Interaction: (talkto) Chat bubble
 				//		- Server configs: http://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
-				//		- testingLocal in Env  && hardCoded IP address
 				//
 				//	ERRORS
 				//		- ALL Files!
@@ -210,7 +209,6 @@
 				//
 				//		- Regen
 				//		- Firefox: king sprite
-				//		- Character name/email/password restrictions
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
@@ -275,13 +273,7 @@ try{
 			// Connect to the server
 
 			server = new ServerHandler();
-			var testingLocal = true,
-				link = null;
-			if (testingLocal) {
-				link = 'ws://127.0.0.1:1338/';
-			} else {
-				link = 'ws://54.86.213.238:1338/';
-			}
+			var link = Env.connection.websocket;
 
 
 			server.onDisconnect = function(){

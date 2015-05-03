@@ -149,6 +149,7 @@ SERVER
 		  	git branch vX
 			git checkout vX
 			git pull origin master
+			update testingLocal in Environment.js
 
 			kill processes (ps -ef)
 			(update db)

@@ -30,11 +30,19 @@ define(function(){
 			serverTimeBetweenMessages: 400
 		};
 
-		this.login = {
-			filterUsername: /\w{2,10}/,
-			filterPassword: /\w{0,100}/, // Allow 0 length passwords for crazy/lazy people
-			filterEmail: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/i, // Found here: http://www.regular-expressions.info/email.html
+		var testingLocal = true;
+		this.connection = {
+			local: {
+				websocket: 'ws://127.0.0.1:1338/',
+				http: (typeof location != "undefined" ? location.origin : ''), // NOTE: server doesn't need this
+			},
+
+			server: {
+				websocket:'ws://54.86.213.238:1338/',
+				http: 'http://54.86.213.238',
+			}
 		};
+		this.connection = (testingLocal ? this.connection.local : this.connection.server);
 
 		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
 			logVerbose = logImportant | LOG_INFO | LOG_DEBUG;
@@ -60,6 +68,12 @@ define(function(){
 			'Interactable': (logVerbose),
 			'Redis': (logVerbose),
 			'Default': (logVerbose)
+		};
+
+		this.login = {
+			filterUsername: /\w{2,10}/,
+			filterPassword: /\w{0,100}/, // Allow 0 length passwords for crazy/lazy people
+			filterEmail: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/i, // Found here: http://www.regular-expressions.info/email.html
 		};
 	};
 

@@ -146,13 +146,7 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 			// Connect to the server
 
 			server = new ServerHandler();
-			var testingLocal = true,
-				link = null;
-			if (testingLocal) {
-				link = 'ws://127.0.0.1:1338/';
-			} else {
-				link = 'ws://54.86.213.238:1338/';
-			}
+			var link = Env.connection.websocket;
 
 
 			server.onDisconnect = function(){
