@@ -205,7 +205,6 @@
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
 				//
-				//		- The.camera.updated
 				//		- Health on zone / login
 				//		- Regen
 				//		- Firefox: king sprite

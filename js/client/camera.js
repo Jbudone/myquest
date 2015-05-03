@@ -45,6 +45,7 @@ define(['eventful'], function(Eventful){
 			// 		movements
 			// if (!The.map.curPage.neighbours.west) left=0;
 			// if (!The.map.curPage.neighbours.north) top=0;
+			/*
 			if (this.offsetX<left) {
 				this.offsetX+=move;
 				if (this.offsetX>left) this.offsetX=left;
@@ -62,13 +63,19 @@ define(['eventful'], function(Eventful){
 				if (this.offsetY<top) this.offsetY=top;
 				this.updated=true;
 			}
+			*/
 
 			if (time - this.lastUpdated > 2500) {
 				this.updated = true; // Use this as a just in case for background redraws
 				this.lastUpdated = time;
 			}
 
+			var offsetY = this.offsetY,
+				offsetX = this.offsetX;
 			this.centerCamera();
+			if (this.offsetY != offsetY || this.offsetX != offsetX) {
+				this.updated = true;
+			}
 		};
 	};
 

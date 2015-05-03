@@ -223,10 +223,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 						The.map.step(time);
 						The.scriptmgr.step(time);
-						// The.camera.step(time);
-						// renderer.ui.step(time);
-						// renderer.render();
-						
 
 						// requestAnimationFrame(gameLoop);
 						setTimeout(gameLoop, speed);
@@ -236,11 +232,10 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 						var _time = new Date().getTime();
 						The.camera.step(_time);
-						The.camera.updated = true; // FIXME: this redraws the background, which is NOT acceptable!! this was already being updated automatically most of the time, but if you stand at (14,7) in the home then it doesn't update and you see the issue. Apparently this is due to static sprites being drawn to entities rather than background (simply update this)
 						renderer.ui.step(_time);
 						renderer.render();
-						// requestAnimationFrame(render);
-						setTimeout(render, 20);
+						requestAnimationFrame(render);
+						// setTimeout(render, 20);
 					};
 				render();
 
