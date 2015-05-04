@@ -5,7 +5,7 @@
 		"sheet":"firefox",
 		"spawn":150,
 		"speed":15,
-		"health":150,
+		"health":15000,
 		"damage":5,
 		"AI":true
 	},

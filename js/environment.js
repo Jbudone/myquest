@@ -30,6 +30,10 @@ define(function(){
 			serverTimeBetweenMessages: 400
 		};
 
+		this.renderer = {
+			drawBorders: true, // Draws page borders (useful for debugging)
+		};
+
 		var testingLocal = true;
 		this.connection = {
 			local: {

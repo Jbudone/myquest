@@ -448,6 +448,18 @@ define(['loggable'], function(Loggable){
 				this.ctxEntities.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
 			}
 
+			if (Env.renderer.drawBorders) {
+				for(var i=0; i<neighbours.length; ++i) {
+					var neighbourInfo = neighbours[i],
+						neighbour = neighbourInfo.neighbour,
+						offX = neighbourInfo.offsetX,
+						offY = neighbourInfo.offsetY;
+
+					this.ctxEntities.strokeRect(scale*(offX - The.camera.offsetX), scale*(offY + The.camera.offsetY), Env.tileSize*scale*Env.pageWidth, Env.tileSize*scale*Env.pageHeight);
+				}
+			}
+
+
 		};
 
 		this.renderPage = function(page, startX, startY, endX, endY, offX, offY){

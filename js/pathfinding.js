@@ -174,8 +174,8 @@ define(['movable'], function(Movable){
 					tile = obj.position.tile,
 					tiles = [new Tile(tile.x, tile.y)];
 
-				if (Math.ceil(x)  > tile.x && Math.ceil(x)  <= this.map.mapWidth)  tiles.push( new Tile( tile.x + 1, tile.x ) );
-				if (Math.floor(x) < tile.x && Math.floor(x) >= 0)                  tiles.push( new Tile( tile.x - 1, tile.x ) );
+				if (Math.ceil(x)  > tile.x && Math.ceil(x)  <= this.map.mapWidth)  tiles.push( new Tile( tile.x + 1, tile.y ) );
+				if (Math.floor(x) < tile.x && Math.floor(x) >= 0)                  tiles.push( new Tile( tile.x - 1, tile.y ) );
 				if (Math.ceil(y)  > tile.y && Math.ceil(y)  <= this.map.mapHeight) tiles.push( new Tile( tile.x, tile.y + 1 ) );
 				if (Math.floor(y) < tile.y && Math.floor(y) >= 0)                  tiles.push( new Tile( tile.x, tile.y - 1 ) );
 				return tiles;

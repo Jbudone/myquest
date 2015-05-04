@@ -1189,9 +1189,16 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			if (!onTileY && !onTileX) {
 
-				this.Log("On this tile: "+ posX +", "+ posY, LOG_ERROR);
-				debugger; // NOTE: this seems to occur on client side, for other entities than the user
-				return new Error("findNearestTiles when not on a proper tileY NOR tileX");
+				// FIXME: THIS SHOULDN"T OCCUR BUT QUITE OFTEN DOES!
+				// this.Log("On this tile: "+ posX +", "+ posY, LOG_ERROR);
+				// debugger; // NOTE: this seems to occur on client side, for other entities than the user
+				// return new Error("findNearestTiles when not on a proper tileY NOR tileX");
+				var nearestTile = this.findNearestTile(posX, posY);
+				if (nearestTile instanceof Tile) {
+					tiles.push( nearestTile );
+				} else if (_.isError(nearestTile)) {
+					return nearestTile;
+				}
 
 			} else if (onTileY && onTileX) {
 

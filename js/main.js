@@ -183,6 +183,7 @@
 				// 	> Webworkers for maps/pages on server & Transferable objects
 				// 	> Db sharding
 				// 	> Caching techniques (hot/cold components; cache lines)
+				// 	> Mappy: base terrain generator (draws up mountains, water, random flowers/grass/etc.)
 				//
 				//
 				//
@@ -205,7 +206,14 @@
 				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
+				//		- Enemy path/chase prediction: when chasing user, don't update from their current tile, update from the tile they're moving to
+				//		- Enemy bad pathfinding (walking WAY off course randomly)
+				//		- Getting lots of goblins/deathknights to chase you causes problems
 				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
+				//		- Uncaught Error: Already watching this entity!map.js:145 Map.watchEntitymap.js:164 Map.addPagesgame.js:474 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
+				//		- Uncaught Error: Entity not a charactergame.js:146 Game.removeCharactergame.js:224 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookmap.js:219 Map.removeEntitypage.js:40 Page.unloadgame.js:470 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
+				//		- onTileX onTileY map.js:1120
+				//		- enemies cross between pages horizontally causes weird rendering effect of them floating away
 				//
 				//		- Regen
 				//		- Firefox: king sprite
@@ -214,7 +222,21 @@
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
 				//		- Uncaught ReferenceError: player is not definedmap.js:364 Map.recalibratePathgame.js:377 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage
-				//
+				//	
+
+				/*
+				holy shit
+￼<16:27:49> "3wolf919": I just got like 30 errors popping up
+￼<16:28:06> "3wolf919": Uncaught TypeError: Cannot read property 'x' of undefinedui.js:39 UI.components.MovableUI.updateui.js:242 UI.updateAllMovablesui.js:101 UI.stepgame.js:235 Game.start.render
+￼<16:28:14> "3wolf919": Uncaught TypeError: Cannot read property 'index' of undefinedgame.js:460 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
+￼<16:28:24> "3wolf919": Uncaught TypeError: Cannot read property 'movables' of undefinedgame.js:321 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage
+￼<16:29:13> "3wolf919": Going back to state..game.js:61 (anonymous function)bluebird.min.js:31 nbluebird.min.js:30 e.exports.e._settlePromiseFromHandlerbluebird.min.js:30 e.exports.e._settlePromiseAtbluebird.min.js:30 e.exports.e._settlePromisesbluebird.min.js:29 r._drainQueuebluebird.min.js:29 r._drainQueuesbluebird.min.js:29 drainQueues
+￼<16:29:22> "3wolf919": that last one just kinda spammed my console
+￼<16:30:01> "3wolf919": yep
+￼<16:30:28> "3wolf919": I was fighting goblins and getting them to chase me around
+￼<16:30:45> "3wolf919": and now when I try to move I get this game.js:463 Uncaught TypeError: Cannot read property 'y' of undefinedgame.js:463 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookuser.js:41 User.clickedTilegame.js:710 (anonymous function)ui.js:134 (anonymous function)
+￼<16:31:07> "3wolf919": close
+*/
 
 define(['resources','client/camera','client/serverHandler','loggable','client/renderer','client/ui','client/user','client/game'], function(Resources,Camera,ServerHandler,Loggable,Renderer,UI,User,Game) {
 try{
