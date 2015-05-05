@@ -54,6 +54,16 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 				this.Log("Sending walkTo request", LOG_DEBUG);
 				this.Log(state, LOG_DEBUG);
+
+
+
+				var safePath = The.map.pathfinding.checkSafeWalk(state, walk);
+				if (!safePath) {
+					debugger;
+					console.error("We created a path that wasn't safe...weird");
+					return false;
+				}
+
 				
 				server.walkTo(walk, state).then(function(){
 				}, function(response){
@@ -351,9 +361,29 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							adjustY = 0, // NOTE: in case walk already started and we need to adjust the 
 							adjustX = 0; // 	 path state
 
-						walk.fromJSON(event.path);
-						walk.walked = 0;
-						path.walks.push(walk);
+						// walk.fromJSON(event.path);
+						// walk.walked = 0;
+						// path.walks.push(walk);
+						path.fromJSON(event.path);
+						if (!path.walks) debugger;
+						if (path.walks && path.walks[0]) path.walks[0].walked = 0;
+
+						// FIXME: USED FOR DEBUGGING PURPOSES
+						var destination = null,
+							dX = pathState.x,
+							dY = pathState.y;
+						for (var walkI=0; walkI<path.walks.length; ++walkI) {
+							     if (walk.direction == NORTH) dY -= walk.distance;
+							else if (walk.direction == SOUTH) dY += walk.distance;
+							else if (walk.direction == WEST)  dX -= walk.distance;
+							else if (walk.direction == EAST)  dX += walk.distance;
+						}
+						entity._serverPosition = {
+							x: reqState.globalX,
+							y: reqState.globalY,
+							toX: dX / Env.tileSize,
+							toY: dY / Env.tileSize,
+						};
 
 
 						var success = The.map.recalibratePath(movableState, pathState, path, maxWalk);
@@ -407,6 +437,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							}
 
 						}
+
 					}
 
 				};

@@ -249,82 +249,16 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return err;
 			}
 
-
 			// 
 			// Check path is safe (no collisions)
 			//
+			//	This works by essentially finding the starting point for the path and walking along that path
+			//	to check if each tile is open.
+			//	NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only
+			//	1 walk)
 			////////////////////////////////////////
+			var safePath = map.pathfinding.checkSafeWalk(reqState, walk);
 
-			var start     = new Tile(reqState.globalX, reqState.globalY),
-				vert      = (walk.direction == NORTH || walk.direction == SOUTH),
-				positive  = (walk.direction == SOUTH || walk.direction == EAST),
-				walked    = 0,
-				tiles     = [],
-				k         = (vert ? player.position.local.y : player.position.local.x),
-				kT        = (vert ? start.globalY : start.globalX),
-				dist      = walk.distance,
-				safePath  = true,
-				nextTile  = start;
-
-
-			if (!map.isTileInRange(start)) {
-				this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
-				err = new GameError("Bad start of path");
-				return err;
-			}
-
-			k += (vert?your.page.y:your.page.x)*16;
-			var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
-				index            = null;
-				isSafe           = null;
-
-			if (_.isError(localCoordinates)) {
-				this.Log("Error finding tile for coordinates", LOG_ERROR);
-				localCoordinates.print();
-				err = new GameError("Error finding tile for coordinates");
-				return err;
-			}
-
-			index  = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-			isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-			if (!isSafe) safePath = false;
-			if (isSafe) {
-				while (walked<walk.distance) {
-					var distanceToTile = (positive? (kT+1)*16 - k : k - ((kT)*16 - 1));
-					if (vert) {
-						nextTile = nextTile.offset((positive?1:-1), 0);
-					}  else {
-						nextTile = nextTile.offset(0, (positive?1:-1));
-					}
-
-					// check tile
-					if (!map.isTileInRange(nextTile)) {
-						this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
-						safePath = false;
-						break;
-					}
-
-					var localCoordinates = map.localFromGlobalCoordinates(nextTile.x, nextTile.y);
-						index            = null;
-						isSafe           = null;
-
-					if (_.isError(localCoordinates)) {
-						safePath = false;
-						break;
-					}
-
-					index  = localCoordinates.y*Env.pageWidth + localCoordinates.x,
-					isSafe = (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-					if (!isSafe) {
-						safePath = false;
-						break;
-					}
-
-					walked += distanceToTile;
-					k += distanceToTile;
-					kT += (positive?1:-1);
-				}
-			}
 
 			var movableState = {
 					y: player.position.local.y + player.page.y * Env.tileSize, // NOTE: global real coordinates
@@ -349,6 +283,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				response.success = false;
 				response.state   = { x: movableState.x, y: movableState.y, localX: movableState.localX, localY: movableState.localY };
 				this.client.send(response.serialize());
+				debugger;
 				return;
 			}
 

@@ -262,7 +262,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 
 
-				var logWalk = function(walk) {
+				logWalk = function(walk) {
 					var dir = null;
 					if (walk.direction == NORTH) dir = "NORTH";
 					else if (walk.direction == SOUTH) dir = "SOUTH";
@@ -276,7 +276,6 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					}
 				}
 			}
-
 
 
 		   // 	> if state & reqstate not equal, extend path w/ position TO initial state
@@ -386,9 +385,10 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						   endTile            = tile,
 						   recalibrationStart = null;
 
-					   if (startTile.tile) return new Error("No startTile found..");
+					   if (startTile.tile) { debugger; return new Error("No startTile found.."); }
 					   recalibrationStart = recalibrationWalk(startTile, state.x, state.y);
 					   if (_.isError(recalibrationStart)) return recalibrationStart;
+
 
 					   // extend walk from position to start
 					   for (var j=recalibrationStart.length-1; j>=0; --j) {
@@ -417,6 +417,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						   }
 					   }
 
+
 					   // This entire path is greater than our maximum path length
 					   if (path.length() > maxWalk) {
 						   console.log("ISSUE HERE D!!!");
@@ -434,6 +435,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						   logPath(path);
 						   return false;
 					   } else {
+
 
 						   return true;
 						   // var pathCpy = extendClass({}).with(path);
@@ -482,6 +484,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					   startTile = startPath.startTile;
 					   endTile   = startPath.endTile;
 
+
 					   var recalibrationStart = recalibrationWalk(startTile.tile, state.x, state.y),
 						   recalibrationEnd   = recalibrationWalk(endTile.tile, pathState.x, pathState.y);
 
@@ -491,6 +494,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					   // extend walk from position to start
 					   for (var j=0; j<recalibrationStart.length; ++j) {
 						   startPath.path.walks.unshift( recalibrationStart[j] );
+
 
 						   // This single walk is too long
 						   if (recalibrationStart[j].distance > 32) {
@@ -525,6 +529,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						   else if (dir == WEST)  recalibrationEnd[j].direction = EAST;
 						   else if (dir == EAST)  recalibrationEnd[j].direction = WEST;
 						   startPath.path.walks.push( recalibrationEnd[j] );
+
 					   }
 
 

@@ -402,6 +402,22 @@ define(['loggable'], function(Loggable){
 
 					this.ctxEntities.drawImage(
 							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+					if (Env.renderer.drawBorders) {
+							if (movable.hasOwnProperty('_serverPosition')) {
+								var _x = movable._serverPosition.x - movable.page.x, // movable.position.tile.x - movable.page.y
+									_y = movable._serverPosition.y - movable.page.y, // movable.position.tile.y - movable.page.y
+									_toX = movable._serverPosition.toX - movable.page.x,
+									_toY = movable._serverPosition.toY - movable.page.y;
+								this.ctxEntities.strokeStyle = "gray";
+								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_x)-offsetX), scale*(Env.tileSize*(_y)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
+								if (Math.abs((movable.position.tile.x - movable.page.x)) - _x > 5*Env.tileSize &&
+									Math.abs((movable.position.tile.x - movable.page.x)) - _toX > 5*Env.tileSize) debugger;
+								// if (Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_x)-offsetX)) > 5*Env.tileSize &&
+								// 	Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_toX)-offsetX)) > 5*Env.tileSize) debugger;
+								this.ctxEntities.strokeStyle = "yellow";
+								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_toX)-offsetX), scale*(Env.tileSize*(_toY)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
+						}
+					}
 				}
 
 				// Draw neighbour movables
@@ -427,8 +443,26 @@ define(['loggable'], function(Loggable){
 							movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet
 						}
 
+						// this.ctxEntities.drawImage(
+						// 		movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 						this.ctxEntities.drawImage(
-								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+
+						if (Env.renderer.drawBorders) {
+							if (movable.hasOwnProperty('_serverPosition')) {
+								var _x = movable._serverPosition.x - movable.page.x, // movable.position.tile.x - movable.page.y
+									_y = movable._serverPosition.y - movable.page.y, // movable.position.tile.y - movable.page.y
+									_toX = movable._serverPosition.toX - movable.page.x,
+									_toY = movable._serverPosition.toY - movable.page.y;
+								this.ctxEntities.strokeStyle = "gray";
+								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_x)-offsetX), scale*(Env.tileSize*(_y)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
+								if (Math.abs((movable.position.tile.x - movable.page.x)) - _x > 5*Env.tileSize &&
+									Math.abs((movable.position.tile.x - movable.page.x)) - _toX > 5*Env.tileSize) debugger;
+									// Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_toX)-offsetX)) > 5*Env.tileSize) debugger;
+								this.ctxEntities.strokeStyle = "yellow";
+								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_toX)-offsetX), scale*(Env.tileSize*(_toY)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
+							}
+						}
 					}
 				}
 			}
@@ -455,6 +489,7 @@ define(['loggable'], function(Loggable){
 						offX = neighbourInfo.offsetX,
 						offY = neighbourInfo.offsetY;
 
+					this.ctxEntities.strokeStyle = "gray";
 					this.ctxEntities.strokeRect(scale*(offX - The.camera.offsetX), scale*(offY + The.camera.offsetY), Env.tileSize*scale*Env.pageWidth, Env.tileSize*scale*Env.pageHeight);
 				}
 			}

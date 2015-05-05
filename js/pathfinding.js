@@ -1,8 +1,11 @@
-define(['movable'], function(Movable){
+define(['movable', 'loggable'], function(Movable, Loggable){
 
 	var Pathfinding = function(map){
 
 		this.map = map;
+		extendClass(this).with(Loggable);
+		this.setLogGroup('Pathfinding');
+		this.setLogPrefix('(Pathfinding) ');
 
 		// Find a path from point A to point B
 		//
@@ -189,6 +192,158 @@ define(['movable'], function(Movable){
 			} else {
 				return new UnexpectedError("Provided object is neither a Movable nor a Tile");
 			}
+		};
+
+
+		this.checkSafeWalk = function(state, walk){
+
+
+			// 
+			// Check path is safe (no collisions)
+			//
+			//	This works by essentially finding the starting point for the path and walking along that path
+			//	to check if each tile is open.
+			//	NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only
+			//	1 walk)
+			////////////////////////////////////////
+
+			var map       = this.map,
+				start     = new Tile(state.globalX, state.globalY),	// Start of path (where the player thinks he's located)
+				vert      = (walk.direction == NORTH || walk.direction == SOUTH),
+				positive  = (walk.direction == SOUTH || walk.direction == EAST),
+				walked    = 0,
+				tiles     = [],
+				pageI     = null,
+				page      = null,
+				k         = (vert ? state.localY  : state.localX),	// k: our local real x/y coordinate
+				kT        = (vert ? state.globalY : state.globalX),	// kT: our global x/y tile
+				kLT       = (vert ? (kT % Env.pageHeight) : (kT % Env.pageWidth)), // kLT: our local x/y tile
+				dist      = walk.distance,
+				safePath  = true,
+				nextTile  = start,
+				err       = null;
+
+			// Find the start of path page
+			pageI = parseInt(state.globalY / Env.pageHeight) * map.pagesPerRow + parseInt(state.globalX / Env.pageWidth);
+			if (!pageI) return new GameError("Bad page index");
+			page  = map.pages[pageI];
+			if (!page) return new GameError("Bad page found from coordinates");
+
+			// Is the first tile in the path within range of the player?
+			if (!map.isTileInRange(start)) {
+				this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
+				err = new GameError("Bad start of path");
+				return err;
+			}
+
+
+			// Given k local tile and page, is the tile open?
+			var isSafeTile = (function(){
+				
+				var _kPair = null; // if k is X then kPair is Y; and vice-versa
+				if (vert) {
+					_kPair = state.globalX % Env.pageWidth;
+					return function(k, page){
+						return (page.collidables[k] & (1<<_kPair) ? false : true);
+					};
+				} else {
+					_kPair = state.globalY % Env.pageHeight;
+					return function(k, page){
+						return (page.collidables[_kPair] & (1<<k) ? false : true);
+					};
+				}
+			}()), updatePageAndLocalTile = (function(){
+
+				if (vert) {
+					return function(k){
+						if (k < 0) {
+							k += Env.pageHeight; // At the furthest end of the previous page
+							pageI -= map.pagesPerRow;
+							page = map.pages[pageI];
+							return k;
+						} else if (k > Env.pageHeight) {
+							k = k % Env.pageHeight;
+							pageI += map.pagesPerRow;
+							page = map.pages[pageI];
+							return k;
+						}
+						return k;
+					};
+				} else {
+					return function(k){
+						if (k < 0) {
+							k += Env.pageWidth; // At the furthest end of the previous page
+							--pageI;
+							page = map.pages[pageI];
+							return k;
+						} else if (k > Env.pageWidth) {
+							k = k % Env.pageWidth;
+							++pageI;
+							page = map.pages[pageI];
+							return k;
+						}
+						return k;
+					};
+				}
+			}());
+
+			if (!isSafeTile(kLT, page)) {
+				this.Log("First tile is not open in path!");
+				err = new GameError("First tile is not open");
+				return err;
+			}
+
+			// Determine the next tile in the path, and confirm that its open
+			// NOTE: This is done separately from the rest of the walk confirmation process since the next
+			// tile could be a recalibration. eg. if the user is walking east and then stops and goes west;
+			// the start tile will be the same tile as the next tile
+			if (walk.distance % Env.tileSize != 0) {
+				var _kTNext = parseInt((k + (positive?1:-1)*(walk.distance%Env.tileSize))/Env.tileSize);
+
+				// If the next tile is not the same as the star tile, then this was not a recalibration step.
+				// Process this next tile
+				if (_kTNext != kT) {
+					kLT += (_kTNext - kT);
+					kT = _kTNext;
+					kLT = updatePageAndLocalTile(kLT);
+					if (!isSafeTile(kLT, page)) {
+						this.Log("Recalibration tile is not open");
+						err = new GameError("Recalibration tile is not open");
+						return err;
+					}
+				}
+				walked += walk.distance % Env.tileSize;
+			}
+
+
+
+			// Confirm the rest of the path
+			var multiplier = (positive?1:-1),
+				isSafe     = true,
+				safePath   = true;
+			while (walked < walk.distance) {
+				kLT += multiplier;
+				kLT = updatePageAndLocalTile(kLT);
+				if (!isSafeTile(kLT, page)) {
+					safePath = false;
+					break;
+				}
+				walked += Env.tileSize;
+			}
+
+			if (walked != walk.distance) {
+				debugger;
+				this.Log("Something strange happened when processing the walk validation..");
+				err = new Error("Bad walk validation!");
+				return err;
+			}
+
+
+			if (isSafe && safePath) {
+				return true;
+			}
+
+			return false;
 		};
 	};
 

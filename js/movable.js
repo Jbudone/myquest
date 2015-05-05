@@ -200,14 +200,12 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 					// Movement calculation
 					//
-					// tile is a real number (not an int). We can compare tile
-					// to our current tile to determine where we're moving. If
-					// tile rounds down to less than our current tile, we're
-					// moving down; likewise if tile rounds up to more than our
-					// current tile, we're moving up. Note that these are the
-					// only two possible rounding cases. If tile rounded down
-					// and rounded are the same, and not equal to our current
-					// tile, then we've finished moving to this new tile
+					// tile is a real number (not an int). We can compare tile to our current tile to
+					// determine where we're moving. If tile rounds down to less than our current tile, we're
+					// moving down; likewise if tile rounds up to more than our current tile, we're moving up.
+					// Note that these are the only two possible rounding cases. If tile rounded down and
+					// rounded are the same, and not equal to our current tile, then we've finished moving to
+					// this new tile
 					var tile = posK / Env.tileSize,
 						adjustedTile = tile;
 

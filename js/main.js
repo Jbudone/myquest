@@ -214,6 +214,7 @@
 				//		- Uncaught Error: Entity not a charactergame.js:146 Game.removeCharactergame.js:224 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookmap.js:219 Map.removeEntitypage.js:40 Page.unloadgame.js:470 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
 				//		- onTileX onTileY map.js:1120
 				//		- enemies cross between pages horizontally causes weird rendering effect of them floating away
+				//		- look into ISSUE WITH PATH... are those still around?
 				//
 				//		- Regen
 				//		- Firefox: king sprite
