@@ -343,6 +343,9 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 				var movable = this.movables[movableID].entity;
 				this.detachMovable( movable );
 			}
+
+			this.tilePathHighlight = null;
+			this.tileHover = null;
 		};
 
 		this.setPage = function(page){ 

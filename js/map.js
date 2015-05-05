@@ -196,6 +196,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			if (!this.doHook('removedentity').pre(entity)) return;
 
+			if (entity.path) entity.path = null;
+
 			var page                    = entity.page,
 				foundEntityInUpdateList = false,
 				result                  = null;

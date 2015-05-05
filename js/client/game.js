@@ -72,7 +72,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					console.error(state);
 					console.error(event);
 
-					tilePathHighlight=null;
+					ui.tilePathHighlight=null;
 
 					The.map.curPage = The.map.pages[state.page];
 					if (response.state) {
@@ -522,6 +522,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					ui.updatePages();
 
 					The.player.page = The.map.curPage;
+					The.player.sprite.idle();
 
 
 					The.player.position = {
@@ -558,6 +559,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					ui.updatePages();
 
 					The.player.page = The.map.curPage;
+					The.player.sprite.idle();
 
 					listenToPlayer();
 

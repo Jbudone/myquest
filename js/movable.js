@@ -20,7 +20,12 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 		// after the movable has moved somewhere (eg. moving, zoning,
 		// respawning)
 		//
-		// local.x and local.y may be outside of the current page. Since a movable may be walking between two tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a time, that current tile is the one which is rounded from the global position. In other words, take the global position and round it to the nearest tile. So if a movable is currently standing on a tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less than 0.
+		// local.x and local.y may be outside of the current page. Since a movable may be walking between two
+		// tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a
+		// time, that current tile is the one which is rounded from the global position. In other words, take
+		// the global position and round it to the nearest tile. So if a movable is currently standing on a
+		// tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less
+		// than 0.
 		//
 		this.position = {
 			tile:   { x: 0, y: 0 },
