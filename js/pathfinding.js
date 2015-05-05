@@ -216,6 +216,7 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 				pageI     = null,
 				page      = null,
 				k         = (vert ? state.localY  : state.localX),	// k: our local real x/y coordinate
+				kR        = null,									// kR: our global real x/y coordinate
 				kT        = (vert ? state.globalY : state.globalX),	// kT: our global x/y tile
 				kLT       = (vert ? (kT % Env.pageHeight) : (kT % Env.pageWidth)), // kLT: our local x/y tile
 				dist      = walk.distance,
@@ -228,6 +229,7 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 			if (!pageI) return new GameError("Bad page index");
 			page  = map.pages[pageI];
 			if (!page) return new GameError("Bad page found from coordinates");
+			kR = k + (vert ? page.y : page.x)*Env.tileSize;
 
 			// Is the first tile in the path within range of the player?
 			if (!map.isTileInRange(start)) {
@@ -298,7 +300,7 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 			// tile could be a recalibration. eg. if the user is walking east and then stops and goes west;
 			// the start tile will be the same tile as the next tile
 			if (walk.distance % Env.tileSize != 0) {
-				var _kTNext = parseInt((k + (positive?1:-1)*(walk.distance%Env.tileSize))/Env.tileSize);
+				var _kTNext = parseInt((kR + (positive?1:-1)*(walk.distance%Env.tileSize))/Env.tileSize);
 
 				// If the next tile is not the same as the star tile, then this was not a recalibration step.
 				// Process this next tile

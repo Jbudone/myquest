@@ -597,7 +597,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				ui.postMessage("\t→ Error handling", MESSAGE_PROGRAM);
 				ui.postMessage("\t→ Bots", MESSAGE_PROGRAM);
 				ui.postMessage("\t→ Periodic saving/backups", MESSAGE_PROGRAM);
-				ui.postMessage("\t→ XP/Levelling", MESSAGE_PROGRAM);
+				ui.postMessage("\t→ XP/Leveling", MESSAGE_PROGRAM);
 				ui.postMessage("\t→ Character Inventory", MESSAGE_PROGRAM);
 				ui.postMessage(" ", MESSAGE_PROGRAM);
 				ui.postMessage(" ", MESSAGE_PROGRAM);

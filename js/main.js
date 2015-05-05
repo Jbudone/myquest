@@ -222,6 +222,9 @@
 				//
 				//		- Regen
 				//		- Firefox: king sprite
+				//		- Items dropped in weird positions
+				//		- Enemies get bored after chasing you for too long or getting too far from you; but
+				//			should stop in their path and wait a moment before going back to spawn spot
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
