@@ -460,33 +460,33 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				user.hook('clickedTile', this).after(function(toTile){
 
 					// 	click to move player creates path for player
-					var playerY      = The.map.curPage.y * Env.tileSize + The.player.position.local.y,
-						playerX      = The.map.curPage.x * Env.tileSize + The.player.position.local.x,
+					var playerX      = The.player.position.global.x,
+						playerY      = The.player.position.global.y,
 						nearestTiles = The.map.findNearestTiles(playerX, playerY),
 						time         = now(),
 						path         = The.map.findPath(nearestTiles, [toTile]);
 
 					if (path && path.path) {
-						//this.Log("Path TO: ("+walkTo.y+","+walkTo.x+") FROM ("+(The.player.position.local.y/Env.tileSize)+","+(The.player.position.local.x/Env.tileSize)+") / ("+path.start.tile.y+","+path.start.tile.x+")", LOG_DEBUG);
-						//this.Log(path, LOG_DEBUG);
 
 						// inject walk to beginning of path depending on where player is relative to start tile
 						var startTile = path.start.tile,
-							recalibrateY = false,
 							recalibrateX = false,
+							recalibrateY = false,
 							path = path.path,
-							playerPosition = { y: The.player.position.local.y + The.map.curPage.y * Env.tileSize,
-											   x: The.player.position.local.x + The.map.curPage.x * Env.tileSize };
-						if (The.player.position.local.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
-						if (The.player.position.local.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
-						if (playerPosition.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
-						if (playerPosition.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
+							playerPosition = {	global: {
+													x: The.player.position.global.x,
+													y: The.player.position.global.y }
+											};
+						if (The.player.position.global.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
+						if (The.player.position.global.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
+						if (playerPosition.global.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
+						if (playerPosition.global.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
 
 						path.splitWalks();
 
 						if (recalibrateY) {
 							// Inject walk to this tile
-							var distance    = -1*(playerPosition.y - startTile.y * Env.tileSize),
+							var distance    = -1*(playerPosition.global.y - startTile.y * Env.tileSize),
 								walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), startTile.offset(0, 0));
 							this.Log("Recalibrating Walk (Y): ", LOG_DEBUG);
 							this.Log("	steps: "+distance, LOG_DEBUG);
@@ -494,10 +494,10 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						}
 						if (recalibrateX) {
 							// Inject walk to this tile
-							var distance    = -1*(playerPosition.x - startTile.x * Env.tileSize),
+							var distance    = -1*(playerPosition.global.x - startTile.x * Env.tileSize),
 								walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
 							this.Log("Recalibrating Walk (X): ", LOG_DEBUG);
-							this.Log("	steps: "+distance+" FROM ("+The.player.position.local.x+") TO ("+startTile.x*Env.tileSize+")", LOG_DEBUG);
+							// this.Log("	steps: "+distance+" FROM ("+The.player.position.global.x+") TO ("+startTile.x*Env.tileSize+")", LOG_DEBUG);
 							path.walks.unshift(walk);
 						}
 						path.walks[0].time = time;
@@ -526,8 +526,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 				user.hook('clickedItem', this).after(function(item){
 					var page = map.pages[item.page],
-						y    = item.coord.y,//parseInt(item.coord / Env.pageWidth),
-						x    = item.coord.x,//item.coord - y*Env.pageWidth,
+						x    = item.coord.x,
+						y    = item.coord.y,
 						tile = new Tile( x, y ),
 						path = map.pathfinding.findPath( The.player, tile ),
 						pickupItem = function(){

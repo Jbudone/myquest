@@ -28,9 +28,10 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.respawnPoint = {
 			map: entity.page.map.id,
 			page: entity.page.index,
-
-			y: entity.position.local.y,
-			x: entity.position.local.x,
+			tile: {
+				x: entity.position.tile.x,
+				y: entity.position.tile.y
+			}
 		};
 
 			// Get hurt by some amount, and possibly by somebody
@@ -109,8 +110,8 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			if (!this.doHook('respawned').pre()) return;
 
 			var result = null;
-			this.entity.position.local.y = this.respawnPoint.y;
-			this.entity.position.local.x = this.respawnPoint.x;
+			this.entity.position.global.y = this.respawnPoint.tile.y*Env.tileSize;
+			this.entity.position.global.x = this.respawnPoint.tile.x*Env.tileSize;
 			result = this.entity.updatePosition();
 			if (_.isError(result)) return result;
 			result = this.characterHasMoved();

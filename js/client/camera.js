@@ -21,8 +21,10 @@ define(['eventful'], function(Eventful){
 
 		// FIXME: fix the camera so that it doesn't need this
 		this.centerCamera = function(){
-			The.camera.offsetY = -The.player.position.local.y + Env.pageHeight * Env.tileSize / 2
-			The.camera.offsetX = The.player.position.local.x - Env.pageWidth * Env.tileSize / 2;
+			var localY = The.player.position.global.y % Env.pageRealHeight,
+				localX = The.player.position.global.x % Env.pageRealWidth;
+			The.camera.offsetY = -localY + Env.pageHeight * Env.tileSize / 2
+			The.camera.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
 		};
 
 		this.initialize = function(){
@@ -41,29 +43,6 @@ define(['eventful'], function(Eventful){
 				left=-Env.pageBorder*Env.tileSize,
 				top=Env.pageBorder*Env.tileSize;
 			this.handlePendingEvents();
-			// NOTE: still need to draw camera offset, otherwise zoning into this map will cause jaggy camera
-			// 		movements
-			// if (!The.map.curPage.neighbours.west) left=0;
-			// if (!The.map.curPage.neighbours.north) top=0;
-			/*
-			if (this.offsetX<left) {
-				this.offsetX+=move;
-				if (this.offsetX>left) this.offsetX=left;
-				this.updated=true;
-			} else if (this.offsetX>left) {
-				this.offsetX-=move;
-				if (this.offsetX<left) this.offsetX=left;
-				this.updated=true;
-			} else if (this.offsetY<top) {
-				this.offsetY+=move;
-				if (this.offsetY>top) this.offsetY=top;
-				this.updated=true;
-			} else if (this.offsetY>top) {
-				this.offsetY-=move;
-				if (this.offsetY<top) this.offsetY=top;
-				this.updated=true;
-			}
-			*/
 
 			if (time - this.lastUpdated > 2500) {
 				this.updated = true; // Use this as a just in case for background redraws

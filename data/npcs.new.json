@@ -4,7 +4,7 @@
 		"name":"player",
 		"sheet":"firefox",
 		"spawn":150,
-		"speed":15,
+		"speed":10,
 		"health":150,
 		"damage":5,
 		"AI":true
@@ -15,7 +15,7 @@
 		"sheet":"firefox",
 		"spawn":1500,
 		"killable":true,
-		"speed":15,
+		"speed":10,
 		"health":50,
 		"damage":5,
 		"AI":true
@@ -24,9 +24,9 @@
 		"id":"deathknight",
 		"name":"deathknight",
 		"sheet":"deathknight",
-		"spawn":1500,
+		"spawn":8500,
 		"killable":true,
-		"speed":12,
+		"speed":8,
 		"health":70,
 		"damage":5,
 		"AI":true

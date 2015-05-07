@@ -77,9 +77,11 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 				recalibrateX = false,
 				path         = path.path,
 				position     = { y: fromPosition.global.y,
-								 x: fromPosition.global.x }
-			if (fromPosition.local.y / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
-			if (fromPosition.local.x / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
+								 x: fromPosition.global.x },
+				localX       = fromPosition.global.x % Env.pageRealWidth,
+				localY       = fromPosition.global.y % Env.pageRealHeight;
+			if (localY / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
+			if (localX / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
 			if (position.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
 			if (position.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
 
@@ -98,7 +100,7 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 				var distance    = -1*(position.x - startTile.x * Env.tileSize),
 					walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
 				console.log("Recalibrating Walk (X): ");
-				console.log("	steps: "+distance+" FROM ("+fromPosition.local.x+") TO ("+startTile.x*Env.tileSize+")");
+				console.log("	steps: "+distance+" FROM ("+localX+") TO ("+startTile.x*Env.tileSize+")");
 				path.walks.unshift(walk);
 			}
 		};
@@ -208,16 +210,16 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 			////////////////////////////////////////
 
 			var map       = this.map,
-				start     = new Tile(state.globalX, state.globalY),	// Start of path (where the player thinks he's located)
+				start     = new Tile(state.tile.x, state.tile.y),	// Start of path (where the player thinks he's located)
 				vert      = (walk.direction == NORTH || walk.direction == SOUTH),
 				positive  = (walk.direction == SOUTH || walk.direction == EAST),
 				walked    = 0,
 				tiles     = [],
 				pageI     = null,
 				page      = null,
-				k         = (vert ? state.localY  : state.localX),	// k: our local real x/y coordinate
+				k         = (vert ? state.global.y%Env.pageRealHeight  : state.global.x%Env.pageRealWidth),	// k: our local real x/y coordinate
 				kR        = null,									// kR: our global real x/y coordinate
-				kT        = (vert ? state.globalY : state.globalX),	// kT: our global x/y tile
+				kT        = (vert ? state.tile.y : state.tile.x),	// kT: our global x/y tile
 				kLT       = (vert ? (kT % Env.pageHeight) : (kT % Env.pageWidth)), // kLT: our local x/y tile
 				dist      = walk.distance,
 				safePath  = true,
@@ -225,7 +227,7 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 				err       = null;
 
 			// Find the start of path page
-			pageI = parseInt(state.globalY / Env.pageHeight) * map.pagesPerRow + parseInt(state.globalX / Env.pageWidth);
+			pageI = parseInt(state.tile.y / Env.pageHeight) * map.pagesPerRow + parseInt(state.tile.x / Env.pageWidth);
 			if (!pageI) return new GameError("Bad page index");
 			page  = map.pages[pageI];
 			if (!page) return new GameError("Bad page found from coordinates");
@@ -244,12 +246,12 @@ define(['movable', 'loggable'], function(Movable, Loggable){
 				
 				var _kPair = null; // if k is X then kPair is Y; and vice-versa
 				if (vert) {
-					_kPair = state.globalX % Env.pageWidth;
+					_kPair = state.tile.x % Env.pageWidth;
 					return function(k, page){
 						return (page.collidables[k] & (1<<_kPair) ? false : true);
 					};
 				} else {
-					_kPair = state.globalY % Env.pageHeight;
+					_kPair = state.tile.y % Env.pageHeight;
 					return function(k, page){
 						return (page.collidables[_kPair] & (1<<k) ? false : true);
 					};

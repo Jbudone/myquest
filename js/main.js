@@ -108,6 +108,7 @@
 				//	> CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
 				//	> CLEAN: temporary movable._character property should be abstracted so that it doesn't
 				//				need to be copied in multiple places
+				//	> CLEAN: look at better way of hashing tiles (without any precision/collision issues)
 				//
 				//
 				//	
@@ -207,16 +208,15 @@
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
 				//		- Enemy path/chase prediction: when chasing user, don't update from their current tile, update from the tile they're moving to
+				//		- Error handling: return Error for game error stuff; throw Error for ANYTHING that goes wrong; but do checking before hand for possibly bad input to return Error. The caller can check for error and throw if necessary (server stuff), or disallow input (client request)
 				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
 				//		- Uncaught Error: Already watching this entity!map.js:145 Map.watchEntitymap.js:164 Map.addPagesgame.js:474 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
 				//		- Uncaught Error: Entity not a charactergame.js:146 Game.removeCharactergame.js:224 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookmap.js:219 Map.removeEntitypage.js:40 Page.unloadgame.js:470 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
 				//
 				//
 				//
-				//		- enemies cross between pages horizontally causes weird rendering effect of them floating away
 				//		- onTileX onTileY map.js:1120
 				//		- look into ISSUE WITH PATH... are those still around?
-				//		- Getting lots of goblins/deathknights to chase you causes problems
 				//
 				//
 				//

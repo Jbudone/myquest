@@ -24,6 +24,9 @@ define(function(){
 		this.tileScale=2;
 		this.isServer=false;
 
+		this.pageRealWidth  = this.pageWidth * this.tileSize;
+		this.pageRealHeight = this.pageHeight * this.tileSize;
+
 		this.chat = {
 			maxMessageLength: 140,
 			clientTimeBetweenMessages: 500,
@@ -31,7 +34,7 @@ define(function(){
 		};
 
 		this.renderer = {
-			drawBorders: false, // Draws page borders (useful for debugging)
+			drawBorders: true, // Draws page borders (useful for debugging)
 		};
 
 		var testingLocal = true;

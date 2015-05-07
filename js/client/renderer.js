@@ -400,20 +400,18 @@ define(['loggable'], function(Loggable){
 						movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet
 					}
 
+					var localX = movable.position.global.x % Env.pageRealWidth,
+						localY = movable.position.global.y % Env.pageRealHeight;
 					this.ctxEntities.drawImage(
-							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+							movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(localX-offsetX-movableOffX), scale*(localY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 					if (Env.renderer.drawBorders) {
 							if (movable.hasOwnProperty('_serverPosition')) {
-								var _x = movable._serverPosition.x - movable.page.x, // movable.position.tile.x - movable.page.y
-									_y = movable._serverPosition.y - movable.page.y, // movable.position.tile.y - movable.page.y
-									_toX = movable._serverPosition.toX - movable.page.x,
-									_toY = movable._serverPosition.toY - movable.page.y;
+								var _x = movable._serverPosition.tile.x - movable.page.x, // movable.position.tile.x - movable.page.y
+									_y = movable._serverPosition.tile.y - movable.page.y, // movable.position.tile.y - movable.page.y
+									_toX = movable._serverPosition.toTile.x - movable.page.x,
+									_toY = movable._serverPosition.toTile.y - movable.page.y;
 								this.ctxEntities.strokeStyle = "gray";
 								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_x)-offsetX), scale*(Env.tileSize*(_y)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
-								if (Math.abs((movable.position.tile.x - movable.page.x)) - _x > 5*Env.tileSize &&
-									Math.abs((movable.position.tile.x - movable.page.x)) - _toX > 5*Env.tileSize) debugger;
-								// if (Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_x)-offsetX)) > 5*Env.tileSize &&
-								// 	Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_toX)-offsetX)) > 5*Env.tileSize) debugger;
 								this.ctxEntities.strokeStyle = "yellow";
 								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_toX)-offsetX), scale*(Env.tileSize*(_toY)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
 						}
@@ -436,29 +434,26 @@ define(['loggable'], function(Loggable){
 							offsetY = this.camera.offsetY + offY,
 							offsetX = this.camera.offsetX - offX,
 							// TODO: fix sprite centering with sheet offset
-							movableOffX = movable.sprite.tileSize/4,// - movable.sprite.offset_x, //movable.sprite.tileSize/4, // Center the entity
-							movableOffY = movable.sprite.tileSize/2;// - movable.sprite.offset_y; //movable.sprite.tileSize/2;
+							movableOffX = movable.sprite.tileSize/4,
+							movableOffY = movable.sprite.tileSize/2;
 						if (movable.sprite.state.sheet) {
 							customSheet = true;
 							movableSheet = movable.sprite.state.sheet.image; // Specific state/animation may require a separate sheet
 						}
 
-						// this.ctxEntities.drawImage(
-						// 		movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(movable.position.local.x-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+						var localX = movable.position.global.x % Env.pageRealWidth,
+							localY = movable.position.global.y % Env.pageRealHeight;
 						this.ctxEntities.drawImage(
-								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX), scale*(movable.position.local.y+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
+								movableSheet, movable.sprite.state.x, movable.sprite.state.y, movable.sprite.tileSize, movable.sprite.tileSize, scale*(localX-offsetX-movableOffX), scale*(localY+offsetY-movableOffY), scale*movable.sprite.tileSize, scale*movable.sprite.tileSize);
 
 						if (Env.renderer.drawBorders) {
 							if (movable.hasOwnProperty('_serverPosition')) {
-								var _x = movable._serverPosition.x - movable.page.x, // movable.position.tile.x - movable.page.y
-									_y = movable._serverPosition.y - movable.page.y, // movable.position.tile.y - movable.page.y
-									_toX = movable._serverPosition.toX - movable.page.x,
-									_toY = movable._serverPosition.toY - movable.page.y;
+								var _x = movable._serverPosition.tile.x - movable.page.x,
+									_y = movable._serverPosition.tile.y - movable.page.y,
+									_toX = movable._serverPosition.toTile.x - movable.page.x,
+									_toY = movable._serverPosition.toTile.y - movable.page.y;
 								this.ctxEntities.strokeStyle = "gray";
 								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_x)-offsetX), scale*(Env.tileSize*(_y)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
-								if (Math.abs((movable.position.tile.x - movable.page.x)) - _x > 5*Env.tileSize &&
-									Math.abs((movable.position.tile.x - movable.page.x)) - _toX > 5*Env.tileSize) debugger;
-									// Math.abs(scale*(Env.tileSize*(movable.position.tile.x-movable.page.x)-offsetX-movableOffX) - scale*(Env.tileSize*(_toX)-offsetX)) > 5*Env.tileSize) debugger;
 								this.ctxEntities.strokeStyle = "yellow";
 								this.ctxEntities.strokeRect(scale*(Env.tileSize*(_toX)-offsetX), scale*(Env.tileSize*(_toY)+offsetY), Env.tileSize*scale, Env.tileSize*scale);
 							}

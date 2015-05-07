@@ -38,8 +38,9 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				err.becauseOf = 'map';
 				return err;
 			}
+
 			var map            = The.world.maps[player.map],
-				playerPosition = map.localFromGlobalCoordinates(player.position.x, player.position.y),
+				playerPosition = map.localFromGlobalCoordinates(player.position.tile.x, player.position.tile.y),
 				respawnPoint   = null;
 
 			if (_.isError(playerPosition)) {
@@ -51,11 +52,10 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return err;
 			}
 
-			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.x, player.respawn.position.y);
+			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.tile.x, player.respawn.position.tile.y);
 
 			if (_.isError(respawnPoint)) {
 				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
-				respawnPoint.print();
 				err = new GameError("Could not get local coordinates for respawn point..");
 				err.reason = BAD_POSITION;
 				err.becauseOf = 'respawn';
@@ -63,13 +63,20 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 			this.movable          = new Movable('player', playerPosition.page, {
 												position: {
-													tile: new Tile(player.position.x, player.position.y),
-													global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
-													local: { y: playerPosition.y * Env.tileSize, x: playerPosition.x * Env.tileSize }
+													tile: {
+														x: player.position.tile.x,
+														y: player.position.tile.y },
+													global: {
+														x: player.position.tile.x*Env.tileSize,
+														y: player.position.tile.y*Env.tileSize }
 												},
-												respawnPoint: new Tile( respawnPoint.x + respawnPoint.page.x,
-																		respawnPoint.y + respawnPoint.page.y,
-																		respawnPoint.page.map ) });
+												respawnPoint: {
+													tile: {
+														x: player.respawn.position.tile.x,
+														y: player.respawn.position.tile.y
+													},
+													map: respawnPoint.page.map
+												} });
 			this.movable.name = player.username;
 			this.movable.playerID = player.id;
 			this.movable.player = this;
@@ -194,8 +201,14 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 						tilesets: map.map.properties.tilesets,
 					},
 					player:{
-						localY: this.movable.position.local.y,
-						localX: this.movable.position.local.x,
+						position: {
+							tile: {
+								x: this.movable.position.tile.x,
+								y: this.movable.position.tile.y },
+							global: {
+								x: this.movable.position.global.x,
+								y: this.movable.position.global.y }
+						},
 						page: this.movable.page.index,
 						_character: {
 							health: this.movable.character.health
@@ -261,19 +274,25 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 
 			var movableState = {
-					y: player.position.local.y + player.page.y * Env.tileSize, // NOTE: global real coordinates
-					x: player.position.local.x + player.page.x * Env.tileSize,
-					localY: player.position.local.y,
-					localX: player.position.local.x,
-					globalY: Math.floor(player.position.local.y/Env.tileSize) + player.page.y,
-					globalX: Math.floor(player.position.local.x/Env.tileSize) + player.page.x },
+					position: {
+						global: {
+							x: player.position.global.x,
+							y: player.position.global.y },
+						tile: {
+							x: player.position.tile.x,
+							y: player.position.tile.y }
+					}
+				},
 				pathState = {
-					y: reqState.y,
-					x: reqState.x,
-					localY: reqState.localY,
-					localX: reqState.localX,
-					globalY: reqState.globalY,
-					globalX: reqState.globalX
+					position: {
+						global: {
+							x: reqState.global.x,
+							y: reqState.global.y
+						},
+						tile: {
+							x: reqState.tile.x,
+							y: reqState.tile.y }
+					}
 				};
 
 			if (!safePath) {
@@ -281,7 +300,15 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 				var response     = new Response(action.id);
 				response.success = false;
-				response.state   = { x: movableState.x, y: movableState.y, localX: movableState.localX, localY: movableState.localY };
+				response.state   = { position: {
+										global: {
+											x: movableState.position.global.x,
+											y: movableState.position.global.y },
+										tile: {
+											x: movableState.position.tile.x,
+											y: movableState.position.tile.y }
+										}
+									};
 				this.client.send(response.serialize());
 				debugger;
 				return;
@@ -307,7 +334,15 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 				var response = new Response(action.id);
 				response.success = false;
-				response.state = { x: movableState.x, y: movableState.y };
+				response.state   = { position: {
+										global: {
+											x: movableState.position.global.x,
+											y: movableState.position.global.y },
+										tile: {
+											x: movableState.position.tile.x,
+											y: movableState.position.tile.y }
+										}
+									};
 				this.client.send(response.serialize());
 				return;
 			}
@@ -444,7 +479,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				this.client.send(JSON.stringify(initialization));
 
 			} else if (evt.evtType==EVT_PREPARING_WALK) {
-				this.Log("new message from user.. FROM ("+evt.state.localY+", "+evt.state.localX+") ----> "+evt.data.distance, LOG_DEBUG);
+				//this.Log("new message from user.. FROM ("+evt.state.localY+", "+evt.state.localX+") ----> "+evt.data.distance, LOG_DEBUG);
 				this.onPreparingToWalk(evt);
 			} else {
 				var dynamicHandler = this.handler(evt.evtType);

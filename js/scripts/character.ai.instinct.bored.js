@@ -71,9 +71,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 			goBackToSpawn: function(){
 				var respawn = _character.respawnPoint,
 					page	= _character.entity.page.map.pages[ respawn.page ],
-					x		= parseInt(respawn.x / Env.tileSize) + page.x,
-					y		= parseInt(respawn.y / Env.tileSize) + page.y,
-					tile 	= new Tile( x, y );
+					tile 	= new Tile( respawn.tile.x, respawn.tile.y );
 				brain.instincts['movement'].goToTile( tile, 0 );
 			},
 

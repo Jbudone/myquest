@@ -91,7 +91,7 @@ define(['loggable'], function(Loggable){
 					shasum.update('SALTY'+password);
 
 					// No player exists with these credentials.. register new user
-					this.createNewPlayer({map:'main', position:{y:60, x:53}}, username, shasum.digest('hex'), email).then(function(newID){
+					this.createNewPlayer({map:'main', position:{tile:{y:60, x:53}}}, username, shasum.digest('hex'), email).then(function(newID){
 						finished(null, newID);
 					}, function(err){
 						failed(err);
@@ -139,12 +139,16 @@ define(['loggable'], function(Loggable){
 							password: password,
 							email: email,
 							position: {
-								y: 60, x: 53
+								tile: {
+									y: 60, x: 53
+								}
 							},
 							respawn: {
 								map: "main",
 								position: {
-									y: 60, x: 53
+									tile: {
+										y: 60, x: 53
+									}
 								},
 							},
 							map: "main"
@@ -164,13 +168,18 @@ define(['loggable'], function(Loggable){
 
 		this.savePlayer = function(player){
 
-		   var y     = Math.round((player.position.local.y + player.page.y*Env.tileSize)/Env.tileSize),
-			   x     = Math.round((player.position.local.x + player.page.x*Env.tileSize)/Env.tileSize),
-			   mapID = player.page.map.id;
+			var y     = player.position.tile.y,
+				x     = player.position.tile.x,
+				mapID = player.page.map.id;
+
+			if (!_.isFinite(y) || !_.isFinite(x)) {
+				console.log(player.position);
+				throw new Error("Cannot save player with bad position!");
+			}
 
 			db
 			.collection('players')
-			.update({id:player.playerID}, {"$set": {position:{y:y,x:x}, map:mapID}}, function(err){
+			.update({id:player.playerID}, {"$set": {position:{tile:{y:y,x:x}}, map:mapID}}, function(err){
 				if (err) Log(err, LOG_ERROR);
 				Log("Successfully updated player ("+player.playerID+") position.. ("+y+","+x+") in map("+mapID+")");
 			});

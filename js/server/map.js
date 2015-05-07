@@ -483,12 +483,15 @@ define(['page', 'movable'], function(Page, Movable){
 				if (entity.path && _.isFunction(entity.path.onFailed)) entity.path.onFailed();
 				entity.path = null;
 				entity.position = {
-					tile: new Tile(tile.x + tile.page.x, tile.y + tile.page.y),
-					global: null,
-					local: null
+					global: {
+						x: (tile.x + tile.page.x)*Env.tileSize,
+						y: (tile.y + tile.page.y)*Env.tileSize,
+					},
+					tile: {
+						x: tile.x + tile.page.x,
+						y: tile.y + tile.page.y
+					}
 				};
-				entity.position.local  = { x: tile.x * Env.tileSize, y: tile.y * Env.tileSize };
-				entity.position.global = this.coordinates.globalFromLocal( entity.position.local.x, entity.position.local.y, tile.page, true );
 				tile.page.addEntity(entity);
 				if (!this.movables[entity.id]) {
 					var result = this.watchEntity(entity);

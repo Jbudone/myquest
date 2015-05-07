@@ -102,19 +102,12 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					this.triggerEvent(EVT_ZONE, entity, entity.page, null);
 					return;
 				}
-
-				// Moved to a new pages, need to set the proper local position
-				newPos = this.coordinates.localFromGlobal(entity.position.global.x, entity.position.global.y, true);
-				if (_.isError(newPos)) {
-					return newPos;
-				}
-				entity.position.local = newPos;
 			}
 
 			
 			// Zoned to new map?
-			var tY     = parseInt(entity.position.local.y / Env.tileSize),
-				tX     = parseInt(entity.position.local.x / Env.tileSize),
+			var tY     = entity.position.tile.y % Env.pageHeight,
+				tX     = entity.position.tile.x % Env.pageWidth,
 				zoning = (newPage || entity.page).checkZoningTile(tX, tY);
 
 			if (zoning) {
@@ -128,12 +121,13 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					oldPage.triggerEvent(EVT_ZONE_OUT, entity, zoning);
 					this.triggerEvent(EVT_ZONE_OUT, oldPage, entity, zoning);
 				} else {
-					this.Log("Zoning user ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
+					this.Log("Zoning entity ["+entity.id+"] from ("+entity.page.index+") to page ("+newPage.index+")");
 					var result = entity.page.zoneEntity(newPage, entity);
 					if (_.isError(result)) return result;
 
 					entity.triggerEvent(EVT_ZONE, oldPage, newPage);
 					this.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
+
 				}
 			}
 		};
@@ -237,12 +231,12 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 
 		// Recalibrate a path from the movable's state to the starting point of the path
-		//	Server: When the user sends a path request, but we're slightly behind in their local position, then
+		//	Server: When the user sends a path request, but we're slightly behind in their position, then
 		//			we need to recalibrate the path to start from their server position to their expected
 		//			position, and add this into the path
 		//	Client: When the server sends us some path for an entity, but that entity isn't at the start path
 		//			position (most likely they're still walking there), then need to recalibrate the path from
-		//			the local entity position to the start of the path
+		//			the entity position to the start of the path
 		//
 		//
 		// state: The (x, y) global real position
@@ -342,7 +336,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		   //
 		   // If player is not currently standing on starting point for path, then inject a
 		   // path from current position to that starting point
-		   if (pathState.y != state.y || pathState.x != state.x) {
+		   if (pathState.position.global.y != state.position.global.y || pathState.position.global.x != state.position.global.x) {
 
 			   // Need to inject any necessary walk from the player position to the starting
 			   // point for the path,
@@ -357,10 +351,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 
 			   // Recalibrate path if necessary
-			   // NOTE: use player.posY/posX since we need local real coordinates to
-			   // 		determine offsets from the tile
-			   var startTiles = findNearestTiles( state.x, state.y ),
-				   endTiles   = findNearestTiles( pathState.x, pathState.y ),
+			   var startTiles = findNearestTiles( state.position.global.x, state.position.global.y ),
+				   endTiles   = findNearestTiles( pathState.position.global.x, pathState.position.global.y ),
 				   startPath  = null,
 				   startTile  = null,
 				   endTile    = null;
@@ -370,8 +362,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 			   if (startTiles.length == 0) {
 				   console.log("	No startTiles found.."+now());
-				   console.log(player.position.local.y);
-				   console.log(player.position.local.x);
+				   console.log(state.position.global.y);
+				   console.log(state.position.global.x);
 				   return false;
 			   } else {
 				   startPath  = findShortestPath( startTiles, endTiles );
@@ -388,7 +380,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 						   recalibrationStart = null;
 
 					   if (startTile.tile) { debugger; return new Error("No startTile found.."); }
-					   recalibrationStart = recalibrationWalk(startTile, state.x, state.y);
+					   recalibrationStart = recalibrationWalk(startTile, state.position.global.x, state.position.global.y);
 					   if (_.isError(recalibrationStart)) return recalibrationStart;
 
 
@@ -398,20 +390,21 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 						   // This single walk is far too long
 						   if (recalibrationStart[j].distance > 32) {
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
-							   console.log("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+							   console.error("ISSUE HERE A!!!");
+						   debugger;
 							   console.log(startTiles);
 							   console.log(endTiles);
 							   logPath(path);
@@ -422,18 +415,19 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // This entire path is greater than our maximum path length
 					   if (path.length() > maxWalk) {
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
-						   console.log("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   console.error("ISSUE HERE D!!!");
+						   debugger;
 						   logPath(path);
 						   return false;
 					   } else {
@@ -463,20 +457,21 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // Path length is greater than our maximum path length
 					   if (startPath.path.length() > maxWalk) {
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
-						   console.log("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   console.error("ISSUE HERE C!!!");
+						   //debugger;
 						   console.log(startTiles);
 						   console.log(endTiles);
 						   logPath(path);
@@ -487,8 +482,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 					   endTile   = startPath.endTile;
 
 
-					   var recalibrationStart = recalibrationWalk(startTile.tile, state.x, state.y),
-						   recalibrationEnd   = recalibrationWalk(endTile.tile, pathState.x, pathState.y);
+					   var recalibrationStart = recalibrationWalk(startTile.tile, state.position.global.x, state.position.global.y),
+						   recalibrationEnd   = recalibrationWalk(endTile.tile, pathState.position.global.x, pathState.position.global.y);
 
 					   if (_.isError(recalibrationStart)) return recalibrationStart;
 					   if (_.isError(recalibrationEnd)) return recalibrationEnd;
@@ -500,20 +495,21 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 						   // This single walk is too long
 						   if (recalibrationStart[j].distance > 32) {
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
-							   console.log("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+							   console.error("ISSUE HERE B!!!");
+						   debugger;
 							   logWalk(recalibrationStart);
 							   logWalk(recalibrationEnd);
 							   console.log(startTiles);
@@ -546,18 +542,19 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // This entire path is longer than our maximum path length
 					   if (path.length() > maxWalk) {
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
-						   console.log("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   console.error("ISSUE HERE E!!!");
+						   //debugger;
 						   console.log(startTiles);
 						   console.log(endTiles);
 						   logPath(path);
@@ -591,8 +588,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			   } else {
 				   console.log("No path found to get from current player position to req state..");
 				   console.log("--------------------------------");
-				   var startTiles = findNearestTiles( state.x, state.y ),
-					   endTiles   = findNearestTiles( pathState.x, pathState.y );
+				   var startTiles = findNearestTiles( state.position.global.x, state.position.global.y ),
+					   endTiles   = findNearestTiles( pathState.position.global.x, pathState.position.global.y );
 				   console.log(startTiles);
 				   console.log(endTiles);
 				   console.log("--------------------------------");

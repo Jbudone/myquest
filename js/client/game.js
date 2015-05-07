@@ -30,22 +30,24 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
 
 				Log("Preparing to walk..");
-				var playerPosition = { y: The.player.position.global.y,
-									   x: The.player.position.global.x,
-									   globalY: The.player.position.tile.y,
-									   globalX: The.player.position.tile.x },
-					state = {
-						page: The.map.curPage.index,
-						localY: The.player.position.local.y,
-						localX: The.player.position.local.x,
-						y: playerPosition.y,
-						x: playerPosition.x,
-						globalY: playerPosition.globalY,
-						globalX: playerPosition.globalX
-					};
+				var playerPosition = {	global: {
+											x: The.player.position.global.x,
+											y: The.player.position.global.y },
+										tile: {
+											x: The.player.position.tile.x,
+											y: The.player.position.tile.y }
+									},
+					state = {	page: The.map.curPage.index,
+								global: {
+									x: playerPosition.global.x,
+									y: playerPosition.global.y, },
+								tile: {
+									x: playerPosition.tile.x,
+									y: playerPosition.tile.y }
+							};
 
-				var onTileY = state.y % 16 == 0,
-					onTileX = state.x % 16 == 0;
+				var onTileY = state.global.y % Env.tileSize == 0,
+					onTileX = state.global.x % Env.tileSize == 0;
 				if (!onTileY && !onTileX) {
 					debugger;
 					console.error("BAD STATE FOR WALK!");
@@ -76,11 +78,11 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 					The.map.curPage = The.map.pages[state.page];
 					if (response.state) {
-						The.player.position.local.y = response.state.localY;
-						The.player.position.local.x = response.state.localX;
+						The.player.position.global.x = response.state.position.global.x;
+						The.player.position.global.y = response.state.position.global.y;
 					} else {
-						The.player.position.local.y = state.localY;
-						The.player.position.local.x = state.localX;
+						The.player.position.global.x = state.global.x;
+						The.player.position.global.y = state.global.y;
 					}
 					The.player.updatePosition();
 					The.player.path = null;
@@ -120,16 +122,19 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 		};
 
 		this.loadedPlayer = function(player){
-			The.player          = true; // NOTE: this is used to help the initiatilization of Movable below to determine that it is our player (The.player =  =  = true)
+			The.player          = true; // NOTE: this is used to help the initiatilization of Movable below to determine that it is our player (The.player === true)
 			The.player          = new Movable('player');
 			The.player.id       = player.id;
 			The.player.playerID = player.id;
 			The.player.name     = player.name;
 
 			The.player.position = {
-				tile: new Tile(player.position.x, player.position.y),
-				global: { y: player.position.y * Env.tileSize, x: player.position.x * Env.tileSize },
-				local: null,
+				tile: {
+					x: player.position.tile.x,
+					y: player.position.tile.y },
+				global: {
+					x: player.position.tile.x*Env.tileSize,
+					y: player.position.tile.y*Env.tileSize }
 			};
 		};
 
@@ -188,7 +193,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			var playerPosition = The.map.coordinates.localFromGlobal(The.player.position.global.x, The.player.position.global.y, true);
 			The.map.curPage = playerPosition.page;
 			The.player.page = The.map.curPage;
-			The.player.position.local = playerPosition;
 
 			if (!The.map.curPage.movables[The.player.id]) throw new Error("Player has not yet been added to page!");
 
@@ -224,7 +228,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 
 			startGame = function(){
-				var speed = 50,
+				var speed = 30,
 					gameLoop = function() {
 
 						if (!isGameRunning) return;
@@ -261,31 +265,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				server.onEntityAdded = function(page, addedEntity){
 
 					if (The.map.movables[addedEntity.id]) {
-						// NOTE: its possible that our local entity position
-						// hasn't updated to the servers entity position, and
-						// hence the entity is stuck in another page. As a just
-						// in case, update this entity to the current
-						// page/position
-						if (addedEntity.id != The.player.id) {
-							var entity = The.map.movables[addedEntity.id];
-							entity.page.zoneEntity(The.map.pages[page], entity);
-							entity.page = The.map.pages[page];
-							if (entity.page) {
-								// TODO: abstract pathfinding & recalibration to not have to do this..
-								addedEntity.state = {
-									globalY: entity.page.y + parseInt(addedEntity.localY/Env.tileSize),
-									globalX: entity.page.x + parseInt(addedEntity.localX/Env.tileSize),
-									localY: addedEntity.localY,
-									localX: addedEntity.localX,
-									y: entity.page.y*Env.tileSize + addedEntity.localY,
-									x: entity.page.x*Env.tileSize + addedEntity.localX,
-								};
-								server.onEntityWalking(page, addedEntity);
-							} else {
-								entity.page.zoneEntity(null, entity);
-								The.map.unwatchEntity(entity);
-							}
-						}
+						// The entity was added to another page; however, we already have this entity in our
+						// map so no need to do anything with this event
 						return; // Already have this entity loaded
 					}
 					if (addedEntity.id == The.player.id) {
@@ -293,11 +274,12 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					} else {
 						var entity = new Movable(addedEntity.spriteID, The.map.pages[page], { id: addedEntity.id });
 						Log("Adding Entity: "+addedEntity.id);
-						entity.id               = addedEntity.id;
-						entity.position.local.y = addedEntity.localY;
-						entity.position.local.x = addedEntity.localX;
-						entity.sprite.state     = addedEntity.state;
-						entity.zoning           = addedEntity.zoning;
+						entity.id                = addedEntity.id;
+						entity.position.global.y = addedEntity.position.global.y;
+						entity.position.global.x = addedEntity.position.global.x;
+						entity.sprite.state      = addedEntity.state;
+						entity.zoning            = addedEntity.zoning;
+						entity._character        = addedEntity._character;
 
 						if (addedEntity.path) {
 							var path = JSON.parse(addedEntity.path);
@@ -327,12 +309,13 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					if (event.id == The.player.id) {
 
 					} else {
-						var entPage = The.map.pages[page],
-							entity = entPage.movables[event.id],
+						var entity   = The.map.movables[event.id],
+							entPage  = entity.page,
 							reqState = event.state;
 
 						if (!entity) {
-							Log("Event to move entity, but entity not on same page. Ignoring event");
+							Log("Event to move entity, but entity not found in map", LOG_ERROR);
+							debugger;
 							return;
 						}
 
@@ -341,48 +324,58 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 						Log(event.path, LOG_DEBUG);
 
 						var movableState = {
-								y: entity.position.local.y + entPage.y * Env.tileSize,
-								x: entity.position.local.x + entPage.x * Env.tileSize,
-								localY: entity.position.local.y,
-								localX: entity.position.local.x,
-								globalY: Math.floor(entity.position.local.y/Env.tileSize) + entPage.y,
-								globalX: Math.floor(entity.position.local.x/Env.tileSize) + entPage.x },
+								position: {
+									global: {
+										x: entity.position.global.x,
+										y: entity.position.global.y },
+									tile: {
+										x: entity.position.tile.x,
+										y: entity.position.tile.y }
+								}
+							},
 							pathState = {
-								y: reqState.y,
-								x: reqState.x,
-								localY: reqState.localY,
-								localX: reqState.localX,
-								globalY: reqState.globalY,
-								globalX: reqState.globalX
+								position: {
+									global: {
+										x: reqState.position.global.x,
+										y: reqState.position.global.y },
+									tile: {
+										x: reqState.position.tile.x,
+										y: reqState.position.tile.y }
+								}
 							},
 							path = new Path(),
 							walk = new Walk(),
-							maxWalk = 1500 / entity.moveSpeed, // 5*Env.tileSize,
+							maxWalk = 1000 / entity.moveSpeed, // delayTime / moveSpeed = distance
 							adjustY = 0, // NOTE: in case walk already started and we need to adjust the 
 							adjustX = 0; // 	 path state
 
-						// walk.fromJSON(event.path);
-						// walk.walked = 0;
-						// path.walks.push(walk);
-						path.fromJSON(event.path);
-						if (!path.walks) debugger;
+						if (Math.abs(movableState.position.tile.y - pathState.position.tile.y) > 5 ||
+							Math.abs(movableState.position.tile.x - pathState.position.tile.x) > 5) {
+							debugger;
+						}
+
+						walk.fromJSON(event.path);
+						path.walks.push(walk);
 						if (path.walks && path.walks[0]) path.walks[0].walked = 0;
 
 						// FIXME: USED FOR DEBUGGING PURPOSES
 						var destination = null,
-							dX = pathState.x,
-							dY = pathState.y;
+							dX = pathState.position.global.x,
+							dY = pathState.position.global.y;
 						for (var walkI=0; walkI<path.walks.length; ++walkI) {
-							     if (walk.direction == NORTH) dY -= walk.distance;
-							else if (walk.direction == SOUTH) dY += walk.distance;
-							else if (walk.direction == WEST)  dX -= walk.distance;
-							else if (walk.direction == EAST)  dX += walk.distance;
+							var _walk = path.walks[walkI];
+							     if (_walk.direction == NORTH) dY -= _walk.distance;
+							else if (_walk.direction == SOUTH) dY += _walk.distance;
+							else if (_walk.direction == WEST)  dX -= _walk.distance;
+							else if (_walk.direction == EAST)  dX += _walk.distance;
 						}
 						entity._serverPosition = {
-							x: reqState.globalX,
-							y: reqState.globalY,
-							toX: dX / Env.tileSize,
-							toY: dY / Env.tileSize,
+							tile: {
+								x: reqState.position.tile.x,
+								y: reqState.position.tile.y },
+							toTile: {
+								x: dX / Env.tileSize,
+								y: dY / Env.tileSize }
 						};
 
 
@@ -392,8 +385,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							entity.addPath(path);
 						} else {
 							// find end path and jump movable to there
-							var y = pathState.y,
-								x = pathState.x;
+							var x = pathState.position.global.x,
+								y = pathState.position.global.y;
 								 if (walk.direction == NORTH) y -= walk.distance;
 							else if (walk.direction == SOUTH) y += walk.distance;
 							else if (walk.direction == WEST)  x -= walk.distance;
@@ -401,7 +394,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 							Log("COULD NOT MOVE ENTITY THROUGH PATH!! Jumping entity directly to end", LOG_WARNING);
 
-							var localCoordinates = The.map.localFromGlobalCoordinates(pathState.globalX, pathState.globalY),
+							var localCoordinates = The.map.localFromGlobalCoordinates(pathState.position.tile.x, pathState.position.tile.y),
 								page             = The.map.pages[page];
 
 							if (localCoordinates instanceof Error) {
@@ -427,11 +420,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 								page.stopListeningTo(entity, EVT_PREPARING_WALK);
 
 							} else {
-								y -= page.y*Env.tileSize;
-								x -= page.x*Env.tileSize;
-
-								entity.position.local.y = y;
-								entity.position.local.x = x;
+								entity.position.global.y = y;
+								entity.position.global.x = x;
 								entity.updatePosition();
 								entity.sprite.idle();
 							}
@@ -473,7 +463,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 					for (var pageI in pages) {
 						if (The.map.pages[pageI]) {
-							console.error("SERVER GAVE US A PAGE WHICH WE ALREADY HAVE!! WHAT A WASTE OF LATENCY");
+							console.warn("SERVER GAVE US A PAGE WHICH WE ALREADY HAVE!! WHAT A WASTE OF LATENCY");
 							delete pages[pageI];
 						}
 					}
@@ -526,9 +516,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.position.local.x/Env.tileSize) + The.map.curPage.x, parseInt(player.position.local.y/Env.tileSize) + The.map.curPage.y ),
-						global: { y: player.position.local.y + The.map.curPage.y * Env.tileSize, x: player.position.local.x + The.map.curPage.x * Env.tileSize },
-						local: { y: player.position.local.y, x: player.position.local.x },
+						tile: { x: parseInt(player.position.global.x/Env.tileSize), y: parseInt(player.position.global.y/Env.tileSize) },
+						global: { x: player.position.global.x, y: player.position.global.y },
 					};
 
 					reloadScripts().then(callbacksReady);
@@ -565,9 +554,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 
 					The.player.position = {
-						tile: new Tile( parseInt(player.localX/Env.tileSize) + The.map.curPage.x, parseInt(player.localY/Env.tileSize) + The.map.curPage.y ),
-						global: { y: player.localY + The.map.curPage.y * Env.tileSize, x: player.localX + The.map.curPage.x * Env.tileSize },
-						local: { y: player.localY, x: player.localX },
+						tile: { x: player.position.tile.x, y: player.position.tile.y },
+						global: { x: player.position.global.x, y: player.position.global.y },
 					};
 
 					reloadScripts().then(callbacksReady);
@@ -640,8 +628,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 			ui.onMouseMove = function(mouse){
 
-				try {
-
 					ui.tileHover = new Tile(mouse.x, mouse.y);
 
 					ui.hoveringEntity = false;
@@ -651,8 +637,10 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 							offX = (The.map.curPage.x - page.x)*Env.tileSize + The.camera.offsetX;
 						for (var movableID in page.movables) {
 							var movable = page.movables[movableID],
-								px      = movable.position.local.x - offX,
-								py      = movable.position.local.y - offY;
+								localX = movable.position.global.x % Env.pageRealWidth,
+								localY = movable.position.global.y % Env.pageRealHeight;
+								px      = localX - offX,
+								py      = localY - offY;
 							if (movable.npc.killable) {
 								if (movable.playerID) continue;
 								if (mouse.canvasX >= px && mouse.canvasX <= px + 16 &&
@@ -700,17 +688,12 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 						localCoord = localY*Env.pageWidth + localX;
 
 						if (page.interactables[localCoord]) {
-							console.log("ZOMG: "+ page.interactables[localCoord]);
 							ui.hoveringInteractable = page.interactables[localCoord];
 							break;
 						}
 					}
 
 					ui.updateCursor();
-
-				} catch(e) {
-					ui.tileHover = null;
-				}
 
 			};
 

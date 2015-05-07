@@ -113,9 +113,9 @@ FIXME FIXME FIXME FIXME FIXME
 
 								this.Log("	Adding player (me) to page");
 								The.player._character       = movable._character;
-								The.player.position.local = {
-									y: movable.localY,
-									x: movable.localX
+								The.player.position.global = {
+									y: movable.position.global.y,
+									x: movable.position.global.x
 								};
 								The.player.sprite.state = movable.state;
 								The.player.zoning       = false;
@@ -131,13 +131,13 @@ FIXME FIXME FIXME FIXME FIXME
 						} else {
 							this.Log("	Adding movable to page");
 							var entity = new Movable(movable.spriteID, page);
-							entity.id               = movable.id;
-							entity.position.local.y = movable.localY;
-							entity.position.local.x = movable.localX;
-							entity.sprite.state     = movable.state;
-							entity.zoning           = movable.zoning;
-							entity._character       = movable._character;
-							entity.page             = this.pages[pageI];
+							entity.id                = movable.id;
+							entity.position.global.y = movable.position.global.y;
+							entity.position.global.x = movable.position.global.x;
+							entity.sprite.state      = movable.state;
+							entity.zoning            = movable.zoning;
+							entity._character        = movable._character;
+							entity.page              = this.pages[pageI];
 							if (movable.hasOwnProperty('name')) {
 								entity.name = movable.name;
 							}

@@ -32,14 +32,16 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 				this.movable = movable;
 				this.update = function(){
-					var left = Env.tileScale * movable.position.local.x + // game left
+					var localX = movable.position.global.x % Env.pageRealWidth,
+						localY = movable.position.global.y % Env.pageRealHeight;
+					var left = Env.tileScale * localX + // game left
 								Env.tileScale * movable.sprite.tileSize / 4 + // centered UI
 								-1 * Env.tileScale * movable.sprite.offset_x + // offset sprite
 								-1 * Env.tileScale * _UI.camera.offsetX + // camera offset
 								1 * Env.tileScale * (movable.page.x - The.map.curPage.x) * Env.tileSize + // page offset
 								-1 * this.ui.width() / 2, // centered
 
-						top = Env.tileScale * movable.position.local.y + // game top
+						top = Env.tileScale * localY + // game top
 								movable.sprite.offset_y + // offset sprite
 								-1 * Env.tileScale * movable.sprite.offset_y + // offset sprite
 								-1 * movable.sprite.tileSize + // sprite size

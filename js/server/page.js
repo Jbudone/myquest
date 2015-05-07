@@ -9,12 +9,23 @@ define(['movable'], function(Movable){
 			this.listenTo(this, EVT_ADDED_ENTITY, function(page, entity){
 				var ent = {
 					id: entity.id,
-					localY: entity.position.local.y,
-					localX: entity.position.local.x,
+					position: {
+						global: {
+							x: entity.position.global.x,
+							y: entity.position.global.y
+						},
+						tile: {
+							x: entity.position.tile.x,
+							y: entity.position.tile.y
+						}
+					},
 					spriteID: entity.spriteID,
 					state: entity.sprite.state,
 					zoning: entity.zoning,
 					path: (entity.path? entity.path.serialize() : null),
+					_character: {
+						health: entity.character.health
+					},
 				}
 				if (entity.hasOwnProperty('playerID')) {
 					ent.playerID = entity.playerID;
@@ -27,32 +38,33 @@ define(['movable'], function(Movable){
 
 				console.log("Added entity["+entity.id+"]("+entity.spriteID+") to page ("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
-					if (!_.isFinite(entity.position.local.y) || !_.isFinite(entity.position.local.x)) throw new Error("Entity local position is illegal!");
+					if (!_.isFinite(entity.position.global.y) || !_.isFinite(entity.position.global.x)) throw new Error("Entity global position is illegal!");
 					if (!_.isFinite(this.x) || !_.isFinite(this.y)) throw new Error("Page has illegal position!");
 
-					var movablePosition = { y: entity.position.local.y + this.y * Env.tileSize,
-										   x: entity.position.local.x + this.x * Env.tileSize,
-										   globalY: Math.floor(entity.position.local.y / Env.tileSize) + this.y,
-										   globalX: Math.floor(entity.position.local.x / Env.tileSize) + this.x},
-						state = {
+					var state = {
 							page: this.index,
-							localY: entity.position.local.y,
-							localX: entity.position.local.x,
-							y: movablePosition.y,
-							x: movablePosition.x,
-							globalY: movablePosition.globalY,
-							globalX: movablePosition.globalX
+							position: {
+								global: {
+									x: entity.position.global.x,
+									y: entity.position.global.y },
+								tile: {
+									x: entity.position.tile.x,
+									y: entity.position.tile.y }
+							},
 						},
 						path = walk.toJSON(),
 						data = null;
 
 					if (_.isError(path)) throw path;
 
+					if (path.walks) debugger;
+
 					data = {
 						id: entity.id,
 						state: state,
-						path: path
+						path: path,
 					};
+
 
 					// console.log("("+now()+") Sending walk of user ["+entity.id+"] on page ("+this.index+") :: ("+state.localY+","+state.localX+")");
 					this.eventsBuffer.push({
@@ -89,9 +101,9 @@ define(['movable'], function(Movable){
 					var npc = Resources.npcs[spawn.id],
 						entity = new Movable(npc.sheet, page, {
 							position: {
-								local: {
-									y: localY * Env.tileSize,
-									x: localX * Env.tileSize,
+								global: {
+									y: (page.y + localY) * Env.tileSize,
+									x: (page.x + localX) * Env.tileSize,
 								}
 							}
 						});
@@ -138,7 +150,6 @@ define(['movable'], function(Movable){
 			var serialized = {};
 			serialized.index = this.index;
 			if (options |= PAGE_SERIALIZE_BASE) {
-				// tiles, sprites, collidables, y, x
 				serialized.y     = this.y;
 				serialized.x     = this.x;
 
@@ -150,7 +161,6 @@ define(['movable'], function(Movable){
 			}
 
 			if (options |= PAGE_SERIALIZE_MOVABLES) {
-				// movables, paths on movables
 				serialized.movables = {};
 				for (var entityID in this.movables) {
 					var entity     = this.movables[entityID],
@@ -164,13 +174,19 @@ define(['movable'], function(Movable){
 					}
 
 					_character = {
-						health: entity.character.health
+						health: (entity.character ? entity.character.health : entity.npc.health)
 					}
 
 					ent = {
 						id: entity.id,
-						localY: entity.position.local.y,
-						localX: entity.position.local.x,
+						position: {
+							global: {
+								x: entity.position.global.x,
+								y: entity.position.global.y },
+							tile: {
+								x: entity.position.tile.x,
+								y: entity.position.tile.y }
+						},
 						spriteID: entity.spriteID,
 						state: entity.sprite.state,
 						zoning: entity.zoning,
@@ -187,10 +203,10 @@ define(['movable'], function(Movable){
 							var walk = entity.path.walks[j];
 							if (walk.steps==0) break;
 							
-							     if (walk.direction==NORTH) ent.localY -= walk.steps;
-							else if (walk.direction==SOUTH) ent.localY += walk.steps;
-							else if (walk.direction==WEST)  ent.localX -= walk.steps;
-							else if (walk.direction==EAST)  ent.localX += walk.steps;
+							     if (walk.direction==NORTH) ent.y -= walk.steps;
+							else if (walk.direction==SOUTH) ent.y += walk.steps;
+							else if (walk.direction==WEST)  ent.x -= walk.steps;
+							else if (walk.direction==EAST)  ent.x += walk.steps;
 						}
 					}
 
