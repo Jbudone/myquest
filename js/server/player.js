@@ -310,7 +310,6 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 										}
 									};
 				this.client.send(response.serialize());
-				debugger;
 				return;
 			}
 

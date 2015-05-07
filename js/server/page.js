@@ -57,8 +57,6 @@ define(['movable'], function(Movable){
 
 					if (_.isError(path)) throw path;
 
-					if (path.walks) debugger;
-
 					data = {
 						id: entity.id,
 						state: state,

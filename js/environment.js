@@ -34,7 +34,7 @@ define(function(){
 		};
 
 		this.renderer = {
-			drawBorders: true, // Draws page borders (useful for debugging)
+			drawBorders: false, // Draws page borders (useful for debugging)
 		};
 
 		var testingLocal = true;

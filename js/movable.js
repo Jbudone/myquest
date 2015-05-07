@@ -52,7 +52,6 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize);
 
 			if (!_.isFinite(this.position.tile.x) || !_.isFinite(this.position.tile.y)) {
-				debugger;
 				throw new Error("Bad tile!");
 			}
 		};
