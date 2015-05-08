@@ -2,11 +2,11 @@
 	{
 		"id": "itm_potion",
 		"base": "heal",
-		"args": { "amt": 10 }
+		"args": { "amt": 30 }
 	},
 	{
 		"id": "itm_potion2",
 		"base": "heal",
-		"args": { "amt": 20 }
+		"args": { "amt": 40 }
 	}
 ]}

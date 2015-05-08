@@ -85,10 +85,8 @@
 				//	> CLEAN: sometimes bad rendering: the.camera.updated=true fixes it? ..render before loaded?
 				//	> CLEAN: clicking to move while zoning (disallow)
 				//	> CLEAN: movables not sent if 2 pages away (not in initial page neighbour)
-				//	> CLEAN: on-zone displays other movables in bad position
 				//	> CLEAN: high CPU usage
 				//	> CLEAN: remove server animations; auto client animations (facing target, etc.)
-				//	> CLEAN: requestAnimation for drawing; do step function outside of drawing (NOTE: requestAnimation WILL pause when inactive; hence do not allow core/networking functionality in the rendering)
 				//	> CLEAN: try/catch (performance)
 				//	> CLEAN: functions have to be object properties prototype functions kill performance
 				//	> CLEAN: able to handle pauses from client (page not in focus -- delayed timeouts)
@@ -96,8 +94,6 @@
 				//	> CLEAN: multiple target types (NPC, Tile)
 				//	> CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
 				//	> CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages
-				//	> CLEAN: adopt .bind() as much as possible (callbacks, promises, etc.)
-				//	> CLEAN: tile (global/local???)
 				//	> CLEAN: for(...){ ... } where functions perform chaining to variables within the for loop (errors)
 				//	> CLEAN: resources initialization routine (in client/server resources.js?)
 				//	> CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
@@ -204,7 +200,6 @@
 				//		- GameError in all player input type stuff
 				//		- node: red errors
 				//		- unload helpers: automatically keep track of hooks/listeners/etc. and unload all of those
-				//		- Combat: D/C
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
 				//		- Enemy path/chase prediction: when chasing user, don't update from their current tile, update from the tile they're moving to
@@ -225,6 +220,10 @@
 				//		- Items dropped in weird positions
 				//		- Enemies get bored after chasing you for too long or getting too far from you; but
 				//			should stop in their path and wait a moment before going back to spawn spot
+				//		- Combat: D/C
+				//		- Respawn position fixed
+				//		- UI disappears when entity enters new page
+				//		- Predictive pathfinding
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage
