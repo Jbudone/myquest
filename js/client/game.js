@@ -18,6 +18,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			The.player.addEventListener(EVT_ZONE, The.map, function(player, oldPage, newPage, direction){
 				console.log("Zone to "+newPage.index);
 				this.zone(newPage);
+				ui.updatePages();
 			});
 
 			if (initialListening) {

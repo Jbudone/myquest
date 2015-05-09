@@ -225,9 +225,7 @@
 				//			should stop in their path and wait a moment before going back to spawn spot
 				//		- Combat: D/C
 				//		- Respawn position fixed
-				//		- UI disappears when entity enters new page
 				//		- Predictive pathfinding
-				//		- Clicking bad path spot freezes the game briefly
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage

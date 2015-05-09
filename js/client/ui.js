@@ -221,19 +221,19 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 				movableDetails.ui.update();
 			});
 
-			if (entity != The.player) {
-				this.listenTo(entity, EVT_DIED, function(entity){
-					_UI.detachMovable(entity);
-				});
+			// if (entity != The.player) {
+			// 	this.listenTo(entity, EVT_DIED, function(entity){
+			// 		_UI.detachMovable(entity);
+			// 	});
 
-				this.listenTo(entity, EVT_ZONE, function(entity){
-					_UI.detachMovable(entity);
-				});
-			} else {
+			// 	this.listenTo(entity, EVT_ZONE, function(entity){
+			// 		_UI.detachMovable(entity);
+			// 	});
+			// } else {
 				this.listenTo(entity, EVT_DIED, function(entity){
 					_UI.hideMovable(entity);
 				});
-			}
+			// }
 
 		};
 
