@@ -224,8 +224,8 @@
 				//		- Enemies get bored after chasing you for too long or getting too far from you; but
 				//			should stop in their path and wait a moment before going back to spawn spot
 				//		- Combat: D/C
-				//		- Respawn position fixed
 				//		- Predictive pathfinding
+				//		- Wrong player name sometimes (when they log in? or when you login and they're already there?)
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage

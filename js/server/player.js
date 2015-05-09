@@ -75,7 +75,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 														x: player.respawn.position.tile.x,
 														y: player.respawn.position.tile.y
 													},
-													map: respawnPoint.page.map
+													page: respawnPoint.page.index,
+													map: respawnPoint.page.map.id
 												} });
 			this.movable.name = player.username;
 			this.movable.playerID = player.id;
@@ -94,6 +95,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				if (npage) this.pages[npage.index] = npage;
 			}
 
+
+			
 
 
 			this.movable.addEventListener(EVT_ZONE, this, function(player, oldPage, page){

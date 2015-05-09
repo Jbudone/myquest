@@ -25,7 +25,7 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		this.health = entity.npc.health;
 		this.alive  = true;
 		this.respawnTime = null;
-		this.respawnPoint = {
+		this.respawnPoint = entity.respawnPoint || {
 			map: entity.page.map.id,
 			page: entity.page.index,
 			tile: {
