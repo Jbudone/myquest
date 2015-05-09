@@ -38,10 +38,10 @@ define(function(){
 		};
 
 		this.assertion = {
-			eventListeningDuplicates: true,
+			eventListeningDuplicates: false,
 		};
 
-		var testingLocal = true;
+		var testingLocal = false;
 		this.connection = {
 			local: {
 				websocket: 'ws://127.0.0.1:1338/',
