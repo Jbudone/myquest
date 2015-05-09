@@ -9,11 +9,6 @@ define(function(){
 		pendingOperations:[],
 		listeningTo:[], // [{obj, id, ..}, ..]
 
-		switchObject: function(obj){
-			this.copyEventsAndListeners(obj);
-			this.stopAllEventsAndListeners();
-		},
-
 		// Stop all event handling. For any objects that are currently listening to us under any id, inform
 		// them that we're stopping the event handler. This includes any pending events.
 		stopAllEventsAndListeners:function(){
@@ -32,14 +27,6 @@ define(function(){
 				this.stopListeningTo(listener.obj, listener.id);
 			};
 			this.listeningTo = [];
-		},
-
-		// Copy all of the events listening to us, and the event handlers we've setup to another object.
-		// Essentially another object will be replacing our base object without having any side effects
-		copyEventsAndListeners:function(obj){
-			obj.pendingEvents=this.pendingEvents;
-			obj.evtListeners=this.evtListeners;
-			// FIXME: copy listeningTo as well, and change listener/callback for each
 		},
 
 		triggerEvent:function(id){
@@ -85,6 +72,15 @@ define(function(){
 		
 		addEventListener:function(id,context,callback,priority){
 			if (!this.evtListeners[id]) this.evtListeners[id]=[];
+			if (Env.assertion.eventListeningDuplicates) {
+				var compareTo = callback.toString();
+				for (var i=0; i<this.evtListeners[id].length; ++i) {
+					if (this.evtListeners[id][i].callback.toString() == compareTo) {
+						Log("ERROR: adding event listener where a duplicate was found!", LOG_ERROR);
+						debugger;
+					}
+				}
+			}
 			this.evtListeners[id].push({ callback: callback, caller: context, priority: priority });
 			// FIXME: return evt object (so that caller can add object and manipulate it later if necessary)
 			return true;
@@ -173,16 +169,6 @@ define(function(){
 			}
 		},
 
-		changeListeners:function(oldContext, newContext){
-			for (var id in this.evtListeners) {
-				var evt = this.evtListeners[id];
-				for (var i=0; i<evt.length; ++i) {
-					if (evt[i].caller==oldContext) {
-						evt[i].caller = newContext;
-					}
-				}
-			}
-		},
 	};
 
 	return Eventful;

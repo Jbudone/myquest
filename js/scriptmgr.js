@@ -24,7 +24,7 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 			if (!scriptRes.script) continue;
 
 			var _script   = this.buildScript(scriptRes),
-				hookInto  = _script._script.hookInto;
+				hookInto  = _script._script._hookInto;
 
 			if (hookInto == HOOK_INTO_MAP) {
 

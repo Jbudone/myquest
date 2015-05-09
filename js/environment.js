@@ -37,6 +37,10 @@ define(function(){
 			drawBorders: false, // Draws page borders (useful for debugging)
 		};
 
+		this.assertion = {
+			eventListeningDuplicates: true,
+		};
+
 		var testingLocal = true;
 		this.connection = {
 			local: {

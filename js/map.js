@@ -84,8 +84,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 			}
 
 			// Check if entity in new page
-			var pageY   = parseInt(entity.position.global.y / (Env.tileSize*Env.pageHeight)),
-				pageX   = parseInt(entity.position.global.x / (Env.tileSize*Env.pageWidth)),
+			var pageY   = parseInt(entity.position.tile.y / Env.pageHeight),
+				pageX   = parseInt(entity.position.tile.x / Env.pageWidth),
 				pageI   = this.pageIndex(pageX, pageY),
 				oldPage = null,
 				newPage = null,
@@ -98,8 +98,8 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (!newPage && !Env.isServer) {
 					// Entity has zoned to another page which we don't have loaded yet
 					// There's no need to finish the rest of this, simply trigger a zone out
-					entity.page.triggerEvent(EVT_ZONE, entity, null);
-					this.triggerEvent(EVT_ZONE, entity, entity.page, null);
+					entity.page.triggerEvent(EVT_ZONE_OUT, entity, null);
+					this.triggerEvent(EVT_ZONE_OUT, entity.page, entity, null);
 					return;
 				}
 			}

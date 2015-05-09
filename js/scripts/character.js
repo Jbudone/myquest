@@ -164,6 +164,8 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 			this.stopAllEventsAndListeners();
 			if (!(this.entity instanceof Movable)) throw new Error("Entity not a Movable");
 			this.entity.handler('step').unset();
+			this.stopListeningTo(EVERYTHING);
+			this.entity.character = null;
 		}
 
 		var _character = this;

@@ -12,7 +12,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 		this.static       = true,
 		this.keys         = [],
 		this.components   = { };
-		this.hookInto     = HOOK_INTO_MAP;
+		this._hookInto     = HOOK_INTO_MAP;
 		var _game         = this,
 			map           = null,
 			_script       = null;
@@ -146,6 +146,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (!(character instanceof Character)) return new Error("Entity not a character");
 			if (!this.characters.hasOwnProperty(entityID)) return new Error("Character ("+ entityID +") not found");
 			if (!this.doHook('removedcharacter').pre(entity)) return;
+			this.characters[entityID].unload();
 			delete this.characters[entityID];
 
 			var result = null;

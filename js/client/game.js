@@ -9,13 +9,10 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 		var server   = null,
 			ui       = null,
 			camera   = null,
-			renderer = null;
+			renderer = null,
+			initialListening = true;
 
 		var listenToPlayer = function(){
-
-			// The.player.addEventListener(EVT_ZONE, ui, function(player, oldPage, newPage, direction){
-
-			// });
 
 			// NOTE: need to reset map listeners since this was all cleared when reloading scripts
 			The.player.addEventListener(EVT_ZONE, The.map, function(player, oldPage, newPage, direction){
@@ -23,77 +20,83 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				this.zone(newPage);
 			});
 
-			The.player.addEventListener(EVT_FINISHED_PATH, this, function(player, walk){
-				ui.tilePathHighlight = null;
-			});
+			if (initialListening) {
 
-			The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
+				The.player.addEventListener(EVT_FINISHED_PATH, this, function(player, walk){
+					ui.tilePathHighlight = null;
+				});
 
-				Log("Preparing to walk..");
-				var playerPosition = {	global: {
-											x: The.player.position.global.x,
-											y: The.player.position.global.y },
-										tile: {
-											x: The.player.position.tile.x,
-											y: The.player.position.tile.y }
-									},
-					state = {	page: The.map.curPage.index,
-								global: {
-									x: playerPosition.global.x,
-									y: playerPosition.global.y, },
-								tile: {
-									x: playerPosition.tile.x,
-									y: playerPosition.tile.y }
-							};
+				The.player.addEventListener(EVT_PREPARING_WALK, this, function(player, walk){
 
-				var onTileY = state.global.y % Env.tileSize == 0,
-					onTileX = state.global.x % Env.tileSize == 0;
-				if (!onTileY && !onTileX) {
-					debugger;
-					console.error("BAD STATE FOR WALK!");
-					return;
-				}
+					Log("Preparing to walk..");
+					var playerPosition = {	global: {
+												x: The.player.position.global.x,
+												y: The.player.position.global.y },
+											tile: {
+												x: The.player.position.tile.x,
+												y: The.player.position.tile.y }
+										},
+						state = {	page: The.map.curPage.index,
+									global: {
+										x: playerPosition.global.x,
+										y: playerPosition.global.y, },
+									tile: {
+										x: playerPosition.tile.x,
+										y: playerPosition.tile.y }
+								};
 
-				this.Log("Sending walkTo request", LOG_DEBUG);
-				this.Log(state, LOG_DEBUG);
-
-
-
-				var safePath = The.map.pathfinding.checkSafeWalk(state, walk);
-				if (!safePath) {
-					debugger;
-					console.error("We created a path that wasn't safe...weird");
-					return false;
-				}
-
-				
-				server.walkTo(walk, state).then(function(){
-				}, function(response){
-					// not allowed...go back to state
-					console.error("Going back to state..");
-					console.error(state);
-					console.error(event);
-
-					ui.tilePathHighlight=null;
-
-					The.map.curPage = The.map.pages[state.page];
-					if (response.state) {
-						The.player.position.global.x = response.state.position.global.x;
-						The.player.position.global.y = response.state.position.global.y;
-					} else {
-						The.player.position.global.x = state.global.x;
-						The.player.position.global.y = state.global.y;
+					var onTileY = state.global.y % Env.tileSize == 0,
+						onTileX = state.global.x % Env.tileSize == 0;
+					if (!onTileY && !onTileX) {
+						debugger;
+						console.error("BAD STATE FOR WALK!");
+						return;
 					}
-					The.player.updatePosition();
-					The.player.path = null;
-					// The.player.lastMoved = null;
-					The.player.sprite.idle();
-					ui.updatePages();
-				})
-				.catch(Error, function(e){ errorInGame(e); })
-				.error(function(e){ errorInGame(e); });
 
-			});
+					this.Log("Sending walkTo request", LOG_DEBUG);
+					this.Log(state, LOG_DEBUG);
+
+
+
+					var safePath = The.map.pathfinding.checkSafeWalk(state, walk);
+					if (!safePath) {
+						debugger;
+						console.error("We created a path that wasn't safe...weird");
+						return false;
+					}
+
+					
+					server.walkTo(walk, state).then(function(){
+					}, function(response){
+						// not allowed...go back to state
+						console.error("Going back to state..");
+						console.error(state);
+						console.error(event);
+
+						ui.tilePathHighlight=null;
+
+						The.map.curPage = The.map.pages[state.page];
+						if (response.state) {
+							The.player.position.global.x = response.state.position.global.x;
+							The.player.position.global.y = response.state.position.global.y;
+						} else {
+							The.player.position.global.x = state.global.x;
+							The.player.position.global.y = state.global.y;
+						}
+						The.player.updatePosition();
+						The.player.path = null;
+						// The.player.lastMoved = null;
+						The.player.sprite.idle();
+						ui.updatePages();
+					})
+					.catch(Error, function(e){ errorInGame(e); })
+					.error(function(e){ errorInGame(e); });
+
+				});
+
+
+				initialListening = false;
+			}
 		};
 
 		var ready = true,
@@ -499,14 +502,15 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 					Log("Zoned to new map");
 					var oldMap = The.map;
+					oldMap.unload();
+
 
 					The.map = new Map();
 					The.map.loadMap(newMap);
 					The.map.addPages(pages);
 
-					oldMap.copyEventsAndListeners(The.map);
 					oldMap.stopAllEventsAndListeners();
-					The.player.changeListeners(oldMap, The.map);
+					// The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
 					ui.updatePages();
@@ -514,6 +518,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.player.page = The.map.curPage;
 					The.player.sprite.idle();
 
+
+					listenToPlayer();
 
 					The.player.position = {
 						tile: { x: parseInt(player.position.global.x/Env.tileSize), y: parseInt(player.position.global.y/Env.tileSize) },
@@ -535,14 +541,14 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.player.physicalState.transition( STATE_ALIVE );
 
 					var oldMap = The.map;
+					oldMap.unload();
 
 					The.map = new Map();
 					The.map.loadMap(map);
 					The.map.addPages(pages);
 
-					oldMap.copyEventsAndListeners(The.map);
 					oldMap.stopAllEventsAndListeners();
-					The.player.changeListeners(oldMap, The.map);
+					// The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
 					ui.updatePages();

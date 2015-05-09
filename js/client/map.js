@@ -107,7 +107,7 @@ FIXME FIXME FIXME FIXME FIXME
 					for (var entityID in evtPage.movables) {
 						var movable = evtPage.movables[entityID];
 
-						if (isZoning && The.map.pages[pageI].movables[entityID]) continue; // incase zoned in as we received this
+						if (isZoning && The.map.movables[entityID]) continue; // incase zoned in as we received this
 						if (entityID == The.player.id) {
 							if (!isZoning) {
 

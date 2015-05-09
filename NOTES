@@ -147,7 +147,7 @@ SERVER
 	* Updating server
 		- major update:
 		  	git branch vX
-			git checkout vX
+			git checkout vX   (or, git checkout --  to clear unstaged changes)
 			git pull origin master
 			update testingLocal in Environment.js
 
