@@ -475,6 +475,8 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 				user.hook('clickedTile', this).after(function(toTile){
 
+					if (!The.map.isTileOpen(toTile)) return;
+
 					// 	click to move player creates path for player
 					var playerX      = The.player.position.global.x,
 						playerY      = The.player.position.global.y,
