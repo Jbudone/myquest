@@ -216,6 +216,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 			var result = null;
 			this.stopListeningTo(target);
+			this.stopListeningTo(target.entity);
 			result = brain.neuralNet.remove(target.entity.id);
 			if (_.isError(result)) return result;
 
@@ -265,7 +266,7 @@ define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'even
 
 
 		this.globalUnload = function(){
-			this.stopAllEventsAndListeners();
+			this.unloadListener();
 		};
 
 		this.server = {

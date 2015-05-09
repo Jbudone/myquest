@@ -146,7 +146,14 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			if (!(character instanceof Character)) return new Error("Entity not a character");
 			if (!this.characters.hasOwnProperty(entityID)) return new Error("Character ("+ entityID +") not found");
 			if (!this.doHook('removedcharacter').pre(entity)) return;
-			this.characters[entityID].unload();
+
+			if (!Env.isServer && !this.respawning[entityID]) {
+				// Only unload the character if we're respawning; this is because in a respawning case, we're
+				// going to keep the same character and simply turn him back alive after respawning. Unloading
+				// only occurs on client side since there's no point to delete and recreate a character on
+				// server side
+				this.characters[entityID].unload();
+			}
 			delete this.characters[entityID];
 
 			var result = null;
@@ -206,9 +213,17 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 				} else {
 					// NOTE: entity could be a user, and may be zoning between maps. The character script has
 					// already been created, but now its context needs to be switched from 1 map to the other
-					result = _script.addScript( entity.character );
+					result = _script.addScript( entity.character._script );
 					if (_.isError(result)) return result;
-					_.last(_script.children).initialize(); // FIXME: this isn't the safest way to go..; NOTE: if game script is currently initializing, it will attempt to initialize all children afterwards; this child script will already have been initialized, and will not re-initialize the child
+
+					// FIXME: is there a point to re-initializing the script? On the server this caused
+					// duplication issues
+					if (!Env.isServer) {
+						_.last(_script.children).initialize(); // FIXME: this isn't the safest way to go..; NOTE: if game script is currently initializing, it will attempt to initialize all children afterwards; this child script will already have been initialized, and will not re-initialize the child
+					}
+					// } else {
+					// 	debugger;
+					// }
 				}
 
 				result = this.addCharacter.call(this, entity);
@@ -315,7 +330,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 			},
 
 			unload: function(){
-				this.stopAllEventsAndListeners();
+				this.unloadListener();
 				map.handler('step').unset();
 				var result = map.unhook(this);
 				if (_.isError(result)) throw result;

@@ -34,6 +34,7 @@
 	process.on('SIGINT', couldNotStartup);
 	process.on('uncaughtException', couldNotStartup);
 
+
 requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
 
 	var _               = require('underscore'),

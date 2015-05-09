@@ -117,7 +117,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 		};
 
 		this.disconnected = function(){
-			The.player.stopAllEventsAndListeners(The.map);
+			The.player.unload();
+			The.map.unload();
 			The.scriptmgr.unload();
 			if (this.hasOwnProperty('unhookAllHooks')) this.unhookAllHooks();
 
@@ -509,8 +510,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.map.loadMap(newMap);
 					The.map.addPages(pages);
 
-					oldMap.stopAllEventsAndListeners();
-					// The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
 					ui.updatePages();
@@ -547,8 +546,6 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.map.loadMap(map);
 					The.map.addPages(pages);
 
-					oldMap.stopAllEventsAndListeners();
-					// The.player.changeListeners(oldMap, The.map);
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
 					ui.updatePages();
@@ -556,7 +553,9 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.player.page = The.map.curPage;
 					The.player.sprite.idle();
 
+					initialListening = true; // We've cleared the player's listeners and are starting from scratch
 					listenToPlayer();
+
 
 
 					The.player.position = {
@@ -565,6 +564,13 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					};
 
 					reloadScripts().then(callbacksReady);
+
+					callbackWhenReady(function(){
+						// FIXME: had to put this in twice since listenToPlayer doesn't have character defined yet
+						The.player.character.hook('die', this).after(function(){
+							ui.fadeToBlack();
+						});
+					}.bind(this));
 
 					The.camera.updated = true;
 

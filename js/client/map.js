@@ -269,13 +269,11 @@ FIXME FIXME FIXME FIXME FIXME
 				this.pages[pageI].unload();
 			}
 
-			this.stopAllEventsAndListeners();
+			this.unloadListener();
 			if (this.hasOwnProperty('unhookAllHooks')) {
 				this.unhookAllHooks();
 			}
 			this.unregisterAllHooks();
-
-			this.stopListeningTo(EVERYTHING);
 		}
 	};
 

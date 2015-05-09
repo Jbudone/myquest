@@ -313,6 +313,24 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return;
 			}
 
+			
+			// Are we close enough to recalibrate to the starting point of the path?
+			if (Math.abs(pathState.position.tile.x - movableState.position.tile.x) + Math.abs(pathState.position.tile.y - movableState.position.tile.y) > 8) {
+				var response = new Response(action.id);
+				response.success = false;
+				response.state   = { position: {
+										global: {
+											x: movableState.position.global.x,
+											y: movableState.position.global.y },
+										tile: {
+											x: movableState.position.tile.x,
+											y: movableState.position.tile.y }
+										}
+									};
+				this.client.send(response.serialize());
+				return;
+			}
+
 			var success = map.recalibratePath(movableState, pathState, path, maxWalk);
 
 			if (success) {
@@ -355,7 +373,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 
 		this.disconnectPlayer = function(){
 			this.Log("Disconnecting player..");
-			this.movable.stopAllEventsAndListeners();
+			this.movable.unload();
 		};
 
 		this.attackTarget = function(targetID){

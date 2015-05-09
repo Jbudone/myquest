@@ -161,11 +161,10 @@ define(['SCRIPTENV', 'scripts/character.ai', 'eventful', 'hookable', 'loggable']
 		};
 
 		this.unload = function(){
-			this.stopAllEventsAndListeners();
-			if (!(this.entity instanceof Movable)) throw new Error("Entity not a Movable");
+			this.Log("Unloading");
+			this.unloadListener();
 			this.entity.handler('step').unset();
-			this.stopListeningTo(EVERYTHING);
-			this.entity.character = null;
+			delete this.entity.character;
 		}
 
 		var _character = this;

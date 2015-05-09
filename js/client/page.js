@@ -37,16 +37,17 @@ define(function(){
 				// this page which is completely unecessary. However, removeEntity contains a hook which is
 				// hooked by the game to remove the character script as well. So, we must remove the entity
 				// this way
+				if (movableID != The.player.id) {
+					this.movables[movableID].unload();
+				}
 				this.map.removeEntity(this.movables[movableID]);
 			}
 
 
-			this.stopAllEventsAndListeners();
+			this.unloadListener();
 			if (this.hasOwnProperty('unhookAllHooks')) {
 				this.unhookAllHooks();
 			}
-
-			this.stopListeningTo(EVERYTHING);
 		}
 	};
 

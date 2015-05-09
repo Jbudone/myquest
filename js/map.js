@@ -390,21 +390,20 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 						   // This single walk is far too long
 						   if (recalibrationStart[j].distance > 32) {
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-							   console.error("ISSUE HERE A!!!");
-						   debugger;
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
+							   console.log("ISSUE HERE A!!!");
 							   console.log(startTiles);
 							   console.log(endTiles);
 							   logPath(path);
@@ -415,19 +414,18 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // This entire path is greater than our maximum path length
 					   if (path.length() > maxWalk) {
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   console.error("ISSUE HERE D!!!");
-						   debugger;
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
+						   console.log("ISSUE HERE D!!!");
 						   logPath(path);
 						   return false;
 					   } else {
@@ -457,21 +455,20 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // Path length is greater than our maximum path length
 					   if (startPath.path.length() > maxWalk) {
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   console.error("ISSUE HERE C!!!");
-						   //debugger;
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
+						   console.log("ISSUE HERE C!!!");
 						   console.log(startTiles);
 						   console.log(endTiles);
 						   logPath(path);
@@ -495,21 +492,20 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 						   // This single walk is too long
 						   if (recalibrationStart[j].distance > 32) {
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-							   console.error("ISSUE HERE B!!!");
-						   debugger;
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
+							   console.log("ISSUE HERE B!!!");
 							   logWalk(recalibrationStart);
 							   logWalk(recalibrationEnd);
 							   console.log(startTiles);
@@ -542,19 +538,18 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 
 					   // This entire path is longer than our maximum path length
 					   if (path.length() > maxWalk) {
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   console.error("ISSUE HERE E!!!");
-						   //debugger;
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
+						   console.log("ISSUE HERE E!!!");
 						   console.log(startTiles);
 						   console.log(endTiles);
 						   logPath(path);

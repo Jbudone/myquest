@@ -91,7 +91,7 @@ define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
 			Base.unload();
 			delete Base;
 
-			this.stopAllEventsAndListeners();
+			this.unloadListener();
 		};
 
 		// Startup

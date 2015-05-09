@@ -212,6 +212,9 @@
 				//
 				//		- onTileX onTileY map.js:1120
 				//		- look into ISSUE WITH PATH... are those still around?
+				//		- Finish eventful fixes; fix unloading eventful everywhere
+				//		- CHECKME: script.addScript( ... ) had to reference obj._script otherwise it was
+				//					creating a new script everytime! Check everywhere for this for safety
 				//
 				//
 				//
@@ -224,6 +227,7 @@
 				//		- Respawn position fixed
 				//		- UI disappears when entity enters new page
 				//		- Predictive pathfinding
+				//		- Clicking bad path spot freezes the game briefly
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage

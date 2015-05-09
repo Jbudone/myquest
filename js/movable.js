@@ -100,18 +100,6 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			}
 		};
 
-		// FIXME: I put this listener up to fix a problem where the path was
-		// trying to run even though it wasn't cleared after zoning but before
-		// the page was set... This is probably a necessary functionality
-		// though, BUT it didn't seem to trigger before step() did, fix things
-		// up here..
-		this.listenTo(this, EVT_ZONE_OUT, function(){
-
-			if (this.path) {
- 				if (_.isFunction(this.path.onFailed)) this.path.onFailed();
-				this.path = null;
-			}
-		}, HIGH_PRIORITY);
 
 		this.step=_.wrap(this.step,function(step,time){
 
@@ -343,6 +331,11 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			else if (myX > yourX) direction = WEST;
 			else if (myX < yourX) direction = EAST;
 			return direction;
+		};
+
+		this.unload = function(){
+			this.unloadListener();
+			Log("Unloading movable..");
 		};
 	};
 

@@ -16,6 +16,7 @@ define(function(){
 
 	var keyValue = 1,
 		global = (typeof window !== 'undefined' ? window : GLOBAL),
+		keyStrings = {};
 		addKey = function(key){
 			if (global[key] !== undefined) {
 				console.error("ERROR: KEY ["+key+"] ALREADY DEFINED!");
@@ -23,6 +24,7 @@ define(function(){
 			}
 			keys[key] = (keyValue++);
 			global[key]=keys[key];
+			keyStrings[keyValue-1] = key;
 		}, addKeys = function(keys){
 			for (var i=0; i<keys.length; ++i) {
 				addKey(keys[i]);
@@ -34,6 +36,7 @@ define(function(){
 	}
 	global['addKey'] = addKey;
 	global['addKeys'] = addKeys;
+	global['keyStrings'] = keyStrings;
 
 
 	// TODO: organize with arrays, {'events':{prefix:'evt',keys:['step','zone','finished_moving',...]}} and automatically add
