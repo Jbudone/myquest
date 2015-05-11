@@ -34,14 +34,14 @@ define(function(){
 		};
 
 		this.renderer = {
-			drawBorders: false, // Draws page borders (useful for debugging)
+			drawBorders: true, // Draws page borders (useful for debugging)
 		};
 
 		this.assertion = {
-			eventListeningDuplicates: false,
+			eventListeningDuplicates: true,
 		};
 
-		var testingLocal = false;
+		var testingLocal = true;
 		this.connection = {
 			local: {
 				websocket: 'ws://127.0.0.1:1338/',

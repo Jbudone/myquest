@@ -203,6 +203,9 @@
 				//		- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
 				//		- CLEAN: isGameRunning  in window
 				//		- Enemy path/chase prediction: when chasing user, don't update from their current tile, update from the tile they're moving to
+				//		- Bug report script: automatically package thrown data, allow user to submit comment,
+				//			send to jbud.me which sends a request to the live server for a tail of the output
+				//			to append to this error package then email to me.
 				//		- Error handling: return Error for game error stuff; throw Error for ANYTHING that goes wrong; but do checking before hand for possibly bad input to return Error. The caller can check for error and throw if necessary (server stuff), or disallow input (client request)
 				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
 				//		- Uncaught Error: Already watching this entity!map.js:145 Map.watchEntitymap.js:164 Map.addPagesgame.js:474 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
@@ -223,9 +226,14 @@
 				//		- Items dropped in weird positions
 				//		- Enemies get bored after chasing you for too long or getting too far from you; but
 				//			should stop in their path and wait a moment before going back to spawn spot
+				//		- If enemies are bored and walk back to their spot but they see you while walking
+				//			back, they continue to walk back to their spot before turning back and chasing you
 				//		- Combat: D/C
 				//		- Predictive pathfinding
 				//		- Wrong player name sometimes (when they log in? or when you login and they're already there?)
+				//		- Sometime when dying (with a path?) the path gets sent back as bad path before(?)
+				//			respawning, then UI bugs out because The.map.curPage isn't set, and everything
+				//			freezes
 				//
 				//
 				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:447 server.onEntityHurtserverHandler.js:68 server.websocket.onmessage

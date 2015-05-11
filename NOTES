@@ -8,6 +8,9 @@ http://opengameart.org/content/lots-of-hyptosis-tiles-organized
 http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
 http://www.deviantart.com/morelikethis/artists/333013048?view_mode=2
 http://gaurav.munjal.us/Universal-LPC-Spritesheet-Character-Generator/
+http://www.realm667.com/index.php/en/beastiary-mainmenu-136-69621/heretic-hexen-style-mainmenu-137-49102#preview-3
+http://www.spriters-resource.com/pc_computer/heretic/
+http://www.spriters-resource.com/pc_computer/heroes3/
 
 NO inventory, use a belt/pack for storing immediate items (scrolls/potions) limited space. Use Messagebox for purchasing items from shops (link texts). Store quest items internally, show a box of what items you have already (unable to drop/interact/sell those items). Pickup armour from ground to put it on; deletes your current armour in favour of this one. Allow for armour/weapon buffs (timed/perma for item): particle system which you can walk into to get effects, quest givers provide this, certain monsters, etc.
 
@@ -34,6 +37,12 @@ Possible to rob banks. Note the massive maze, traps, countless guards, dragons? 
 A roguelike area where once you enter, you cannot get out through the same entrance. You must travel a long way to reach the end, with LOTS of heavy duty monsters and free player killing, etc. ALL of your items are dropped when you die, and free for other players to take. Perhaps a limited resurrection time with major penalties (eg. group raids). Also lots of treasure will be stored in this area for successful heroes. It is LONG which means people who enter will spend a long time in this place (hence, stores and such...perhaps enemy stores like in goblin towns or something, you will have to gain goblin faction or put on a mask to pretend to be a goblin)
 
 Meat goes bad (necessary for disallowing auctioning/storing food with good benefits); however ice boxes exist and can serve for storing meat (raw and cooked). Ice boxes are really really heavy, so usually you have to go back to find the same ice box (maybe a really snowy mountain which is hugely dangerous where you might freeze..and things snow over..but if you remember where an ice box is, you can walk to the same spot and dig away the snow). Anybody can go into an ice box, unless you stick a lock on it
+
+Gambling: two npc's go to an arena to fight. Players can place bets to whom will win; maybe they can help by passing the NPC some items or potions or buffs?
+
+In-game card game like from M&M
+
+Store maps as BSP tree? then only have to pass events from server to clients which are in sight of a given BSP node. Could extend this into fog of war for client
 
 
 Quests

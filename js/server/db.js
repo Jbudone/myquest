@@ -50,9 +50,11 @@ define(['loggable'], function(Loggable){
 				var shasum = crypto.createHash('sha1');
 				shasum.update('SALTY'+password);
 
+				var usernameUpper = username.toUpperCase();
+
 				db
 				.collection('players')
-				.findOne({'$and':[{username:username}, {password: shasum.digest('hex')}]}, (function(err, player) {
+				.findOne({'$and':[{usernameUpper:usernameUpper}, {password: shasum.digest('hex')}]}, (function(err, player) {
 
 					if (err || !player) {
 						this.Log("Could not find player ("+username+")");
@@ -72,9 +74,11 @@ define(['loggable'], function(Loggable){
 		this.registerUser = function(username, password, email){
 			return new Promise(function(finished, failed){
 
+				var usernameUpper = username.toUpperCase();
+
 				db
 				.collection('players')
-				.findOne({username:username}, function(err, player){
+				.findOne({usernameUpper:usernameUpper}, function(err, player){
 
 					// Player already exists?
 					if (err) {
@@ -109,6 +113,9 @@ define(['loggable'], function(Loggable){
 		this.createNewPlayer = function(playerAttributes, username, password, email){
 
 			return new Promise((function(succeeded, failed){
+
+				var usernameUpper = username.toUpperCase();
+
 				db
 				.collection('players')
 				.find({}, {sort:{'id':-1}, limit:1}).toArray((function(err, res){
@@ -135,6 +142,7 @@ define(['loggable'], function(Loggable){
 						var player = _.defaults(playerAttributes, {
 							// Default player values
 							id: id,
+							usernameUpper: usernameUpper,
 							username: username,
 							password: password,
 							email: email,
