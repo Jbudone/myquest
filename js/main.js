@@ -205,7 +205,7 @@
 				//		- Enemy path/chase prediction: when chasing user, don't update from their current tile, update from the tile they're moving to
 				//		- Bug report script: automatically package thrown data, allow user to submit comment,
 				//			send to jbud.me which sends a request to the live server for a tail of the output
-				//			to append to this error package then email to me.
+				//			to append to this error package then email to me. 
 				//		- Error handling: return Error for game error stuff; throw Error for ANYTHING that goes wrong; but do checking before hand for possibly bad input to return Error. The caller can check for error and throw if necessary (server stuff), or disallow input (client request)
 				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
 				//		- Uncaught Error: Already watching this entity!map.js:145 Map.watchEntitymap.js:164 Map.addPagesgame.js:474 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage

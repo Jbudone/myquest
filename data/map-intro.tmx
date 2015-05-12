@@ -3,8 +3,8 @@
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16">
   <image source="../tilesheet.png" width="320" height="1568"/>
  </tileset>
- <tileset firstgid="1961" name="npcs" tilewidth="16" tileheight="16">
-  <image source="../tools/sheetedit/avatars.png" width="80" height="16"/>
+ <tileset firstgid="1961" name="npcs" tilewidth="32" tileheight="32">
+  <image source="../tools/sheetedit/avatars.png" width="160" height="32"/>
  </tileset>
  <layer name="base" width="100" height="100">
   <data encoding="base64" compression="zlib">
