@@ -1,6 +1,7 @@
 {
 	"maps":{
 		"main":"map-intro",
-		"home":"home"
+		"home":"home",
+		"test-map-toobig":"test-map-toobig"
 	}
 }

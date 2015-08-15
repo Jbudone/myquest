@@ -6,7 +6,13 @@ define(['movable'], function(Movable){
 		spawns:{},
 
 		_init: function(){
+			this.registerHook('addcharacterlessentity');
 			this.listenTo(this, EVT_ADDED_ENTITY, function(page, entity){
+
+				if (!entity.character) {
+					this.doHook('addcharacterlessentity').pre(entity);
+				}
+
 				var ent = {
 					id: entity.id,
 					position: {
@@ -27,7 +33,8 @@ define(['movable'], function(Movable){
 						health: entity.character.health
 					},
 				}
-				if (entity.hasOwnProperty('playerID')) {
+				if (_.isError(ent.path)) throw ent.path;
+				if (_.has(entity, 'playerID')) {
 					ent.playerID = entity.playerID;
 					ent.name = entity.name;
 				}
@@ -35,6 +42,7 @@ define(['movable'], function(Movable){
 					evtType: EVT_ADDED_ENTITY,
 					entity: ent
 				});
+
 
 				console.log("Added entity["+entity.id+"]("+entity.spriteID+") to page ("+this.index+")");
 				this.listenTo(entity, EVT_PREPARING_WALK, function(entity, walk){
@@ -64,12 +72,30 @@ define(['movable'], function(Movable){
 					};
 
 
+
+					var self = this;
+					for (var movableID in this.map.movables) {
+						var movable = this.map.movables[movableID];
+						if (!movable.player) continue;
+						if (movable.player.pages.hasOwnProperty(self.index)) {
+							var s = JSON.stringify({
+							   evtType: EVT_PAGE_EVENTS,
+							   page: self.index,
+							   events: JSON.stringify({events:[JSON.stringify({
+								   evtType: EVT_PREPARING_WALK,
+								   data: data
+							   })]})
+							});
+							movable.player.client.send(s);
+						}
+					}
+
 					// console.log("("+now()+") Sending walk of user ["+entity.id+"] on page ("+this.index+") :: ("+state.localY+","+state.localX+")");
-					this.eventsBuffer.push({
-						evtType: EVT_PREPARING_WALK,
-						data: data
-					});
-				}, HIGH_PRIORITY);
+					// this.eventsBuffer.push({
+					// 	evtType: EVT_PREPARING_WALK,
+					// 	data: data
+					// });
+				});
 
 			});
 
@@ -84,6 +110,12 @@ define(['movable'], function(Movable){
 		},
 
 		initialize: function(){
+
+		},
+
+		// NOTE: since the scriptmgr hasn't been started yet, we want to spawn everything as soon as the
+		// scriptmgr (in particular Game and Character) is ready
+		initialSpawn: function(){
 
 			if (this.spawns) {
 				var page = this;
@@ -156,6 +188,8 @@ define(['movable'], function(Movable){
 				serialized.collidables   = this.collidables;
 				serialized.items         = this.items;
 				serialized.interactables = this.interactables;
+				serialized.jumpPoints    = this.jumpPoints;
+				serialized.forcedNeighbours = this.map.forcedNeighbours;
 			}
 
 			if (options |= PAGE_SERIALIZE_MOVABLES) {

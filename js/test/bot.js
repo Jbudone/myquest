@@ -12,9 +12,13 @@ requirejs.config({
 
 
 var couldNotStartup = function(e){
-   console.log("Could not startup server");
+   console.log("Uncaught exception hit!");
    if (e) {
 	   console.log(e);
+	   console.log(e.stack);
+   } else {
+	   e = new Error();
+	   console.log("No error provided");
 	   console.log(e.stack);
    }
    process.exit();
@@ -162,11 +166,13 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 
 			server.onLogin = function(player){
 
-				Log("Logged in as player "+player.id);
+				console.log("Logged in as player "+player.id);
+				bot.id = player.id;
 
 				ready = false;
 				loaded('player');
 
+				postLoginCallback();
 				Game.loadedPlayer(player);
 
 				Log("Requesting map..");
@@ -178,6 +184,7 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 			server.onLoginFailed = function(evt){
 				Log("Login failed", LOG_ERROR);
 				Log(evt, LOG_ERROR);
+				postLoginCallback(evt);
 			};
 			
 			server.onInitialization = function(evt){
@@ -192,7 +199,13 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 			server.connect(link).then(function(){
 				// Connected
 
-				server.login(id);
+				window['Login'] = function(username, password, callback){
+					server.login(username, password);
+					postLoginCallback = callback;
+				};
+
+				botIsReady();
+
 			}, function(evt){
 				console.error(evt);
 			})
@@ -243,6 +256,8 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 
 			var ui       = new PseudoUI(),
 				renderer = new PseudoRenderer();
+
+			User.initialize();
 			The.user = User;
 			The.bot = User;
 			The.UI   = ui;
@@ -258,18 +273,76 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 	};
 
 
-	var bot = null;
+	var bot = null,
+		username = null,
+		password = null;
 	process.on('message', function(message){
 
 		console.log("Bot: "+ message.msg);
 		if (message.command == BOT_CONNECT) {
-			id = message.id;
-			bot = new Bot(id);
-			bot.whenReady().then(function(){
-				process.send({msg:'connected'});
-			}, function(){
-				process.send({msg:'failed'});
-			});
+			username = message.username;
+			password = message.password;
+
+			var login = function(){
+
+				Login(username, password, function(err){
+					if (err) {
+						process.send({msg:'nologin'});
+					} else {
+						bot.whenReady().then(function(){
+							process.send({msg:'started'});
+						}, function(){
+							process.send({msg:'nostart'});
+						});
+						process.send({msg:'connected'});
+					}
+				});
+			};
+
+			if (bot) {
+				login();
+			} else {
+				bot = new Bot();
+				bot.whenReady().then(login, function(){
+					process.send({msg:'failed'});
+				});
+			}
+		} else if (message.command == BOT_SIGNUP) {
+			var username = message.username,
+				password = message.password,
+				email = message.email;
+
+			var options = {
+				hostname: '127.0.0.1',
+				port: 8124,
+				path: '/?request='+REQ_REGISTER+'&username='+username+'&password='+password+'&email='+email
+			};
+
+			var req = http.request(options, function(res){
+
+				var response = '';
+				res.on('data', function(data){
+					response += data;
+				});
+
+				res.on('end', function(){
+					var reply = JSON.parse(response);
+
+					if (!reply || !_.isObject(reply)) {
+						process.send({msg:'nosignup'});
+						return;
+					}
+
+					if (reply.success != true) {
+						process.send({msg:'nosignup'});
+						return;
+					}
+
+					process.send({msg:'signedup', username: username, password: password});
+				});
+
+			}).end();
+
 		} else if (message.command == BOT_MOVE) {
 			tile = message.tile;
 			The.bot.clickedTile(new Tile(tile.x, tile.y));
@@ -280,16 +353,15 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 						process.send({msg:'finished'});
 					};
 					The.player.path.onFailed = function(){
-						process.send({msg:'failed'});
+						process.send({msg:'failedpath'});
 					};
 				} else {
-					process.send({msg:'failed'});
+					process.send({msg:'badpath'});
 				}
-			}, 500);
+			}, 100);
 		}
 	});
 	process.send({msg:'ready'});
-	console.log("I got here");
 
 });
 

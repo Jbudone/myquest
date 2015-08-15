@@ -543,8 +543,15 @@ var Sheet = function(canvas){
 				} else {
 					sheet.data = preparedSheetData;
 				}
+
+				// FIXME: THIS is what's causing the error where we create a new spritesheet/tilesheet and
+				// lose our reference to the outside sheet. Either we have to manually link afterwards, or
+				// perform the loadSheet functionality here instead of calling loadSheet; or extend loadSheet?
 				interface.loadSheet(sheet, false); // FIXME: this was set to true, why?
-				interface.onSheetChanged( sheetName );
+
+
+
+				interface.onSheetChanged( sheetName, sheet );
 				/*
 				tilesheet.onload = function() { 
 					canvas.style.width  = tilesheet.width;

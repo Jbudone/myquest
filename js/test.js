@@ -48,35 +48,117 @@ requirejs(['keys'],function(Keys){
 		process.exit();
 	};
 
+	var printMsg = function(msg){
+		if (_.isObject(msg)) msg = JSON.stringify(msg);
+		console.log(chalk.bold.underline.green(msg));
+	};
+
 
 		cluster.setupMaster({
 			exec: 'js/test/bot.js',
 		});
 		var bot1 = cluster.fork();
-		bot1.on('listening', function(){
-		});
+		bot1.on('listening', function(){ });
 		var bot1Move = 0,
 			bot2Move = 0;
+		var bot1Moves = [{x:56, y:65},
+						 {x:70, y:65},
+						 {x:82, y:65},
+						 {x:82, y:75},
+						 {x:82, y:85},
+						 {x:82, y:94},
+						 {x:72, y:94},
+						 {x:62, y:94},
+						 {x:52, y:94},
+						 {x:42, y:94},
+						 {x:32, y:94},
+						 {x:22, y:94},
+						 {x:12, y:94},
+						 {x:12, y:84},
+						 {x:12, y:74},
+						 {x:12, y:64},
+						 {x:12, y:54},
+						 {x:12, y:44},
+						 {x:12, y:34},
+						 {x:12, y:25},
+						 {x:22, y:25},
+						 {x:32, y:25},
+						 {x:42, y:25},
+						 {x:52, y:25},
+						 {x:62, y:25},
+						 {x:72, y:25},
+						 {x:84, y:25},
+						 {x:84, y:35},
+						 {x:84, y:45},
+						 {x:84, y:55},
+						 {x:84, y:65},
+						 {x:84, y:75},
+						 {x:84, y:85},
+						 {x:82, y:94},
+						 {x:72, y:94},
+						 {x:62, y:94},
+						 {x:52, y:94},
+						 {x:42, y:94},
+						 {x:32, y:94},
+						 {x:22, y:94},
+						 {x:12, y:94},
+						 {x:12, y:25},
+						 {x:12, y:84},
+						 {x:12, y:74},
+						 {x:12, y:64},
+						 {x:12, y:54},
+						 {x:12, y:44},
+						 {x:12, y:34},
+						 {x:12, y:25},
+						 {x:22, y:25},
+						 {x:32, y:25},
+						 {x:42, y:25},
+						 {x:52, y:25},
+						 {x:62, y:25},
+						 {x:72, y:25},
+						 {x:84, y:25}];
 		bot1.on('message', function(msg){
-			console.log(msg);
+			printMsg(msg);
+
 			if (!msg.msg) return;
 			if (msg.msg == 'ready') {
-				bot1.send({ command: BOT_CONNECT, id: 2 });
+				bot1.send({ command: BOT_CONNECT, username: "bot1", password: "iambot" });
 			} else if (msg.msg == 'connected') {
-				if (++bot1Move % 2 == 0) {
-					bot1.send({ command: BOT_MOVE, tile: { x: 25, y: 5 }});
-				} else {
-					bot1.send({ command: BOT_MOVE, tile: { x: 17, y: 5 }});
-				}
+
+			} else if (msg.msg == 'started') {
+				bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[0].x, y: bot1Moves[0].y } });
+			} else if (msg.msg == 'nostart') {
+
+			} else if (msg.msg == 'nologin') {
+				bot1.send({ command: BOT_SIGNUP, username: "bot1", password: "iambot", email: "k9@lol.bot" });
+			} else if (msg.msg == 'signedup') {
+				var username = msg.username,
+					password = msg.password;
+				bot1.send({ command: BOT_CONNECT, username: username, password: password });
+			} else if (msg.msg == 'nosignup') {
+				console.error("Could not signup!");
+			} else if (msg.msg == 'badpath') {
+				// Already there?
+				console.error("Could not set path");
+				++bot1Move;
+				bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[bot1Move].x, y: bot1Moves[bot1Move].y } });
+			} else if (msg.msg == 'failedpath') {
+				console.error("Failed to walk along path..");
+				--bot1Move;
+				setTimeout(function(){
+					bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[0].x, y: bot1Moves[0].y } });
+				}, 500);
 			} else {
-				if (++bot1Move % 2 == 0) {
-					bot1.send({ command: BOT_MOVE, tile: { x: 25, y: 5 }});
+				console.log("FINISHED MOVE: "+bot1Move);
+				if (++bot1Move >= bot1Moves.length) {
+					console.log("I've finished, master");
 				} else {
-					bot1.send({ command: BOT_MOVE, tile: { x: 17, y: 5 }});
+					bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[bot1Move].x, y: bot1Moves[bot1Move].y } });
 				}
 			}
 		});
 
+		/*
 		var bot2 = cluster.fork();
 		bot2.on('listening', function(){
 		});
@@ -99,4 +181,5 @@ requirejs(['keys'],function(Keys){
 				}
 			}
 		});
+		*/
 });

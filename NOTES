@@ -128,6 +128,11 @@ ERROR CHECKING/HANDLING
   ✓ utilities.js
   ✓ extensions.js
   ✓ serializable.js
+  --------------
+
+
+
+
   ✓ page.js
   ✓ client/page.js
   ✓ server/page.js
@@ -150,6 +155,30 @@ LEARN THESE
  > Animation, Canvas
  > Exceptions, Promises
  > WebEncryption, WebP images
+
+
+
+SERVER PERFORMANCE
+	check 1: really really large map
+	check 2: lots and lots of npcs
+	check 3: lots and lots of active npcs (pathfinding)
+	check 4: lots and lots of bots
+	check 5: lots and lots of active bots
+
+ > npc bored: should use jump-point search, or some significant improvement on A* (HUGE perf hog)
+ > deterministic pathfinding: server only sends point + destination; then only broadcast when something has changed for that entity
+ > trust player: only check for collision when player next tile changes (is your next tile about to be a collision?)
+ > tile based: server only concerned about tile x,y; look at time since arrival at tile & possibly entrance into tile (left/right?) to help consider how much time to reach next tile; only update tileXY when that time has elapsed; send that tile reached time to other players so they can calculate exact x,y; this must be completely synchronized though
+ > JPS+ http://www.gdcvault.com/play/1022094/JPS-Over-100x-Faster-than   https://github.com/SteveRabin/JPSPlusWithGoalBounding
+ > lower server timestep & client interpolation http://gamedev.stackexchange.com/questions/46791/timestep-in-multiplayer-game
+ > NPC chasing: when target moves -- 1) if target runs into the same direction as our last walk then simply extend our last walk;  2) if expected distance > FAR_AWAY then place update on a low priority queue for re-navigating; all items on the queue have the same delay time (that way the server continuously dequeues jobs until we hit a job that's not ready for us to do yet).
+ > minimize triggerEvent on low priority operations:  if (++map.stepI % 100 == 0) map.triggerEvent(EVT_EVERY_TEN_SECONDS)
+ > look through server update and check EVERY possible operation, try to minimize as much as possible
+ > server/player recalibration: options
+		1) server player path keeps a mask/hash of tile locations that will be traversed. On receive new path, check if current path will eventually reach that start point, then cut off the tail of the current path and replace with new path
+		2) player sends path request to server, server says NO to player w/ current position, player sets current position to server position and recalibrates path according to server, then sends back to server. NOTE: this is completely invisible to the player unless the recalibration is far too off; however we will do lag compensation to slow down player movement to let server position catch up
+ > update list: when npc becomes active/inactive (wakeup) then place on page's update list; when page has something on update list, then put page on map's update list
+ > client sends a list of destinations points along the path; this prevents other players from seeing where exactly the player is walking to
  
 
 SERVER
@@ -224,10 +253,11 @@ DB
 ERRORS
 	* When things are allowed to go wrong in a function: return new Error(...)    .. this way the caller can handle it accordingly,
 		eg.   function getTile(x, y){ if (x<0 || y<0) return new Error("Bad tile coordinates"); ... }
+	* Use extended Error for extending error details:  return Err("message", ERR_HINT, {x:null, y:3})
 	* When things are unexpected, cannot go wrong, or handled within a promise/hook:  throw new Error(...)
 	* Make sure to do extra checking for unexpected stuff (eg.  player.position.x = ....;  if (!_.isFinite(x)) throw new Error(...))
 	* Player requests require extra checking that each specific input is acceptable; however, functions should never throw for this allowed input even if the functionality fails (eg. player requests to attack entity 9; we check that entity 9 exists in map and is alive so we setup the request; but if entity 9 is too far away then we return an error instead of throwing)
-	* return GameError when its an error that's likely due to the user; GameError.reason = REASON_KEY  which allows the function to hint to the caller what the errors reason is; GameError.becauseOf = '..'   or ['..', '..', ..]  to indicate precisely the details behind this error/reasoning  (eg. reason is BAD_POSITION but .becauseOf = 'map' means the map id doesn't exist, or .becauseOf = 'page' means the pageID doesn't exist)
+	* Check for error in all functions; this allows us to modify functions later on to return error if necessary and the caller will be ready for it
 
 
 MAP EDITING

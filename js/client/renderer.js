@@ -165,8 +165,34 @@ define(['loggable'], function(Loggable){
 				this.ctxEntities.save();
 				this.ctxEntities.globalAlpha = 0.4;
 				this.ctxEntities.strokeRect(scale*tileSize*this.ui.tileHover.x, scale*tileSize*this.ui.tileHover.y, scale*tileSize-(this.settings.lineWidth/2), scale*tileSize-(this.settings.lineWidth/2));
-				this.ctxEntities.restore();
 
+				if (this.showJumpPoint) {
+					var width = 16.0,
+						height = 6.0,
+						horzMid = (scale*tileSize*(this.ui.tileHover.x+0.5) - 0.5*width),
+						horzLeft = (scale*tileSize*this.ui.tileHover.x - 2.0*width),
+						horzRight = (scale*tileSize*(this.ui.tileHover.x+1) + width),
+						vertTop = (scale*tileSize*this.ui.tileHover.y - height),
+						vertMid = (scale*tileSize*(this.ui.tileHover.y+0.5) + height),
+						vertBot = (scale*tileSize*(this.ui.tileHover.y+1.0) + 2.0*height);
+					this.ctxEntities.globalAlpha = 1.0;
+					this.ctxEntities.font = "12px serif";
+					this.ctxEntities.fillText(this.showJumpPoint[0], horzMid, vertTop, width);
+					this.ctxEntities.fillText(this.showJumpPoint[1], horzLeft, vertMid, width);
+					this.ctxEntities.fillText(this.showJumpPoint[2], horzMid, vertBot, width);
+					this.ctxEntities.fillText(this.showJumpPoint[3], horzRight, vertMid, width);
+
+
+					for (var tileID in The.map.curPage.forcedNeighbours) {
+						var _x = tileID % The.map.mapWidth,
+							_y = Math.floor(tileID / The.map.mapWidth);
+						_y = (_y - this.map.curPage.y) + this.camera.offsetY / Env.tileSize;
+						_x = (_x - this.map.curPage.x) - this.camera.offsetX / Env.tileSize;
+
+						this.ctxEntities.strokeRect(scale*tileSize*_x, scale*tileSize*_y, scale*tileSize-(this.settings.lineWidth/2), scale*tileSize-(this.settings.lineWidth/2));
+					}
+				}
+				this.ctxEntities.restore();
 			}
 
 			if (this.ui.tilePathHighlight) {

@@ -334,6 +334,7 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				return;
 			}
 
+var prePath = JSON.stringify(path);
 			var success = map.recalibratePath(movableState, pathState, path, maxWalk);
 
 			if (success) {
@@ -344,6 +345,8 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 				// you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
 
 				player.path=null;
+// var postPath = JSON.stringify(path);
+// console.log(chalk.bold.magenta(prePath) + " RECALIBRATED TO " + chalk.bold.yellow(postPath));
 				player.addPath(path);
 
 				var response = new Response(action.id);
@@ -501,6 +504,30 @@ define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventfu
 			} else if (evt.evtType==EVT_PREPARING_WALK) {
 				//this.Log("new message from user.. FROM ("+evt.state.localY+", "+evt.state.localX+") ----> "+evt.data.distance, LOG_DEBUG);
 				this.onPreparingToWalk(evt);
+			} else if (evt.evtType==TEST_CHECKJPS) {
+				// FIXME: should move this into dynamic handler for a debugging-specific script
+
+				var map              = The.world.maps[evt.data.mapID],
+					differences      = {},
+					i                = 0,
+					clientJumpPoints = evt.data.JPS;
+				for (var y=evt.data.y; y<Env.pageHeight; ++y) {
+					for (var x=evt.data.x; x<Env.pageWidth; ++x) {
+						for (var d=0; d<4; ++d) {
+							if (map.jumpPoints[4*(y*map.mapWidth+x)+d] != clientJumpPoints[i]) {
+								var tileID = 4*(y*map.mapWidth+x)+d;
+								differences[tileID] = map.jumpPoints[4*(y*map.mapWidth+x)+d];
+							}
+
+							++i;
+						}
+					}
+				}
+
+				this.respond(evt.id, _.isEmpty(differences), {
+					differences: differences
+				});
+
 			} else {
 				var dynamicHandler = this.handler(evt.evtType);
 				if (dynamicHandler) {

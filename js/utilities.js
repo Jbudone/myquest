@@ -6,8 +6,7 @@ define(['serializable'], function(Serializable){
 
 	var now=Date.now,
 		isObjectEmpty=function(obj){
-
-		if (!(obj instanceof Object)) return new MismatchError("Expected object");
+		if (!(obj instanceof Object)) return new Error("Expected object");
 
 		var empty=true;
 		for (var s in obj){
@@ -16,7 +15,7 @@ define(['serializable'], function(Serializable){
 		}
 		return empty;
 	}, frontOfObject=function(obj){
-		if (!(obj instanceof Object)) return new MismatchError("Expected object");
+		if (!(obj instanceof Object)) return new Error("Expected object");
 
 		for (var k in obj){
 			return k;
@@ -56,51 +55,33 @@ define(['serializable'], function(Serializable){
 		this.x=x;
 		this.y=y;
 	}, Tile=function(x, y, map){
-		if (!_.isFinite(y)) return new Error("Expects y to be a number");
-		if (!_.isFinite(x)) return new Error("Expects x to be a number");
+		if (!_.isFinite(x) || !_.isFinite(y)) throw new Error("Tile has bad x,y arguments ("+x+","+y+")");
 		extendClass(this).with(Serializable);
 		this.x=x;
 		this.y=y;
 
 
 		if (map) {
-			if (!(typeof map === "Map")) return new Error("Expected Map object");
+			if (!map.hasOwnProperty('pages')) throw new Error("Expected Map object");
 			var pageY = parseInt(y / Env.pageHeight),
 				pageX = parseInt(x / Env.pageWidth);
 			this.page = map.pages[ map.pagesPerRow * pageY + pageX ];
-			if (!(typeof this.page === "Page")) return new Error("pageY/pageX is out of range of Map pages");
+			if (!this.page) throw new Error("Could not find page in map ("+ pageX +", "+ pageY +")");
 		}
 
 		this.toJSON=function(){
 			var tile={
-				y:y,
-				x:x
+				x:this.x,
+				y:this.y
 			};
 			if (this.hasOwnProperty('page')) tile.page = this.page.index;
 		};
-		this.offset=function(yOff, xOff) {
-			if (!_.isFinite(yOff)) return new Error("Expects yOff to be a number");
-			if (!_.isFinite(xOff)) return new Error("Expects xOff to be a number");
+		this.offset=function(xOff, yOff) {
+			if (!_.isFinite(yOff) || !_.isFinite(xOff)) throw new Error("Tile offset requires number ("+ xOff +","+ yOff +")");
 			var y = this.y + yOff,
 				x = this.x + xOff;
 			if (y < 0 || x < 0) return new Error("Bad offset from tile.."); // TODO: check y/x too far?
 			return new Tile(x, y);
-		};
-		this.localizeTile=function(){
-			if (!this.page) return false;
-			if (this.page.y <= this.y &&
-				this.page.x <= this.x) {
-
-					console.log("Localizing tile: from ("+this.y+", "+this.x+")");
-					this.y -= this.page.y;
-					this.x -= this.page.x;
-					console.log("		to ("+this.y+", "+this.x+")");
-			} else {
-				console.log("COULD NOT LOCALIZE TILE!");
-				console.log("Page: "+this.page.y+", "+this.page.x);
-				console.log("Tile: "+this.y+", "+this.x);
-				return false;
-			}
 		};
 	}, Walk=function(direction, distance, destination){
 		extendClass(this).with(Serializable);
@@ -125,13 +106,13 @@ define(['serializable'], function(Serializable){
 		};
 
 		this.addWalk=function(direction, distance, destination){
-			if (!_.isFinite(direction) || !_.isFinite(distance)) return new Error("Expected direction/distance as numbers");
+			if (!_.isFinite(direction) || !_.isFinite(distance)) throw new Error("Expected direction/distance as numbers ("+ direction +","+ distance +")");
 			this.walks.push((new Walk(direction, distance, destination)));
 		};
 
 		this.splitWalks=function(){
 			var walks    = [],
-				maxWalk  = 2 * Env.tileSize,
+				maxWalk  = Env.game.splitWalkLength * Env.tileSize,
 				curTile  = this.start;
 			for (var i=0; i<this.walks.length; ++i) {
 				var walk    = this.walks[i],
@@ -139,9 +120,9 @@ define(['serializable'], function(Serializable){
 					steps   = walk.distance;
 					
 				while (walked < steps) {
-					var nextWalk = new Walk(walk.direction, null, null),
-						yDistance = 0,
-						xDistance = 0;
+					var nextWalk  = new Walk(walk.direction, null, null),
+						xDistance = 0,
+						yDistance = 0;
 						
 					if (walked + maxWalk > steps) {
 						nextWalk.distance = (steps - walked);
@@ -153,9 +134,9 @@ define(['serializable'], function(Serializable){
 					else if (walk.direction == SOUTH) yDistance =  nextWalk.distance;
 					else if (walk.direction == WEST)  xDistance = -nextWalk.distance;
 					else if (walk.direction == EAST)  xDistance =  nextWalk.distance;
-					curTile = curTile.offset( Math.round(yDistance/Env.tileSize),
-											  Math.round(xDistance/Env.tileSize) );
-					if (_.isError(curTile)) return curTile;
+					curTile = curTile.offset( Math.round(xDistance/Env.tileSize),
+											  Math.round(yDistance/Env.tileSize) );
+					if (_.isError(curTile)) throw curTile;
 					nextWalk.destination = curTile;
 
 					walked += maxWalk;

@@ -71,7 +71,8 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 
 
-		this.registerHook('input')
+		this.registerHook('input');
+		this.registerHook('inputSubmit');
 	};
 
 	return UI;

@@ -73,6 +73,22 @@
                  "width":16,
                  "x":304,
                  "y":16
+                }, 
+                {
+                 "height":16,
+                 "id":26,
+                 "name":"",
+                 "properties":
+                    {
+                     "map":"test-map-toobig",
+                     "spawn":"1"
+                    },
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":16,
+                 "x":32,
+                 "y":144
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -153,7 +169,7 @@
          "x":0,
          "y":0
         }],
- "nextobjectid":19,
+ "nextobjectid":27,
  "orientation":"orthogonal",
  "properties":
     {

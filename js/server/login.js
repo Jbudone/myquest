@@ -7,6 +7,7 @@ define(function(){
 		http.createServer(function(req, res){
 
 			var request = url.parse(req.url, true).query; // request from user
+
 			res.writeHead(200, {'Content-Type': 'text/json', 'Access-Control-Allow-Origin' : '*'}); // FIXME: shouldn't need to do this
 
 			var reply = null;
@@ -15,6 +16,7 @@ define(function(){
 			} else {
 				if (request.request == REQ_REGISTER) {
 
+					console.log("User attempting to register..");
 					var username = request.username,
 						password = request.password,
 						email    = request.email;

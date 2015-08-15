@@ -41,7 +41,7 @@ define(function(){
 					for(var i=1; i<evtArgs.length; ++i) {
 						args.push(evtArgs[i]);
 					}
-					if (listener.priority == HIGH_PRIORITY) {
+					if (listener.priority != LOW_PRIORITY) {
 						listener.callback.apply( listener.caller, args );
 					} else {
 						if (listener.caller.pendingEvents) {

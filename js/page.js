@@ -1,4 +1,4 @@
-define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
+define(['eventful','movable','loggable','hookable'], function(Eventful,Movable,Loggable,Hookable){
 
 
 
@@ -17,6 +17,7 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 	var Page = function(map){
 		extendClass(this).with(Eventful);
 		extendClass(this).with(Loggable);
+		extendClass(this).with(Hookable);
 		Ext.extend(this,'page');
 
 		this.baseTile = null; // Base tile 
@@ -32,10 +33,10 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 		this.collidables = [];
 		for (var y=0; y<Env.pageHeight; ++y) { this.collidables[y]=0; }
 
-		this.updateList = [];
-		this.eventsQueue = [];
+		this.updateList   = [];
+		this.eventsQueue  = [];
 		this.eventsBuffer = []; // To be sent out to connected users
-		this.clients = [];
+		this.clients      = [];
 
 		this.map   = map;
 		this.index = null;
@@ -52,21 +53,31 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 
 		this.zoneEntity = function(newPage, entity){
 
+			var result      = null,
+				foundEntity = null;
+
 			// Remove from this page
+			if (!_.has(this.movables, entity.id)) throw new Error("Entity not in movables list ("+ this.index +")");
 			delete this.movables[entity.id];
+			foundEntity = false;
 			for (var i=0; i<this.updateList.length; ++i) {
 				if (this.updateList[i] == entity) {
 					this.updateList.splice(i,1);
+					foundEntity = true;
 					break;
 				}
 			}
+			if (!foundEntity) throw new Error("Entity was not in update list ("+ this.index +")");
 
 			this.stopListeningTo(entity);
 
 			// Add to new page
 			// NOTE: if newPage === null then this is probably a client w/out the page loaded
 			if (!newPage && Env.isServer) throw new Error("No new page given for entity zoning");
-			if (newPage) newPage.addEntity(entity);
+			if (newPage) {
+				result = newPage.addEntity(entity);
+				if (_.isError(result)) throw result;
+			}
 
 			// FIXME: WHY IS THIS NOT ENABLED FOR SERVER?!
 			// if (!Env.isServer) {
@@ -76,12 +87,10 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 
 		this.addEntity = function(entity) {
 			if (entity.step) {
-				if (this.movables[entity.id]) throw new Error("Entity ("+ entity.id +") already in movables"); // FIXME: OCCURS WHEN USER ZONES FROM MAP TO HOME; map.js:watchEntity() is called first
+				if (_.has(this.movables, entity.id)) throw new Error("Entity ("+ entity.id +") already in movables");
 
 				this.updateList.push(entity);
 				this.movables[entity.id] = entity;
-				// FIXME: don't add the entity if he's already listed in movables....check that this doesn't
-				// break anything (NOTE: this avoids listening twice or adding to updateList multiple times)
 
 				// TODO: check if movable before checking zone_out
 				if (entity instanceof Movable) {
@@ -100,8 +109,8 @@ define(['eventful','movable','loggable'], function(Eventful,Movable,Loggable){
 			this.handlePendingEvents();
 			for (var i=0; i<this.updateList.length; ++i) {
 				update  = this.updateList[i];
-				result  = update.step(time);
-				if (_.isError(result)) return result;
+				result  = update.step(now());
+				if (_.isError(result)) throw result;
 			}
 		}; 
 

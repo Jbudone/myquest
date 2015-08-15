@@ -17,10 +17,10 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		this.client = {
 			initialize: function(){
 				//console.log("Loading zoning mgr");
-				_self.heMoved(-1);
-				this.listenTo(player, EVT_MOVED_TO_NEW_TILE).after(function(theGuyWhoMoved){
-					_self.heMoved(id);
-				});
+				// _self.heMoved(-1);
+				// this.listenTo(player, EVT_MOVED_TO_NEW_TILE).after(function(theGuyWhoMoved){
+				// 	_self.heMoved(id);
+				// });
 			},
 
 			heMoved: function(id){

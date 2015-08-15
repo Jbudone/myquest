@@ -152,6 +152,10 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			The.map.loadMap(evt.map);
 			The.map.addPages(evt.pages);
 
+			setTimeout(function(){
+				checkNewPages(evt.pages);
+			}, 1000);
+
 
 			server = _server;
 			camera = The.camera;
@@ -234,6 +238,7 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 
 			startGame = function(){
 				var speed = 30,
+					requestAnimFrame = requestAnimationFrame || function(callback){ setTimeout(callback, 80); };
 					gameLoop = function() {
 
 						if (!isGameRunning) return;
@@ -253,7 +258,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 						The.camera.step(_time);
 						renderer.ui.step(_time);
 						renderer.render();
-						requestAnimationFrame(render);
+						requestAnimFrame(render);
+						// requestAnimationFrame(render);
 						// setTimeout(render, 20);
 					};
 				render();
@@ -312,6 +318,19 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				server.onEntityWalking = function(page, event){
 
 					if (event.id == The.player.id) {
+
+						var entity   = The.map.movables[event.id],
+							entPage  = entity.page,
+							reqState = event.state;
+
+						entity._serverPosition = {
+							tile: {
+								x: reqState.position.tile.x,
+								y: reqState.position.tile.y },
+							toTile: {
+								x: reqState.position.tile.x,
+								y: reqState.position.tile.y }
+						};
 
 					} else {
 						var entity   = The.map.movables[event.id],
@@ -498,6 +517,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					}
 
 					The.map.addPages(pages, true); // Zoning into one of the new pages
+
+					checkNewPages(pages);
 				};
 
 				server.onLoadedMap = function(newMap, pages, player){
@@ -510,6 +531,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.map = new Map();
 					The.map.loadMap(newMap);
 					The.map.addPages(pages);
+
+					checkNewPages(pages);
 
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
@@ -546,6 +569,8 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 					The.map = new Map();
 					The.map.loadMap(map);
 					The.map.addPages(pages);
+
+					checkNewPages(pages);
 
 					The.map.curPage    = The.map.pages[player.page];
 					ui.clear();
@@ -642,6 +667,25 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 			ui.onMouseMove = function(mouse){
 
 					ui.tileHover = new Tile(mouse.x, mouse.y);
+
+					// Display the JumpPoints here (for testing purposes)
+					var _x     = (The.camera.offsetX / Env.tileSize) + The.map.curPage.x + ui.tileHover.x,
+						_y     = -(The.camera.offsetY / Env.tileSize) + The.map.curPage.y + ui.tileHover.y,
+						_xI    = Math.floor(_x / Env.pageWidth),
+						_yI    = Math.floor(_y / Env.pageHeight),
+						_pageI = _yI * The.map.pagesPerRow + _xI,
+						_page  = The.map.pages[_pageI],
+						_JPn, _JPw, _JPs, _JPe;
+					_JP = 4*(_y*The.map.mapWidth+_x);
+					_x = _x % Env.pageWidth;
+					_y = _y % Env.pageHeight;
+
+					if (The.map.jumpPoints) {
+						renderer.showJumpPoint = [The.map.jumpPoints[_JP], The.map.jumpPoints[_JP+1], The.map.jumpPoints[_JP+2], The.map.jumpPoints[_JP+3]];
+					} else {
+						renderer.showJumpPoint = ['N','W','S','E'];
+					}
+					
 
 					ui.hoveringEntity = false;
 					for (var pageID in The.map.pages) {
@@ -767,8 +811,64 @@ define(['loggable', 'entity', 'movable', 'map', 'page', 'scriptmgr'], function(L
 				document.getElementById('entities').dispatchEvent( evt );
 			};
 
+			// Compile the list of JPs in a page and send to the server for checking and confirming a match
+			var checkPageJPS = function(page){
+
+				return new Promise(function(succeeded, failed){
+
+					var JPS = new Int16Array(4*Env.pageWidth*Env.pageHeight),
+						y   = null,
+						x   = page.x;
+
+					for (y=page.y; y<(page.y+Env.pageHeight); ++y) {
+						var row = The.map.jumpPoints.subarray( 4*(y*The.map.mapWidth + x), 4*(y*The.map.mapWidth + x + Env.pageWidth) );
+						JPS.set(row, 4*(y-page.y)*Env.pageWidth);
+					}
+
+					server.makeRequest(TEST_CHECKJPS, { JPS: JPS }).then(function(data){
+
+						if (data.success != true) {
+							failed(data);
+						} else {
+							succeeded();
+						}
+
+					}).catch(Error, function(e){ errorInGame(e); });
+
+				});
+			};
+
+			var checkNewPages = function(pages){
+
+				var pagesToCheck = [];
+				for (var pageI in pages) {
+					pagesToCheck.push(pageI);
+				}
+
+				var checkNextPage = function(){
+
+					if (pagesToCheck.length == 0) return;
+					var pageI = pagesToCheck.shift();
+
+					checkPageJPS(The.map.pages[pageI]).then(function(){
+						console.log('Page ['+pageI+'] Matches server');
+						checkNextPage();
+					}, function(data){
+						console.error('Page ['+pageI+'] Mismatch JPS');
+						console.error(data);
+						checkNextPage();
+					}).catch(Error, function(e){
+						errorInGame(e);
+					});
+				};
+
+				checkNextPage();
+			};
+
 			window['randomMapPoint'] = randomMapPoint;
-			window['clickPoint'] = clickPoint;
+			window['clickPoint']     = clickPoint;
+			window['checkPageJPS']   = checkPageJPS;
+			window['checkNewPages']  = checkNewPages;
 
 
 			callbackWhenReady( startGame );

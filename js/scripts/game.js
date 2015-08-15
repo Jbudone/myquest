@@ -260,6 +260,27 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 
 				map.game = _game; // For debugging purposes..
 
+
+				// When an entity is initially created, they don't have a Character attached to them.
+				// Currently there's no better place to hook onto an entity being created initially, perhaps
+				// this could be fixed with a Factory pattern for entities in the map? So instead when the
+				// page adds a new entity it checks if the entity has a character property, otherwise hooks
+				// the addcharacterlessentity hook which propagates into the map and into here where we can
+				// create and attach a character. Note that we're still listening to entities being
+				// added/moved across pages, so we do NOT add character/player to our character list here.
+				map.hook('addcharacterlessentity', this).before(function(entity){
+					var result = null;
+					result = _game.createCharacter.call(_game, entity);
+					if (_.isError(result)) throw result;
+				});
+
+				// The game (this) is a script run under the script manager, while the page/map is initialized
+				// immediately at startup. Since we need a character object associated with each entity,
+				// including initial spawns, we have to delay the map spawning until the scriptmgr is finished
+				// initializing the game.
+				map.initialSpawn();
+
+				/*
 				// TODO: add all current characters in map
 				_.each(map.movables, function(entity, entityID){
 					var result = null;
@@ -272,6 +293,7 @@ define(['SCRIPTENV', 'eventful', 'hookable', 'loggable', 'scripts/character'], f
 						if (_.isError(result)) throw result;
 					}
 				}.bind(this));
+				*/
 
 				map.registerHandler('step');
 				map.handler('step').set(function(delta){

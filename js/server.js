@@ -35,7 +35,7 @@
 	process.on('uncaughtException', couldNotStartup);
 
 
-requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM){
+requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm','profiler'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM,Profiler){
 
 	var _               = require('underscore'),
 		$               = require('jquery'),
@@ -355,10 +355,12 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 
 				   // TODO: clean this!
 				   you.onPreparingToWalk = function(evt){
-					   requestBuffer.queue({
-						   you:this,
-						   action:evt
-					   });
+
+					   you.handleWalkRequest(evt);
+					   // requestBuffer.queue({
+						   // you:this,
+						   // action:evt
+					   // });
 				   };
 				   you.onSomeEvent = function(evt){
 					   requestBuffer.queue({
@@ -373,85 +375,96 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 			   // Listen for login/register related requests
 			   var loginHandler = new LoginHandler(http, db);
 
-			   var stepTimer=30,
+			   var stepTimer=100,
+				   profilerReportElapsed = 0,
+				   buffer = null,
+				   request = null,
+				   you, your, action,
+				   eventsBuffer = null,
 			   step=function(){
 				   time=now();
 
+				   setTimeout(step, stepTimer);
 
 				   requestBuffer.switch();
 				   eventsArchive.pushArchive();
 
-				   var buffer=requestBuffer.read();
+				   buffer = requestBuffer.read();
 				   if (buffer.length) {
 					   Log("----Reading request buffer----");
-				   }
-				   for (i=0; i<buffer.length; ++i) {
 
-					   // console.log("New request");
-					   // Check if request & client still here
-					   var request=buffer[i];
-					   if (!request) continue; 
-					   if (!players[request.you.id]) continue;
+					   for (i=0; i<buffer.length; ++i) {
 
-					   // TODO: handle events through a better abstraction structure
-					   var you = request.you,
-						   your=you,
-						   action=null;
-					   if (!request) { 
-						   console.log("			BAD REQUEST!? Weirdness..");
-						   continue;
+						   // Check if request & client still here
+						   request = buffer[i];
+						   if (!request) continue; 
+						   if (!players[request.you.id]) continue;
+
+						   // TODO: handle events through a better abstraction structure
+						   you = request.you;
+						   your = you;
+						   action = null;
+						   if (!request) { 
+							   console.log("			BAD REQUEST!? Weirdness..");
+							   continue;
+						   }
+						   action=request.action;
+
+						   if (action.evtType==EVT_PREPARING_WALK) {
+
+							   // you.handleWalkRequest(action);
+
+						   } else if (action.evtType == EVT_DISCONNECTED) {
+
+							   var page = you.movable.page;
+							   you.disconnectPlayer();
+							   page.map.removeEntity( you.movable );
+							   page.eventsBuffer.push({
+								   evtType: EVT_REMOVED_ENTITY,
+								   entity: { id: you.movable.id }
+							   });
+
+							   Log("REMOVED PLAYER: "+you.id);
+							   db.savePlayer(you.movable);
+							   delete players[you.id];
+
+						   } else if (action.evtType == EVT_ATTACKED) {
+
+							   you.attackTarget(action.data.id);
+
+						   } else if (action.evtType == EVT_DISTRACTED) {
+							   // TODO: need to confirm same as current target?
+							   // you.player.brain.setTarget(null);
+							   Log("["+you.movable.id+"] Is Distracted..");
+							   you.movable.triggerEvent(EVT_DISTRACTED);
+						   } else {
+							   console.log("			Some strange unheard of event ("+action.evtType+") ??");
+						   }
 					   }
-					   action=request.action;
-					   // console.log("Handling action: ");
-					   // console.log(action);
 
-					   if (action.evtType==EVT_PREPARING_WALK) {
-
-						   you.handleWalkRequest(action);
-
-					   } else if (action.evtType == EVT_DISCONNECTED) {
-
-						   var page = you.movable.page;
-						   you.disconnectPlayer();
-						   page.map.removeEntity( you.movable );
-						   page.eventsBuffer.push({
-							   evtType: EVT_REMOVED_ENTITY,
-							   entity: { id: you.movable.id }
-						   });
-
-						   Log("REMOVED PLAYER: "+you.id);
-						   db.savePlayer(you.movable);
-						   delete players[you.id];
-
-					   } else if (action.evtType == EVT_ATTACKED) {
-
-						   you.attackTarget(action.data.id);
-
-					   } else if (action.evtType == EVT_DISTRACTED) {
-						   // TODO: need to confirm same as current target?
-						   // you.player.brain.setTarget(null);
-						   Log("["+you.movable.id+"] Is Distracted..");
-						   you.movable.triggerEvent(EVT_DISTRACTED);
-					   } else {
-						   console.log("			Some strange unheard of event ("+action.evtType+") ??");
-					   }
-				   }
-				   if (buffer.length) {
 					   requestBuffer.clear();
 					   console.log("----Cleared request buffer----");
 				   }
 
-
 				   // Timestep the world
-				   var eventsBuffer = The.world.step(time);
+				   Profiler.profile('world');
+				   eventsBuffer = The.world.step(time);
+				   Profiler.profileEnd('world');
+
+				   Profiler.profile('scriptmgr');
 				   The.scriptmgr.step(time);
+				   Profiler.profileEnd('scriptmgr');
+
+
+				   Profiler.profile('players');
+
 				   for (var clientID in players) {
 					   var player = players[clientID],
-							client = player.client;
+						   client = player.client;
 					   if (client.readyState !== 1) continue; // Not open (probably in the middle of d/c)
-						player.step(time);
-						for (var pageID in player.pages){
-						   var page   = pageID;
+					   player.step(time);
+					   for (var pageID in player.pages){
+						   var page = pageID;
 
 						   // FIXME: for some reason old pages are still stored in player.pages.. this could
 						   // potentially be a BIG problem with bugs laying around the program. Make sure to
@@ -478,7 +491,18 @@ requirejs(['objectmgr','environment','utilities','extensions','keys','event','er
 					   }
 				   }
 
-				   setTimeout(step, stepTimer);
+				   Profiler.profileEnd('players');
+
+				   // Report profile
+				   (++profilerReportElapsed);
+				   if (profilerReportElapsed >= 100) {
+					   Profiler.report();
+					   profilerReportElapsed = 0;
+					   Profiler.clear('world');
+					   Profiler.clear('scriptmgr');
+					   Profiler.clear('players');
+				   }
+
 			   };
 			   step();
 

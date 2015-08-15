@@ -3,6 +3,7 @@ define(['page', 'movable'], function(Page, Movable){
 	var Map={
 		_init: function(){
 			
+			this.registerHook('addcharacterlessentity');
 		},
 
 		clients: {},
@@ -39,6 +40,8 @@ define(['page', 'movable'], function(Page, Movable){
 			this.mapWidth    = mapWidth;
 			this.mapHeight   = mapHeight;
 
+			this.jumpPoints  = new Int16Array(this.map.data.jumpPoints);
+			this.forcedNeighbours = this.map.data.forcedNeighbours;
 
 			// TODO: render borders for pages; pageWidth-2*border included here
 			// TODO: HEAVY HEAVY HEAVY testing of various page sizes vs. map pages
@@ -65,6 +68,7 @@ define(['page', 'movable'], function(Page, Movable){
 					//	mapXYCoord: ePAGE x/y position
 					//
 					//	pageWH: page width/height
+					//	pgXY: page x/y index
 					//	pageXY: page x/y position
 					//
 					// NOTE: map starts at 0 since the cell.tiles is spliced each time, so those spliced tiles
@@ -87,7 +91,11 @@ define(['page', 'movable'], function(Page, Movable){
 								tiles      = [],
 								sprites    = [];
 							
-							if (!pages[pageI]) pages[pageI] = (new Page(this));
+							if (!pages[pageI]) {
+								pages[pageI] = (new Page(this));
+								pages[pageI].jumpPoints = this.map.data.pages[pgY][pgX].jumpPoints;	
+							}
+
 							page       = pages[pageI];
 							page.index = pageI;
 							page.y     = pgY;
@@ -456,6 +464,18 @@ define(['page', 'movable'], function(Page, Movable){
 
 
 				page.initialize();
+
+				page.hook('addcharacterlessentity', this).before(function(entity){
+					this.doHook('addcharacterlessentity').pre(entity);
+				});
+			}
+		},
+
+		initialSpawn: function(){
+			var page = null;
+			for (var pageID in this.pages) {
+				page = this.pages[pageID];
+				page.initialSpawn();
 			}
 		},
 
@@ -477,6 +497,11 @@ define(['page', 'movable'], function(Page, Movable){
 					tile = this.localFromGlobalCoordinates(localZone.x, localZone.y);
 					break;
 				}
+			}
+
+			if (!tile) {
+				console.log(this.zones.in);
+				throw new Error("No tile found for zone");
 			}
 
 			if (!_.isError(tile)) {

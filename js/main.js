@@ -105,6 +105,8 @@
 				//	> CLEAN: temporary movable._character property should be abstracted so that it doesn't
 				//				need to be copied in multiple places
 				//	> CLEAN: look at better way of hashing tiles (without any precision/collision issues)
+				//	> CLEAN: replace .hasOwnProperty with _.has(..,..)
+				//	> CLEAN: switch parseInt w/ Math.floor where necessary: https://jsperf.com/math-floor-vs-math-round-vs-parseint/
 				//
 				//
 				//	
@@ -194,6 +196,7 @@
 				//				test scripts); get errors from Bots; run through Grunt; speed time
 				//		- Interaction: (talkto) Chat bubble
 				//		- Server configs: http://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+				//		- Efficient position/path update w/ server; predictive pathfinding
 				//
 				//	ERRORS
 				//		- ALL Files!
@@ -210,6 +213,12 @@
 				//		- (client): addUser done multiple times (new character) when player zones, without removing old character
 				//		- Uncaught Error: Already watching this entity!map.js:145 Map.watchEntitymap.js:164 Map.addPagesgame.js:474 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
 				//		- Uncaught Error: Entity not a charactergame.js:146 Game.removeCharactergame.js:224 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookmap.js:219 Map.removeEntitypage.js:40 Page.unloadgame.js:470 Game.start.server.onZoneserverHandler.js:80 ServerHandler.connect.server.websocket.onmessage
+				//		- Uncaught TypeError: Cannot read property 'hurt' of undefinedgame.js:455 Game.start.server.onEntityHurtserverHandler.js:68 ServerHandler.connect.server.websocket.onmessage
+				//		- Uncaught TypeError: Cannot read property 'isPlayer' of undefinedcharacter.ai.instinct.combat.js:575 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookuser.js:24 User.clickedEntitygame.js:717 (anonymous function)ui.js:136 (anonymous function)
+				//		- Uncaught TypeError: Cannot read property 'page' of undefinedgame.js:318 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage
+				//		-  I was trying to talk to the king and I got this  Uncaught Error: Could not find tile of interactablegame.js:684 (anonymous function)hookable.js:121 Hook.rebuildHandlers.posthookable.js:286 Hookable.doHook.callPostHookuser.js:36 User.clickedInteractablegame.js:729 (anonymous function)ui.js:136 (anonymous function)
+				//			 I think it might be if I walk thru him and try to talk to him at the same time
+				//		-  so if I get too many things chasing me all over the place I keep get this error that breaks my game  Uncaught TypeError: Cannot read property 'page' of undefinedgame.js:318 Game.start.server.onEntityWalkingserverHandler.js:67 ServerHandler.connect.server.websocket.onmessage
 				//
 				//
 				//
@@ -218,6 +227,28 @@
 				//		- Finish eventful fixes; fix unloading eventful everywhere
 				//		- CHECKME: script.addScript( ... ) had to reference obj._script otherwise it was
 				//					creating a new script everytime! Check everywhere for this for safety
+				//
+				//		- Error: Don't EVERY return error, this clearly won't work and will be impossible to
+				//				manage. Simply throw everywhere necessary, and only return null/false in cases
+				//				where you need to return the status or something; hints are implied through
+				//				that. In very specific cases I suppose we could return error later; but this
+				//				should not be the general way to do things
+				//		- Pathfinding
+				//				* User path goes way off course when there's a lot of guys chasing you
+				//				* Need to optimize path checking & running (maybe only tile-by-tile? maybe
+				//					checks only need to be performed when movable is about to move to the next
+				//					tile?)
+				//				* client/server needs to send/broadcast path related stuff ASAP? (ie.
+				//					immediately from client -> server; extremely often from server ->
+				//					clients); server can keep an array of events to broadcast to each client,
+				//					and simply broadcast at regular intervals
+				//				* should only step active movables (waking/sleeping npc's?)
+				//				* mnimize compuation in entity/movable stepping (event listening, triggers,
+				//					etc.)
+				//				* player wastes time on server when not moving; so if player updates
+				//					(lastMoved=now()) then a walk request comes through, they've wasted all of
+				//					that time
+				//
 				//
 				//
 				//

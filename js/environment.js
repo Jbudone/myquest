@@ -41,11 +41,15 @@ define(function(){
 			eventListeningDuplicates: true,
 		};
 
+		this.game = {
+			splitWalkLength: 4, // Walks are split up into individual walks of this length (multiplied by tileSize); mostly a consideration for client/server communication speed and security (players shouldn't be able to tell exactly where other players are planning to go)
+		};
+
 		var testingLocal = true;
 		this.connection = {
 			local: {
 				websocket: 'ws://127.0.0.1:1338/',
-				http: (typeof location != "undefined" ? location.origin : ''), // NOTE: server doesn't need this
+				http: (typeof location != "undefined" ? location.origin : 'http://myquest.local'), // NOTE: server doesn't need this
 			},
 
 			server: {

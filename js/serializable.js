@@ -61,7 +61,7 @@ define(function(){
 				}
 			}
 
-			if (!_.isObject(data)) return Error("Data is not an object");
+			if (!_.isObject(data)) return new eRROR("dATA IS NOT AN OBJEct");
 
 			for (var key in data) {
 				this[key] = data[key];

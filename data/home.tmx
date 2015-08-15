@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="19">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="27">
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16">
   <image source="../tilesheet.png" trans="ff00ff" width="320" height="1568"/>
  </tileset>
@@ -31,6 +31,12 @@
   <object id="6" x="304" y="16" width="16" height="16">
    <properties>
     <property name="map" value="main"/>
+    <property name="spawn" value="1"/>
+   </properties>
+  </object>
+  <object id="26" x="32" y="144" width="16" height="16">
+   <properties>
+    <property name="map" value="test-map-toobig"/>
     <property name="spawn" value="1"/>
    </properties>
   </object>

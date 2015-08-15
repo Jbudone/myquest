@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="29">
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="30">
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16">
   <image source="../tilesheet.png" width="320" height="1568"/>
  </tileset>
  <tileset firstgid="1961" name="npcs" tilewidth="32" tileheight="32">
-  <image source="../tools/sheetedit/avatars.png" width="160" height="32"/>
+  <image source="../tools/sheetedit/avatars.png" width="160" height="64"/>
  </tileset>
  <layer name="base" width="100" height="100">
   <data encoding="base64" compression="zlib">
@@ -55,6 +55,7 @@
   <object id="25" gid="1962" x="1436" y="972"/>
   <object id="26" gid="1962" x="1287" y="1159"/>
   <object id="27" gid="1962" x="1330" y="1160"/>
+  <object id="29" gid="1965" x="678.5" y="1102.5"/>
  </objectgroup>
  <objectgroup name="interactables">
   <object id="28" name="window" type="lookat" x="848" y="848" width="16" height="32"/>

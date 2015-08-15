@@ -89,6 +89,18 @@ $(document).ready(function(){
 					console.log(data);
 					viewingAsset = data;
 					editor.loadView('spritesheet', data, linkEl);
+
+					// FIXME: quickfix that might work if finished
+					// The bug is initiated by:  New Spritesheet -> *drop image* -> New Animation
+					// var _changed = sheet.onSheetChanged;
+					// sheet.onSheetChanged = function(sheetName, _sheet){
+					// 	_changed(_sheet);
+					// 	sheet.onSheetChanged = _changed;
+
+					// 	var linkEl = this.linkEl;
+					// 	debugger;
+					// 	setTimeout(function(){linkEl.click()}, 100);
+					// }.bind({linkEl:linkEl});
 				};
 
 				assetsMgr.onRemovedItem = function(asset){

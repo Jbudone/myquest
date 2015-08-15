@@ -18,11 +18,11 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 	 *}
 	 *******************************************************/
 	var Map = function(id){
-		Ext.extend(this,'map');
 		extendClass(this).with(Eventful);
 		extendClass(this).with(Hookable);
 		extendClass(this).with(Loggable);
 		extendClass(this).with(Dynamic);
+		Ext.extend(this,'map');
 
 		this.Log("Loading map..");
 
@@ -41,6 +41,33 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 		this.pageIndex=function(x,y){
 			return this.pagesPerRow*y+x;
 		};
+
+		// TODO: this is FAR too expensive in memory; should compress into 1 short (2 bytes) per tile. Note
+		// that since there's a lot of tiles, there's going to be some duplicates (pidgeon-hole principle) so
+		// we can maybe turn these into JumpPoint objects and have the tile reference the appropriate
+		// JumpPoint? Then for temporal cache coherence, we can decompress most recently accessed JumpPoints
+		// and leave those in the cache
+		//
+		// pendingForcedNeighbours
+		// ------------------------
+		//
+		// 	Page 1 is being added, a forced neighbour is created from a collision in Page 1, but the forced
+		// 	neighbour belongs to Page 2 which hasn't been created yet.
+		//
+		//	  Page 1         Page 2
+		//  +-------------+----------
+		//  +      X      |X
+		//  +       ######|
+		//  +      X      |X
+		//  +             |
+		//  +-------------+----------
+		//
+		//
+
+		//
+		this.jumpPoints  = null;
+		this.forcedNeighbours = {};
+		this.pendingForcedNeighbours = {}; // Forced neighbours which were created from another page, where the forced neighbour exists on a page which hasn't been added yet
 
 		this.sheet       = null;// Resources.findSheetFromFile('tilesheet.png'); // FIXME: should this be here?
 		this.pathfinding = new Pathfinding(this);
@@ -150,7 +177,7 @@ define(['eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathf
 				if (_.isError(result)) {
 					throw result;
 				}
-			}, HIGH_PRIORITY);
+			});
 
 			this.listenTo(entity, EVT_DIED, function(entity){
 

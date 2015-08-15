@@ -110,6 +110,11 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 			var stepResults = step.apply(this, [time]); // TODO: generalize this wrap/apply operation for basic inheritance
 
 			var timeDelta = time - this.lastMoved;
+var totalStepsTaken = 0,
+	oldX = this.position.global.x,
+	oldY = this.position.global.y,
+	oldLastMoved = this.lastMoved,
+	totalDeltaTaken = 0;
 
 			// Have we zoned? Disallow stepping page-specific things
 			if (!this.page) {
@@ -122,14 +127,14 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 				var delta = timeDelta;
 				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
-				while (delta>this.moveSpeed && this.path) {
+				while (delta>=this.moveSpeed && this.path) {
 
 					if (!_.isArray(this.path.walks) ||
 						this.path.walks.length === 0) {
 
 						if (_.isFunction(this.path.onFailed)) this.path.onFailed();
 						this.path = null;
-						return UnexpectedError("Path of length 0 walks");
+						throw new Error("Path of length 0 walks");
 					}
 
 					var path              = this.path,
@@ -147,10 +152,17 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 						deltaSteps = steps;
 						deltaTaken = deltaSteps * this.moveSpeed;
 						delta -= deltaTaken;
+if ((Env.isServer && this.playerID) || (!Env.isServer && The.player == this)) {
+	// console.log('> steps: '+deltaTaken);
+}
 					} else {
-						deltaTaken = delta;
-						delta = 0;
+						deltaTaken = this.moveSpeed * deltaSteps;
+						delta -= deltaTaken;
+if ((Env.isServer && this.playerID) || (!Env.isServer && The.player == this)) {
+	// console.log('IN WALK: '+deltaTaken);
+}
 					}
+totalStepsTaken += deltaSteps;
 
 					if (steps === 0) {
 						// Finished walk
@@ -169,12 +181,15 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
 							this.triggerEvent(EVT_FINISHED_MOVING);
 							this.lastMoved += delta;
+// console.log('HERE');
+totalDeltaTaken += delta;
 							break;
 						} else {
 							this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
 						}
 					}
 
+if (walk.walked + deltaSteps > walk.distance) throw new Error("THIS SHOULD NEVER HAPPEN!");
 					walk.walked = Math.min(walk.distance, walk.walked + deltaSteps);
 
 					if (!walk.started) {
@@ -253,11 +268,19 @@ define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 					}
 
 
+totalDeltaTaken += deltaTaken;
 					this.lastMoved += deltaTaken;
 				}
 
 				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
+
+if ((Env.isServer && this.playerID) || (Env.isBot && The.player == this)) {
+	// console.log(chalk.underline.bold.green((Math.floor(now()/100) % 10000)+":  Player position: ("+this.position.global.x+", "+this.position.global.y+")    In ["+(time - oldLastMoved)+"] ticks I've taken ["+(totalDeltaTaken)+"] delta and ["+totalStepsTaken+"] steps and WAS here ("+oldX+", "+oldY+") I've left ["+(time-this.lastMoved)+"] delta for next time"));
+}
 			} else {
+if ((Env.isServer && this.playerID) || (Env.isBot && The.player == this)) {
+	// console.log(chalk.underline.bold.green((Math.floor(now()/100) % 10000)+":  Player("+this.playerID+") wasted some time ("+(time-this.lastMoved)+")"));
+}
 				this.lastMoved = time;
 			}
 			this.sprite.step(time);

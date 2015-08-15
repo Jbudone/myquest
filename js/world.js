@@ -30,7 +30,7 @@ define(['eventful','map'], function(Eventful,Map){
 					// 	console.log(e);
 					// 	// TODO: send entity to safe spot
 					// }
-				}, HIGH_PRIORITY);
+				});
 			}
 		};
 

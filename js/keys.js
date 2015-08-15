@@ -94,7 +94,8 @@ define(function(){
 
 	addKey('ACTION_NEW_PATH');
 
-	addKey('HIGH_PRIORITY');
+	// addKey('HIGH_PRIORITY');
+	addKey('LOW_PRIORITY');
 
 	addKey('LEFT_TO_RIGHT');
 	addKey('UP_TO_DOWN');
@@ -122,11 +123,14 @@ define(function(){
 	addKey('BAD_COORDINATES'); 
 
 	addKey('BOT_CONNECT'); // Bot commands
+	addKey('BOT_SIGNUP');
 	addKey('BOT_MOVE');
 
 	addKey('REQ_REGISTER'); // Login requests
 
 	addKey('EVERYTHING'); // Indicator
+
+	addKey('TEST_CHECKJPS'); // Testing
 
 	return keys;
 });

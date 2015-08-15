@@ -60,5 +60,23 @@ define(['lib/stacktrace'], function(Stack){
 
 	allErrors['GameError'] = GameError; // NOTE: a Game error is not an error in code; its an error specific to within the game (eg. a player requests to pickup an item which is not there)
 
+
+	// An extendable error class
+	// arg1 is supposed to be a hint (o/w use it for args)
+	// arg2 is supposed to be args
+	var Err = function(message, arg1, arg2){
+
+		var e = new Error(message);
+
+		// In case arg1
+		if (!arg2 && _.isObject(arg1)) {
+			arg2 = arg1;
+		}
+
+		e.hint = _.isFinite(arg1) ? arg1 : null;
+		e.args = arg2 || {};
+		return e;
+	};
+
 	return allErrors;
 });
