@@ -52,33 +52,6 @@ Quests
 
 
 
-NEXT UPDATE
-	- Fixed entity respawning
-	- Fixed gid's synced between client/server (firefox couldn't see king)
-	- Fixed eventful, when running stopListeningTo during triggerEvent, the triggerEvent skips some elements
-	- Fixed fadeToBlack not hitting on death after zoning to a new map
-	- Optimized sight (only enabled when bored/standing around)
-	- Implemented a map hash in map export to avoid redundant map exporting
-	- Optimized UI updates
-	- Using new pathfinding algorithm for server
-	- Turned off JPS (set an option)
-	- Logging: cleanup to avoid needless logging
-	- Setup new combat system & strategies
-	- Fixed pathfinding (false ALREADY_THERE)
-	- Fixed pathfinding recalibrating when on (or near) end tile (rather than sending ALREADY_THERE)
-	- Fixed path synchronization (alternative path to shorten path from server; to avoid accumulation of recalibrations)
-	- Added server side pathfinding for player (for combat system)
-	- Fixed enemies standing ontop of you while attacking
-	- Fixed enemies stopping along path (broadcast entity path cancelled event to users)
-	- Allow enemies to give up and not chase you too far
-	- Improved logging: JSON renderer, colours
-	- Fixed (long range) melee not considering obstacles in the way
-	- Fixed long wait time for node-inspector (https://github.com/nodejs/node/issues/7853)
-	- Renamed "Map" to "Area"  (because of ES6 Map type)
-	- Setup Smoke Test framework
-	- Fixed receiving path from entity when client has already unloaded entity
-	- Fixed receiving events from page which has already been unloaded
-	
 WORKING ON (was previously working on)
 	- Error handling
 	  	- Never return errors (please keep note where it may seem useful); ALWAYS test and throw as much as possible
@@ -650,6 +623,7 @@ DB
 ====== Functions
 
 	reference: https://rainsoft.io/when-not-to-use-arrow-functions-in-javascript/
+	never ever use `new Function()`: Fixed long wait time for node-inspector (https://github.com/nodejs/node/issues/7853)
 
 	* function(){}  creates its own context. NOTE: this can be an issue with vars
 		function Tacos(){
