@@ -1,5 +1,6 @@
 define(['loggable'], function(Loggable){
 
+    // TODO: Look into Mongoose
 	var DB = function(){
 		extendClass(this).with(Loggable);
 		this.setLogGroup('DB');
@@ -27,9 +28,9 @@ define(['loggable'], function(Loggable){
 
 					this.Log("Connected and ready to go");
 					loaded();
-				});
+				}.bind(this));
 
-			});
+			}.bind(this));
 		};
 		
 
@@ -90,12 +91,12 @@ define(['loggable'], function(Loggable){
 						return;
 					}
 
-					console.log("No player ("+username+") found..creating new user");
+					this.Log("No player ("+username+") found..creating new user", LOG_DEBUG);
 					var shasum = crypto.createHash('sha1');
 					shasum.update('SALTY'+password);
 
 					// No player exists with these credentials.. register new user
-					this.createNewPlayer({map:'main', position:{tile:{y:60, x:53}}}, username, shasum.digest('hex'), email).then(function(newID){
+					this.createNewPlayer({area:'main', position:{tile:{y:60, x:53}}}, username, shasum.digest('hex'), email).then(function(newID){
 						finished(null, newID);
 					}, function(err){
 						failed(err);
@@ -152,14 +153,14 @@ define(['loggable'], function(Loggable){
 								}
 							},
 							respawn: {
-								map: "main",
+								area: "main",
 								position: {
 									tile: {
 										y: 60, x: 53
 									}
 								},
 							},
-							map: "main"
+							area: "main"
 						});
 
 						db
@@ -178,18 +179,18 @@ define(['loggable'], function(Loggable){
 
 			var y     = player.position.tile.y,
 				x     = player.position.tile.x,
-				mapID = player.page.map.id;
+				areaID = player.page.area.id;
 
 			if (!_.isFinite(y) || !_.isFinite(x)) {
-				console.log(player.position);
+				this.Log(player.position, LOG_ERROR);
 				throw new Error("Cannot save player with bad position!");
 			}
 
 			db
 			.collection('players')
-			.update({id:player.playerID}, {"$set": {position:{tile:{y:y,x:x}}, map:mapID}}, function(err){
+			.update({id:player.playerID}, {"$set": {position:{tile:{y:y,x:x}}, area:areaID}}, function(err){
 				if (err) Log(err, LOG_ERROR);
-				Log("Successfully updated player ("+player.playerID+") position.. ("+y+","+x+") in map("+mapID+")");
+				Log("Successfully updated player ("+player.playerID+") position.. ("+y+","+x+") in area("+areaID+")");
 			});
 		};
 

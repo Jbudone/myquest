@@ -1,56 +1,55 @@
-define(function(){
+define(() => {
 
-	var Dynamic = {
+    const Dynamic = {
 
-		_dynamicHandles: {},
+        _dynamicHandles: {},
 
-		registerHandler: function(id, name, options){
-			if (!options)  options={};
-			options = {
-				hook: options.hook || false,
-				event: options.event || false
-			};
+        registerHandler(id, name, options) {
+            if (!options)  options = {};
+            options = {
+                hook: options.hook || false,
+                event: options.event || false
+            };
 
-			var doNothing = function(){ return true; },
-				preHandle = (options.hook ? this.doHook(options.hook).pre : doNothing),
-				evtHandle = (options.event ? this.triggerEvent(options.event) : doNothing),
-				postHandle = (options.hook ? this.doHook(options.hook).post : doNothing),
-				_this     = this,
-				_id       = id;
-			
-			var _dynamicHandler = {
-				name: name,
-				mainHandle: doNothing,
-				handler: function(){
-					if (!preHandle(arguments)) return;
-					var result = _this._dynamicHandles[_id].mainHandle.apply(_this, arguments);//bind(this)(arguments); // FIXME: are we safe to use apply & this?
-					if (_.isError(result)) return result; // Immediately escape from error
-					evtHandle(arguments);
-					postHandle(arguments);
-					return result;
-				}
-			};
-			this._dynamicHandles[id] = _dynamicHandler;
-		},
+            const doNothing = function() { return true; },
+                preHandle   = (options.hook ? this.doHook(options.hook).pre : doNothing),
+                evtHandle   = (options.event ? this.triggerEvent(options.event) : doNothing),
+                postHandle  = (options.hook ? this.doHook(options.hook).post : doNothing),
+                _this       = this,
+                _id         = id;
 
-		handler: function(id){
-			var handle = this._dynamicHandles[id];
+            const _dynamicHandler = {
+                name,
+                mainHandle: doNothing,
+                handler() {
+                    // FIXME: Find a way to do this without using arguments or apply
+                    if (!preHandle(arguments)) return;
+                    var result = _this._dynamicHandles[_id].mainHandle.apply(_this, arguments);//bind(this)(arguments); // FIXME: are we safe to use apply & this?
+                    evtHandle(arguments);
+                    postHandle(arguments);
+                    return result;
+                }
+            };
+            this._dynamicHandles[id] = _dynamicHandler;
+        },
 
-			if (!handle) {
-				return null;
-			}
+        handler(id) {
+            const handle = this._dynamicHandles[id];
 
-			var setHandle   = function(callback){ handle.mainHandle = callback; },
-				unsetHandle = function(){ handle.mainHandle = function(){ return true; }; };
+            if (!handle) {
+                return null;
+            }
 
-			return {
-				call: handle.handler,
-				set: setHandle,
-				unset: unsetHandle
-			};
-		},
+            const setHandle = function(callback){ handle.mainHandle = callback; },
+                unsetHandle = function(){ handle.mainHandle = function(){ return true; }; };
 
-	};
+            return {
+                call: handle.handler,
+                set: setHandle,
+                unset: unsetHandle
+            };
+        }
+    };
 
-	return Dynamic;
+    return Dynamic;
 });

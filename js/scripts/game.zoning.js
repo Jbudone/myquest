@@ -1,6 +1,6 @@
-define(['SCRIPTENV'], function(SCRIPTENV){
+define(['SCRIPTINJECT'], function(SCRIPTINJECT){
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
 	var ZoningMgr = function(){
 		var _self = this;
@@ -9,14 +9,10 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 		this.keys = [];
 		this.initialize = function(){
 			_self.heMoved(-2);
-			console.log("Loaded zoning mgr.. but you're a client aren't ya? :)");
 		};
-		this.heMoved = function(id){
-			console.log("YOU TOTALLY MOVED, DIDN'T YOU ["+id+"] !?");
-		};
+		this.heMoved = function(id){ };
 		this.client = {
 			initialize: function(){
-				//console.log("Loading zoning mgr");
 				// _self.heMoved(-1);
 				// this.listenTo(player, EVT_MOVED_TO_NEW_TILE).after(function(theGuyWhoMoved){
 				// 	_self.heMoved(id);
@@ -24,7 +20,6 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			},
 
 			heMoved: function(id){
-				//console.log("Cliently moved ["+id+"]");
 			}
 		};
 	};

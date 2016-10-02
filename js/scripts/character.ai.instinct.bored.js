@@ -1,106 +1,119 @@
-define(['SCRIPTENV', 'scripts/character', 'scripts/character.ai.instinct', 'eventful', 'hookable', 'dynamic', 'loggable'], function(SCRIPTENV, Character, Instinct, Eventful, Hookable, Dynamic, Loggable){
-	
-	eval(SCRIPTENV);
+define(
+    [
+        'SCRIPTINJECT', 'scripts/character', 'scripts/character.ai.instinct',
+        'eventful', 'hookable', 'dynamic', 'loggable'
+    ],
+    (
+        SCRIPTINJECT, Character, Instinct, Eventful, Hookable, Dynamic, Loggable
+    ) => {
 
-	var Bored = function(game, brain){
-		extendClass(this).with(Eventful);
-		extendClass(this).with(Hookable);
-		extendClass(this).with(Dynamic);
-		extendClass(this).with(Loggable);
-		this.setLogGroup('Instinct');
-		this.setLogPrefix('(Bored:'+ brain.character.entity.id +') ');
+        /* SCRIPTINJECT */
 
-		this.base = Instinct;
-		this.base();
+        const Bored = function(game, brain) {
 
-		this.name = "bored";
+            Instinct.call(this);
 
-		var _bored     = this,
-			brain      = brain,
-			_game      = game,
-			_character = brain.character,
-			_script    = null;
+            extendClass(this).with(Eventful);
+            extendClass(this).with(Hookable);
+            extendClass(this).with(Dynamic);
+            extendClass(this).with(Loggable);
 
-		this.isBored = true;
-		this.timeEntered = now();
-		this.boredTime = 0;
+            this.setLogGroup('Instinct');
+            this.setLogPrefix(`Bored:${brain.character.entity.id}`);
 
+            this.name = "bored";
 
+            const _bored   = this,
+                _character = brain.character;
+            let _script    = null;
 
-		this.onEnter = function(instinct, data){
-			this.beginBoredom();
-		};
-		
-		this.onLeave = function(){
+            this.isBored     = true;
+            this.timeEntered = now();
+            this.boredTime   = 0;
+            this.backAtSpawn = false;
 
-			_game.hook('longStep', this).remove();
-		};
+            this.onEnter = (instinct, data) => {
+                this.beginBoredom();
+            };
 
-		this.globalUnload = function(){
+            this.onLeave = () => {
 
-		};
+                game.hook('longStep', this).remove();
+            };
 
-		this.server = {
-			initialize: function(){
-				_script = this;
-				_bored.boredInit.bind(_bored)();
-			},
+            this.globalUnload = () => {
 
-			beginBoredom: function(){
+            };
 
-				this.isBored = false;
-				this.boredTime = 0;
-				_game.hook('longStep', this).after(function(){
-					this.boredTime += 1000;
-					this.Log("Getting bored.. "+ this.boredTime);
-					if (this.boredTime > 2000) {
-						this.isBored = true;
-						this.Log("IM BORED!!!!");
+            this.server = {
 
-						// TODO: walk to spawn spot
-						this.goBackToSpawn();
-						_game.hook('longStep', this).remove();
-					}
-				}.bind(this));
+                initialize() {
+                    _script = this;
+                    _bored.boredInit();
+                },
 
-				// TODO: listen to onStateChanged to remove boredom
+                beginBoredom: () => {
 
-				this.timeEntered = now();
-			},
+                    this.isBored = false;
+                    this.boredTime = 0;
+                    game.hook('longStep', this).after(() => {
+                        this.boredTime += 1000;
+                        if (this.boredTime > 2000) {
+                            this.isBored = true;
+                            this.Log("IM BORED!!!!", LOG_DEBUG);
 
-			goBackToSpawn: function(){
-				var respawn = _character.respawnPoint,
-					page	= _character.entity.page.map.pages[ respawn.page ],
-					tile 	= new Tile( respawn.tile.x, respawn.tile.y );
-				brain.instincts['movement'].goToTile( tile, 0 );
-			},
+                            // TODO: walk to spawn spot
+                            this.goBackToSpawn();
+                            game.hook('longStep', this).remove();
+                        }
+                    });
 
-			update: function(){},
-			inform: function(){
-				// News of some other important thing has occured.. don't worry about what the news is, just
-				// accept to leave the boredom state
-				return {
-					accept: true,
-				}
-			},
+                    _character.standGuard();
 
-			boredInit: function(){
+                    // TODO: listen to onStateChanged to remove boredom
 
-				if (!_character.isPlayer) {
-					brain.onStateless = function(){
-						brain.enterState('boredom');
-					};
-				}
+                    this.timeEntered = now();
+                },
 
-			},
+                goBackToSpawn: () => {
+                    const respawn = _character.respawnPoint,
+                        page      = _character.entity.page.area.pages[respawn.page],
+                        tile      = new Tile(respawn.tile.x, respawn.tile.y);
 
-			unload: function(){
-				_game.hook('longStep', this).remove();
-				this.globalUnload();
-			}
-		};
+                    brain.instincts.movement.goToTile(tile, 0).then(() => {
+                        this.beginBoredom();
+                    });
+                },
 
-	}
+                update: function(){},
+                inform: () => {
+                    // News of some other important thing has occured.. don't worry about what the news is, just accept
+                    // to leave the boredom state
+                    return {
+                        accept: true
+                    };
+                },
 
-	return Bored;
-});
+                boredInit: () => {
+
+                    if (!_character.isPlayer) {
+                        brain.onStateless = () => {
+                            brain.enterState('boredom');
+                        };
+                    }
+
+                },
+
+                unload: () => {
+                    game.hook('longStep', this).remove();
+                    this.globalUnload();
+                }
+            };
+
+        };
+
+        Bored.prototype = Object.create(Instinct.prototype);
+        Bored.prototype.constructor = Bored;
+
+        return Bored;
+    });

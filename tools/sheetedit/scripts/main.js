@@ -1,5 +1,49 @@
 
+var assetDetails = {
+    tileTypes: {
+        collisions: {
+            title: "Collision",
+            highlight: "#CC0000",
+            opacity: 0.6
+        },
+        floating: {
+            title: "Floating",
+            highlight: "#00CC00",
+            opacity: 0.6
+        },
+        //visible: {
+
+        //},
+        shootable: {
+            title: "Shootable",
+            highlight: "#0000CC",
+            opacity: 0.6
+        },
+
+        // TODO: Would be really really nice to add Objects to this list, however objects is an {} in assets.js, and
+        // editor.js handles objects very differently
+        // objects: {
+        //     title: "Objects",
+        //     highlight: "#CCCC00",
+        //     opacity: 0.4
+        // }
+    }
+};
+
+window.assetDetails = assetDetails;
+
+
 $(document).ready(function(){
+
+    for (var tileType in assetDetails.tileTypes) {
+        $('<button/>')
+            .attr('id', 'ctrl-'+tileType)
+            .attr('type', 'button')
+            .addClass('btn')
+            .addClass('btn-default')
+            .text(assetDetails.tileTypes[tileType].title)
+            .appendTo($('#buttons_tilesheets'));
+    }
 
 	var assetsMgr = null,
 		editor    = null,

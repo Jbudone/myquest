@@ -1,563 +1,546 @@
-define(['eventful', 'dynamic', 'loggable', 'movable', 'event'], function(Eventful, Dynamic, Loggable, Movable, Event){
-
-	var Player = function(client){
-		extendClass(this).with(Loggable);
-		extendClass(this).with(Eventful);
-		extendClass(this).with(Dynamic);
-		this.setLogGroup('Player');
-		this.setLogPrefix('(Player)[null] ');
-
-		this.id                    = null;
-		this.movable               = null;
-		this.lastActionId          = 0;
-		this.client                = client;
-
-		this.onDisconnected        = new Function();
-		this.onRequestNewCharacter = new Function();
-		this.onLogin               = new Function();
-
-		this.onPreparingToWalk     = new Function();
-		this.onSomeEvent           = new Function();
-
-		this.pages                 = { }; // Visible pages
-
-
-		this.setPlayer = function(player){
-
-			this.id = player.id;
-			this.setLogPrefix('(Player)['+player.id+'] ');
-			this.Log("Logged in player ["+player.id+"]");
-			this.Log(player, LOG_DEBUG);
-
-			var err = null;
-
-			// Set players position
-			if (!The.world.maps[player.map]) {
-				err = new GameError("Map ("+player.map+") not found in world!");
-				err.reason = BAD_POSITION;
-				err.becauseOf = 'map';
-				return err;
-			}
-
-			var map            = The.world.maps[player.map],
-				playerPosition = map.localFromGlobalCoordinates(player.position.tile.x, player.position.tile.y),
-				respawnPoint   = null;
-
-			if (_.isError(playerPosition)) {
-				this.Log("Could not get correct position for player..", LOG_ERROR);
-				playerPosition.print();
-				err = new GameError("Could not get correct position for player..");
-				err.reason = BAD_POSITION;
-				err.becauseOf = 'position';
-				return err;
-			}
-
-			respawnPoint = The.world.maps[player.respawn.map].localFromGlobalCoordinates(player.respawn.position.tile.x, player.respawn.position.tile.y);
-
-			if (_.isError(respawnPoint)) {
-				this.Log("Could not get local coordinates for respawn point", LOG_ERROR);
-				err = new GameError("Could not get local coordinates for respawn point..");
-				err.reason = BAD_POSITION;
-				err.becauseOf = 'respawn';
-			}
-
-			this.movable          = new Movable('player', playerPosition.page, {
-												position: {
-													tile: {
-														x: player.position.tile.x,
-														y: player.position.tile.y },
-													global: {
-														x: player.position.tile.x*Env.tileSize,
-														y: player.position.tile.y*Env.tileSize }
-												},
-												respawnPoint: {
-													tile: {
-														x: player.respawn.position.tile.x,
-														y: player.respawn.position.tile.y
-													},
-													page: respawnPoint.page.index,
-													map: respawnPoint.page.map.id
-												} });
-			this.movable.name = player.username;
-			this.movable.playerID = player.id;
-			this.movable.player = this;
-
-			var result = null;
-			result = this.movable.page.addEntity(this.movable);
-			if (_.isError(result)) return result;
-			result = map.watchEntity(this.movable);
-			if (_.isError(result)) return result;
-
-			this.pages = { };
-			this.pages[this.movable.page.index] = this.movable.page;
-			for (var neighbour in this.movable.page.neighbours) {
-				var npage = this.movable.page.neighbours[neighbour];
-				if (npage) this.pages[npage.index] = npage;
-			}
-
-
-			
-
-
-			this.movable.addEventListener(EVT_ZONE, this, function(player, oldPage, page){
-				this.Log("Zoned player from ("+ this.movable.page.index +") to ("+ page.index +")");
-				var oldPage       = oldPage,
-					oldNeighbours = {};
-
-				if (!oldPage) throw new Error("No oldPage defined");
-				oldNeighbours[oldPage.index] = oldPage;
-				for (var neighbour in oldPage.neighbours) {
-					if (oldPage.neighbours[neighbour]) {
-						oldNeighbours[oldPage.neighbours[neighbour].index] = oldPage.neighbours[neighbour];
-					}
-				}
-
-				this.movable.page      = page;
-				this.pages             = {};
-				this.pages[page.index] = page;
-
-
-
-				// Send new page & neighbours as necessary
-				// If neighbour page was sent previously then don't send again
-				var initialization = {
-					zone:true,
-					pages:{}
-				}, result = null;
-
-				if (!oldNeighbours[page.index]) {
-					result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-					if (_.isError(result)) throw result;
-					initialization.pages[page.index] = result;
-				}
-				for (var neighbour in page.neighbours) {
-					var npage = page.neighbours[neighbour];
-					if (npage) this.pages[npage.index] = npage;
-					if (npage && !oldNeighbours[npage.index] && npage.index != oldPage.index) {
-						result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-						if (_.isError(result)) throw result;
-						initialization.pages[npage.index] = result;
-					}
-				}
-
-				this.client.send(JSON.stringify(initialization));
-			});
-
-			this.movable.addEventListener(EVT_ZONE_OUT, this, function(player, oldMap, oldPage, map, page, zone) {
-				this.Log("Zoned player from ("+oldMap.id+")["+oldPage.index+"] to ("+map.id+")["+page.index+"]");
-
-				// NOTE: the actual zoning process is already handled in world.js
-				// map.zoneIn(player, zone);
-
-				player.page = page;
-				this.pages = { };
-				this.pages[page.index] = page;
-
-				var initialization = {
-						zoneMap:true,
-						map:{
-							id: map.id,
-							pagesPerRow: map.pagesPerRow,
-							mapWidth: map.map.properties.width,
-							mapHeight: map.map.properties.height,
-							tilesets: map.map.properties.tilesets,
-						},
-						player:{
-							position: this.movable.position,
-							page: this.movable.page.index
-						},
-						pages:{}
-					}, result = null;
-
-				result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				if (_.isError(result)) throw result;
-				initialization.pages[page.index] = result;
-				for (var neighbour in page.neighbours) {
-					var npage = page.neighbours[neighbour];
-					if (npage) {
-						this.pages[npage.index] = npage;
-						result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-						if (_.isError(result)) throw result;
-						initialization.pages[npage.index] = result;
-					}
-				}
-
-				this.client.send(JSON.stringify(initialization));
-			});
-
-			return true;
-		};
-
-		this.respawn = function(){
-
-			this.pages = {};
-			this.pages[this.movable.page.index] = this.movable.page;
-			var page = this.movable.page,
-				map = page.map,
-				initialization = {
-					respawn:true,
-					map:{
-						id: map.id,
-						pagesPerRow: map.pagesPerRow,
-						mapWidth: map.map.properties.width,
-						mapHeight: map.map.properties.height,
-						tilesets: map.map.properties.tilesets,
-					},
-					player:{
-						position: {
-							tile: {
-								x: this.movable.position.tile.x,
-								y: this.movable.position.tile.y },
-							global: {
-								x: this.movable.position.global.x,
-								y: this.movable.position.global.y }
-						},
-						page: this.movable.page.index,
-						_character: {
-							health: this.movable.character.health
-						}
-					},
-					pages:{}
-			}, result = null;
-
-			result = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-			if (_.isError(result)) return result;
-			initialization.pages[page.index] = result;
-			for (var neighbour in page.neighbours) {
-				var npage = page.neighbours[neighbour];
-				if (npage) {
-					this.pages[npage.index] = npage;
-					result = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-					initialization.pages[npage.index] = result;
-				}
-			}
-
-			this.client.send(JSON.stringify(initialization));
-		};
-
-		this.handleWalkRequest = function(action){
-
-			// 	Create path from request
-			////////////////////////////////////
-
-			var path     = new Path(),
-				walk     = new Walk(),
-				player   = this.movable,
-				your     = player,
-				map      = player.page.map,
-				reqState = action.state,
-				maxWalk  = 1500/player.moveSpeed, // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
-				err      = null,
-				result   = null;
-
-			result = walk.fromJSON(action.data);
-			if (_.isError(result)) {
-				err = new GameError(result.message);
-				return err;
-			}
-			walk.walked = 0;
-			path.walks.push(walk);
-
-			if (path.length() > maxWalk) {
-				this.Log("Path longer than maxwalk..", LOG_ERROR);
-				this.Log(path, LOG_ERROR);
-				err = new GameError("Path longer than maxwalk");
-				return err;
-			}
-
-			// 
-			// Check path is safe (no collisions)
-			//
-			//	This works by essentially finding the starting point for the path and walking along that path
-			//	to check if each tile is open.
-			//	NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only
-			//	1 walk)
-			////////////////////////////////////////
-			var safePath = map.pathfinding.checkSafeWalk(reqState, walk);
-
-
-			var movableState = {
-					position: {
-						global: {
-							x: player.position.global.x,
-							y: player.position.global.y },
-						tile: {
-							x: player.position.tile.x,
-							y: player.position.tile.y }
-					}
-				},
-				pathState = {
-					position: {
-						global: {
-							x: reqState.global.x,
-							y: reqState.global.y
-						},
-						tile: {
-							x: reqState.tile.x,
-							y: reqState.tile.y }
-					}
-				};
-
-			if (!safePath) {
-				this.Log("Path is not safe for user... cancelling!");
-
-				var response     = new Response(action.id);
-				response.success = false;
-				response.state   = { position: {
-										global: {
-											x: movableState.position.global.x,
-											y: movableState.position.global.y },
-										tile: {
-											x: movableState.position.tile.x,
-											y: movableState.position.tile.y }
-										}
-									};
-				this.client.send(response.serialize());
-				return;
-			}
-
-			
-			// Are we close enough to recalibrate to the starting point of the path?
-			if (Math.abs(pathState.position.tile.x - movableState.position.tile.x) + Math.abs(pathState.position.tile.y - movableState.position.tile.y) > 8) {
-				var response = new Response(action.id);
-				response.success = false;
-				response.state   = { position: {
-										global: {
-											x: movableState.position.global.x,
-											y: movableState.position.global.y },
-										tile: {
-											x: movableState.position.tile.x,
-											y: movableState.position.tile.y }
-										}
-									};
-				this.client.send(response.serialize());
-				return;
-			}
-
-var prePath = JSON.stringify(path);
-			var success = map.recalibratePath(movableState, pathState, path, maxWalk);
-
-			if (success) {
-
-				// var pathCpy = extendClass({}).with(path);
-				// pathCpy.time = action.time;
-				// pathCpy.state = action.state;
-				// you.pathArchive.addEvent(pathCpy); // TODO: need to pushArchive for path sometimes
-
-				player.path=null;
-// var postPath = JSON.stringify(path);
-// console.log(chalk.bold.magenta(prePath) + " RECALIBRATED TO " + chalk.bold.yellow(postPath));
-				player.addPath(path);
-
-				var response = new Response(action.id);
-				response.success = true;
-				this.client.send(response.serialize());
-				return;
-			} else {
-
-				var response = new Response(action.id);
-				response.success = false;
-				response.state   = { position: {
-										global: {
-											x: movableState.position.global.x,
-											y: movableState.position.global.y },
-										tile: {
-											x: movableState.position.tile.x,
-											y: movableState.position.tile.y }
-										}
-									};
-				this.client.send(response.serialize());
-				return;
-			}
-
-
-			var response = new Response(action.id);
-			response.success = false;
-			this.client.send(response.serialize());
-			return;
-		};
-
-		this.disconnectPlayer = function(){
-			this.Log("Disconnecting player..");
-			this.movable.unload();
-		};
-
-		this.attackTarget = function(targetID){
-			this.Log("Player requesting to attack entity["+targetID+"]..");
-			var target = this.movable.page.movables[targetID];
-			if (target && target.playerID) {
-				return; // NO player killing!
-			}
-			this.movable.triggerEvent(EVT_AGGRO, this.movable.page.map.movables[targetID]);
-		};
-
-		client.on('close', (function() {
-			this.onDisconnected();
-			this.Log('websocket connection close ['+ this.id +']');
-		}).bind(this));
-
-		// FIXME: do we need to disconnect them from all errors ??
-		client.on('error', (function() {
-			this.onDisconnected();
-			this.Log('websocket connection error.. disconnecting user ['+this.id+']');
-		}).bind(this));
-
-		client.on('message', (function(evt) {
-			this.Log(evt, LOG_DEBUG);
-			var evt = JSON.parse(evt);
-			if (!evt || _.isError(evt)) {
-				this.Log("			BAD MESSAGE!? Weird..", LOG_ERROR);
-				// TODO: tell client that the message was misunderstood?
-				return;
-			}
-			if (evt.id!=this.lastActionId+1) {
-				this.Log("			Sorry user("+this.id+")..we may have missed some of your messages..  "+evt.id+"!="+(this.lastActionId+1), LOG_ERROR);
-				// TODO: tell client we're missing some messages..
-				return;
-			}
-
-			this.lastActionId++; // note: this may be safer (async) than lastActionId=evt.id
-
-
-			if (this.id==null) {
-				if (evt.evtType==EVT_NEW_CHARACTER) {
-					this.Log("User requesting a new character..");
-					this.onRequestNewCharacter().then((function(newID){
-						this.Log("Created new character for player ["+newID+"]", LOG_ERROR);
-						var response          = new Response(evt.id);
-						response.success      = true;
-						response.newCharacter = { id: newID, };
-						this.client.send(response.serialize());
-					}).bind(this), (function(){
-						this.Log("Could not create new player..", LOG_ERROR);
-						// TODO: tell user
-					}).bind(this))
-					.catch(Error, function(e){ errorInGame(e); })
-					.error(function(e){ errorInGame(e); });
-				} else if (evt.evtType==EVT_LOGIN) {
-					var username = evt.data.username,
-						password = evt.data.password;
-					this.Log("User logging in as ["+username+"]");
-					this.onLogin(username, password).then((function(details){
-						var savedState = details.savedState,
-							callback   = details.callback,
-							succeeded  = this.setPlayer(savedState);
-						if (!succeeded) {
-							var response     = new Response(evt.id);
-							response.success = false;
-							this.client.send(response.serialize());
-							return;
-						}
-
-						var response     = new Response(evt.id);
-						response.success = true;
-						response.login   = true;
-						response.player  = {
-							position: savedState.position,
-							playerID: this.movable.playerID,
-							id: this.movable.id,
-							name: this.movable.name,
-						};
-						this.client.send(response.serialize());
-
-						callback();
-					}).bind(this), (function(err){
-					   this.Log("Could not login player..");
-					   var response     = new Response(evt.id);
-					   response.success = false;
-					   response.reason  = err;
-					   this.client.send(response.serialize());
-					}).bind(this))
-					.catch(Error, function(e){ errorInGame(e); })
-					.error(function(e){ errorInGame(e); });
-				}
-
-				return;
-			}
-
-
-			if (evt.evtType==EVT_REQUEST_MAP) {
-
-				this.Log("Sending requested map..");
-				var page           = this.movable.page,
-					map            = page.map,
-					initialization = {
-						initialization:true,
-						map:{
-							id: map.id,
-							pagesPerRow: map.pagesPerRow,
-							mapWidth: map.map.properties.width,
-							mapHeight: map.map.properties.height,
-							tilesets: map.map.properties.tilesets,
-						},
-						pages:{}
-					};
-
-				initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				for (var neighbour in page.neighbours) {
-					var npage = page.neighbours[neighbour];
-					if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-				}
-
-				this.client.send(JSON.stringify(initialization));
-
-			} else if (evt.evtType==EVT_PREPARING_WALK) {
-				//this.Log("new message from user.. FROM ("+evt.state.localY+", "+evt.state.localX+") ----> "+evt.data.distance, LOG_DEBUG);
-				this.onPreparingToWalk(evt);
-			} else if (evt.evtType==TEST_CHECKJPS) {
-				// FIXME: should move this into dynamic handler for a debugging-specific script
-
-				var map              = The.world.maps[evt.data.mapID],
-					differences      = {},
-					i                = 0,
-					clientJumpPoints = evt.data.JPS;
-				for (var y=evt.data.y; y<Env.pageHeight; ++y) {
-					for (var x=evt.data.x; x<Env.pageWidth; ++x) {
-						for (var d=0; d<4; ++d) {
-							if (map.jumpPoints[4*(y*map.mapWidth+x)+d] != clientJumpPoints[i]) {
-								var tileID = 4*(y*map.mapWidth+x)+d;
-								differences[tileID] = map.jumpPoints[4*(y*map.mapWidth+x)+d];
-							}
-
-							++i;
-						}
-					}
-				}
-
-				this.respond(evt.id, _.isEmpty(differences), {
-					differences: differences
-				});
-
-			} else {
-				var dynamicHandler = this.handler(evt.evtType);
-				if (dynamicHandler) {
-					dynamicHandler.call(evt, evt.data);
-				} else {
-					this.onSomeEvent(evt);
-				}
-			}
-		}).bind(this));
-
-		this.respond = function(id, success, args){
-			var response = new Response(id);
-			response.success = success;
-			if (args) {
-				_.extend(response, args);
-			}
-			this.client.send(response.serialize());
-		};
-
-		this.send = function(evt, args){
-			this.client.send(JSON.stringify({
-				evtType: evt,
-				data: args
-			}));
-		};
-
-		this.step = function(time) {
-			this.handlePendingEvents();
-		};
-	};
-
-	return Player;
-});
+define(
+    [
+        'eventful', 'dynamic', 'loggable', 'movable'
+    ],
+    (
+        Eventful, Dynamic, Loggable, Movable
+    ) => {
+
+        const Player = function(client) {
+
+            extendClass(this).with(Loggable);
+            extendClass(this).with(Eventful);
+            extendClass(this).with(Dynamic);
+
+            this.setLogGroup('Player');
+            this.setLogPrefix('Player [null]');
+
+            this.id                    = null;
+            this.movable               = null;
+            this.client                = client;
+
+            this.onDisconnected        = function() {};
+            this.onRequestNewCharacter = function() {};
+            this.onLogin               = function() {};
+
+            this.onPreparingToWalk     = function() {};
+            this.onSomeEvent           = function() {};
+
+            this.pages                 = { }; // Visible pages
+
+            this.queuedDisconnect      = false;
+            this.timeToDisconnect      = null;
+
+
+            this.setPlayer = (player) => {
+
+                this.id = player.id;
+                this.setLogPrefix(`Player ${player.id}`);
+                this.Log(`Logged in player ${player.id}`, LOG_DEBUG);
+
+                // Set players position
+                if (!The.world.areas[player.area]) {
+                    throw Err(`Area (${player.area}) not found in the world!`);
+                }
+
+                const area         = The.world.areas[player.area],
+                    respawnArea    = The.world.areas[player.respawn.area],
+                    playerPosition = area.localFromGlobalCoordinates(player.position.tile.x, player.position.tile.y),
+                    respawnPoint   = respawnArea.localFromGlobalCoordinates(player.respawn.position.tile.x, player.respawn.position.tile.y);
+
+                this.movable = new Movable('player', playerPosition.page, {
+                    position: {
+                        tile: {
+                            x: player.position.tile.x,
+                            y: player.position.tile.y },
+                        global: {
+                            x: player.position.tile.x * Env.tileSize,
+                            y: player.position.tile.y * Env.tileSize }
+                    },
+                    respawnPoint: {
+                        tile: {
+                            x: player.respawn.position.tile.x,
+                            y: player.respawn.position.tile.y
+                        },
+                        page: respawnPoint.page.index,
+                        area: respawnPoint.page.area.id
+                    }
+                });
+                this.movable.name     = player.username;
+                this.movable.playerID = player.id;
+                this.movable.player   = this;
+
+                this.movable.page.addEntity(this.movable);
+                area.watchEntity(this.movable);
+
+                this.pages = { };
+                this.pages[this.movable.page.index] = this.movable.page;
+                for (const neighbour in this.movable.page.neighbours) {
+                    const npage = this.movable.page.neighbours[neighbour];
+                    if (npage) this.pages[npage.index] = npage;
+                }
+
+
+                this.movable.addEventListener(EVT_ZONE, this, (player, oldPage, page) => {
+                    this.Log(`Zoned player from (${this.movable.page.index}) to (${page.index})`, LOG_DEBUG);
+                    const oldNeighbours = {};
+
+                    assert(oldPage, "No oldPage defined");
+
+                    oldNeighbours[oldPage.index] = oldPage;
+                    for (const neighbour in oldPage.neighbours) {
+                        if (oldPage.neighbours[neighbour]) {
+                            oldNeighbours[oldPage.neighbours[neighbour].index] = oldPage.neighbours[neighbour];
+                        }
+                    }
+
+                    this.movable.page      = page;
+                    this.pages             = {};
+                    this.pages[page.index] = page;
+
+
+                    // Send new page & neighbours as necessary
+                    // If neighbour page was sent previously then don't send again
+                    const initialization =
+                        {
+                            zone: true,
+                            pages: {}
+                        };
+
+                    if (!oldNeighbours[page.index]) {
+                        const str = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                        initialization.pages[page.index] = str;
+                    }
+
+                    for (const neighbour in page.neighbours) {
+                        const npage = page.neighbours[neighbour];
+
+                        if (npage) {
+                            this.pages[npage.index] = npage;
+                            if (!oldNeighbours[npage.index] && npage.index != oldPage.index) {
+                                const str = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                                initialization.pages[npage.index] = str;
+                            }
+                        }
+                    }
+
+                    this.client.send(JSON.stringify(initialization));
+                });
+
+                this.movable.addEventListener(EVT_ZONE_OUT, this, (player, oldArea, oldPage, area, page, zone) => {
+                    this.Log(`Zoned player from (${oldArea.id})[${oldPage.index}] to (${area.id})[${page.index}]`, LOG_DEBUG);
+
+                    // NOTE: the actual zoning process is already handled in world.js
+                    // area.zoneIn(player, zone);
+
+                    player.page = page;
+                    this.pages = { };
+                    this.pages[page.index] = page;
+
+                    const initialization = {
+                        zoneArea: true,
+                        area: {
+                            id: area.id,
+                            pagesPerRow: area.pagesPerRow,
+                            areaWidth: area.area.properties.width,
+                            areaHeight: area.area.properties.height,
+                            tilesets: area.area.properties.tilesets
+                        },
+                        player: {
+                            position: this.movable.position,
+                            page: this.movable.page.index
+                        },
+                        pages: {}
+                    };
+
+                    initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                    for (const neighbour in page.neighbours) {
+                        const npage = page.neighbours[neighbour];
+                        if (npage) {
+                            this.pages[npage.index] = npage;
+                            initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                        }
+                    }
+
+                    this.client.send(JSON.stringify(initialization));
+                });
+
+                return true;
+            };
+
+            this.respawn = () => {
+
+                this.pages = {};
+                this.pages[this.movable.page.index] = this.movable.page;
+                const page = this.movable.page,
+                    area   = page.area,
+                    initialization = {
+                        respawn: true,
+                        area: {
+                            id: area.id,
+                            pagesPerRow: area.pagesPerRow,
+                            areaWidth: area.area.properties.width,
+                            areaHeight: area.area.properties.height,
+                            tilesets: area.area.properties.tilesets
+                        },
+                        player: {
+                            position: {
+                                tile: {
+                                    x: this.movable.position.tile.x,
+                                    y: this.movable.position.tile.y },
+                                global: {
+                                    x: this.movable.position.global.x,
+                                    y: this.movable.position.global.y }
+                            },
+                            page: this.movable.page.index,
+                            _character: {
+                                health: this.movable.character.health
+                            }
+                        },
+                        pages: {}
+                    };
+
+                initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                for (const neighbour in page.neighbours) {
+                    const npage = page.neighbours[neighbour];
+                    if (npage) {
+                        this.pages[npage.index] = npage;
+                        initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                    }
+                }
+
+                this.client.send(JSON.stringify(initialization));
+            };
+
+            this.handleWalkRequest = (action) => {
+
+                //  Create path from request
+                // =================================
+
+                const path   = new Path(),
+                    walk     = new Walk(),
+                    player   = this.movable,
+                    area     = player.page.area,
+                    reqState = action.state,
+                    maxWalk  = 1500 / player.moveSpeed; // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
+
+                const result = walk.fromJSON(action.data);
+                if (_.isError(result)) {
+                    this.Log("Error serializing walk request");
+                    return;
+                }
+                walk.walked = 0;
+                path.walks.push(walk);
+
+                if (path.length() > maxWalk) {
+                    this.Log("Path longer than maxwalk..", LOG_ERROR);
+                    this.Log(path, LOG_ERROR);
+                    return;
+                }
+
+                path.id = reqState.path.id;
+                path.flag = reqState.path.flag;
+                this.Log(`Path Received: {${path.id}}, ${path.flag}}`, LOG_DEBUG);
+
+                // Check path is safe (no collisions)
+                //
+                // This works by essentially finding the starting point for the path and walking along that path to
+                // check if each tile is open.
+                // NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only 1
+                // walk)
+                const safePath = area.pathfinding.checkSafeWalk(reqState, walk);
+
+                const movableState = {
+                    position: {
+                        global: {
+                            x: player.position.global.x,
+                            y: player.position.global.y },
+                        tile: {
+                            x: player.position.tile.x,
+                            y: player.position.tile.y }
+                    }
+                };
+
+                const pathState = {
+                    position: {
+                        global: {
+                            x: reqState.global.x,
+                            y: reqState.global.y
+                        },
+                        tile: {
+                            x: reqState.tile.x,
+                            y: reqState.tile.y }
+                    }
+                };
+
+                if (!safePath) {
+                    this.Log("Path is not safe for user... cancelling!");
+
+                    const response   = new Response(action.id);
+                    response.success = false;
+                    response.state   = {
+                        position: {
+                            global: {
+                                x: movableState.position.global.x,
+                                y: movableState.position.global.y },
+                            tile: {
+                                x: movableState.position.tile.x,
+                                y: movableState.position.tile.y }
+                        }
+                    };
+                    this.client.send(response.serialize());
+                    return;
+                }
+
+                // Are we close enough to recalibrate to the starting point of the path?
+                const distX = Math.abs(pathState.position.tile.x - movableState.position.tile.x),
+                    distY   = Math.abs(pathState.position.tile.y - movableState.position.tile.y);
+                // TODO: Env the max recal distance
+                if (distX + distY > 8) {
+
+                    this.Log("We're not close enough to the beginning of the requested path");
+                    this.Log(pathState);
+                    this.Log(movableState);
+
+                    const response = new Response(action.id);
+                    response.success = false;
+                    response.state   = { position: {
+                        global: {
+                            x: movableState.position.global.x,
+                            y: movableState.position.global.y },
+                        tile: {
+                            x: movableState.position.tile.x,
+                            y: movableState.position.tile.y }
+                    }
+                    };
+                    this.client.send(response.serialize());
+                    return;
+                }
+
+                const success = area.recalibratePath(movableState, pathState, path, maxWalk);
+
+                if (success) {
+
+                    player.path = null;
+
+                    this.triggerEvent(EVT_USER_ADDED_PATH);
+                    this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${movableState.position.tile.x}, ${movableState.position.tile.y})`, LOG_DEBUG);
+                    player.addPath(path);
+
+                    const response = new Response(action.id);
+                    response.success = true;
+                    this.client.send(response.serialize());
+                } else {
+                    this.Log("Could not recalibrate our current position to the beginning of the requested path");
+                    this.Log(pathState);
+                    this.Log(movableState);
+                    this.Log(path);
+
+                    const response = new Response(action.id);
+                    response.success = false;
+                    response.state   = {
+                        position: {
+                            global: {
+                                x: movableState.position.global.x,
+                                y: movableState.position.global.y },
+                            tile: {
+                                x: movableState.position.tile.x,
+                                y: movableState.position.tile.y }
+                        }
+                    };
+                    this.client.send(response.serialize());
+                }
+            };
+
+            this.disconnectPlayer = () => {
+                this.Log("Disconnecting player..");
+                this.movable.unload();
+            };
+
+            this.attackTarget = (targetID) => {
+                this.Log(`Player requesting to attack entity [${targetID}]..`, LOG_DEBUG);
+                const target = this.movable.page.movables[targetID];
+                if (target && target.playerID) {
+                    return; // NO player killing!
+                }
+                this.movable.triggerEvent(EVT_AGGRO, this.movable.page.area.movables[targetID]);
+            };
+
+            this.wantToDisconnect = () => {
+                this.queuedDisconnect = true;
+                this.timeToDisconnect = Env.game.disconnecting.waitTimeToDisconnect;
+            };
+
+            this.canDisconnect = () => {
+                return (!Env.game.disconnecting.dontDisconnectIfBusy || this.movable.character.canDisconnect());
+            };
+
+            client.on('close', () => {
+                this.onDisconnected();
+                this.Log(`websocket connection close [${this.id}]`);
+            });
+
+            // FIXME: do we need to disconnect them from all errors ??
+            client.on('error', () => {
+                this.onDisconnected();
+                this.Log(`websocket connection error.. disconnecting user [${this.id}]`);
+            });
+
+            client.on('message', (evt) => {
+
+                this.Log(evt, LOG_DEBUG);
+                evt = JSON.parse(evt);
+                const evtType = parseInt(evt.evtType, 10);
+
+                if (!this.id) {
+
+                    if (evtType === EVT_NEW_CHARACTER) {
+
+                        this.Log("User requesting a new character..", LOG_DEBUG);
+                        this.onRequestNewCharacter().then((newID) => {
+                            this.Log(`Created new character for player [${newID}]`);
+                            const response        = new Response(evt.id);
+                            response.success      = true;
+                            response.newCharacter = { id: newID };
+                            this.client.send(response.serialize());
+                        }, () => {
+                            this.Log("Could not create new player..", LOG_ERROR);
+                            // TODO: tell user
+                        })
+                        .catch(errorInGame);
+                    } else if (evtType === EVT_LOGIN) {
+
+                        const username = evt.data.username,
+                            password   = evt.data.password;
+
+                        this.Log(`User logging in as [${username}]`);
+                        this.onLogin(username, password).then((details) => {
+
+                            const savedState = details.savedState,
+                                callback     = details.callback,
+                                succeeded    = this.setPlayer(savedState);
+
+                            if (!succeeded) {
+                                const response   = new Response(evt.id);
+                                response.success = false;
+                                this.client.send(response.serialize());
+                                return;
+                            }
+
+                            const response   = new Response(evt.id);
+                            response.success = true;
+                            response.login   = true;
+                            response.player  = {
+                                position: savedState.position,
+                                playerID: this.movable.playerID,
+                                id: this.movable.id,
+                                name: this.movable.name
+                            };
+                            this.client.send(response.serialize());
+
+                            callback();
+                        }, (err) => {
+
+                            this.Log("Could not login player..");
+                            const response   = new Response(evt.id);
+                            response.success = false;
+                            response.reason  = err;
+                            this.client.send(response.serialize());
+                        })
+                        .catch(errorInGame);
+                    }
+
+                    return;
+                }
+
+                if (evtType === EVT_REQUEST_MAP) {
+
+                    this.Log("Sending requested area..", LOG_DEBUG);
+                    const page = this.movable.page,
+                        area   = page.area,
+                        initialization = {
+                            initialization: true,
+                            area: {
+                                id: area.id,
+                                pagesPerRow: area.pagesPerRow,
+                                areaWidth: area.area.properties.width,
+                                areaHeight: area.area.properties.height,
+                                tilesets: area.area.properties.tilesets
+                            },
+                            pages: {}
+                        };
+
+                    initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                    for (const neighbour in page.neighbours) {
+                        const npage = page.neighbours[neighbour];
+                        if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                    }
+
+                    this.client.send(JSON.stringify(initialization));
+
+                } else if (evtType === EVT_PREPARING_WALK) {
+
+                    this.Log(`new message from user.. FROM (${evt.state.global.x}, ${evt.state.global.y}) ----> ${evt.data.distance}`, LOG_DEBUG);
+                    this.onPreparingToWalk(evt);
+                } else if (evtType === TEST_CHECKJPS) {
+
+                    if (Env.game.useJPS) {
+                        // FIXME: should move this into dynamic handler for a debugging-specific script
+
+                        const area           = The.world.areas[evt.data.areaID],
+                            differences      = {},
+                            clientJumpPoints = evt.data.JPS;
+
+                        let i = 0;
+                        for (let y = evt.data.y; y < Env.pageHeight; ++y) {
+                            for (let x = evt.data.x; x < Env.pageWidth; ++x) {
+                                for (let d = 0; d < 4; ++d) {
+                                    if (area.jumpPoints[4 * (y * area.areaWidth + x) + d] !== clientJumpPoints[i]) {
+                                        const tileID = 4 * (y * area.areaWidth + x) + d;
+                                        differences[tileID] = area.jumpPoints[4 * (y * area.areaWidth + x) + d];
+                                    }
+
+                                    ++i;
+                                }
+                            }
+                        }
+
+                        this.respond(evt.id, _.isEmpty(differences), {
+                            differences: differences
+                        });
+                    }
+
+                } else {
+
+                    const dynamicHandler = this.handler(evtType);
+                    if (dynamicHandler) {
+                        dynamicHandler.call(evt, evt.data);
+                    } else {
+                        this.onSomeEvent(evt);
+                    }
+                }
+            });
+
+            this.respond = (id, success, args) => {
+                const response = new Response(id);
+                response.success = success;
+                if (args) {
+                    _.extend(response, args);
+                }
+                this.client.send(response.serialize());
+            };
+
+            this.send = (evt, args) => {
+                this.client.send(JSON.stringify({
+                    evtType: evt,
+                    data: args
+                }));
+            };
+
+            this.step = (time) => {
+                this.handlePendingEvents();
+            };
+        };
+
+        return Player;
+    });

@@ -1,13 +1,13 @@
 
-var requirejs = require('requirejs');
+const filepath = require('path'),
+    requirejs  = require('requirejs');
 
 requirejs.config({
-	nodeRequire: require,
-	baseUrl: "js",
-	paths: {
-		//"jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
-		"underscore": "http://underscorejs.org/underscore",
-	},
+    nodeRequire: require,
+    baseUrl: __dirname,
+    paths: {
+        lodash: "https://cdn.jsdelivr.net/lodash/4.14.1/lodash.min.js"
+    }
 });
 
 
@@ -18,6 +18,7 @@ var couldNotStartup = function(e){
 	   console.log(e);
 	   console.log(e.stack);
    }
+
    process.exit();
 };
 
@@ -26,20 +27,32 @@ process.on('SIGINT', couldNotStartup);
 process.on('uncaughtException', couldNotStartup);
 
 
-requirejs(['keys'],function(Keys){
+requirejs(['keys', 'environment'], (Keys, Environment) => {
 
-	var _         = require('underscore'),
-		$         = require('jquery')(require("jsdom").jsdom().parentWindow),
+    // Initialize our environment as the server
+    const Env = (new Environment());
+    Env.isBot = true;
+    GLOBAL.Env = Env;
+
+
+	var _         = require('lodash'),
 		fs        = require('fs'),
 		Promise   = require('bluebird'),
 		http      = require('http'), // TODO: need this?
 		WebSocket = require('ws'),
 		chalk     = require('chalk'),
-		cluster   = require('cluster');
+        cluster   = require('cluster');
+
+    var $ = require('jquery')(require("jsdom").jsdom().parentWindow);
 
 	$.support.cors = true;
 	Promise.longStackTraces();
 
+    var Mocha = require('mocha');
+
+    var mocha = new Mocha();
+
+    GLOBAL.describe = mocha.describe;
 
 	var errorInGame = function(e){
 
@@ -53,133 +66,166 @@ requirejs(['keys'],function(Keys){
 		console.log(chalk.bold.underline.green(msg));
 	};
 
+    let server = null;
 
-		cluster.setupMaster({
-			exec: 'js/test/bot.js',
-		});
-		var bot1 = cluster.fork();
-		bot1.on('listening', function(){ });
-		var bot1Move = 0,
-			bot2Move = 0;
-		var bot1Moves = [{x:56, y:65},
-						 {x:70, y:65},
-						 {x:82, y:65},
-						 {x:82, y:75},
-						 {x:82, y:85},
-						 {x:82, y:94},
-						 {x:72, y:94},
-						 {x:62, y:94},
-						 {x:52, y:94},
-						 {x:42, y:94},
-						 {x:32, y:94},
-						 {x:22, y:94},
-						 {x:12, y:94},
-						 {x:12, y:84},
-						 {x:12, y:74},
-						 {x:12, y:64},
-						 {x:12, y:54},
-						 {x:12, y:44},
-						 {x:12, y:34},
-						 {x:12, y:25},
-						 {x:22, y:25},
-						 {x:32, y:25},
-						 {x:42, y:25},
-						 {x:52, y:25},
-						 {x:62, y:25},
-						 {x:72, y:25},
-						 {x:84, y:25},
-						 {x:84, y:35},
-						 {x:84, y:45},
-						 {x:84, y:55},
-						 {x:84, y:65},
-						 {x:84, y:75},
-						 {x:84, y:85},
-						 {x:82, y:94},
-						 {x:72, y:94},
-						 {x:62, y:94},
-						 {x:52, y:94},
-						 {x:42, y:94},
-						 {x:32, y:94},
-						 {x:22, y:94},
-						 {x:12, y:94},
-						 {x:12, y:25},
-						 {x:12, y:84},
-						 {x:12, y:74},
-						 {x:12, y:64},
-						 {x:12, y:54},
-						 {x:12, y:44},
-						 {x:12, y:34},
-						 {x:12, y:25},
-						 {x:22, y:25},
-						 {x:32, y:25},
-						 {x:42, y:25},
-						 {x:52, y:25},
-						 {x:62, y:25},
-						 {x:72, y:25},
-						 {x:84, y:25}];
-		bot1.on('message', function(msg){
-			printMsg(msg);
+    const Test = {};
 
-			if (!msg.msg) return;
-			if (msg.msg == 'ready') {
-				bot1.send({ command: BOT_CONNECT, username: "bot1", password: "iambot" });
-			} else if (msg.msg == 'connected') {
+    GLOBAL.Test = Test;
 
-			} else if (msg.msg == 'started') {
-				bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[0].x, y: bot1Moves[0].y } });
-			} else if (msg.msg == 'nostart') {
+    const prepareForTesting = () => {
 
-			} else if (msg.msg == 'nologin') {
-				bot1.send({ command: BOT_SIGNUP, username: "bot1", password: "iambot", email: "k9@lol.bot" });
-			} else if (msg.msg == 'signedup') {
-				var username = msg.username,
-					password = msg.password;
-				bot1.send({ command: BOT_CONNECT, username: username, password: password });
-			} else if (msg.msg == 'nosignup') {
-				console.error("Could not signup!");
-			} else if (msg.msg == 'badpath') {
-				// Already there?
-				console.error("Could not set path");
-				++bot1Move;
-				bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[bot1Move].x, y: bot1Moves[bot1Move].y } });
-			} else if (msg.msg == 'failedpath') {
-				console.error("Failed to walk along path..");
-				--bot1Move;
-				setTimeout(function(){
-					bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[0].x, y: bot1Moves[0].y } });
-				}, 500);
-			} else {
-				console.log("FINISHED MOVE: "+bot1Move);
-				if (++bot1Move >= bot1Moves.length) {
-					console.log("I've finished, master");
-				} else {
-					bot1.send({ command: BOT_MOVE, tile: { x: bot1Moves[bot1Move].x, y: bot1Moves[bot1Move].y } });
-				}
-			}
-		});
+        const testPath = 'data/tests/testFile.json';
 
-		/*
-		var bot2 = cluster.fork();
-		bot2.on('listening', function(){
-		});
-		bot2.on('message', function(msg){
-			console.log(msg);
-			if (!msg.msg) return;
-			if (msg.msg == 'ready') {
-				bot2.send({ command: BOT_CONNECT, id: 3 });
-			} else if (msg.msg == 'connected') {
-				if (++bot2Move % 2 == 0) {
-					bot2.send({ command: BOT_MOVE, tile: { x: 22, y: 8 }});
-				} else {
-					bot2.send({ command: BOT_MOVE, tile: { x: 13, y: 5 }});
-				}
-			} else {
-				if (++bot2Move % 2 == 0) {
-					bot2.send({ command: BOT_MOVE, tile: { x: 22, y: 8 }});
-				} else {
-					bot2.send({ command: BOT_MOVE, tile: { x: 13, y: 5 }});
-				}
-			}
-		});
-		*/
+        cluster.setupMaster({
+            //execArgv: ['--debug'],
+            exec: 'dist/test/bot2.js',
+        });
+
+        var activeBots = [];
+
+        Test.addBot = () => {
+            const bot = cluster.fork();
+
+            activeBots.push(bot);
+
+            return bot;
+        };
+
+        var tests = [];
+
+        const UnitTest = function(title) {
+            this.title = title;
+            this.finished = false;
+            this.success = false;
+
+            this.succeeded = () => {
+                this.success = true;
+                this.finished = true;
+            };
+
+            this.failed = () => {
+                this.finished = true;
+            };
+
+            this.log = () => {
+                console.log(`  ${this.title}: ${this.success ? "succeeded" : "failed"}`);
+            };
+        };
+
+        Test.addTest = (title) => {
+            var unit = new UnitTest(title);
+            tests.push(unit);
+
+            return unit;
+        };
+
+        fs.readFile(testPath, 'utf8', (err, data) => {
+            if (err) {
+                console.error(err);
+            }
+
+            console.log(data);
+
+            const testFiles = JSON.parse(data);
+
+            console.log(testFiles);
+
+            const nextTest = () => {
+
+                const test = testFiles.tests.shift();
+
+            //testFiles.tests.forEach((file) => {
+            //    require('../data/tests/' + file);
+            //    //mocha.addFile('data/tests/' + file);
+            //    //var m = mocha.run((err) => {
+            //    //    console.error(err);
+
+            //    //    //process.exit();
+
+            //    //});
+
+            //});
+
+
+                const Smoke = require('../data/tests/' + test);
+
+                Smoke.onCompleted = () => {
+
+                    // Clear bots
+                    activeBots.forEach((bot) => {
+                        bot.process.exit(0);
+                    });
+
+                    activeBots = [];
+
+                    // Print Unit Tests
+                    console.log("Test: " + test);
+                    tests.forEach((t) => {
+                        t.log();
+                    });
+
+                    tests = [];
+
+                    // Go to next test if there's more
+                    if (testFiles.tests.length) {
+                        nextTest();
+                    } else {
+                        // Finished testing
+                        console.log("Finished testing!");
+                    }
+                };
+
+                Smoke.start();
+            };
+
+            nextTest();
+        });
+    };
+
+
+    const connected = () => {
+        prepareForTesting();
+
+        const msg = { req: "oink", msg: "Lol" },
+            json = JSON.stringify(msg);
+        server.send(json);
+    };
+
+    const disconnected = () => {
+        console.log("Oops..");
+        process.exit();
+    };
+
+    const connectToServer = () => {
+
+        server = new WebSocket(Env.connection.websocketTest);
+        //this.Log("Connecting to: "+link);
+
+        server.onopen = (evt) => {
+            //server.Log("Connected to server");
+            connected(evt);
+        };
+
+        server.onerror = (evt) => {
+            //server.Log("Error connecting to server", LOG_CRITICAL);
+            throw new Err("Error connecting to server", evt);
+        };
+
+        server.onclose = (evt) => {
+            //server.Log("Disconnected from server..");
+            //server.onDisconnect();
+            disconnected();
+        };
+
+        server.onmessage = (evt) => {
+            //server.Log("Message received", LOG_DEBUG);
+
+            evt = JSON.parse(evt.data);
+
+
+        };
+    };
+
+    connectToServer();
+
 });

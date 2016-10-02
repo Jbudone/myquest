@@ -1,7 +1,8 @@
 {
-	"maps":{
+	"areas":{
 		"main":"map-intro",
 		"home":"home",
-		"test-map-toobig":"test-map-toobig"
+		"test-map-toobig":"test-map-toobig",
+		"test-map-smallwithnpcs": "test-map-smallwithnpcs"
 	}
 }

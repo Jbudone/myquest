@@ -1,0 +1,41 @@
+{
+    "extends": [
+		"airbnb", ".myquest-globals.json", ".myquest-globals-auto.json"
+	],
+    "plugins": [
+        "react"
+    ],
+	"env": {
+		"browser": true,
+		"node": true,
+		"amd": true,
+		"es6": true
+	},
+	"rules": {
+		"padded-blocks": "off",
+		"import/no-amd": "off",
+		"indent": ["error", 4],
+		"max-len": ["warn", 120],
+		"one-var": ["error", {
+			"var": "always",
+			"let": "always",
+			"const": "always"
+		}],
+		"no-multi-spaces": ["error", {
+			"exceptions": {
+				"VariableDeclarator": true,
+				"Property": true
+			}
+		}],
+		"prefer-arrow-callback": "error",
+		"space-before-function-paren": "off",
+		"func-names": "off",
+		"quotes": ["error", "double"],
+		"one-var": "off",
+		"new-cap": "off",
+		"comma-dangle": ["error", "never"],
+		"no-multi-spaces": "off",
+		"quotes": "off",
+		"no-else-return": "off"
+	}
+}

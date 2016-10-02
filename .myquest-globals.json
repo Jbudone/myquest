@@ -1,0 +1,17 @@
+{
+    "globals": {
+        "Walk": true,
+        "Tile": true,
+        "Path": true,
+        "LOG_DEBUG": true,
+        "LOG_INFO": true,
+        "LOG_WARN": true,
+        "LOG_ERROR": true,
+        "frontOfObject": true,
+        "isObjectEmpty": true,
+        "Err": true,
+        "now": true,
+        "BufferQueue": true,
+        "server": true
+    }
+}

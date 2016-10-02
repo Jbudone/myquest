@@ -1,0 +1,6 @@
+{
+	"tests": [
+		"test.js",
+		"recalibration.js"
+	]
+}

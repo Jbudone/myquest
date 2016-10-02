@@ -50,135 +50,524 @@ Quests
  - Bridge Troll
  - Princess & Frog: go to a dangerous place and collect the right frog which the princess can kiss and turn to a prince
 
-GOAL: name the functions and variables in such a way that they are completely readable, like an English sentence
-GOAL: STRICT coding style
-
-Game - determine visibility, 
-UI - all ui components
-Renderer - all rendering
-
-TODO
- - How to write classes to avoid this. keyword repeatedly
- - How to update map while players are playing?
- - How to work with tiled & tmux; convert to optimized map file
-   	- Multiple tiles? (base tile & tile ontop)
-	  	1 base tile, static tiles; separated by areas & different tileset select per area
-		tiles:[,,,,34,68,[23,89],83,,,,] allows 0,1,n static tiles (eg. tile!=base tile, but also has static entity ontop)
-		Use 2 types of tiles: base tile, sprite tile. Base tile is default if set as undefined
-		object layer: spawn spots, stairs/portals, traps
-		Areas: music, atmosphere: object "area"; Page { defaultArea: ..., Areas: [{Area, Rect}, {Area, Rect}] }
-	- How to work with Layers? Areas??
-	- Pages
-	  	* Include boundary*2 of neighbours as apart of tileset for pages (border==zoning->border*2); cons: doesn't include movables (see empty spot on border, zone in and realize there's LOTS of people/enemies there)
-			NOTE: page update w/ movables on border could send neighbourly updates to neighbour
- - How to handle patching?
-
- - Server vs. Client abstraction
-   	- separate initialization of server/client (separate files?); read from Environment to figure which part to execute
- - How to abstract rendering
-   	- map contains all entities (including player)
-	- step map -> step pages -> step entities -> step animations
-	- renderer (main.js?) check camera to consider which pages to render & what offset/angle (ctx.save/restore); render correct boundary of each page
-	- render save details of state of each screen tile, then consider next time for blitting
- - Messaging
-    - allow callbacks for certain events on steps: {condition, callback}; allow for multiple callback objects; eg. Player move step hits boundary of page: Zoning .. Camera zoning transition finished: resume playing
-	- objects inherit from eventobj which stores event watchers in separate lists (depending on their condition); the parent object initializes eventobj with its various events it can trigger, then triggers them as necessary; then th eventobj checks through that list for making the appropriate callback
-	- use a querymgr for finding and selecting things
- - Collision
-    - WHOLE tile collides or doesn't; if not then determine if tile is drawn ontop of movables or underneath (tree vs. firecamp)
 
 
+NEXT UPDATE
+	- Fixed entity respawning
+	- Fixed gid's synced between client/server (firefox couldn't see king)
+	- Fixed eventful, when running stopListeningTo during triggerEvent, the triggerEvent skips some elements
+	- Fixed fadeToBlack not hitting on death after zoning to a new map
+	- Optimized sight (only enabled when bored/standing around)
+	- Implemented a map hash in map export to avoid redundant map exporting
+	- Optimized UI updates
+	- Using new pathfinding algorithm for server
+	- Turned off JPS (set an option)
+	- Logging: cleanup to avoid needless logging
+	- Setup new combat system & strategies
+	- Fixed pathfinding (false ALREADY_THERE)
+	- Fixed pathfinding recalibrating when on (or near) end tile (rather than sending ALREADY_THERE)
+	- Fixed path synchronization (alternative path to shorten path from server; to avoid accumulation of recalibrations)
+	- Added server side pathfinding for player (for combat system)
+	- Fixed enemies standing ontop of you while attacking
+	- Fixed enemies stopping along path (broadcast entity path cancelled event to users)
+	- Allow enemies to give up and not chase you too far
+	- Improved logging: JSON renderer, colours
+	- Fixed (long range) melee not considering obstacles in the way
+	- Fixed long wait time for node-inspector (https://github.com/nodejs/node/issues/7853)
+	- Renamed "Map" to "Area"  (because of ES6 Map type)
+	- Setup Smoke Test framework
+	- Fixed receiving path from entity when client has already unloaded entity
+	- Fixed receiving events from page which has already been unloaded
+	
+WORKING ON (was previously working on)
+	- Error handling
+	  	- Never return errors (please keep note where it may seem useful); ALWAYS test and throw as much as possible
+		- throw Err(`Bad coordinates (${x}, ${y})`, requestPos, curPos)  // Always throw Err (not new) with a templated string describing as much as possible, with as many args as possible (NOTE: can't pass arguments because of strict mode)
+	- Walking out of sync (testing with bot)
+	- Performance on walking/AI/players/scripts (profiler; check movable.js delta's; allocate X time per timestep to AI, may need to have a queue of AI updates and round-robin update -- on AI callback, commit update/details and round-robin update)
+	- client/game.js checkNewPages
+	- offload page/map sending to another process
+	- sleep/wake entities/pages/maps
+	- Loop issue in map-step: http://pastebin.com/fFrwmKA6
+	- Page stepping << Map stepping???  (possibly set pages to sleep?)
+	- Fix camera (currently resets every frame)
+	- Fix clicking to attack enemies (in lots-of-npcs maps?)
+	- Recycle Tile
+	- UI: Defer updates when too much time already spent in UI (round-robin update? webworkers?)
+	- UI: Hide/Redraw/Show html (to avoid redrawing after every css/html change)
+	- Clean Profiler mess
+	- Clean update/step mess
+	- Player send path (or path progress) rather than walk (inefficient otherwise). Make note of possibility of compressing (dir/dist pair compressed into 1 byte, then path is a string of walks)
+	  	- NOTE: NEED To identify map (otherwise if we request a path which has a similar starting point to another map, and we happen to zone into that map on the server right before the request comes through..weird shit happens)
+	- Clean pathfinding + partial progress mess
+	- Show "Still logged in.. can't login"
+	- Idle (animation) goblins when they get bored and finish walking back to spawn
+	- Debugging:
+	  	- Print current brain/neuralnet
+		- Draw current path (pos/dest & path + actual path written out on the right + recalibration)
+	- Neural network fixes
+	  	- Provide interface to neuralnet: get, has, remove
+		- Interface to neuron: property (es6 getter/setter)
+		- On any changes print out current neuralnet state
+	- Fix: movement new chase calls stop on previous movement which calls cancelPath EVERY time (and broadcasts event to everyone) 
+	- Ranged combat
+		- Ranged attack (vs. melee) -- show sprite
+		- filterFunc:
+		  			- Option 1: Circular tile expansion, considering collision along expansion
+					- Option 2: Use precomputed Manhattan heuristic to determine each endpoint which could be reached, and their starting points. The paths between start to end will share common ancestor paths (NOTE: This means we HAVE to have each endpoint always take the same path which correctly shares its ancestor path). We could go through each ancestor path (beginning part) and see which tiles are accepted/unacceptable, then spawn the child paths if accepted, and continue on for however long the range is. 
+					  			Actually we could spawn from the multiple different ancestors in certain cases.
+								Rule: Only allowed to follow 2 cardinal directions from startpoint to endpoint, from the startpoint we cna travel 1 direction for a max of X distance, but the first turn disables that and we have to make a turn every tile after
+	- Fix: entity uses alternate path which takes a completely different path; then path way through the new path (at a point which is much further away than the server position) the entity walks off in another direction. CurPosition & path start position could be drastically different
+	- Fix player attacks goblin 2 tiles away.. both walk towards each other and end up on top of each other  (on evt move could be worth it to check if you could recalibrate to previous tile)
+	- Fix goblin bored walking back doesn't have sight enabled (ignores users running beside them)
+	- Setup build pipeline, concat, uglify, minify, SourceMaps, babeljs, jslint/eslint/jsint/jscs, smoke test (Jasmine?), flow
+	  - Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
+	        0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
+	        0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
+	- eslint: spaces (4x)
+	- server.js: clean requirejs (should only require once)
+	- Logging: output to file, UI, colouring, store in buffer to flush together (or only print if a crash comes up)
+	- CLEAN: spam clicking movement lags out the entire game (server should ignore noisy players; client should temporarily ignore input between processing); should probably also have client-side check if the near-path has even changed, then only send the later part (updated) path when necessary
+	- CLEAN: clicking to move while zoning (disallow)
+	- CLEAN: remove server animations; auto client animations (facing target, etc.)
+	- CLEAN: Movable setting params before/after Ext
+	- CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
+	- CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages; clean static rendering; abstract rendering operations
+	- CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
+	- CLEAN: convert server tiles to Uint8Array; each references an index of tileRefs which specify the gid; cache and send page data as a blob (for compression/throughput)
+	- CLEAN: switch from loops to maps/forEach/...
+	- CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
+	- CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
+	- CLEAN: replace .hasOwnProperty: use property access (eg. obj['id']) which is significantly faster; unless we can expect undefined/null/0 then use `in` (eg.  id in obj)
+	- CLEAN: switch parseInt w/ Math.floor where necessary: https://jsperf.com/math-floor-vs-math-round-vs-parseint/
+	- render background canvas as ALL neighbour pages; then simply translate the canvas as you walk around (NOTE: drawImage on background takes up the most CPU in profiling; this would fix that completely)
+	- server & client initialize gid's separately (in arbitrary order), and then server overwrites client gid for necessary tilesheets. So king sheet has same gid.first as items.sheet in house since house doesn't overwrite items.gid. SHOULD precalculate all sheets gids' into sheets.json
+	- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
+	- Server jump to client's current path position (ie. server receives client path 0.1s later, so jump to the position that he should be at)
+	- Client path out of sync: speed avatars up when too far, otherwise teleport
+	- Clean commenting style (top of file/class, splitting between members/public/private properties of classes, methods)
+	- Resources.js using 'dist/' directory, should abstract this
+	- http://bluebirdjs.com/docs/install.html : look at node installation debugging techniques
+	- Tool for .myquest-globals.json (js script to load globals json, go through game to get keys & "GLOBALS['...']=", add keys if not found in globals, then write to globals)
+	- player.disconnectPlayer()  should unhook everything which may be listening to it.. "Entity page does not contain entity" when user attempted to d/c while a bunch of npcs were attacking
+	- server.js: Make players an array; also improve eventBuffer (object of mapID, pageID)  should be arrays. Perhaps we could map  (map,page)  pairs to indices which the player could contain? Although maps will soon be threaded anyways
+	- Look into https://www.joyent.com/node-js/production/debug for debugging techniques    http://stackoverflow.com/questions/1911015/how-do-i-debug-node-js-applications/16512303#16512303
+	- Assertion testing: find a good assertion library (should be easily extendable, readable, minimalistic, compatible through browser+node using native assert) and find a way to easily remove (or disable) asserts from prod. eg. `assert(XXX)` ==> `if (!prod) assert(XXX)`. Assert ALL type checking on functions as much as possible; how to coordinate this with if(XXX) throw Err ??  We may want some asserts to remain in prod and only most of them to be in debug
+	- Add option to disable asserts in production.. NOTE: NEED To either remove asserts, or prepend (if !prod) to them, otherwise it'll still call the expression before calling the assertion
+	- Confirm that we can remove onEntityWalking, and focus entirely on onPathProgress
+	- Fix hooks to not require context (could use arrow functions intead)
+	- CLEAN: switch from errorInGame to shutdownGame to shutdown server (unless there's an error)
+	- assert(HiddenClassChecker(1, arg), "...")   .. HiddenClassChecker uses the caller/num as an identifier, then checks every property of the arg to determine if the last recorded arg had the exact same hidden class (otherwise throw)
+	- Area vs. Region?
+	- Aggro: attacking one person then another person walks right beside you, you ignore them
+	- Client pathfinding - prefer to move the same direction you're already going (weight of +1 for immediate turn)
+	- Loggable time; also allow server to extend messages with time (or ID) and client can print out received event (time/id) before handling
+	- Client loads serialized page/movables w/ path in progress and disregards current walked amount; should shorten walks by amount that has already been walked (to avoid entity walking more than necessary)
+	- Fix Strategy loading/handling in combat (be conscious of memory); should be able to abstract functionality; should be able to extend w/ Logs
+	- 2D spritesheets out of 3D models
+	- 2D texture synthesis https://github.com/mxgmn/WaveFunctionCollapse  https://github.com/mxgmn/SynTex
+	- Can we remove 'static' property? A bunch of scripts are using them but doesn't seem to do anything
+	- Script initialize should pass itself as the 1st parameter to allow initialize as an arrow function (this context to be what we expect)
+	- "use strict"
+	- if checks on north/west/south/east have an else case and throw error
+	- AbilityState vs Instinct?
+	- Cleanup player requests / error checking
+	  	- 1) Confirm we have expected and valid args
+		  2) Call handler: handler checks valid args, then attempts to run
+		  If there is any issue in the handler or caller respond to the user with the err msg and return false; do NOT allow subroutines to throw errors, check input before then
+		  Need a routine like,  confirm( [dataAssertion], "Invalid argument" )   where confirm acts like an assertion and auto responds to player evt
+	- Smoke Test
+	  	CLIENT: bot.js (loaded via Karma)  should load Game as expected (strip renderer/ui)
+			- Read from some test file
+			- Server takes in arg to specify that its for testing. If testing then load test world (NOTE: want to do all startup routines at beginning to speed testing up). Extend Player class to accept args from Bot (if in testing mode) rather than loading/saving from DB. Otherwise maybe we could have a test DB/Redis?
+			- Bot loads test file, sends necessary args to server, then runs through test cases
+			- Server should run at varying speeds to allow quick testing
+			- Can we make it so the bot can load/reload in the same instance? eg. new player / map / etc.   without reloading base modules?
+				- Maybe we can have Test framework load base modules, then individual bots under the Test framework are loaded/unloaded as necessary. This way we can also have multiple bots doing things in parallel and even interacting with each other
+	    Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
 
-Coding Style
-	Documentation
-		methods
-		classes
-		codeblocks
 
-	Formatting
-		codeblocks
-		spacing align ='s, space out args (..), prefer to create more variables rather than make 1 massive line (eg. Camera.offsetX=Math.floor(Env.pageWidth*Env.tileSize) == var size = Env.pageWidth*Env.tileSize, offset = Math.floor(size); Camera.offsetX = offset; )
-		space out +: "sprite(" + sprite.name + ")"
+		- Cleanup console.log's (to suppress bot logging)
+		- Setup test resources
+		  	path/recalibration, signup/login/logout (also double logins) + chat
+		- Bot interface to Game/test
+		- Close server test websocket
+		- Test framework: Loggable
+		- Test framework: Do base module loading here instead of on bot
+		- Bot: Move renderer/ui and clean
+		- Clean Client/Server testing overrides (messy testing stuff)
+		- Bot: Debugger option
+		- Bot interface + tons of tests
+	        0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
+	        0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
+		- Need to find a way to organize bot logs
+		- Integrate into Grunt
+		- Integrate Mocha
+		- Fix error reporting
+		- Abstract stacktrace/error report from client/server/bots
+		- Timeout on tests
 
-	Style
-		* if you read a block of code and cannot easily understand what's going on, then it needs to be rewritten (use an English style of writing -- variable names / methods)
-		* codeblocks may need comments ontop to explain why its doing things that way, explanation of the calculation, etc.
-		* serializable class objects allow initiation without args (in case of .fromJSON creation)
-		* base/extending classes use {} and write like: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
-		* extendClass = function(class){return{ with: function(module){ ... } }};   extendClass(this).with( .. )
-		* use var for ALL initializations of variables
-		* (function nameOfFunction(){ ... }())
-		* use .hasOwnProperty() to test for variables
-		* use (.id !== 0) to avoid undefined issues
-		* use === where applicable
-		* try/catch where necessary (outside of performance heavy functions) -- MUST try/catch at the highest level spot that will only break that specific routine, but nothing else in the game; must try/catch on anonymous functions; must try/catch within class initialization
-		* Function:
-			- Error handling technique: http://stackoverflow.com/questions/7310521/node-js-best-practice-exception-handling?rq=1
-			- sanitize args (set any undefined args to null; undefined == throws bugs)
-			- try/catch (if necessary)
-			- provide all variables (set default to null if necessary)
-			- set individual variables
-			- IF Error: if error belongs to us then Log and return; if error belongs to caller then return error
-			- var result = ....   for all function calls, and check if result is error then handle accordingly
-
-	http://google-styleguide.googlecode.com/svn/trunk/javascriptguide.xml
+	- Area draw map; server.test should be able to return pages/data to test framework, and bot can draw both maps side-by-side to show differences
 
 
-ERROR CHECKING/HANDLING
-  ✓ utilities.js
-  ✓ extensions.js
-  ✓ serializable.js
-  --------------
+	- BUG: If you're queued to d/c and then die before you have a chance to d/c, your queued request will still trigger and crash the server (since dying removes your player from the map and the d/c attempts to get your character)
+	- BUG: Start test bot then load in part way through; when receiving PathCancelled messages and bot is out of sight shit gets crazy
+	- BUG: Client throw Err doesn't actually print thrown message, just "uncaught exception"  eg. server handler functions (onPathCancelled)  (temporarily added console.error in Err class)
+	  	
+
+		[requires]
+
+		[Comment] 
+
+		[class]
+
+			[members]
+
+			[comment-splitter]
+
+			[methods group]
+
+	- Go through every file and clean with the following things in mind:
+	  	- Error handling / throwing (Err)
+		- Proper function/arrow function
+		- Commenting on class, function, blocks
+		- const/let
+		- Logging as much as possible (error/warning/info/debug)
+		- Class/Object toString
+		- Functional coding
+		  	- Array: every, some, forEach, map, filter, reduce, reduceRight,
+			  		from/of/fill/copyWithin, for..of, find/includes, keys/entries, 
+					destructuring
+			- Map/Set, WeakMap/WeakSet
+			- in, default param, rest, spread
+			- Symbol: toPrimitive, iterator, hasInstance
+			- Generators / yield
+		- Promises
+		  	- PromisifyAll, resolve, then/catch/finally
+			- Collections: .each, .map, etc.
+		- lodash stuff
+		- Performance
+		  	- for..in, copying objects: slow
+			- hidden classes: make sure objects use the same hidden class
+			  	- don't add dynamic properties
+				- use the constructor only for objects
+			- Arrays:
+			  	- mixed types
+				- holes in arrays
+				- try to use arrays over objects
+				- use contiguous keys (don't do  x[n] = 1; where n > x.length)
+			- call functions with the same expected types
+			- Strings are immutable
+			- Only use `new Function()` if absolutely necessary
+
+
+		Linted/Cleaned files list
+		-------------------------
+
+		js/main.js                                                ✓
+		js/server.js                                              ✓
+		js/client/game.js                                         ✓
+		js/area.js                                                ✓
+		js/client/area.js                                         ✓
+		js/server/area.js                                         ✓
+		js/pathfinding.js                                         ✓
+		js/page.js                                                ✓
+		js/server/page.js                                         ✓
+		js/client/renderer.js                                     ✓
+		js/scripts/character.ai.instinct.combat.js                ✓
+		js/scripts/game.js                                        ✓
+		js/scripts/character.js                                   ✓
+		js/server/player.js                                       ✓
+		js/movable.js                                             ✓
+		js/client/ui.js                                           ✓
+		js/scripts/character.ai.js                                ✓
+		js/scripts/character.ai.combat.strategy.basic_melee.js    ✓
+		js/scripts/character.ai.instinct.range.js                 ✓
+		js/scripts/character.ai.instinct.movement.js              ✓
+		js/scripts/character.ai.combat.strategy.js                ✓
+		js/scripts/character.ai.combat.sight.js                   ✓
+		js/hookable.js                                            ✓
+		js/client/serverHandler.js                                ✓
+		js/script.js                                              ✓
+		js/utilities.js          								  ✓
+		js/scripts/character.ai.instinct.bored.js                 ✓
+		js/scripts/game.chat.js    								  ✓
+		js/scriptmgr.js 									      ✓
+		js/scripts/character.ai.combat.melee.js                   ✓
+		js/serializable.js                                        ✓
+		js/scripts/interactables.lookat.js                        ✓
+        js/spritesheet.js										  ✓
+        js/sprite.js                                              ✓
+        js/entity.js											  ✓
+        js/client/user.js										  ✓
+        js/dynamic.js											  ✓
+        js/client/page.js										  ✓
+        js/client/camera.js                                       ✓
+		js/animable.js											  ✓
+		js/scripts/character.ai.combat.state.js                   ✓
+		js/world.js        										  ✓
+
+
+		js/scripts/interactables.talkto.js
+        js/scripts/items.heal.js
 
 
 
 
-  ✓ page.js
-  ✓ client/page.js
-  ✓ server/page.js
-  ✓ map.js
-  ✓ client/map.js
-  ✓ server/map.js
-  ✓ scripts/game.js
-  ✓ scripts/character.js
-  ✓ scripts/character.ai.js
-  ✓ scripts/character.ai.instinct.combat.js
+
+Next Priority
+	- Soak testing
+	  	Server side AI/bots: Explorers/Adventurers with AI that will force them to explore the game and try things that could crash stuff
+		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
+		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
+	- Sound
+	- Levelling/Experience
+	- Combat: smarter target selection
+	- Combat: attack/speed formula (level/stats/randomness)
+	- Inventory, loot, wearable/usable items, show worn items on sprite?
+	- Death system (animation, corpse, client scripts, respawn to safe spot, remove corpse after time, consequences)
+	- NPC chat bubble
+	- Questing / rewards
+	- Regeneration
+	- Periodic saving
+	- Bug system (auto bug reports on client/server crash)
 
 
-LEARN THESE
- > Node.js
- > Grunt/Jasmine
- > applicationCache, indexedDB, sessionStorage, couchDB, redis
- > different db choice for server?
- > Web Workers
- > Websockets, webRTC
- > Animation, Canvas
- > Exceptions, Promises
- > WebEncryption, WebP images
+Future
+	- Skills
+	- Better interaction (right click entities/avatars, conversation tree)
+	- Better UI
+	  	- Store messages in localization files & packages which slot messages & UI effects into UI
+	- Gameplay system/scripts, triggers/traps
+	- Questing DFA
+	- Animated static sprites
+	- Multi-tiled movables (cthulu, boats)
+	- boat: walk on & off, can't get off on water, walk on boat while boat moving, walk on boat while boat zoning (pages, maps)
+	- dynamic collidables (drawbridge, shifting walls)
+	- Entity idle animation
+	- /admin
+	- Electron desktop application
+	- Replace Eventful w/ node.js native EventEmitter? (use Browserify event for browser)
+	- Performance
+	  	- Sleep/Wake entities/pages/maps
+		- JobList w/ Workers  (either self-contained processes, or shared context?)
+		- WebRTC/UDP
+		- db sharding
+		- https://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+		- Chasing (pathfinding): NPCs can check player's destination tile and determine their own path (NOTE: Need to make it appear realistic, like the NPC is guessing where you're going, but able to optimize by only re-determining during changed paths, and potentially only if the changed path goes far off of where you would have met up with them anyways)
+		- Pathfinding regions: open convex regions in map (able to immediately create [north,south]/[west,east] path w/out checking for collisions); could store "portals" (open edges) from regions and have cached paths between neighbouring region portals
+		- Could store groups of convex collisions then connect a line to the nearest vertex and walk along the edge, etc.  like that one algorithm from computational geometry
+ 		- Trust player: only check for collision when player next tile changes (is your next tile about to be a collision?)
+ 		- Tile based: server only concerned about tile x,y; look at time since arrival at tile & possibly entrance into tile (left/right?) to help consider how much time to reach next tile; only update tileXY when that time has elapsed; send that tile reached time to other players so they can calculate real x,y; this must be completely synchronized though
+		- Immutable arguments
+		- Avoid for..in
+		- JPS pathfinding for suitable maps/regions? (eg. dungeons, tight corridors)
+	- Fault tolerance
+	  	- On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
+		- https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
 
 
 
-SERVER PERFORMANCE
-	check 1: really really large map
-	check 2: lots and lots of npcs
-	check 3: lots and lots of active npcs (pathfinding)
-	check 4: lots and lots of bots
-	check 5: lots and lots of active bots
+========
+ Pathfinding Perf
+========
+	- l1-clarkson w/ option to turn on/off; best from/to tile
+	- compress path/walks
+	- get rid of JPS (turn off)
+	- Start path from last point
+	- Only search every X turns (dependant on how far the player is)
 
- > npc bored: should use jump-point search, or some significant improvement on A* (HUGE perf hog)
- > deterministic pathfinding: server only sends point + destination; then only broadcast when something has changed for that entity
- > trust player: only check for collision when player next tile changes (is your next tile about to be a collision?)
- > tile based: server only concerned about tile x,y; look at time since arrival at tile & possibly entrance into tile (left/right?) to help consider how much time to reach next tile; only update tileXY when that time has elapsed; send that tile reached time to other players so they can calculate exact x,y; this must be completely synchronized though
- > JPS+ http://www.gdcvault.com/play/1022094/JPS-Over-100x-Faster-than   https://github.com/SteveRabin/JPSPlusWithGoalBounding
- > lower server timestep & client interpolation http://gamedev.stackexchange.com/questions/46791/timestep-in-multiplayer-game
- > NPC chasing: when target moves -- 1) if target runs into the same direction as our last walk then simply extend our last walk;  2) if expected distance > FAR_AWAY then place update on a low priority queue for re-navigating; all items on the queue have the same delay time (that way the server continuously dequeues jobs until we hit a job that's not ready for us to do yet).
- > minimize triggerEvent on low priority operations:  if (++map.stepI % 100 == 0) map.triggerEvent(EVT_EVERY_TEN_SECONDS)
- > look through server update and check EVERY possible operation, try to minimize as much as possible
- > server/player recalibration: options
-		1) server player path keeps a mask/hash of tile locations that will be traversed. On receive new path, check if current path will eventually reach that start point, then cut off the tail of the current path and replace with new path
-		2) player sends path request to server, server says NO to player w/ current position, player sets current position to server position and recalibrates path according to server, then sends back to server. NOTE: this is completely invisible to the player unless the recalibration is far too off; however we will do lag compensation to slow down player movement to let server position catch up
- > update list: when npc becomes active/inactive (wakeup) then place on page's update list; when page has something on update list, then put page on map's update list
- > client sends a list of destinations points along the path; this prevents other players from seeing where exactly the player is walking to
+	- http://www.redblobgames.com/pathfinding/l1-clarkson/
+	- https://github.com/mikolalysenko/l1-path-finder
+	- http://www.redblobgames.com/pathfinding/visibility-graphs/
+	- http://www.redblobgames.com/pathfinding/heuristics/differential.html
+	- http://www.redblobgames.com/pathfinding/tower-defense/
+	- http://www.gdcvault.com/play/1022094/JPS-Over-100x-Faster-than
+	- Start path from last point
+	- Only search every X turns (dependant on how far the player is)
+
+
+
+10:20 < jbud> amitp: You around??
+10:21 < jbud> I have a couple of qs's regarding your JPS article, if you're around :)
+10:21 < amitp> hi
+10:21 < jbud> There's something I'm really confused on that never seems to be mentioned in anything with JPS
+10:21 < jbud> Big maps
+10:22 < jbud> In particular, big open spaced maps
+10:22 < jbud> JPS basically just traverses up, for every tile, and checks all of the tiles on the left/right to find any jump points
+10:22 < jbud> But for big maps that's potentially extremely inefficient
+10:23 < jbud> I thought I could sidestep that by precomputing jump points offline, but I think you have to do that traversal process just to find the goal
+10:25 < amitp> Yes, it is potentially inefficient
+10:25 < jbud> I think the worst case is something like this: http://qiao.github.io/PathFinding.js/visual/   leave it as default and run JPS, EVERY tile has to be traversed before it finds the goal
+10:25 < amitp> There is a JPS+ algorithm that precomputes some things
+10:25 < amitp> Although I do mention JPS on some of my pages I don't use it myself because I find it to be a strange algorithm
+10:26 < jbud> Because of the same issue?
+10:26 < amitp> That and many other issues :(
+10:26 < jbud> =[
+10:26 < amitp> JPS is popular though so I should try it someday
+10:26 < amitp> I have never implemented it myself
+10:26 < amitp> (I'm not sure which "your JPS article" you're referring to)
+10:27 < jbud> I feel like A* should work for me, but I'm probably using it the wrong way. The problem is when I have 100 enemies chasing a player, and every time that player moves to a new tile their path has to be recomputed from 
+              scratch
+10:27 < amitp> You can either modify the algorithm (A* into JPS) or you can modify the data structure (grids into navigation mesh or visibility graph) and I usually change the data structure instead of changing the algorithm
+10:28 < amitp> Have you considered breadth first search?
+10:28 < jbud> No,that's kind of weird isn't it? A* has a heuristic but BFS doesn't
+10:28 < amitp> http://www.redblobgames.com/pathfinding/tower-defense/ -- when you move the player (the red blobby icon) you have to recompute the paths, but you only have to do that once for the player move, not once per enemy
+10:29 < amitp> How big is your map?
+10:30 < jbud> Wow this looks really interesting
+10:30 < jbud> I'd like to have maps as big as 300x200 tiles or so
+10:31 < jbud> Maybe larger. At this point I'm just aiming for scalability in the engine
+10:31 < amitp> 300x200 I just use regular A*
+10:31 < amitp> but if you have 100 enemies and they are all goign to the same player then breadth first search
+10:32 < amitp> Breadth first search uses a queue instead of a priority queue, and queues are much faster. I think you'd be able to compute the whole thing in 1 millisecond for a 300x200 map, and you only have to do that every time 
+               the player moves.
+10:32 < jbud> That's actually really awesome
+10:33 < jbud> Another problem though is if more players join the game
+10:34 < jbud> And those computation times add up
+10:34 < amitp> Yes
+10:34 < jbud> One idea I was toying with is defining a boundary between the player and enemies everytime the pathfinding is computed
+10:35 < jbud> The path would have to reside within that boundary, BUT it avoids searching parts of the map that are unecessary
+10:35 < amitp> There's a trick for making queues even faster, but it only works with breadth first search. I should write a page about that. The idea is that you have two arrays, A and B. When you are expanding the nodes from A, you 
+               put all the neighbors in B. Then you set A = B; B = []. This way you remove lots at once instead of removing one item at a time
+10:36 < jbud> I get it
+10:37 < amitp> I have regular A* http://www.redblobgames.com/pathfinding/heuristics/differential.html running pretty fast (as you move the mouse around), and I know breadth first search would be faster, but I haven't tried it on 
+               that size map. I will add that to my list of things I should try :)
+10:39 < jbud> Also do you think its reasonable to recompute paths starting from the last goal point?  So if the enemy has a path to the player, then the player moves 1 tile away, to have the pathfinder run from the previous goal to 
+              the next goal?
+10:39 < amitp> It is reasonable but you don't need to do this unless an enemy is close to the player
+10:40 < amitp> If the enemy isn't close, wait a little bit, because you know the player is going to move soon
+10:41 < jbud> Okay, thanks amitp  I'm going to read through these articles. I really like the performance you're getting for these
+10:42 < amitp> The data structure for the graph and the priority queue make a big difference. I usually use a binary heap for the priority queue.
+10:43 < amitp> I usually use an integer for the node id instead of an object. For a grid something like (y*1000 + x) can be a reasonable integer id. The four neighbors will be id-1 id+1 id-1000 id+1000.
+10:44 < jbud> See I was surprised people mentioned the priority queue as being a problem. I just used something like:  queue = {}; queue[heuristic] = array(neighbour1, neighbour2, ...);  then the node with the lowest heuristic is 
+              just the first element on the queue, so    var cheapestHeuristic = null; for(var heuristic in queue){ cheapestHeuristic = heuristic; break; }
+10:45 < amitp> Hm, interesting
+10:46 < amitp> I don't know how javascript represents that, but since that type of array is not a common use of arrays, I suspect the optimizers don't optimize sparse arrays that don't start at 0
+10:46 < jbud> True its an object instead of an array
+10:47 < jbud> But I think it uses a hash to fetch elements, so O(1)
+10:47 < amitp> Even a hash can be slow ;)
+10:47 < jbud> Tbh though I might be wrong
+10:47 < jbud> Yeah =[  I really need to profile that and figure out for sure
+10:49 < amitp> For my demos I'm using mikolalysenko's simple-heap library
+10:49 < amitp> https://github.com/mikolalysenko/simple-heap
+10:51 < mikolalysenko> minimizing priority queue operations is the main advantage of jps
+10:51 < mikolalysenko> it still expands many nodes in the grid, but the trick is that it only puts a few special jump points into the priority queue
+10:52 < jbud> Right but for large maps traversing all of those nodes could outweight the time spent handling priority queue operations right?
+10:52 < mikolalysenko> it might
+10:52 < mikolalysenko> jps is a bit funny
+10:53 < mikolalysenko> basically it amounts to searching on a reduced graph where the nodes of the graph are the corners
+10:53 < mikolalysenko> and to query an edge you have to do this weird jps expansion thing
+10:54 < mikolalysenko> you can speed it up by precalculating a visibility graph like amitp does in one of his tutorials
+10:54 < mikolalysenko> but the downside to using a visibility graph is that there can be up to O(n^2) edges, where n=number of corners in the grid
+10:54 < mikolalysenko> you can reduce the number of edges in a few important cases though
+10:54 < amitp> http://www.redblobgames.com/pathfinding/visibility-graphs/ is my visibility graph demo
+10:55 < mikolalysenko> if the objects only move along cardinal directions (n,s,e,w), then you can add some steiner points to reduce the number of edges to just O(n log^3/2 n)
+10:55 < amitp> In practice though I find grids, with good graph and priority queue data structures, to be plenty fast enough for me.
+10:55 < mikolalysenko> depends how big the grid is though
+10:56 < amitp> Right, and none of my projects have huge grids so it is fine for my stuff :)
+10:56 < mikolalysenko> if you have a really big grid, you could try this module: https://github.com/mikolalysenko/l1-path-finder
+10:56 < amitp> jbud has a tiny grid
+10:56 < amitp> l1-path-finder is awesome
+10:57 < mikolalysenko> there are some demos on this page http://mikolalysenko.github.io/l1-path-finder/www/
+10:57 < mikolalysenko> if you click on the logo at the top the circles will chase your cursor around
+10:58 < mikolalysenko> all paths in that demo are recomputed in real time, and they run on a grid ~ to the size of your display
+10:58 < mikolalysenko> so it is 1 pixel/grid cell
+10:58 < amitp> I tried one of the biggest maps I could find (800x800) and l1-path-finder took essentially zero time http://www.redblobgames.com/pathfinding/l1-clarkson/
+10:59 < jbud> omg
+11:00 < mikolalysenko> you could modify l1 path finder to work with linfinity paths too
+11:00 < mikolalysenko> since you can convert l1 distances into linfinity distances by shearing
+11:00 < mikolalysenko> so this would be situations where you have diagonal movement
+11:01 < mikolalysenko> the trick in l1 path finder is based on an idea by ken clarkson
+11:02 < mikolalysenko> he originally invented it for vlsi design/synthesis, and his original version was somewhat more general
+11:02 < mikolalysenko> since it works with arbitrary polygonal obstacles, not just grids
+11:04 < jbud> This is really cool mikolalysenko 
+11:04 < jbud> Seriously it runs crazy fast
+11:04 < mikolalysenko> thanks
+11:05 < mikolalysenko> I made some benchmarks to compare it to other js libraries
+11:05 < mikolalysenko> https://mikolalysenko.github.io/l1-path-finder/benchmark.html
+11:06 < mikolalysenko> though part of the problem is that many of the js path finding libraries out there are really really bad
+11:06 < mikolalysenko> so none of them put up much of a fight
+11:06 < mikolalysenko> other than l1-path-finder, the best I've found is pathfinding.js and it is really bad
+11:06 < jbud> Yeah, it looks like you put easystart to shame
+11:06 < mikolalysenko> easystar is terrible
+11:06 < mikolalysenko> horrible api, lots of bugs, really really slow
+11:07 < mikolalysenko> please never use that library
+11:07 < jbud> Hahah I won't, np
+11:08 < mikolalysenko> like look at this mess:  https://github.com/prettymuchbryce/easystarjs
+11:08 < mikolalysenko> why are there 20 methods here?
+11:08 < mikolalysenko> what is going on?
+11:08 < mikolalysenko> and there are lots of async/zalgo bugs all over the place
+11:08 < mikolalysenko> just ugh, don't touch that thing
+11:08 < mikolalysenko> so dishonest calling that thing easy
+11:08 < mikolalysenko> and it is absurdly slow too
+11:09 < jbud> Loll
+11:09 < jbud> Poor Bryce, I hope he doesn't see those benchmarks
+11:10 < mikolalysenko> well, at least he has like 1000 stars on github so I guess that is something
+11:10 < jbud> Holy shit he does!
+11:10 < jbud> That's a bad sign
+11:10 < jbud> People really shouldn't be using that library if it runs that slow
+11:10 < mikolalysenko> and it is broken
+11:10 < mikolalysenko> like seriously fundamentally broken
+11:11 < mikolalysenko> as in you get callbacks that don't fire, fire twice, fire with incorrect/corrupted state
+11:11 < mikolalysenko> it gives paths that are incorrect
+11:11 < mikolalysenko> etc.
+11:11 < mikolalysenko> pretty much the worst library
+11:11 < mikolalysenko> 0/5 would not recommend
+11:11 < mikolalysenko> pathfinding is at least pretty solid, but it is just slow
+11:11 < jbud> That's really sad, I picture people trying to make a game and look for the most popular pathfinding library on Github. Come across that and implement it, wondering why their game is so buggy
+11:12 < jbud> Then just giving up altogether
+11:12 < mikolalysenko> this one is actually the most popular:  https://github.com/qiao/PathFinding.js
+11:12 < mikolalysenko> it is just very slow
+11:12 < mikolalysenko> but the main draw is the visualizations I think
+11:13 < mikolalysenko> if you judge the repo by the algorithms implementations, then pathfinding.js is also pretty bad
+11:13 < mikolalysenko> however it has some really nice interactive visualizations
+11:13 < jbud> Yeah its a good learning resource for sure
+11:13 < mikolalysenko> one thing that pathfinding.js does which is pretty stupid is that it reinitializes the map every time you call one of the search algorithms
+11:13 < mikolalysenko> which kind of defeats the point of things like A*
+11:13 < jbud> That's weird
+11:13 < jbud> Actually wth that's really weird
+11:13 < mikolalysenko> yeah, and it is bad
+11:14 < jbud> Especially for people who don't know that and use that for their game
+11:14 < mikolalysenko> at least it mostly works
+11:14 < mikolalysenko> yeah, don't use it in a game
+11:14 < mikolalysenko> basically all of those algorithms run in about the same time as bfs in practice
+11:14 < mikolalysenko> even their fancy over engineered jps implementation...
+11:14 < mikolalysenko> but if you are just gonna zap the whole grid anyway, then *why bother*?
+11:15 < mikolalysenko> you should just bfs it
+11:15 < jbud> Hahah
+11:15 < jbud> Yeah I don't get it, that should be an optional setting that's turned off by default
+11:15 < mikolalysenko> pathfinding.js is kind of wtf
+11:15 < mikolalysenko> but I don't think they seriously advocate for using it in a game or something like that
+11:15 < mikolalysenko> it is really about the visualization
+11:16 < mikolalysenko> they do expose an api, but I think that it was created as an afterthought
+11:16 < jbud> I was going to argue that the main point of it was as a learning resource, but i tlooks like that's not the case
+11:16 < mikolalysenko> the visualizations came first
+11:16 < jbud> "The aim of this project is to provide a path-finding library that can be easily incorporated into web games. "
+11:16 < mikolalysenko> yeah....
+11:16 < mikolalysenko> don't use it
+11:16 < jbud> Lol
+11:16 < mikolalysenko> but it is better than easystar
+11:17 < mikolalysenko> and easier to use too ironically
+11:17 < jbud> True true, well I really like what you've accomplished with l1-pathfinder, and some of the tricks amitp has
+11:17 < jbud> I spent so much time googling around for pathfinding tricks, I'm not sure how I didn't come across either of these
+11:18 < mikolalysenko> amitp's stuff is the best resource on the net I think
+11:18 < mikolalysenko> for grids anyway
+11:18 < jbud> Yeah its really well written, good visuals and easy to follow
+11:18 < mikolalysenko> if you are using triangular meshes, you should check out recast
+11:18 < mikolalysenko> https://github.com/memononen/recastnavigation
+11:18 < mikolalysenko> that is a really nice system
+11:19 < mikolalysenko> I think it is used in many AAA games
+11:22 < jbud> This looks pretty cool
+11:22 < jbud> I'm gonna head off and read through these resources you guys recommended, thanks :)
+
+
+
+
+
+
+
+
+
  
 
 SERVER
@@ -204,6 +593,12 @@ DB
 
 	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
 	* Not error safe; must throw and use .catch() on promise
+	* .catch() will not be received from nested callbacks
+		return new Promise() {
+			Tacos.onFailedTaco = function(evt){
+				throw new Err("Error failed to make taco!");  // This will not be caught by promsie catch
+			};
+		}
 	* Continues on after calling resolve() or reject()  (must explicitly return after calling those unless you want to continue)
 
 ====== Eventful
@@ -211,6 +606,7 @@ DB
 	* triggeredEvents will append the event callback to the CONTEXT's event_callback_queue
 	* REQUIRES an update function to handle pending requests regularly
 	* Not error safe; must throw errors
+	* Because triggerEvent loops through an array of listeners, you can only run stopListeningTo on the callback object during the trigger; however, if you run stopListeningTo on another object then this WILL break things. If this is a desirable feature later on, we can implement it by adding a "lastCalled" id to callbacks and readjusting the loop at each iteration to the next callback
 
 ====== Subscription
 	
@@ -235,7 +631,10 @@ DB
 ====== Prototype
 
 	* http://jsfiddle.net/vauovfyd/
-	* Essentially a base class, except that this base class is a Singleton (ALL classes using this class as a prototype will share the same properties)
+	* Type A Prototyping: Essentially a base class, except that this base class is a Singleton (ALL classes using this class as a prototype will share the same properties)
+
+	* https://jsfiddle.net/jc24s7b4/ 
+	* Type B Prototyping: Essentially a copy of the prototype; other classes won't share the same context
 
 ====== Base
 
@@ -248,16 +647,109 @@ DB
 
 	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
 
+====== Functions
+
+	reference: https://rainsoft.io/when-not-to-use-arrow-functions-in-javascript/
+
+	* function(){}  creates its own context. NOTE: this can be an issue with vars
+		function Tacos(){
+			this.cheesy = true;
+
+			var CookThatTaco = function(){
+				console.log("cheesy? " + this.cheesy); // cheesy? undefined
+			};
+
+			this.MakeATaco = function(){
+				CookThatTaco(); // CookThatTaco is being called with no context, so its context is global
+			};
+		};
+
+		var tacos = new Tacos();
+		tacos.MakeATaco();
+
+	* () => {}  uses context of the places its been defined. NOTE: this can be an issue with objects:
+		var Tacos = {
+			cheesy: true,
+			MakeATaco: () => { console.log("cheesy? " + this.cheesy); } // cheesy? undefined
+		}
+		Tacos.MakeATaco(); // since MakeATaco is defined inside of the object, the context is window (undefined?) at the time
+
+	* () => {}  is also bad with defining an object:
+		var Tacos = () => { this.cheesy = true; }
+		var tacos = new Tacos(); // Error: Tacos is not a constructor
 
 
-ERRORS
-	* When things are allowed to go wrong in a function: return new Error(...)    .. this way the caller can handle it accordingly,
-		eg.   function getTile(x, y){ if (x<0 || y<0) return new Error("Bad tile coordinates"); ... }
-	* Use extended Error for extending error details:  return Err("message", ERR_HINT, {x:null, y:3})
-	* When things are unexpected, cannot go wrong, or handled within a promise/hook:  throw new Error(...)
-	* Make sure to do extra checking for unexpected stuff (eg.  player.position.x = ....;  if (!_.isFinite(x)) throw new Error(...))
-	* Player requests require extra checking that each specific input is acceptable; however, functions should never throw for this allowed input even if the functionality fails (eg. player requests to attack entity 9; we check that entity 9 exists in map and is alive so we setup the request; but if entity 9 is too far away then we return an error instead of throwing)
-	* Check for error in all functions; this allows us to modify functions later on to return error if necessary and the caller will be ready for it
+	1) Defining a function/object:  use function
+	2) function in an object literal: use function
+		var Tacos = {
+			MakeATaco: function(){}
+		}
+	3) method in an object: use function
+		var Tacos = function(){
+			this.MakeATaco = function(){}
+		}
+	4) var in an object: use arrow
+		var Tacos = function(){
+			var MakeATaco = () => {}
+		}
+	5) callback function: use arrow   (unless explicitly binding to something)
+		player.hook('EVT_DIED').after(() => {})
+	6) global function: use arrow
+	7) callback within function literal: use arrow
+		var Tacos = {
+			MakeATaco: function(){
+				user.hook('EVT_CANCEL_ORDER', () => {
+					this.cancelOrder();
+				});
+			}
+		}
+	8) function within object within class: use arrow
+		var Taco = function(){
+		   this.toppings = { cheese: true, beef: true }
+		   this.manage = {
+			  printToppings: () => { console.log(this.toppings); }
+		   }
+		}
+	9) function within function within object within class: use function
+		var Taco = function(){
+			const _Taco = this;
+			this.manage = {
+
+				// NOTE: initialize is called from another context
+				initialize() {
+
+					var giveCheese = function() { this.cheese++; };
+
+					_Taco.giveCheese();
+				}
+			}
+		}
+
+
+
+
+	Arrow functions don't have arguments: https://jsfiddle.net/5daundpr/
+
+	const Taco = function(initialToppings, cookingTime){
+
+		this.setToppings = function(){};
+		
+		this.MakeATaco = () => {
+			this.setToppings(arguments); // arguments: [initialToppings, cookingTime]  
+		}
+	}
+
+};
+
+====== Declaration
+
+	reference: http://stackoverflow.com/questions/762011/let-keyword-vs-var-keyword
+
+	* var: scoped to the nearest function block
+	* let: scoped to the nearest enclosing block
+
+	var vs. let: use let
+	let vs const: use const
 
 
 MAP EDITING

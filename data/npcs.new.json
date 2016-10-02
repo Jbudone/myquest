@@ -7,7 +7,15 @@
 		"speed":10,
 		"health":1500,
 		"damage":5,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.player.basic_melee",
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		}
 	},
 	{
 		"id":"firefox",
@@ -18,7 +26,15 @@
 		"speed":10,
 		"health":50,
 		"damage":5,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		}
 	},
 	{
 		"id":"deathknight",
@@ -29,7 +45,15 @@
 		"speed":8,
 		"health":70,
 		"damage":5,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		}
 	},
 	{
 		"id":"goblin",
@@ -37,10 +61,18 @@
 		"sheet":"goblin",
 		"spawn":5500,
 		"killable":true,
-		"speed":10,
-		"health":80,
+		"speed":30,
+		"health":8000,
 		"damage":3,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+		"attackInfo":
+		{
+			"ability":"range",
+			"range":2,
+			"attackTime":100,
+			"chaseDistance":150
+		}
 	},
 	{
 		"id":"spider",
@@ -51,7 +83,15 @@
 		"speed":10,
 		"health":80,
 		"damage":3,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		}
 	},
 	{
 		"id":"snake",
@@ -62,6 +102,14 @@
 		"speed":10,
 		"health":80,
 		"damage":3,
-		"AI":true
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		}
 	}
 ] }

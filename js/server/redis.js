@@ -9,14 +9,21 @@ define(['loggable'], function(Loggable){
 			db    = null;
 
 		this.initialize = function(){
-			redis = require('redis').createClient();
-			redis.on('error', function(err){
-				this.Log("Redis error: "+ err, LOG_ERROR);
-				this.onError(err);
-			}.bind(this));
+
+            return new Promise((success, failed) => {
+                redis = require('redis').createClient();
+                redis.on('error', (e) => {
+                    this.Log("Redis error: "+ e, LOG_ERROR);
+                    failed(e);
+                });
+
+                success();
+            });
 		};
 
-		this.onError = new Function();
+        this.disconnect = function(){
+            if (redis) redis.quit();
+        };
 
 		// Get the value from the 'scriptID:playerID' key-pair
 		//

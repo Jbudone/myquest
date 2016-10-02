@@ -20,7 +20,10 @@
 				"script": "character.ai.instinct.combat",
 				"components": {
 					"melee": "character.ai.combat.melee",
-					"sight": "character.ai.combat.sight"
+					"range": "character.ai.combat.range",
+					"sight": "character.ai.combat.sight",
+					"strategy.basic_melee": "character.ai.combat.strategy.basic_melee",
+					"strategy.player.basic_melee": "character.ai.combat.strategy.player.basic_melee"
 				}
 			},
 			"movement": "character.ai.instinct.movement",

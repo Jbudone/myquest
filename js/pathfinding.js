@@ -1,355 +1,612 @@
-define(['movable', 'loggable'], function(Movable, Loggable){
 
-	var Pathfinding = function(map){
+// Pathfinding
+define(['movable', 'loggable'], (Movable, Loggable) => {
 
-		this.map = map;
-		extendClass(this).with(Loggable);
-		this.setLogGroup('Pathfinding');
-		this.setLogPrefix('(Pathfinding) ');
+    const Pathfinding = function(area) {
 
-		// Find a path from point A to point B
-		//
-		// The start/end points can be a variety of different things: movable(s), tile(s); and the pathfinder
-		// can accept a variety of options such as range, adjacent endpoint, auto recalibration, etc. 
-		//
-		// For movables, the pathfinder will automatically find their nearest tiles and consider each as a
-		// possible to/from point.
-		this.findPath = function(from, to, options){
-			if (_.isUndefined(from) || _.isUndefined(to)) return false;
+        this.area = area;
 
-			if (!_.isArray(from)) from = [from];
-			if (!_.isArray(to))   to   = [to];
+        extendClass(this).with(Loggable);
+        this.setLogGroup('Pathfinding');
+        this.setLogPrefix('Pathfinding');
 
-			if (_.isUndefined(options)) options = {};
-			_.defaults(options, {
-				range: 0,
-				adjacent: true,
-				maxWeight: 100
-			});
+        // If we're using a library to handle our pathfinding then set that up here
+        if (Env.isServer && Env.game.usePathPlanner) {
 
+            // Setup area grid for l1-pathfinder
+            this.planner = null;
 
-			// Fetch all possible to/from tiles
-			// 
-			// For targets which may be movables, they could be between one or more tiles. This will find all
-			// tiles that the movable is partially between.
-			var fromTiles       = [],
-				toTiles         = [],
-				recalibrateFrom = null;
-			for (var i=0; i<from.length; ++i) {
-				if (from[i] instanceof Movable) {
-					recalibrateFrom = from[i].position; // FIXME: what if we're searching from multiple from positions? Would we ever need to?
-				}
-				var tiles = this.findTilesOf( from[i] );
-				fromTiles = _.union(fromTiles, tiles);
-			}
-			fromTiles = this.filterTilesInRange(fromTiles, 0);
-			
-			for (var i=0; i<to.length; ++i) {
-				var tiles = this.findTilesOf( to[i] );
-				toTiles   = _.union(toTiles, tiles);
-			}
-			toTiles = this.filterTilesInRange(toTiles, options.range, options.adjacent);
+            /*
+            const Pathfinder = require('l1-path-finder'),
+                ndarray      = require('ndarray');
 
-			if (fromTiles.length === 0 || toTiles.length === 0) return false;
+            this.setupGrid = () => {
+                // NOTE: Disabling l1-path-finder for now since it doesn't seem to work in some cases..
 
-			var path = this.map.findPath( fromTiles, toTiles, options.maxWeight );
+                var grid  = [],
+                    page  = null,
+                    pageY = null,
+                    pageX = null,
+                    areaWidth = area.pagesPerRow * Env.pageWidth;
 
-			if (path) {
-				if (path.path) {
+                for (var pageI in area.pages) {
+                    page = area.pages[pageI];
+                    pageY = page.y;
+                    pageX = page.x;
 
-					if (recalibrateFrom) {
-						this.recalibratePath(path, recalibrateFrom);
-					}
+                    for (var y = pageY, yOff=0; y < pageY + Env.pageHeight; ++y, ++yOff) {
+                        for (var x = pageX, xOff=0; x < pageX + Env.pageWidth; ++x, ++xOff) {
+                            var isCollidable = (page.collidables[yOff] & (1 << xOff) ? true : false);
+                            grid[areaWidth*y + x] = isCollidable;
 
-					return path.path;
-				} else {
-					return ALREADY_THERE;
-				}
-			}
-			return false;
-		};
+                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                            // FIXME: ASSERTION TEST UNECESSARY
+                            var tile = { x: x, y: y };
+                            if (area.hasTile(tile) && area.isTileOpen(tile) !== (!isCollidable)) {
+                                debugger; // wtf?!
+                            }
+                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        }
+                    }
+                }
 
-		this.recalibratePath = function(path, fromPosition){
+                var gridArray = ndarray(grid, [grid.length / areaWidth, areaWidth]);
+                this.planner = Pathfinder(gridArray);
 
-			// inject walk to beginning of path depending on where player is relative to start tile
-			var startTile    = path.start.tile,
-				recalibrateY = false,
-				recalibrateX = false,
-				path         = path.path,
-				position     = { y: fromPosition.global.y,
-								 x: fromPosition.global.x },
-				localX       = fromPosition.global.x % Env.pageRealWidth,
-				localY       = fromPosition.global.y % Env.pageRealHeight;
-			if (localY / Env.tileSize - startTile.y >= 1) throw "BAD Y assumption";
-			if (localX / Env.tileSize - startTile.x >= 1) throw "BAD X assumption";
-			if (position.y - startTile.y * Env.tileSize != 0) recalibrateY = true;
-			if (position.x - startTile.x * Env.tileSize != 0) recalibrateX = true;
+                //debugger;
 
-			path.splitWalks();
-
-			if (recalibrateY) {
-				// Inject walk to this tile
-				var distance    = -1*(position.y - startTile.y * Env.tileSize),
-					walk        = new Walk((distance<0?NORTH:SOUTH), Math.abs(distance), startTile.offset(0, 0));
-				console.log("Recalibrating Walk (Y): ");
-				console.log("	steps: "+distance);
-				path.walks.unshift(walk);
-			}
-			if (recalibrateX) {
-				// Inject walk to this tile
-				var distance    = -1*(position.x - startTile.x * Env.tileSize),
-					walk        = new Walk((distance<0?WEST:EAST), Math.abs(distance), startTile.offset(0, 0));
-				console.log("Recalibrating Walk (X): ");
-				console.log("	steps: "+distance+" FROM ("+localX+") TO ("+startTile.x*Env.tileSize+")");
-				path.walks.unshift(walk);
-			}
-		};
-
-		this.filterTilesInRange = function(centerTiles, range, isAdjacent){
-			if (!_.isArray(centerTiles)) centerTiles = [centerTiles];
-			if (range === 0 || isNaN(range)) return centerTiles;
-			if (_.isUndefined(isAdjacent)) isAdjacent = false;
-
-			var tiles     = [],
-				hashList  = {},
-				tileHash  = function(tile){
-					return tile.y * this.map.mapWidth + tile.x;
-				}.bind(this);
-			for (var i=0; i<centerTiles.length; ++i) {
-				var centerTile = centerTiles[i];
-
-				if (isAdjacent) {
-					var x = centerTile.x;
-					for (var y=centerTile.y - range; y<=centerTile.y + range; ++y) {
-						var tile = new Tile(x, y),
-							hash = tileHash(tile);
-						if (hashList[hash]) continue; // Has this tile been added yet?
-						hashList[hash] = true; // Hash this tile to avoid checking it again
-						if (!this.isOpenTile.bind(this)(tile)) continue; // Is this tile open? (able to walk on)
-						tiles.push(tile);
-					}
-
-					var y = centerTile.y;
-					for (var x=centerTile.x - range; x<=centerTile.x + range; ++x) {
-						var tile = new Tile(x, y),
-							hash = tileHash(tile);
-						if (hashList[hash]) continue; // Has this tile been added yet?
-						hashList[hash] = true; // Hash this tile to avoid checking it again
-						if (!this.isOpenTile.bind(this)(tile)) continue; // Is this tile open? (able to walk on)
-						tiles.push(tile);
-					}
-				} else {
-					// Create a box range about this center tile
-					for (var y=centerTile.y - range; y<=centerTile.y + range; ++y) {
-						for (var x=centerTile.x - range; x<=centerTile.x + range; ++x) {
-							var tile = new Tile(x, y),
-								hash = tileHash(tile);
-							if (hashList[hash]) continue; // Has this tile been added yet?
-							hashList[hash] = true; // Hash this tile to avoid checking it again
-							if (!this.isOpenTile.bind(this)(tile)) continue; // Is this tile open? (able to walk on)
-							tiles.push(tile);
-						}
-					}
-				}
-			}
-
-			return tiles;
-		};
-
-		this.isOpenTile = function(tile){
-			var localCoordinates = this.map.localFromGlobalCoordinates(tile.x, tile.y);
-
-			if (localCoordinates instanceof Error) {
-				return false;
-			}
-
-			return (localCoordinates.page.collidables[localCoordinates.y] & (1<<localCoordinates.x) ? false : true);
-		};
+                // FAILED PATH
+                // Under main area this path doesn't work
+                var path = [],
+                    test = this.planner.search(63, 68, 60, 65, path);
+            }
+            */
+        }
 
 
-		// Find the nearest tiles of a movable or tile
-		this.findTilesOf = function(obj){
-			if (_.isUndefined(obj)) {
-				return [];
-			}
+        // Find a path from point A to point B
+        //
+        // The start/end points can be a variety of different things: movable(s), tile(s); and the pathfinder can accept
+        // a variety of options such as range, adjacent endpoint, auto recalibration, etc. 
+        //
+        // For movables, the pathfinder will automatically find their nearest tiles and consider each as a possible
+        // to/from point.
+        this.findPath = (from, to, options) => {
+            if (_.isUndefined(from) || _.isUndefined(to)) throw Err(`Either from/to was not defined`);
 
-			if (obj instanceof Movable) {
-				var x = obj.position.global.x / Env.tileSize,
-					y = obj.position.global.y / Env.tileSize,
-					tile = obj.position.tile,
-					tiles = [new Tile(tile.x, tile.y)];
+            if (!_.isArray(from)) from = [from];
+            if (!_.isArray(to))   to   = [to];
 
-				if (Math.ceil(x)  > tile.x && Math.ceil(x)  <= this.map.mapWidth)  tiles.push( new Tile( tile.x + 1, tile.y ) );
-				if (Math.floor(x) < tile.x && Math.floor(x) >= 0)                  tiles.push( new Tile( tile.x - 1, tile.y ) );
-				if (Math.ceil(y)  > tile.y && Math.ceil(y)  <= this.map.mapHeight) tiles.push( new Tile( tile.x, tile.y + 1 ) );
-				if (Math.floor(y) < tile.y && Math.floor(y) >= 0)                  tiles.push( new Tile( tile.x, tile.y - 1 ) );
-				return tiles;
-			} else if (obj instanceof Tile) {
-				if (obj.hasOwnProperty('page')) {
-					var page = this.map.pages[obj.page];
-					return [new Tile(obj.x + page.x, obj.y + page.y)];
-				} else {
-					return [obj];
-				}
-			} else {
-				return new UnexpectedError("Provided object is neither a Movable nor a Tile");
-			}
-		};
+            if (_.isUndefined(options)) options = {};
+            _.defaults(options, {
+                range: 0,
+                adjacent: true,
+                maxWeight: 100,
+                excludeTile: false, // Exclude the center/from tiles?
+                filterFunc: null // Optional function for manually expanding tiles about each toTile
+            });
 
 
-		this.checkSafeWalk = function(state, walk){
+            // Fetch all possible to/from tiles
+            //
+            // For targets which may be movables, they could be between one or more tiles. This will find all
+            // tiles that the movable is partially between.
+            let fromTiles           = [],
+                toTiles             = [],
+                recalibrateFrom     = null,
+                path                = null;
+
+            const unexpandedFromTiles = {},
+                unexpandedToTiles     = {};
 
 
-			// 
-			// Check path is safe (no collisions)
-			//
-			//	This works by essentially finding the starting point for the path and walking along that path
-			//	to check if each tile is open.
-			//	NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only
-			//	1 walk)
-			////////////////////////////////////////
+            // Expand our fromTiles
+            // If our fromTile is a movable and he's nearing the next tile then we can include the next tile in our
+            // fromTiles list
+            from.forEach((fromTile) => {
+                let fromHash = null,
+                    tiles    = this.findTilesOf(fromTile);
 
-			var map       = this.map,
-				start     = new Tile(state.tile.x, state.tile.y),	// Start of path (where the player thinks he's located)
-				vert      = (walk.direction == NORTH || walk.direction == SOUTH),
-				positive  = (walk.direction == SOUTH || walk.direction == EAST),
-				walked    = 0,
-				tiles     = [],
-				pageI     = null,
-				page      = null,
-				k         = (vert ? state.global.y%Env.pageRealHeight  : state.global.x%Env.pageRealWidth),	// k: our local real x/y coordinate
-				kR        = null,									// kR: our global real x/y coordinate
-				kT        = (vert ? state.tile.y : state.tile.x),	// kT: our global x/y tile
-				kLT       = (vert ? (kT % Env.pageHeight) : (kT % Env.pageWidth)), // kLT: our local x/y tile
-				dist      = walk.distance,
-				safePath  = true,
-				nextTile  = start,
-				err       = null;
+                if (fromTile instanceof Movable) {
+                    // TODO: what if we're searching from multiple from positions? Would we ever need to?
+                    recalibrateFrom = fromTile.position;
+                    fromHash = fromTile.position.tile.y * this.area.areaWidth + fromTile.position.tile.x;
+                } else {
+                    fromHash = fromTile.y * this.area.areaWidth + fromTile.x;
+                }
 
-			// Find the start of path page
-			pageI = parseInt(state.tile.y / Env.pageHeight) * map.pagesPerRow + parseInt(state.tile.x / Env.pageWidth);
-			if (!pageI) return new GameError("Bad page index");
-			page  = map.pages[pageI];
-			if (!page) return new GameError("Bad page found from coordinates");
-			kR = k + (vert ? page.y : page.x)*Env.tileSize;
+                fromTiles = _.union(fromTiles, tiles);
+                unexpandedFromTiles[fromHash] = fromTile;
+            });
+            fromTiles = this.filterTilesInRange(fromTiles, {range:0});
 
-			// Is the first tile in the path within range of the player?
-			if (!map.isTileInRange(start)) {
-				this.Log("Bad start of path! ("+start.y+","+start.x+")", LOG_ERROR);
-				err = new GameError("Bad start of path");
-				return err;
-			}
+            // Expand our toTiles
+            to.forEach((toTile) => {
+                let toHash = null,
+                    tiles  = this.findTilesOf(toTile);
 
+                if (toTile instanceof Movable) {
+                    toHash = toTile.position.tile.y * this.area.areaWidth + toTile.position.tile.x;
+                } else {
+                    toHash = toTile.y * this.area.areaWidth + toTile.x;
+                }
 
-			// Given k local tile and page, is the tile open?
-			var isSafeTile = (function(){
-				
-				var _kPair = null; // if k is X then kPair is Y; and vice-versa
-				if (vert) {
-					_kPair = state.tile.x % Env.pageWidth;
-					return function(k, page){
-						return (page.collidables[k] & (1<<_kPair) ? false : true);
-					};
-				} else {
-					_kPair = state.tile.y % Env.pageHeight;
-					return function(k, page){
-						return (page.collidables[_kPair] & (1<<k) ? false : true);
-					};
-				}
-			}()), updatePageAndLocalTile = (function(){
+                toTiles = _.union(toTiles, tiles);
+                unexpandedToTiles[toHash] = toTile;
+            });
+            toTiles = this.filterTilesInRange(toTiles, options);
 
-				if (vert) {
-					return function(k){
-						if (k < 0) {
-							k += Env.pageHeight; // At the furthest end of the previous page
-							pageI -= map.pagesPerRow;
-							page = map.pages[pageI];
-							return k;
-						} else if (k > Env.pageHeight) {
-							k = k % Env.pageHeight;
-							pageI += map.pagesPerRow;
-							page = map.pages[pageI];
-							return k;
-						}
-						return k;
-					};
-				} else {
-					return function(k){
-						if (k < 0) {
-							k += Env.pageWidth; // At the furthest end of the previous page
-							--pageI;
-							page = map.pages[pageI];
-							return k;
-						} else if (k > Env.pageWidth) {
-							k = k % Env.pageWidth;
-							++pageI;
-							page = map.pages[pageI];
-							return k;
-						}
-						return k;
-					};
-				}
-			}());
+            // Exclude the provided tiles in search
+            // NOTE: This could be used for combat where we don't want to stand on the same tile as the person we're
+            // attacking
+            if (options.excludeTile) {
+                const areaWidth = this.area.areaWidth;
+                toTiles = toTiles.filter((toTile) => {
+                    const toHash = toTile.y * areaWidth + toTile.x;
 
-			if (!isSafeTile(kLT, page)) {
-				this.Log("First tile is not open in path!");
-				err = new GameError("First tile is not open");
-				return err;
-			}
+                    return !(toHash in unexpandedToTiles);
+                });
+            }
 
-			// Determine the next tile in the path, and confirm that its open
-			// NOTE: This is done separately from the rest of the walk confirmation process since the next
-			// tile could be a recalibration. eg. if the user is walking east and then stops and goes west;
-			// the start tile will be the same tile as the next tile
-			if (walk.distance % Env.tileSize != 0) {
-				var _kTNext = parseInt((kR + (positive?1:-1)*(walk.distance%Env.tileSize))/Env.tileSize);
+            if (fromTiles.length === 0 || toTiles.length === 0) {
+                return false;
+            }
 
-				// If the next tile is not the same as the star tile, then this was not a recalibration step.
-				// Process this next tile
-				if (_kTNext != kT) {
-					kLT += (_kTNext - kT);
-					kT = _kTNext;
-					kLT = updatePageAndLocalTile(kLT);
-					if (!isSafeTile(kLT, page)) {
-						this.Log("Recalibration tile is not open");
-						err = new GameError("Recalibration tile is not open");
-						return err;
-					}
-				}
-				walked += walk.distance % Env.tileSize;
-			}
+            // Are we already in range?
+            // NOTE: We can only consider the unexpanded from tiles since the expanded from tiles have an
+            //          extra recalibration distance
+            for (let i = 0; i < toTiles.length; ++i) {
+                const toTile = toTiles[i],
+                    tileHash = toTile.y * this.area.areaWidth + toTile.x;
+
+                if (tileHash in unexpandedFromTiles) {
+
+                    // We're already here. Do we also need to recalibrate into position?
+                    if (recalibrateFrom) {
+
+                        path = {
+                            start: { tile: new Tile(recalibrateFrom.tile.x, recalibrateFrom.tile.y) },
+                            end: { tile: new Tile(recalibrateFrom.tile.x, recalibrateFrom.tile.y) }
+                        };
+
+                        path.path = new Path();
+                        this.recalibratePath(path, recalibrateFrom);
+
+                        if (path.path.walks.length) {
+                            return path.path;
+                        }
+                    }
+
+                    return ALREADY_THERE;
+                }
+            }
+
+            // Would like to try l1-path-finder but it looks like it isn't ready yet. Look at failed path
+            // under Pathfinder() creation for "main" area
+            if (Env.isServer && Env.game.usePathPlanner) {
+                /*
+
+                // Find the cheapest tile pair
+                // TODO: Is there a better way than O(n^2) for this?
+                // NOTE: The given weights don't consider the recalibration cost (which is ensured to exist in
+                //          cases where the weight is 0)
+                var tileWeights = {};
+                for (var fromTileI in fromTiles) {
+                    for (var toTileI in toTiles) {
+                        var weight = Math.abs(fromTiles[fromTileI].x - toTiles[toTileI].x) + Math.abs(fromTiles[fromTileI].y - toTiles[toTileI].y);
+                        if (!tileWeights[weight]) {
+                            tileWeights[weight] = {
+                                from: fromTiles[fromTileI],
+                                to: toTiles[toTileI]
+                            }
+                        }
+                    }
+                }
+                var cheapestTilesWeight = frontOfObject(tileWeights),
+                    cheapestTiles = tileWeights[cheapestTilesWeight];
 
 
+                // If the cheapest weight is 0 then we're nearing a tile which is in our toTiles set. Simply
+                // use the recalibration as our path
+                if (cheapestTilesWeight == 0) {
+                    var path = {
+                        path: new Path(),
+                        start: {
+                            tile: cheapestTiles[0]
+                        }
+                    };
 
-			// Confirm the rest of the path
-			var multiplier = (positive?1:-1),
-				isSafe     = true,
-				safePath   = true;
-			while (walked < walk.distance) {
-				kLT += multiplier;
-				kLT = updatePageAndLocalTile(kLT);
-				if (!isSafeTile(kLT, page)) {
-					safePath = false;
-					break;
-				}
-				walked += Env.tileSize;
-			}
-
-			if (walked != walk.distance) {
-				debugger;
-				this.Log("Something strange happened when processing the walk validation..");
-				err = new Error("Bad walk validation!");
-				return err;
-			}
+                    this.recalibratePath(path, recalibrateFrom);
+                    return path.path;
+                }
 
 
-			if (isSafe && safePath) {
-				return true;
-			}
+                var path2 = [],
+                    dist2 = this.planner.search(cheapestTiles.from.y, cheapestTiles.from.x, cheapestTiles.to.y, cheapestTiles.to.x, path2);
 
-			return false;
-		};
-	};
+                // Planner could not find a path
+                if (!_.isFinite(dist2)) {
+                    console.log("Attempted path was not finite");
 
-	return Pathfinding;
+                    // Draw mini-area of failed path area
+                    var borderOffset = 5,
+                        startY = Math.max(0, Math.min(cheapestTiles.from.y, cheapestTiles.to.y) - borderOffset),
+                        endY   = Math.min(this.area.areaHeight - 1, Math.max(cheapestTiles.from.y, cheapestTiles.to.y) + borderOffset),
+                        startX = Math.max(0, Math.min(cheapestTiles.from.x, cheapestTiles.to.x) - borderOffset),
+                        endX   = Math.min(this.area.areaWidth - 1, Math.max(cheapestTiles.from.x, cheapestTiles.to.x) + borderOffset);
+
+                    console.log("Printing Area: ");
+                    for (var y = startY; y < endY; ++y) {
+                        var line = "";
+                        for (var x = startX; x < endX; ++x) {
+                            var symbol = (this.area.hasTile({x,y}) && this.area.isTileOpen({x:x,y:y})) ? "." : "#";
+                            if (x == cheapestTiles.from.x && y == cheapestTiles.from.y) {
+                                symbol = "X";
+                            } else if (x == cheapestTiles.to.x && y == cheapestTiles.to.y) {
+                                symbol = "*";
+                            }
+
+                            line += symbol;
+                        }
+                        console.log(line);
+                    }
+
+
+                    return false;
+                }
+
+                var path2Full            = new Path(),
+                    curPos = [fromTiles[0].y, fromTiles[0].x],  // FIXME: Is this correct?!  What if we're using a cheap nearby tile
+                    path2I = 2;
+                while(true) {
+
+                    // Vertical
+                    if (path2[path2I] != curPos[0]) {
+                        var dist = path2[path2I] - curPos[0],
+                            dir = dist > 0 ? SOUTH : NORTH;
+                        path2Full.walks.push( new Walk(dir, Math.abs(dist) * Env.tileSize, null) );
+                    } else {
+                        // Horizontal
+                        var dist = path2[path2I+1] - curPos[1],
+                            dir = dist > 0 ? EAST : WEST;
+                        path2Full.walks.push( new Walk(dir, Math.abs(dist) * Env.tileSize, null) );
+                    }
+
+
+                    curPos[0] = path2[path2I];
+                    curPos[1] = path2[path2I+1];
+                    path2I += 2;
+
+                    if (path2I == path2.length) {
+                        break;
+                    } else if (path2I > path2.length) {
+                        console.log("Building the path resulting in an endless loop.." + path2I + " > " + path2.length);
+                        debugger; // wtf is this?!
+                        this.planner.search(cheapestTiles.from.x, cheapestTiles.from.y, cheapestTiles.to.x, cheapestTiles.to.y, path2);
+
+                    }
+                }
+
+                path2Full.start = cheapestTiles.from;
+                var newPath = {
+                    start: { tile: cheapestTiles.from },
+                    path: path2Full,
+                    end: { tile: cheapestTiles.to }
+                }
+                path = newPath;
+                */
+            } else {
+                path = this.area.findPath(fromTiles, toTiles, options.maxWeight);
+            }
+
+            if (path) {
+                if (path.path) {
+
+                    if (recalibrateFrom) {
+                        this.recalibratePath(path, recalibrateFrom);
+                    }
+
+                    return path.path;
+                } else {
+
+                    if (recalibrateFrom) {
+                        path.path = new Path();
+                        this.recalibratePath(path, recalibrateFrom);
+
+                        if (path.path.walks.length) {
+                            return path.path;
+                        }
+                    }
+
+                    return ALREADY_THERE;
+                }
+            }
+
+            return false;
+        };
+
+        this.recalibratePath = (path, fromPosition) => {
+
+            // inject walk to beginning of path depending on where player is relative to start tile
+            const startTile = path.start.tile,
+                position    = {
+                    y: fromPosition.global.y,
+                    x: fromPosition.global.x
+                },
+                localX      = fromPosition.global.x % Env.pageRealWidth,
+                localY      = fromPosition.global.y % Env.pageRealHeight;
+
+            let recalibrateY = false,
+                recalibrateX = false;
+
+            path = path.path;
+
+            if (position.y - startTile.y * Env.tileSize !== 0) recalibrateY = true;
+            if (position.x - startTile.x * Env.tileSize !== 0) recalibrateX = true;
+
+            path.splitWalks();
+
+            if (recalibrateY) {
+                // Inject walk to this tile
+                const distance = -1 * (position.y - startTile.y * Env.tileSize),
+                    walk       = new Walk((distance < 0 ? NORTH : SOUTH), Math.abs(distance), startTile.offset(0, 0));
+                this.Log(`Recalibrating Walk (Y): steps ${distance} from ${localY} to ${startTile.y * Env.tileSize}`, LOG_DEBUG);
+                path.walks.unshift(walk);
+            }
+            if (recalibrateX) {
+                // Inject walk to this tile
+                const distance = -1 * (position.x - startTile.x * Env.tileSize),
+                    walk       = new Walk((distance < 0 ? WEST : EAST), Math.abs(distance), startTile.offset(0, 0));
+                this.Log(`Recalibrating Walk (X): steps ${distance} from ${localX} to ${startTile.x * Env.tileSize}`, LOG_DEBUG);
+                path.walks.unshift(walk);
+            }
+        };
+
+        this.filterTilesInRange = (centerTiles, options) => {
+
+            const range      = options.range,
+                isAdjacent   = options.adjacent || false,
+                filterFunc   = options.filterFunc,
+                shootThrough = options.shootThrough;
+
+
+            if (!_.isArray(centerTiles)) centerTiles = [centerTiles];
+            if (range === 0 || isNaN(range)) return centerTiles;
+
+            const tiles  = [],
+                hashList = {};
+
+            const tileHash = (tile) => tile.y * this.area.areaWidth + tile.x;
+
+            // TODO: Could clean this up to bake the filterFunc ahead of time
+            centerTiles.forEach((centerTile) => {
+
+                if (filterFunc) {
+
+                    // Custom filtering function
+                    const expandedTiles = filterFunc(centerTile, this.area);
+                    if (!_.isArray(expandedTiles)) throw Err("Filter func returned non-array type");
+
+                    expandedTiles.forEach((expandedTile) => {
+                        const tile = new Tile(expandedTile.x, expandedTile.y),
+                            hash   = tileHash(tile);
+
+                        if (hash in hashList) return; // Has this tile been added yet?
+                        hashList[hash] = true; // Hash this tile to avoid checking it again
+                        if (!this.area.isTileOpen(tile)) return; // Is this tile open? (able to walk on)
+                        tiles.push(tile);
+                    });
+                } else {
+
+                    if (isAdjacent) {
+
+                        tiles.push(new Tile(centerTile.x, centerTile.y)); // Current tile
+
+                        const x        = centerTile.x,
+                            y          = centerTile.y,
+                            directions = [
+                                { xDir: 1, yDir: 0 },
+                                { xDir: -1, yDir: 0 },
+                                { xDir: 0, yDir: 1 },
+                                { xDir: 0, yDir: -1 }
+                            ];
+
+                        directions.forEach(({ xDir, yDir }) => {
+
+                            for (let offset = 1; offset <= range; ++offset) {
+                                const tile = new Tile(x + xDir * offset, y + yDir * offset),
+                                    hash   = tileHash(tile);
+                                if (hashList[hash]) continue; // Has this tile been added yet?
+                                hashList[hash] = true; // Hash this tile to avoid checking it again
+                                if (!this.area.isTileOpen(tile)) {
+                                    // FIXME: Abstract shootable filtering for only range based combat
+                                    if (!shootThrough || !this.area.isShootableTile(tile)) {
+                                        break; // Is this tile open? If not then we shouldn't be able to reach anything beyond that either
+                                    } else {
+                                        continue; // We can shoot through this tile, so allow open tiles further along the path, but don't include this tile as an acceptable to-tile
+                                    }
+                                }
+                                tiles.push(tile);
+                            }
+                        });
+
+                    } else {
+
+                        // Create a box range about this center tile
+                        for (let y = centerTile.y - range; y <= centerTile.y + range; ++y) {
+                            for (let x = centerTile.x - range; x <= centerTile.x + range; ++x) {
+                                const tile = new Tile(x, y),
+                                    hash   = tileHash(tile);
+                                if (hashList[hash]) continue; // Has this tile been added yet?
+                                hashList[hash] = true; // Hash this tile to avoid checking it again
+                                if (!this.area.isTileOpen(tile)) continue; // Is this tile open? (able to walk on)
+                                tiles.push(tile);
+                            }
+                        }
+                    }
+
+                }
+            });
+
+            return tiles;
+        };
+
+        // Find the nearest tiles of a movable or tile
+        this.findTilesOf = (obj) => {
+
+            if (obj instanceof Movable) {
+                const x   = obj.position.global.x / Env.tileSize,
+                    y     = obj.position.global.y / Env.tileSize,
+                    tile  = obj.position.tile,
+                    tiles = [new Tile(tile.x, tile.y)];
+
+                if (inRange(Math.ceil(x), tile.x + 1, this.area.areaWidth)) tiles.push(new Tile(tile.x + 1, tile.y));
+                if (inRange(Math.floor(x), 0, tile.x - 1)) tiles.push(new Tile(tile.x - 1, tile.y));
+                if (inRange(Math.ceil(y), tile.y + 1, this.area.areaHeight)) tiles.push(new Tile(tile.x, tile.y + 1));
+                if (inRange(Math.floor(y), 0, tile.y - 1)) tiles.push(new Tile(tile.x, tile.y - 1));
+
+                return tiles;
+            } else if (obj instanceof Tile) {
+                if (obj.page) {
+                    const page = this.area.pages[obj.page];
+                    return [new Tile(obj.x + page.x, obj.y + page.y)];
+                } else {
+                    return [obj];
+                }
+            } else {
+                throw Err("Provided object is neither a Movable nor a Tile");
+            }
+        };
+
+
+        this.checkSafeWalk = (state, walk) => {
+
+
+            //
+            // Check path is safe (no collisions)
+            //
+            //  This works by essentially finding the starting point for the path and walking along that path to check
+            //  if each tile is open.
+            //  NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only 1 walk)
+            ////////////////////////////////////////
+
+            const start   = new Tile(state.tile.x, state.tile.y),   // Start of path (where the player thinks he's located)
+                vert      = (walk.direction === NORTH || walk.direction === SOUTH),
+                positive  = (walk.direction === SOUTH || walk.direction === EAST);
+
+            let walked    = 0,
+                pageI     = null,
+                page      = null,
+                k         = (vert ? state.global.y % Env.pageRealHeight  : state.global.x % Env.pageRealWidth), // k: our local real x/y coordinate
+                kR        = null,                                   // kR: our global real x/y coordinate
+                kT        = (vert ? state.tile.y : state.tile.x),   // kT: our global x/y tile
+                kLT       = (vert ? (kT % Env.pageHeight) : (kT % Env.pageWidth)), // kLT: our local x/y tile
+                safePath  = true;
+
+            // Find the start of path page
+            pageI = parseInt(state.tile.y / Env.pageHeight, 10) * area.pagesPerRow + parseInt(state.tile.x / Env.pageWidth, 10);
+            page  = area.pages[pageI];
+            kR    = k + (vert ? page.y : page.x) * Env.tileSize;
+
+            // Is the first tile in the path within range of the player?
+            if (!area.isTileInRange(start)) {
+                throw Err(`Bad start of path (${start.x}, ${start.y})`);
+            }
+
+
+            // Given k local tile and page, is the tile open?
+            const isSafeTile = (() => {
+
+                let _kPair = null; // if k is X then kPair is Y; and vice-versa
+                if (vert) {
+                    _kPair = state.tile.x % Env.pageWidth;
+                    return (k, page) => !(page.collidables[k] & (1<<_kPair));
+                } else {
+                    _kPair = state.tile.y % Env.pageHeight;
+                    return (k, page) => !(page.collidables[_kPair] & (1<<k));
+                }
+            })();
+
+            const updatePageAndLocalTile = (() => {
+
+                if (vert) {
+                    return (k) => {
+                        if (k < 0) {
+                            k += Env.pageHeight; // At the furthest end of the previous page
+                            pageI -= area.pagesPerRow;
+                            page = area.pages[pageI];
+                            return k;
+                        } else if (k > Env.pageHeight) {
+                            k = k % Env.pageHeight;
+                            pageI += area.pagesPerRow;
+                            page = area.pages[pageI];
+                            return k;
+                        }
+                        return k;
+                    };
+                } else {
+                    return (k) => {
+                        if (k < 0) {
+                            k += Env.pageWidth; // At the furthest end of the previous page
+                            --pageI;
+                            page = area.pages[pageI];
+                            return k;
+                        } else if (k > Env.pageWidth) {
+                            k = k % Env.pageWidth;
+                            ++pageI;
+                            page = area.pages[pageI];
+                            return k;
+                        }
+                        return k;
+                    };
+                }
+            })();
+
+            if (!isSafeTile(kLT, page)) {
+                throw Err("First tile is not open in path");
+            }
+
+            // Determine the next tile in the path, and confirm that its open
+            // NOTE: This is done separately from the rest of the walk confirmation process since the next tile could be
+            // a recalibration. eg. if the user is walking east and then stops and goes west; the start tile will be the
+            // same tile as the next tile
+            if (walk.distance % Env.tileSize !== 0) {
+                const _kTNext = parseInt((kR + (positive ? 1 : -1) * (walk.distance % Env.tileSize)) / Env.tileSize, 10);
+
+                // If the next tile is not the same as the star tile, then this was not a recalibration step.
+                // Process this next tile
+                if (_kTNext !== kT) {
+                    kLT += (_kTNext - kT);
+                    kT = _kTNext;
+                    kLT = updatePageAndLocalTile(kLT);
+                    if (!isSafeTile(kLT, page)) {
+                        throw Err("Recalibration tile is not open");
+                    }
+                }
+                walked += walk.distance % Env.tileSize;
+            }
+
+            // Confirm the rest of the path
+            const multiplier = (positive ? 1 : -1);
+
+            while (walked < walk.distance) {
+                kLT += multiplier;
+                kLT = updatePageAndLocalTile(kLT);
+                if (!isSafeTile(kLT, page)) {
+                    safePath = false;
+                    break;
+                }
+                walked += Env.tileSize;
+            }
+
+            if (walked !== walk.distance) {
+                // Something weird happened in the walk validation
+                throw Err("Bad walk validation!");
+            }
+
+            return safePath;
+        };
+    };
+
+    return Pathfinding;
 });

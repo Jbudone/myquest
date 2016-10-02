@@ -94,21 +94,24 @@
 	</div>
 <script>
 requirejs.config({
-	"baseUrl": "js",
+	"baseUrl": "dist",
 	"paths": {
 		// "jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
 		"jquery": "lib/jquery-2.1.1.min",
 		// "underscore": "//underscorejs.org/underscore",
-		"underscore": "lib/underscore-min",
+		//"underscore": "lib/underscore-min",
+		"lodash": "lib/lodash.min",
 		"bluebird": "lib/bluebird.min"
 	}
 });
 
 
 // Load the main app module to start the app
-require(['jquery','bluebird','underscore','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
+require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
 
 	// TODO: why aren't The or Env global?
+    window['$']=$;
+    window['_']=_;
 	window['The']=The;
 	window['Env']=(new Env());
 	window['Ext']=Ext;

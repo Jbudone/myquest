@@ -1,102 +1,104 @@
-define(['loggable', 'eventful', 'script'], function(Loggable, Eventful, Script){
+define(['loggable', 'eventful', 'script'], (Loggable, Eventful, Script) => {
 
-	var ScriptMgr = function(){
-		extendClass(this).with(Eventful);
-		extendClass(this).with(Loggable);
-		this.setLogGroup('ScriptMgr');
-		this.setLogPrefix('(ScriptMgr) ');
+    const ScriptMgr = function() {
 
-		var Base = new Script();
-		Base.parent = this;
+        extendClass(this).with(Eventful);
+        extendClass(this).with(Loggable);
 
-		this.buildScript = function(scriptData){
-			var script = new scriptData.script();
-			for (var componentID in scriptData.components) {
-				script.components[componentID] = scriptData.components[componentID];
-			}
+        this.setLogGroup('ScriptMgr');
+        this.setLogPrefix('ScriptMgr');
 
-			return new Script(script);
-		};
+        const Base = new Script();
+        Base.parent = this;
 
-		// Build script-tree
-		for (var scriptKey in Resources.scripts) {
-			var scriptRes = Resources.scripts[scriptKey];
-			if (!scriptRes.script) continue;
+        this.buildScript = (scriptData) => {
+            const script = new scriptData.script();
+            for (const componentID in scriptData.components) {
+                script.components[componentID] = scriptData.components[componentID];
+            }
 
-			var _script   = this.buildScript(scriptRes),
-				hookInto  = _script._script._hookInto;
+            return new Script(script);
+        };
 
-			if (hookInto == HOOK_INTO_MAP) {
+        // Build script-tree
+        for (const scriptKey in Resources.scripts) {
+            const scriptRes = Resources.scripts[scriptKey];
+            if (!scriptRes.script) continue;
 
-				if (Env.isServer) {
-					for (var mapID in The.scripting.world.maps) {
-						var script = this.buildScript(scriptRes);
-						script.hookInto = The.scripting.world.maps[mapID];
-						Base.addScript(script);
-					}
-				} else {
-					_script.hookInto = The.scripting.map;
-					Base.addScript(_script);
-				}
+            const _script = this.buildScript(scriptRes),
+                hookInto  = _script._script._hookInto;
 
-			} else {
-				Base.addScript(_script);
-			}
+            if (hookInto === HOOK_INTO_MAP) {
 
-		}
+                if (Env.isServer) {
+                    for (const areaID in The.scripting.world.areas) {
+                        const script = this.buildScript(scriptRes);
+                        script.hookInto = The.scripting.world.areas[areaID];
+                        Base.addScript(script);
+                    }
+                } else {
+                    _script.hookInto = The.scripting.area;
+                    Base.addScript(_script);
+                }
 
-		this.step = function(time){
-			this.handlePendingEvents();
-		};
+            } else {
+                Base.addScript(_script);
+            }
 
+        }
 
-		// Allow base script to subscribe to the ScriptMgr
-		// We will listen to the (obj,id) and use Base script's callback
-		this.subscriptions = {};
-		this.subscribe = function(obj, id, script, callback){
-			// Are we already listening to (obj,id) ?
-			if (this.subscriptions[id]) {
-				var subID = this.subscriptions[id];
-				for (var i=0; i<subID.length; ++i) {
-					if (subID[i] == obj) {
-						// Base is already listening to this (obj,id)!
-						this.Log("Base is trying to listen to the same (obj,id) twice!", LOG_ERROR);
-						return false;
-					}
-				}
-			}
-
-			// add to subscription list
-			if (!this.subscriptions[id]) this.subscriptions[id] = [];
-			this.subscriptions[id] = script;
-			this.listenTo(obj, id, callback);
-		};
+        this.step = (time) => {
+            this.handlePendingEvents();
+        };
 
 
-		this.unsubscribe = function(obj, id, script){
-			// TODO: support id==null (all id's on obj)
-			if (!this.subscriptions[id]) return;
-			var subID = this.subscriptions[id];
-			for (var i=0; i<subID.length; ++i) {
-				if (subID[i] == obj) {
-					subID.splice(i, 1);
-					break;
-				}
-			}
+        // Allow base script to subscribe to the ScriptMgr
+        // We will listen to the (obj,id) and use Base script's callback
+        this.subscriptions = {};
+        this.subscribe = (obj, id, script, callback) => {
+            // Are we already listening to (obj,id) ?
+            if (this.subscriptions[id]) {
+                const subID = this.subscriptions[id];
+                for (let i = 0; i < subID.length; ++i) {
+                    if (subID[i] === obj) {
+                        // Base is already listening to this (obj,id)!
+                        this.Log("Base is trying to listen to the same (obj,id) twice!", LOG_ERROR);
+                        return false;
+                    }
+                }
+            }
 
-			this.stopListeningTo(obj, id);
-		};
+            // add to subscription list
+            if (!this.subscriptions[id]) this.subscriptions[id] = [];
+            this.subscriptions[id] = script;
+            this.listenTo(obj, id, callback);
+            return true;
+        };
 
-		this.unload = function(){
-			Base.unload();
-			delete Base;
 
-			this.unloadListener();
-		};
+        this.unsubscribe = (obj, id, script) => {
+            // TODO: support id==null (all id's on obj)
+            if (!this.subscriptions[id]) return;
+            const subID = this.subscriptions[id];
+            for (let i = 0; i < subID.length; ++i) {
+                if (subID[i] === obj) {
+                    subID.splice(i, 1);
+                    break;
+                }
+            }
 
-		// Startup
-		Base.initialize();
-	};
+            this.stopListeningTo(obj, id);
+        };
 
-	return ScriptMgr;
+        this.unload = () => {
+            Base.unload();
+
+            this.unloadListener();
+        };
+
+        // Startup
+        Base.initialize();
+    };
+
+    return ScriptMgr;
 });

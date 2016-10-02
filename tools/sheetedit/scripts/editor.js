@@ -45,11 +45,13 @@ var Editor = function(container, sheet){
 		},
 		objects: {
 			container: $('.objects_list')
-		},
-		setCollision: $('#ctrl-collision'),
-		setFloating: $('#ctrl-floating'),
-		setObjects: $('#ctrl-objects')
+        },
+        setObjects: $('#ctrl-objects')
 	};
+
+    for (var tileType in assetDetails.tileTypes) {
+        view_tilesheet.components['set'+tileType] = $('#ctrl-'+tileType);
+    }
 
 
 	view_tilesheet.components.tilesize.input[0].oninput = null;
@@ -95,23 +97,17 @@ var Editor = function(container, sheet){
 		view_tilesheet.modified();
 	};
 
-	view_tilesheet.components.setCollision[0].onclick = null;
-	view_tilesheet.components.setCollision[0].onclick = function(){
-		sheet.setMode('collision');
-		return false;
-	};
+    view_tilesheet.components.setObjects[0].onclick = function(){
+        sheet.setMode('objects');
+        return false;
+    };
 
-	view_tilesheet.components.setFloating[0].onclick = null;
-	view_tilesheet.components.setFloating[0].onclick = function(){
-		sheet.setMode('floating');
-		return false;
-	};
-
-	view_tilesheet.components.setObjects[0].onclick = null;
-	view_tilesheet.components.setObjects[0].onclick = function(){
-		sheet.setMode('objects');
-		return false;
-	};
+    for (var tileType in assetDetails.tileTypes) {
+        view_tilesheet.components['set'+tileType][0].onclick = function(){
+            sheet.setMode(tileType);
+            return false;
+        };
+    }
 
 
 	// ------------ Loading/Unloading ------------ //
@@ -120,9 +116,11 @@ var Editor = function(container, sheet){
 
 		this.data = data;
 		if (!data.data) data.data = {};
-		if (!data.data.objects) data.data.objects = [];
-		if (!data.data.floating) data.data.floating = [];
-		if (!data.data.collisions) data.data.collisions = [];
+        if (!data.data.objects) data.data.objects = [];
+
+        for (var tileType in assetDetails.tileTypes) {
+            if (!(tileType in data.data)) data.data[tileType] = [];
+        }
 
 		view_tilesheet.components.id.val( data.id );
 		view_tilesheet.components.tilesize.input.val( parseInt(data.tilesize) );
@@ -163,25 +161,16 @@ var Editor = function(container, sheet){
 						addObject(itemName + idNum, _object);
 					}
 				}
-			} else if (modified.type == 'floating') {
-				var _floats = [],
-					floats = modified.selection.tiles;
-				for (var i=0; i<floats.length; ++i) {
-					var float = floats[i],
-						_float = float.y * parseInt(view_tilesheet.data.columns) + float.x;
-					_floats.push( _float );
+            } else if (modified.type in assetDetails.tileTypes) {
+                let _tiles = [],
+                    tiles = modified.selection.tiles;
+				for (var i=0; i<tiles.length; ++i) {
+					let tile = tiles[i],
+						_tile = tile.y * parseInt(view_tilesheet.data.columns) + tile.x;
+					_tiles.push(_tile);
 				}
-				view_tilesheet.data.data.floating = _floats;
-			} else if (modified.type == 'collision') {
-				var _collisions = [],
-					collisions = modified.selection.tiles;
-				for (var i=0; i<collisions.length; ++i) {
-					var collision = collisions[i],
-						_collision = collision.y * parseInt(view_tilesheet.data.columns) + collision.x;
-					_collisions.push( _collision );
-				}
-				view_tilesheet.data.data.collisions = _collisions;
-			}
+				view_tilesheet.data.data[tileType] = _tiles;
+            }
 			view_tilesheet.modified();
 		};
 		sheet.onSheetChanged = function(src){

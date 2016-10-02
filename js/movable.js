@@ -1,367 +1,524 @@
-define(['entity','animable','dynamic'], function(Entity, Animable, Dynamic) {
 
-	var Movable = function(spriteID, page, params) {
-		console.log("new Movable("+spriteID+")");
-		this.base = Entity;
-		this.base(spriteID, page);
+// Movable
+define(
+    [
+        'entity', 'animable', 'dynamic'
+    ],
+    (
+        Entity, Animable, Dynamic
+    ) => {
 
-		extendClass(this).with(Dynamic);
+        const Movable = function(spriteID, page, params) {
 
-		// Position will always accurately reflect the movables position in the map. It is split between tile
-		// and real coordinates. Since the movable could be part way between two tiles, it makes sense to
-		// consider its real coordinates (x=tile.x*tileSize) and its tile coordinates. Note that these are
-		// both global coordinates, and do not consider the offset within the page (local coordinates).
-		//
-		// Tile is the global discrete tile position within the map. Global is a continuous value (eg. as you
-		// move between tile 0 and tile 1, your global.x goes from (tileSize/2) to ((1+tileSize)/2))
-		//
-		// This variable should be updated with updatePosition() immediately after the movable has moved
-		// somewhere (eg. moving, zoning, respawning)
-		//
-		// Local coordinates used to be included within the position, but quickly caused problems. I've
-		// removed local coordinates and will calculate those on the fly where necessary. This can be done by,
-		// 	local.x = global.x % (Env.tileSize*Env.pageWidth)
-		// 	local.y = global.y % (Env.tileSize*Env.pageHeight)
-		// 	page.x  = parseInt(global.x / (Env.tileSize*Env.pageWidth))
-		// 	page.y  = parseInt(global.y / (Env.tileSize*Env.pageHeight))
-		// 	pageI   = page.y * map.pagesPerRow + page.x
-		//
-		// local.x and local.y may be outside of the current page. Since a movable may be walking between two
-		// tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a
-		// time, that current tile is the one which is rounded from the global position. In other words, take
-		// the global position and round it to the nearest tile. So if a movable is currently standing on a
-		// tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less
-		// than 0.
-		//
-		// NOTE: JS uses float64 numbers, so our safe range for numbers are Number.MAX_SAFE_INTEGER == 2^53.
-		// This should be more than enough for even the largest maps
-		//
-		this.position = {
-			tile:   { x: 0, y: 0 },
-			global: { x: 0, y: 0 }
-		};
+            Entity.call(this, spriteID, page);
 
-		this.updatePosition = function(globalX, globalY){
+            extendClass(this).with(Dynamic);
 
-			if (globalX !== undefined && globalX !== undefined) {
-				this.position.global.x = globalX;
-				this.position.global.y = globalY;
-			}
+            // Position will always accurately reflect the movables position in the area. It is split between tile
+            // and real coordinates. Since the movable could be part way between two tiles, it makes sense to
+            // consider its real coordinates (x=tile.x*tileSize) and its tile coordinates. Note that these are
+            // both global coordinates, and do not consider the offset within the page (local coordinates).
+            //
+            // Tile is the global discrete tile position within the area. Global is a continuous value (eg. as you
+            // move between tile 0 and tile 1, your global.x goes from (tileSize/2) to ((1+tileSize)/2))
+            //
+            // This variable should be updated with updatePosition() immediately after the movable has moved
+            // somewhere (eg. moving, zoning, respawning)
+            //
+            // Local coordinates used to be included within the position, but quickly caused problems. I've
+            // removed local coordinates and will calculate those on the fly where necessary. This can be done by,
+            //  local.x = global.x % (Env.tileSize*Env.pageWidth)
+            //  local.y = global.y % (Env.tileSize*Env.pageHeight)
+            //  page.x  = parseInt(global.x / (Env.tileSize*Env.pageWidth))
+            //  page.y  = parseInt(global.y / (Env.tileSize*Env.pageHeight))
+            //  pageI   = page.y * area.pagesPerRow + page.x
+            //
+            // local.x and local.y may be outside of the current page. Since a movable may be walking between two
+            // tiles which are on adjacent pages, and the movable is only considered to be standing on 1 tile at a
+            // time, that current tile is the one which is rounded from the global position. In other words, take
+            // the global position and round it to the nearest tile. So if a movable is currently standing on a
+            // tile at the top of the page (y==0), but walking north to the next tile, his local.y will be less
+            // than 0.
+            //
+            // NOTE: JS uses float64 numbers, so our safe range for numbers are Number.MAX_SAFE_INTEGER == 2^53.
+            // This should be more than enough for even the largest areas
+            //
+            this.position = {
+                tile:   { x: 0, y: 0 },
+                global: { x: 0, y: 0 }
+            };
 
-			this.position.tile.x = parseInt(this.position.global.x / Env.tileSize);
-			this.position.tile.y = parseInt(this.position.global.y / Env.tileSize);
+            this.updatePosition = (globalX, globalY) => {
 
-			if (!_.isFinite(this.position.tile.x) || !_.isFinite(this.position.tile.y)) {
-				throw new Error("Bad tile!");
-			}
-		};
+                if (globalX !== undefined && globalX !== undefined) {
+                    this.position.global.x = globalX;
+                    this.position.global.y = globalY;
+                }
 
+                this.position.tile.x = parseInt(this.position.global.x * Env.invTileSize, 10);
+                this.position.tile.y = parseInt(this.position.global.y * Env.invTileSize, 10);
 
-		// Set any predefined parameters for the movable
-		if (params) {
-			for (var param in params) {
-				this[param] = params[param];
-
-				if (param == 'position') {
-					if (!this.position.tile)   this.position.tile = {};
-					if (!this.position.global) this.position.global = {};
-					this.updatePosition();
-				}
-			}
-		}
-
-		Ext.extend(this,'movable');
-
-		this.sprite=(new Animable(this.npc.sheet)); // FIXME: should not need animable for server
-
-		this.moving    = false;
-		this.direction = null;
-		this.speed     = 50;
-		this.moveSpeed = this.npc.speed;
-		this.lastMoved = now();
-		this.path      = null;
-		this.zoning    = false;
-
-		this.physicalState = new State(STATE_ALIVE);
+                if (!_.isFinite(this.position.tile.x) || !_.isFinite(this.position.tile.y)) {
+                    throw Err("Bad tile!");
+                }
+            };
 
 
-		this.lastStep=0;
-		this.faceDirection = function(direction){
-			if (this.direction != direction) {
-				this.direction = direction;
-				var dir="";
-				     if (direction == NORTH) dir = "up";
-				else if (direction == SOUTH) dir = "down";
-				else if (direction == WEST)  dir = "left";
-				else if (direction == EAST)  dir = "right";
-				if (dir) {
-					this.sprite.idle('walk_'+dir);
-				}
-			}
-		};
+            // Set any predefined parameters for the movable
+            if (params) {
+                for (const param in params) {
+                    this[param] = params[param];
+
+                    if (param === 'position') {
+                        if (!this.position.tile)   this.position.tile = {};
+                        if (!this.position.global) this.position.global = {};
+                        this.updatePosition();
+                    }
+                }
+            }
+
+            Ext.extend(this,'movable');
+
+            // Path consists of an array of walks where each walk is a direction/distance pair. Note that walks
+            // can be split up if they're too large so that we avoid sending too much information. The goal is to
+            // avoid cheating by minimizing how much path information we send to the client.
+            //
+            // Any time we begin walking along a path, and periodically throughout our walk along the path, an
+            // event is triggered to inform the server that the path needs to be sent
+            // EVT_PATH_PARTIAL_PROGRESS:   - Initial walk (0%) when beginning a new path
+            //                              - X steps since the last EVT_PATH_PARTIAL_PROGRESS sent
+            //
+            //
+            // Since paths are relayed to the clients we need to be able to determine if the received path is the
+            // same as our active path. This can happen if the user moves somewhere, his path is sent to the
+            // server and then broadcasted to everyone (including himself). We need to be able to discard the same
+            // received path. Also note that paths received from the server are only a subset of the entire path
+            // (to avoid cheating), so its not enough to compare the walks of the path. For this reason we need to
+            // keep track of the path id. We also need to consider the fact that paths can be created on the
+            // server and sent to the same user who may have already started a new path. Consider the user
+            // clicking to move somewhere directly before receiving a new path from the server which automatically
+            // moves him into combat. In this case both paths could have the same id but are completely different.
+            // Because of this we need to distinguish the origin of the path by its flag.
+            //
+            // lastPathId: A keyval object where the key is the path flag and the value is the last added path
+            // with that flag type. Note that this can wrap around as well.
+            this.path       = null;
+            this.lastPathId = {};
+
+            this.hasHadPath = (path) => {
+                if (this.lastPathId[path.flag]) {
+                    // Note that lastPathId can wraparound
+                    const dist   = this.lastPathId[path.flag] - path.id,
+                        TOO_MUCH = 1000; // FIXME: Env, and find a reasonable number
+                    if (dist >= 0 && dist < TOO_MUCH) {
+                        return true;
+                    } else if (dist < 0 && (this.lastPathId[path.flag] + (Number.MAX_SAFE_INTEGER - path.id)) < TOO_MUCH) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            this.sprite = (new Animable(this.npc.sheet)); // FIXME: should not need animable for server
+
+            this.moving       = false;
+            this.direction    = null;
+            this.speed        = 50;
+            this.moveSpeed    = this.npc.speed;
+            this.invMoveSpeed = 1 / this.npc.speed;
+            this.lastMoved    = now();
+            this.zoning       = false;
 
 
-		this.step=_.wrap(this.step,function(step,time){
+            // Debugging information
+            // This contains stuff like rendering hints (eg. if I'm a client, what does the server think my position is?)
+            // FIXME: Find a better way to store this
+            this.debugging = {};
 
-			if (this.physicalState.state !== STATE_ALIVE) {
-				this.handlePendingEvents();
-				return;
-			}
-			var stepResults = step.apply(this, [time]); // TODO: generalize this wrap/apply operation for basic inheritance
+            this.physicalState = new State(STATE_ALIVE);
 
-			var timeDelta = time - this.lastMoved;
-var totalStepsTaken = 0,
-	oldX = this.position.global.x,
-	oldY = this.position.global.y,
-	oldLastMoved = this.lastMoved,
-	totalDeltaTaken = 0;
-
-			// Have we zoned? Disallow stepping page-specific things
-			if (!this.page) {
-				if (this.path && _.isFunction(this.path.onFailed)) this.path.onFailed();
-				this.path = null;
-			}
-
-			if (this.path) {
-				// player step checks path, decrements from walk steps
-
-				var delta = timeDelta;
-				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
-				while (delta>=this.moveSpeed && this.path) {
-
-					if (!_.isArray(this.path.walks) ||
-						this.path.walks.length === 0) {
-
-						if (_.isFunction(this.path.onFailed)) this.path.onFailed();
-						this.path = null;
-						throw new Error("Path of length 0 walks");
-					}
-
-					var path              = this.path,
-						walk              = path.walks[0],
-						steps             = (walk.distance - walk.walked),
-						deltaSteps        = Math.floor(delta/this.moveSpeed),
-						deltaTaken        = null,
-						direction         = walk.direction,
-						posK              = (walk.direction==NORTH||walk.direction==SOUTH?this.position.global.y:this.position.global.x),
-						finishedWalk      = false,
-						hasZoned		  = false;
-
-					if (deltaSteps > steps) {
-						// TODO: change lastMoved to when this move WOULD have finished to satisfy steps
-						deltaSteps = steps;
-						deltaTaken = deltaSteps * this.moveSpeed;
-						delta -= deltaTaken;
-if ((Env.isServer && this.playerID) || (!Env.isServer && The.player == this)) {
-	// console.log('> steps: '+deltaTaken);
-}
-					} else {
-						deltaTaken = this.moveSpeed * deltaSteps;
-						delta -= deltaTaken;
-if ((Env.isServer && this.playerID) || (!Env.isServer && The.player == this)) {
-	// console.log('IN WALK: '+deltaTaken);
-}
-					}
-totalStepsTaken += deltaSteps;
-
-					if (steps === 0) {
-						// Finished walk
-						finishedWalk = true;
-						this.triggerEvent(EVT_FINISHED_WALK, direction);
-						path.walks.splice(0,1);
-						if (path.walks.length === 0) {
-							// Finished path
-							this.triggerEvent(EVT_FINISHED_PATH, path.id);
-							if (_.isFunction(this.path.onFinished)) this.path.onFinished();
-							this.path = null;
-
-							// Finished moving
-							this.moving = false; // TODO: necessary?
-							this.sprite.idle();
-
-							this.triggerEvent(EVT_FINISHED_MOVING);
-							this.lastMoved += delta;
-// console.log('HERE');
-totalDeltaTaken += delta;
-							break;
-						} else {
-							this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
-						}
-					}
-
-if (walk.walked + deltaSteps > walk.distance) throw new Error("THIS SHOULD NEVER HAPPEN!");
-					walk.walked = Math.min(walk.distance, walk.walked + deltaSteps);
-
-					if (!walk.started) {
-						walk.started = true;
-						this.direction = direction;
-						     if (direction==EAST)       this.sprite.animate('walk_right', true);
-						else if (direction==WEST)       this.sprite.animate('walk_left', true);
-						else if (direction==SOUTH)      this.sprite.animate('walk_down', true);
-						else if (direction==NORTH)      this.sprite.animate('walk_up', true);
-						
-					}
-
-					if (direction==EAST || direction==SOUTH) posK += deltaSteps;
-					else                                     posK -= deltaSteps;
+            this.lastStep = 0;
+            this.faceDirection = (direction) => {
+                if (this.direction != direction) {
+                    this.direction = direction;
+                    let dir="";
+                    if (direction == NORTH) dir = "up";
+                    else if (direction == SOUTH) dir = "down";
+                    else if (direction == WEST)  dir = "left";
+                    else if (direction == EAST)  dir = "right";
+                    if (dir) {
+                        this.sprite.idle('walk_'+dir);
+                    }
+                }
+            };
 
 
-					// Movement calculation
-					//
-					// tile is a real number (not an int). We can compare tile to our current tile to
-					// determine where we're moving. If tile rounds down to less than our current tile, we're
-					// moving down; likewise if tile rounds up to more than our current tile, we're moving up.
-					// Note that these are the only two possible rounding cases. If tile rounded down and
-					// rounded are the same, and not equal to our current tile, then we've finished moving to
-					// this new tile
-					var tile = posK / Env.tileSize;
-					if (direction==NORTH || direction==SOUTH) {
-						if (Math.floor(tile) != this.position.tile.y || Math.ceil(tile) != this.position.tile.y) {
-							if ((direction==NORTH && tile < this.position.tile.y) ||
-								(direction==SOUTH && tile >= (this.position.tile.y+1))) {
-								// Moved to new tile
-								this.updatePosition(this.position.global.x, posK);
-								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
-							} else {
-								// Moving to new tile
-								this.updatePosition(this.position.global.x, posK);
-								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
-							}
-						} else {
-							// Moved back to center of current tile (changed direction of path)
-							this.position.global.y = posK;
-						}
-					} else {
-						if (Math.floor(tile) != this.position.tile.x || Math.ceil(tile) != this.position.tile.x) {
-							if ((direction==WEST && tile < this.position.tile.x) ||
-								(direction==EAST && tile >= (this.position.tile.x+1))) {
-								// FIXME: use >= (this.position.tile.x+0.5) to allow reaching new tile while walking to it
-								// 			NOTE: need to consider walking west and reaching next tile too early
+            this.step = _.wrap(this.step, (step, time) => {
 
-								// Moved to new tile
-								this.updatePosition(posK, this.position.global.y);
-								this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
-							} else {
-								// Moving to new tile
-								this.updatePosition(posK, this.position.global.y);
-								this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
-							}
-						} else {
-							// Moved back to center of current tile (changed direction of path)
-							this.position.global.x = posK;
-						}
-					}
+                if (this.physicalState.state !== STATE_ALIVE) {
+                    this.handlePendingEvents();
+                    return;
+                }
 
+                const stepResults = step.apply(this, [time]), // TODO: generalize this wrap/apply operation for basic inheritance
+                    timeDelta = time - this.lastMoved;
 
-					hasZoned = this.hasOwnProperty('isZoning');
-					if (!hasZoned) {
+                // Have we zoned? Disallow stepping page-specific things
+                if (!this.page) {
+                    if (this.path) {
+                        if (_.isFunction(this.path.onFailed)) this.path.onFailed();
+                        this.path = null;
+                    }
+                }
 
-						// Movable has finished the walk. This is only a final step
-						// to calibrate the user to the center of the tile
-						if (finishedWalk) {
-							// TODO: might need to change lastMoved to reflect this recalibration
-							this.position.global.x = Env.tileSize*Math.round(this.position.global.x/Env.tileSize);
-							this.position.global.y = Env.tileSize*Math.round(this.position.global.y/Env.tileSize);
-						}
-						this.updatePosition();
-					
-					}
+                if (this.path) {
+                    // player step checks path, decrements from walk steps
 
+                    let delta = timeDelta;
+                    if (this.hasOwnProperty('isZoning')) delete this.isZoning;
 
-totalDeltaTaken += deltaTaken;
-					this.lastMoved += deltaTaken;
-				}
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    // TODO: try determining how many tiles we've moved based off delta, then find the tile that
+                    // we end up at, then trigger WALKED_TO_TILE for each tile from next position to this
+                    // position (only have to do these calculations once)
+                    //  Server could be updated less frequently?  OR  only update pages when their delta
+                    //  accumulates passed a threshold
+                    /*
+                     if (Env.isServer) {
+                     if (delta >= (this.moveSpeed * Env.tileSize)) {
+                     var tilesWalked = [],
+                     path = this.path,
+                     walk = path.walks[0],
+                     numTiles = Math.floor(delta / (this.moveSpeed * Env.tileSize));
 
-				if (this.hasOwnProperty('isZoning')) delete this.isZoning;
+                     while (numTiles > 0) {
 
-if ((Env.isServer && this.playerID) || (Env.isBot && The.player == this)) {
-	// console.log(chalk.underline.bold.green((Math.floor(now()/100) % 10000)+":  Player position: ("+this.position.global.x+", "+this.position.global.y+")    In ["+(time - oldLastMoved)+"] ticks I've taken ["+(totalDeltaTaken)+"] delta and ["+totalStepsTaken+"] steps and WAS here ("+oldX+", "+oldY+") I've left ["+(time-this.lastMoved)+"] delta for next time"));
-}
-			} else {
-if ((Env.isServer && this.playerID) || (Env.isBot && The.player == this)) {
-	// console.log(chalk.underline.bold.green((Math.floor(now()/100) % 10000)+":  Player("+this.playerID+") wasted some time ("+(time-this.lastMoved)+")"));
-}
-				this.lastMoved = time;
-			}
-			this.sprite.step(time);
+                     if (++walk.walked >= walk.distance) {
+                     this.triggerEvent(EVT_FINISHED_WALK, walk.direction);
+                     path.walks.shift();
+
+                     if (path.walks.length == 0) {
+                     this.triggerEvent(EVT_FINISHED_PATH, path.id);
+                     if (_.isFunction(this.path.onFinished)) this.path.onFinished();
+                     this.path = null;
+
+                    // Finished moving
+                    this.moving = false; // TODO: necessary?
+                    this.sprite.idle();
+
+                    this.triggerEvent(EVT_FINISHED_MOVING);
+                    break;
+                    }
+
+                    walk = path.walks[0];
+                    this.triggerEvent(EVT_PREPARING_WALK, walk);
+                    }
+                    }
+                    }
+                    } else {
+                    */
+
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-			var dynamicHandler = this.handler('step');
-			if (dynamicHandler) {
-				dynamicHandler.call(timeDelta);
-			}
+                    // Are we just beginning a new walk?
+                    // We need to send this immediately since we could end up zoning to another page before we get a chance
+                    // to send the path, and never end up sending that path to players who could only view us in our
+                    // previous page
+                    let sentInitialPath = false;
+                    if (this.path.lastMarkedWalked === 0) {
+                        this.triggerEvent(EVT_PATH_PARTIAL_PROGRESS, this.path);
+                        sentInitialPath = true;
+                    }
 
-			return stepResults;
-		});
-		
-		this.addPath=function(path, priority){
+                    while (delta >= this.moveSpeed && this.path && !this.path.finished()) {
 
+                        if (!_.isArray(this.path.walks) ||
+                            this.path.walks.length === 0) {
 
-			// add/replace path
-			// TODO: implement priority better?
+                            if (_.isFunction(this.path.onFailed)) this.path.onFailed();
+                            this.path = null;
+                            throw Err("Path of length 0 walks");
+                        }
 
-			if (this.path && _.isFunction(this.path.onFailed)) {
-				this.path.onFailed();
-			}
+                        const path    = this.path,
+                            walk      = path.walks[path.walkIndex],
+                            steps     = (walk.distance - walk.walked),
+                            direction = walk.direction;
 
-			if (this.path && priority) {
-				this.path = path; // replace current path with this
-				this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
-				return;
-			}
-
-			for (var j=0; j<path.walks.length; ++j) {
-				path.walks[j].started = false; // in case walk has already started on server
-				path.walks[j].steps   = 0;
-			}
-
-
-			this.path = path; // replace current path with this
-			this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
-			var mov = this,
-				logWalk = function(walk) {
-					var dir = null;
-					     if (walk.direction == NORTH) dir = "NORTH";
-					else if (walk.direction == SOUTH) dir = "SOUTH";
-					else if (walk.direction == WEST)  dir = "WEST";
-					else if (walk.direction == EAST)  dir = "EAST";
-					console.log("		Walk: "+dir+"  ("+walk.distance+")");
-					if (walk.started) console.log("			WALK ALREADY STARTED!!!");
-				}, logPath = function(path) {
-					console.log("	Path:");
-					console.log("		FROM ("+mov.position.global.y+","+mov.position.global.x+")");
-					for (var j=0; j<path.walks.length; ++j) {
-						logWalk(path.walks[j]);
-					}
-				}
-
-			return ({finished:function(success, failed){
-				if (_.isFunction(success)) this.path.onFinished = success;
-				if (_.isFunction(failed))  this.path.onFailed   = failed;
-			}.bind(this)});
-		};
+                        let deltaSteps   = Math.floor(delta * this.invMoveSpeed),
+                            deltaTaken   = null,
+                            posK         = (walk.direction==NORTH||walk.direction==SOUTH?this.position.global.y:this.position.global.x),
+                            finishedWalk = false,
+                            hasZoned     = false;
 
 
-		this.directionOfTarget = function(target){
-			var myY          = this.position.global.y,
-				myX          = this.position.global.x,
-				yourY        = target.position.global.y,
-				yourX        = target.position.global.x,
-				direction    = null;
+                        // Are we able to move more than necessary for the current walk?
+                        if (deltaSteps > steps) {
+                            // TODO: change lastMoved to when this move WOULD have finished to satisfy steps
+                            deltaSteps = steps;
+                        }
 
-			     if (myY > yourY) direction = NORTH;
-			else if (myY < yourY) direction = SOUTH;
-			else if (myX > yourX) direction = WEST;
-			else if (myX < yourX) direction = EAST;
-			return direction;
-		};
+                        // How much movement are we making this iteration
+                        deltaTaken = deltaSteps * this.moveSpeed;
+                        delta -= deltaTaken;
 
-		this.unload = function(){
-			this.unloadListener();
-			Log("Unloading movable..");
-		};
-	};
+                        // Movement direction
+                        if (direction == EAST || direction == SOUTH) posK += deltaSteps;
+                        else                                         posK -= deltaSteps;
+
+                        // Are we just beginning this next walk?
+                        if (!walk.started) {
+                            walk.started = true;
+                            this.direction = direction;
+                            if (!Env.isServer) {
+                                     if (direction==EAST)       this.sprite.animate('walk_right', true);
+                                else if (direction==WEST)       this.sprite.animate('walk_left', true);
+                                else if (direction==SOUTH)      this.sprite.animate('walk_down', true);
+                                else if (direction==NORTH)      this.sprite.animate('walk_up', true);
+                            }
+
+                            this.triggerEvent(EVT_PREPARING_WALK, walk);
+                        }
+
+                        // Keep track of our progress in the path/walk
+                        walk.walked = Math.min(walk.distance, walk.walked + deltaSteps);
+                        path.walked += deltaSteps;
+
+                        // Finished this walk?
+                        if (walk.walked >= walk.distance) {
+
+                            finishedWalk = true;
+                            this.triggerEvent(EVT_FINISHED_WALK, direction);
+
+                            // Finished the path?
+                            if (path.walkIndex >= (path.walks.length - 1)) {
+                                this.lastMoved += delta;
+                            } else {
+                                ++path.walkIndex;
+                            }
+                        }
 
 
-	return Movable;
-});
+                        // Movement calculation
+                        //
+                        // tile is a real number (not an int). We can compare tile to our current tile to
+                        // determine where we're moving. If tile rounds down to less than our current tile, we're
+                        // moving down; likewise if tile rounds up to more than our current tile, we're moving up.
+                        // Note that these are the only two possible rounding cases. If tile rounded down and
+                        // rounded are the same, and not equal to our current tile, then we've finished moving to
+                        // this new tile
+                        const tile = posK * Env.invTileSize;
+                        if (direction==NORTH || direction==SOUTH) {
+                            if (Math.floor(tile) !== this.position.tile.y || Math.ceil(tile) !== this.position.tile.y) {
+                                if ((direction==NORTH && tile < this.position.tile.y) ||
+                                    (direction==SOUTH && tile >= (this.position.tile.y + 1))) {
+                                    // Moved to new tile
+                                    this.updatePosition(this.position.global.x, posK);
+                                    this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+                                } else {
+                                    // Moving to new tile
+                                    this.updatePosition(this.position.global.x, posK);
+                                    this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+                                }
+                            } else {
+                                // Moved back to center of current tile (changed direction of path)
+                                this.position.global.y = posK;
+                            }
+                        } else {
+                            if (Math.floor(tile) !== this.position.tile.x || Math.ceil(tile) !== this.position.tile.x) {
+                                if ((direction==WEST && tile < this.position.tile.x) ||
+                                    (direction==EAST && tile >= (this.position.tile.x + 1))) {
+                                    // FIXME: use >= (this.position.tile.x+0.5) to allow reaching new tile while walking to it
+                                    //          NOTE: need to consider walking west and reaching next tile too early
+
+                                    // Moved to new tile
+                                    this.updatePosition(posK, this.position.global.y);
+                                    this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+                                } else {
+                                    // Moving to new tile
+                                    this.updatePosition(posK, this.position.global.y);
+                                    this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
+                                }
+                            } else {
+                                // Moved back to center of current tile (changed direction of path)
+                                this.position.global.x = posK;
+                            }
+                        }
+
+
+                        hasZoned = this.hasOwnProperty('isZoning');
+                        if (!hasZoned) {
+
+                            // Movable has finished the walk. This is only a final step to calibrate the user to the
+                            // center of the tile
+                            if (finishedWalk) {
+                                // TODO: might need to change lastMoved to reflect this recalibration
+                                this.position.global.x = Env.tileSize * Math.round(this.position.global.x * Env.invTileSize);
+                                this.position.global.y = Env.tileSize * Math.round(this.position.global.y * Env.invTileSize);
+                            }
+                            this.updatePosition();
+
+                        }
+
+                        this.lastMoved += deltaTaken;
+                    }
+
+                    // We may have zoned and thus lost our path
+                    if (this.path) {
+
+                        // Have we moved enough to trigger some partial progress through the path?
+                        // FIXME: stepsWalked in Env
+                        if ((this.path.lastMarkedWalked === 0) ||  // Started the path
+                            (this.path.lastMarkedWalked - this.path.walked > 10)) { // Made some more notable progress through the path
+
+                            // Don't send the partial path progress if we've already sent this before our path handling
+                            if (!sentInitialPath) {
+                                this.triggerEvent(EVT_PATH_PARTIAL_PROGRESS, this.path);
+                            }
+                        }
+
+
+                        // Have we finished the entire path?
+                        // Properly clear the path and trigger the path progress
+                        if (this.path.finished()) {
+                            // FIXME
+                            this.triggerEvent(EVT_FINISHED_PATH, this.path.id);
+                            if (_.isFunction(this.path.onFinished)) this.path.onFinished();
+                            this.path = null;
+
+                            // Finished moving
+                            this.moving = false; // TODO: necessary?
+                            this.sprite.idle();
+
+                            this.triggerEvent(EVT_FINISHED_MOVING);
+                        }
+
+                    }
+
+                    if (this.hasOwnProperty('isZoning')) delete this.isZoning;
+
+
+                } else {
+                    this.lastMoved = time;
+                }
+                this.sprite.step(time);
+
+
+                const dynamicHandler = this.handler('step');
+                if (dynamicHandler) {
+                    dynamicHandler.call(timeDelta);
+                }
+
+                return stepResults;
+            });
+
+            this.pathToStr = () => {
+
+                if (!this.path) {
+                    return "No Path";
+                }
+
+                let str = `(${this.path.id}, ${this.path.flag}): `;
+                this.path.walks.forEach((walk) => {
+                    const walked = walk.walked ? (`, walked: ${walk.walked}`) : "";
+                    str += `{${walk.distance} ${keyStrings[walk.direction]} ${walked}}, `;
+                });
+
+                return str;
+            };
+
+            this.addPath = (path, priority) => {
+
+
+                // add/replace path
+                // TODO: implement priority better?
+
+                // Keep track of this path so that we know we've already added/ran it
+                if (!this.lastPathId[path.flag]) this.lastPathId[path.flag] = 0;
+                if (!path.id) {
+                    path.id = (++this.lastPathId[path.flag]);
+
+                    // Wraparound if necessary
+                    if (path.id > Number.MAX_SAFE_INTEGER) {
+                        path.id = 1;
+                        this.lastPathId[path.flag] = 1;
+                    }
+                } else {
+                    this.lastPathId[path.flag] = path.id;
+                }
+
+                if (path.id === undefined && path.flag === undefined) {
+                    throw Err("Adding path with no id or flag set");
+                }
+
+                Log(`[${this.id}] Adding path {${path.id}, ${path.flag})`, LOG_DEBUG);
+
+
+                if (this.path && _.isFunction(this.path.onFailed)) {
+                    this.path.onFailed();
+                }
+
+                if (this.path && priority) {
+                    this.path = path; // replace current path with this
+                    this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
+                    return null;
+                }
+
+                for (let j = 0; j < path.walks.length; ++j) {
+                    path.walks[j].started = false; // in case walk has already started on server
+                    path.walks[j].steps   = 0;
+                }
+
+
+                this.path = path; // replace current path with this
+                this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
+
+                return {
+                    finished: (success, failed) => {
+                        if (_.isFunction(success)) this.path.onFinished = success;
+                        if (_.isFunction(failed))  this.path.onFailed   = failed;
+                    }
+                };
+            };
+
+            this.cancelPath = () => {
+                if (this.path) {
+                    if (_.isFunction(this.path.onFailed)) {
+                        this.path.onFailed();
+                    }
+
+                    this.triggerEvent(EVT_CANCELLED_PATH, { id: this.path.id, flag: this.path.flag });
+                    this.path = null;
+                    this.sprite.idle();
+                }
+            };
+
+
+            this.directionOfTarget = (target) => {
+                const myY     = this.position.global.y,
+                    myX       = this.position.global.x,
+                    yourY     = target.position.global.y,
+                    yourX     = target.position.global.x;
+
+                let direction = null;
+                     if (myY > yourY) direction = NORTH;
+                else if (myY < yourY) direction = SOUTH;
+                else if (myX > yourX) direction = WEST;
+                else if (myX < yourX) direction = EAST;
+                return direction;
+            };
+
+            this.unload = () => {
+                this.triggerEvent(EVT_UNLOADED);
+                this.unloadListener();
+                Log("Unloading movable..", LOG_DEBUG);
+            };
+        };
+
+        Movable.prototype = Object.create(Entity.prototype);
+        Movable.prototype.constructor = Movable;
+
+        return Movable;
+    });

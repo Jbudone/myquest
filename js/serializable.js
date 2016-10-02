@@ -1,79 +1,79 @@
 
-define(function(){
+define(() => {
 
-	var Serializable = {
-		toJSON:function(){
-			var json={},
-				jsonizeValue = function(val) {
-					var type = typeof val;
-					if (type == 'function') return null;
-					if (val == null) return null;
-					if (val instanceof Array) {
-						var jsonized = [],
-							jsonizedVal = null;
-						for (i=0; i<val.length; ++i) {
-							jsonizedVal = jsonizeValue(val[i]);
-							if (_.isError(jsonizedVal)) return jsonizedVal;
+    const Serializable = {
 
-							jsonized.push( jsonizedVal );
-						}
-						return jsonized;
-					} else if (typeof val == 'object') {
-						if (val.hasOwnProperty('toJSON')) {
-							var json = val.toJSON();
-							return json; // if error then returning error
-						}
-						var jsonized = {},
-							jsonizedVal = null;
-						for (var key in val) {
-							jsonizedVal = jsonizeValue(val[key]);
-							if (_.isError(jsonizedVal)) return jsonizedVal;
+        toJSON() {
+            const json = {};
 
-							jsonized[key] = jsonizedVal;
-						}
-						return jsonized;
-					} else {
-						return val;
-					}
-				},
-				keyVal = null,
-				jsonVal = null;
+            const jsonizeValue = function(val) {
 
-			for (var key in this) {
-				keyVal = this[key];
-				if (typeof keyVal != "function") {
-					jsonVal = jsonizeValue(keyVal);
-					if (_.isError(jsonVal)) return jsonVal;
+                const type = typeof val;
+                if (type === 'function') return null;
+                if (val === null) return null;
+                if (val instanceof Array) {
+                    const jsonized  = [];
+                    let jsonizedVal = null;
 
-					json[key] = jsonVal;
-				}
-			}
-			return json;
-		},
-		fromJSON:function(data){
+                    for (let i = 0; i < val.length; ++i) {
+                        jsonizedVal = jsonizeValue(val[i]);
+                        jsonized.push(jsonizedVal);
+                    }
+                    return jsonized;
+                } else if (typeof val === 'object') {
 
-			if (_.isString(data)) {
-				// FIXME: look into if this try/catch is hurting performance
-				try {
-					data = JSON.parse(data);
-				} catch(e){
-					return new Error("Bad JSON given");
-				}
-			}
+                    if (val.toJSON) {
+                        return val.toJSON(); // if error then returning error
+                    }
 
-			if (!_.isObject(data)) return new eRROR("dATA IS NOT AN OBJEct");
+                    const jsonized  = {};
+                    let jsonizedVal = null;
 
-			for (var key in data) {
-				this[key] = data[key];
-			}
-		},
-		serialize:function(){
-			var json = this.toJSON();
-			if (_.isError(json)) return json;
+                    for (const key in val) {
+                        jsonizedVal = jsonizeValue(val[key]);
+                        jsonized[key] = jsonizedVal;
+                    }
+                    return jsonized;
+                } else {
+                    return val;
+                }
+            };
 
-			return JSON.stringify(json);
-		}
-	};
+            let keyVal  = null,
+                jsonVal = null;
 
-	return Serializable;
+            for (const key in this) {
+                keyVal = this[key];
+                if (typeof keyVal !== 'function') {
+                    jsonVal = jsonizeValue(keyVal);
+                    json[key] = jsonVal;
+                }
+            }
+            return json;
+        },
+
+        fromJSON(data) {
+
+            if (_.isString(data)) {
+                // FIXME: look into if this try/catch is hurting performance
+                try {
+                    data = JSON.parse(data);
+                } catch(e){
+                    return new Error("Bad JSON given");
+                }
+            }
+
+            if (!_.isObject(data)) return new Error("Data is not an object");
+
+            for (const key in data) {
+                this[key] = data[key];
+            }
+        },
+
+        serialize() {
+            return JSON.stringify(this.toJSON());
+        }
+    };
+
+    return Serializable;
 });

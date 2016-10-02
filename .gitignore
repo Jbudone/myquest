@@ -1,2 +1,5 @@
 *.swp
 js/scripts/ready/
+
+js/SCRIPT.INJECTION.min.js
+dist/

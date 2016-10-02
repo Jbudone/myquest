@@ -99,8 +99,8 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 
 		GLOBAL['Log'] = this.Log;
 
-		var whenReadySucceeded = new Function(),
-			botHasFailed       = new Function(),
+		var whenReadySucceeded = function(){},
+			botHasFailed       = function(){},
 			botIsReady = function(){
 				whenReadySucceeded();
 			};
@@ -175,9 +175,9 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 				postLoginCallback();
 				Game.loadedPlayer(player);
 
-				Log("Requesting map..");
-				server.requestMap();
-				loading('map');
+				Log("Requesting area..");
+				server.requestArea();
+				loading('area');
 				ready = true;
 			};
 
@@ -191,7 +191,7 @@ requirejs(['resources','client/camera','client/serverHandler','loggable','test/p
 
 				The.camera = new Camera();
 				Game.initialize(evt, server);
-				loaded('map');
+				loaded('area');
 
 			};
 

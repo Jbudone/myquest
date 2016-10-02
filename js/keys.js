@@ -16,10 +16,10 @@ define(function(){
 
 	var keyValue = 1,
 		global = (typeof window !== 'undefined' ? window : GLOBAL),
-		keyStrings = {};
+		keyStrings = {},
 		addKey = function(key){
 			if (global[key] !== undefined) {
-				console.error("ERROR: KEY ["+key+"] ALREADY DEFINED!");
+                Log(`WARNING: KEY ${key} ALREADY DEFINED!`, LOG_WARNING);
 				return;
 			}
 			keys[key] = (keyValue++);
@@ -55,6 +55,8 @@ define(function(){
 
 	addKey('EVT_NEW_PATH');
 	addKey('EVT_PREPARING_WALK');
+	addKey('EVT_PATH_PARTIAL_PROGRESS');
+	addKey('EVT_CANCELLED_PATH');
 
 	addKey('EVT_LOGIN');
 	addKey('EVT_REQUEST_MAP');
@@ -80,6 +82,7 @@ define(function(){
 	addKey('EVT_BORED');
 	addKey('EVT_RESPAWNING');
 	addKey('EVT_RESPAWNED');
+	addKey('EVT_USER_ADDED_PATH');
 
 	addKey('EVT_GET_ITEM');
 	addKey('EVT_USE_ITEM');
@@ -96,6 +99,7 @@ define(function(){
 
 	// addKey('HIGH_PRIORITY');
 	addKey('LOW_PRIORITY');
+	addKey('EVT_UNLOADED');
 
 	addKey('LEFT_TO_RIGHT');
 	addKey('UP_TO_DOWN');
@@ -114,6 +118,7 @@ define(function(){
 
 	addKey('ADJACENT_RANGE'); // Pathfinding
 	addKey('ALREADY_THERE');
+	addKey('PATH_TOO_FAR');
 
 	addKey('CLIENT_ONLY'); // Interactable handlers
 	addKey('SERVER_ONLY');

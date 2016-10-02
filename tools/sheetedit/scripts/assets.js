@@ -148,12 +148,16 @@ var AssetsManager = function(assets, container, files){
 					x: 0,
 					y: 0
 				},
-				data: {
-					collisions: [],
-					floating: [],
-					objects: {}
-				}
-			}, assetEl = addAsset( 'tilesheets', asset );
+                data: {
+                    objects: {}
+                }
+        };
+
+        for (var tileType in assetDetails.tileTypes) {
+            asset.data[tileType] = [];
+        }
+
+        var assetEl = addAsset( 'tilesheets', asset );
 		assetEl.addClass('modified');
 
 		assets.tilesheets.list.push( asset );

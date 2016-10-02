@@ -1,6 +1,6 @@
-define(['SCRIPTENV'], function(SCRIPTENV){
+define(['SCRIPTINJECT'], function(SCRIPTINJECT){
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
 	/* Neural Network
 	 *
@@ -33,19 +33,49 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			return false;
 		};
 
+		this.get = this.has;
+		this.find = this.has;
+
 		this.add = function(character){
-			this.neurons[character.entity.id] = new Neuron(character);
+			var neuron = new Neuron(character);
+			this.neurons[character.entity.id] = neuron;
+			this.print();
+
+			return neuron;
 		};
 
 		this.remove = function(id){
 			delete this.neurons[id];
+			this.print();
 		};
 
 		this.reset = function(){
 			this.neurons = {};
+			this.print();
 		};
 
 		this.neurons = {};
+
+		this.print = function(){
+			console.log("");
+			console.log("      Entity ["+ brain.character.entity.id +"]  NeuralNet Memory");
+			console.log(" --------------------------------");
+
+			for(var id in this.neurons) {
+				var neuron = this.neurons[id],
+					json = {};
+
+				for(var d in neuron) {
+					if(d == 'connections' || d == 'relationship' || d == 'character') continue; // FIXME: You know how to fix this
+					json[d] = neuron[d];
+				}
+
+				json = JSON.stringify(json);
+
+				console.log("   "+ id +": "+ json);
+			}
+			console.log("");
+		};
 	};
 
 	var Neuron = function(character){

@@ -1,62 +1,57 @@
-define(['eventful'], function(Eventful){
+define(['eventful'], (Eventful) => {
 
 
+    // Camera
+    //
+    // Camera is responsible for various rendering techniques; including transitioning (zoning) between pages,
+    // rumbling/shake effects, viewing plateaus?
+    const Camera = function() {
 
-	/* Camera
-	 *
-	 * Camera is responsible for various rendering techniques; including transitioning (zoning) between pages,
-	 * rumbling/shake effects, viewing plateaus?
-	 *
-	 ********************************************************/
-	var Camera = function(){
-		extendClass(this).with(Eventful);
-		this.lastTime=now();
-		this.offsetX=0;
-		this.offsetY=0;
+        extendClass(this).with(Eventful);
 
-		this.isZoning=false;
-		this.updated=false;
-		this.moveSpeed=75;
-		this.lastUpdated=now();
+        this.lastTime = now();
+        this.offsetX  = 0;
+        this.offsetY  = 0;
 
-		// FIXME: fix the camera so that it doesn't need this
-		this.centerCamera = function(){
-			var localY = The.player.position.global.y % Env.pageRealHeight,
-				localX = The.player.position.global.x % Env.pageRealWidth;
-			The.camera.offsetY = -localY + Env.pageHeight * Env.tileSize / 2
-			The.camera.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
-		};
+        this.isZoning    = false;
+        this.updated     = false;
+        this.moveSpeed   = 75;
+        this.lastUpdated = now();
 
-		this.initialize = function(){
-			this.listenTo(The.map, EVT_ZONE, function(map,direction){
-				console.log("CAMERA ZONING: "+direction);
+        // FIXME: fix the camera so that it doesn't need this
+        this.centerCamera = () => {
+            const localY = The.player.position.global.y % Env.pageRealHeight,
+                localX   = The.player.position.global.x % Env.pageRealWidth;
+            The.camera.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;
+            The.camera.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
+        };
 
-					 if (direction=='n') this.offsetY = -(Env.pageHeight-Env.pageBorder) * Env.tileSize;
-				else if (direction=='w') this.offsetX = (Env.pageWidth-Env.pageBorder)   * Env.tileSize;
-				else if (direction=='e') this.offsetX = -(Env.pageWidth-Env.pageBorder)  * Env.tileSize;
-				else if (direction=='s') this.offsetY = (Env.pageHeight-Env.pageBorder)  * Env.tileSize;
-			});
-		};
+        this.initialize = () => {
+            this.listenTo(The.area, EVT_ZONE, (area, direction) => {
 
-		this.step=function(time){
-			var move=this.moveSpeed,
-				left=-Env.pageBorder*Env.tileSize,
-				top=Env.pageBorder*Env.tileSize;
-			this.handlePendingEvents();
+                     if (direction === 'n') this.offsetY = -(Env.pageHeight - Env.pageBorder) * Env.tileSize;
+                else if (direction === 'w') this.offsetX = (Env.pageWidth - Env.pageBorder)   * Env.tileSize;
+                else if (direction === 'e') this.offsetX = -(Env.pageWidth - Env.pageBorder)  * Env.tileSize;
+                else if (direction === 's') this.offsetY = (Env.pageHeight - Env.pageBorder)  * Env.tileSize;
+            });
+        };
 
-			if (time - this.lastUpdated > 2500) {
-				this.updated = true; // Use this as a just in case for background redraws
-				this.lastUpdated = time;
-			}
+        this.step = (time) => {
+            this.handlePendingEvents();
 
-			var offsetY = this.offsetY,
-				offsetX = this.offsetX;
-			this.centerCamera();
-			if (this.offsetY != offsetY || this.offsetX != offsetX) {
-				this.updated = true;
-			}
-		};
-	};
+            if (time - this.lastUpdated > 2500) {
+                this.updated = true; // Use this as a just in case for background redraws
+                this.lastUpdated = time;
+            }
 
-	return Camera;
+            const offsetY = this.offsetY,
+                offsetX   = this.offsetX;
+            this.centerCamera();
+            if (this.offsetY !== offsetY || this.offsetX !== offsetX) {
+                this.updated = true;
+            }
+        };
+    };
+
+    return Camera;
 });

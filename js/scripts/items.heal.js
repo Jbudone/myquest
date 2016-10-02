@@ -1,6 +1,6 @@
-define(['SCRIPTENV', 'loggable', 'scripts/character'], function(SCRIPTENV, Loggable, Character){
+define(['SCRIPTINJECT', 'loggable', 'scripts/character'], function(SCRIPTINJECT, Loggable, Character){
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
 	var Heal = function(){
 		extendClass(this).with(Loggable);

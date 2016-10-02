@@ -1,9 +1,20 @@
 #!/bin/bash
 
-# inject INJECT.SCRIPT into all scripts
-for f in js/scripts/*.js; do
-	out="js/scripts/ready/$(basename $f)"
-	sed '/\s*define\s*(.*function\s*(.*)\s*{/r js/SCRIPT.INJECTION.js' $f > $out
-	echo "$f > $out"
+# TODO: find a better way to uglifyjs, remove comments and only keep minified script injection in memory
+
+## inject INJECT.SCRIPT into all scripts
+node_modules/.bin/uglifyjs js/SCRIPT.INJECTION.js > js/SCRIPT.INJECTION.min.js
+printf "\n" >> js/SCRIPT.INJECTION.min.js
+
+#START=$(date +%s.%N)
+for f in dist/scripts/*.js; do
+    if grep -q "^\s*\/\*\s*SCRIPTINJECT\s*\*\/" $f
+    then
+        sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//r js/SCRIPT.INJECTION.min.js' $f
+        sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//d' $f
+        echo "$f > $f"
+    fi
 done
-# TODO: preprocess keys (some keys file?)
+#END=$(date +%s.%N)
+#DIFF=$(echo "$END - $START" | bc)
+#echo "$DIFF"

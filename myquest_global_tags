@@ -1,0 +1,3 @@
+#!/bin/bash
+
+grep --exclude-dir=lib --binary-file=without-match -hroP "(addKey|GLOBAL|window)(\['|\.|\('|\[\"|\(\")\K([\w_\d\-]+)" js | python myquest_global_tags.py

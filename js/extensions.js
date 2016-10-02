@@ -1,46 +1,66 @@
 
 define(function(){
 
-	var SERVER=1,
-		CLIENT=2,
+	var SERVER=1<<0,
+		CLIENT=1<<1,
+        TEST=1<<2,
+        CLIENT_TEST=1<<3,
+        SERVER_TEST=1<<4;
 		status={loaded:false},
+        environments={
+            client: { env: CLIENT, path: 'client/' },
+            server: { env: SERVER, path: 'server/' },
+            test: { env: TEST, path: 'test/' },
+            client_test: { env: CLIENT_TEST, path: 'client/test/' },
+            server_test: { env: SERVER_TEST, path: 'server/test/' },
+        },
 		extensions={
 			movable:(CLIENT|SERVER),
-			map:(CLIENT|SERVER),
+			area:(CLIENT|SERVER),
 			page:(CLIENT|SERVER),
-			resources:(CLIENT|SERVER)
+            resources:(CLIENT|SERVER),
+            game:(CLIENT_TEST),
+            server:(SERVER_TEST)
 		}, ready=function(environment){
-			return new Promise(function(loaded, failed) {
-				var envPath = (environment==CLIENT?'client/':'server/'),
-					loading = 0,
+			return new Promise(function(loaded) {
+                const envPaths = [];
+
+                if (environment & CLIENT) envPaths.push(environments.client);
+                if (environment & SERVER) envPaths.push(environments.server);
+                if (environment & TEST) envPaths.push(environments.test);
+                if (environment & CLIENT_TEST) envPaths.push(environments.client_test);
+                if (environment & SERVER_TEST) envPaths.push(environments.server_test);
+
+				var loading = 0,
 					waiting = false;
-				_.each(extensions, function(env, extension, extensions){
-					if (extensions[extension] & environment) {
-						var module = envPath + extension;
-						++loading;
-						console.log("Loading extension: "+module);
-						var loadExtension = function(mod) {
 
-							extensions[extension] = mod;
+                envPaths.forEach((envPath) => {
+                    _.each(extensions, function(env, extension, extensions){
+                        if (extensions[extension] & envPath.env) {
+                            var module = envPath.path + extension;
+                            ++loading;
+                            console.log("Loading extension: "+module);
+                            var loadExtension = function(mod) {
 
-							// TODO: When using (for .. in) there were problems with require matching the wrong extensions callbacks.. Look into why
-							if (extension == 'map' && mod.draw) {
-								console.log(module);
-								console.log("WOW ERROR!!!");
-							}
-							--loading;
-							if (waiting && !loading) {
-								loaded();
-							}
-						};
-						require([module], function(mod) {
-							loadExtension(mod);
-						});
-					}
+                                extensions[extension] = mod;
 
-				});
-				// for (var extension in extensions) {
-				// }
+                                // TODO: When using (for .. in) there were problems with require matching the wrong extensions callbacks.. Look into why
+                                if (extension == 'area' && mod.draw) {
+                                    console.log(module);
+                                    console.log("WOW ERROR!!!");
+                                }
+                                --loading;
+                                if (waiting && !loading) {
+                                    loaded();
+                                }
+                            };
+                            require([module], function(mod) {
+                                loadExtension(mod);
+                            });
+                        }
+
+                    });
+                });
 				waiting = true;
 				if (!loading) {
 					loaded();
@@ -53,6 +73,9 @@ define(function(){
 	return {
 		SERVER:SERVER,
 		CLIENT:CLIENT,
+        TEST:TEST,
+        CLIENT_TEST:CLIENT_TEST,
+        SERVER_TEST:SERVER_TEST,
 		ready:ready,
 		extensions:extensions,
 		extend:function(module,modulename){

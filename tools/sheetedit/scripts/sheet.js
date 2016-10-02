@@ -133,16 +133,17 @@ var Sheet = function(canvas){
 			sheetData.sheet_offset.y = 0;
 			sheetData.sheet_offset.x = 0;
 
-			if (sheetData.data.animations) sheetData.data.animations = {};
-			if (sheetData.data.floating) sheetData.data.floating = {};
-			if (sheetData.data.collisions) sheetData.data.collisions = {};
-			if (sheetData.data.objects) sheetData.data.objects = {};
-
 			if (!selections.data) selections.data = {};
-			if (selections.data.objects) sheet.data.objects.selections.tiles = [];
-			if (selections.data.floating) sheet.data.floating.selections.tiles = [];
-			if (selections.data.collisions) sheet.data.collisions.selections.tiles = [];
+			if (sheetData.data.animations) sheetData.data.animations = {};
 			if (selections.data.animations) sheet.data.animations.selections.tiles = [];
+
+            if (sheetData.data.objects) sheetData.data.objects = {};
+            if (selections.data.objects) sheet.data.objects.selections.tiles = [];
+            for (var tileType in assetDetails.tileTypes) {
+                if (tileType in sheetData.data) sheetData.data[tileType] = {};
+                if (tileType in selections.data) sheet.data[tileType].selections.tiles = [];
+            }
+
 		} else {
 			sheetData = {
 				image: null,
@@ -165,57 +166,45 @@ var Sheet = function(canvas){
 		tilesheet = new Image();
 		var sheetDataSetup = function(){
 
-			if (sheet.data.objects) {
-				selections.objects = {
-					selection: new TilesSelection(),
-					color: '#CCCC00',
-					opacity: 0.4
-				}
 
-				for (var t in sheet.data.objects) {
-					var objectName = sheet.data.objects[t],
-						tx = parseInt(t % sheetData.columns),
-						ty = parseInt(t / sheetData.columns),
-						tile = new Tile( ty, tx );
+            if (sheet.data.objects) {
 
-					selections.objects.selection.tiles.push( tile );
-				}
-			}
+                selections.objects = {
+                    selection: new TilesSelection(),
+                    color: "#CCCC00",
+                    opacity: 0.4,
+                }
 
+                for (var t in sheet.data.objects) {
+                    var tx = parseInt(t % sheetData.columns),
+                        ty = parseInt(t / sheetData.columns),
+                        tile = new Tile( ty, tx );
 
-			if (sheet.data.floating) {
-				selections.floating = {
-					selection: new TilesSelection(),
-					color: '#00CC00',
-					opacity: 0.6
-				}
+                    selections.objects.selection.tiles.push( tile );
+                }
+            }
 
-				for (var i=0; i<sheet.data.floating.length; ++i) {
-					var _floating = sheet.data.floating[i],
-						tx = parseInt(_floating % sheetData.columns),
-						ty = parseInt(_floating / sheetData.columns),
-						tile = new Tile( ty, tx );
+            for (var tileType in assetDetails.tileTypes) {
 
-					selections.floating.selection.tiles.push( tile );
-				}
-			}
+                if (tileType in sheet.data) {
 
-			if (sheet.data.collisions) {
-				selections.collisions = {
-					selection: new TilesSelection(),
-					color: '#CC0000',
-					opacity: 0.6
-				}
+                    selections[tileType] = {
+                        selection: new TilesSelection(),
+                        color: assetDetails.tileTypes[tileType].highlight,
+                        opacity: assetDetails.tileTypes[tileType].opacity
+                    }
 
-				for (var i=0; i<sheet.data.collisions.length; ++i) {
-					var _collision = sheet.data.collisions[i],
-						tx = parseInt(_collision % sheetData.columns),
-						ty = parseInt(_collision / sheetData.columns),
-						tile = new Tile( ty, tx );
+                    for (var i=0; i<sheet.data[tileType].length; ++i) {
+                        var t = sheet.data[tileType][i],
+                            tx = parseInt(t % sheetData.columns),
+                            ty = parseInt(t / sheetData.columns),
+                            tile = new Tile( ty, tx );
 
-					selections.collisions.selection.tiles.push( tile );
-				}
-			}
+                        selections[tileType].selection.tiles.push( tile );
+                    }
+                }
+            }
+
 
 			if (sheet.data.hasOwnProperty("avatar")) {
 				selections.avatar = {
@@ -288,9 +277,11 @@ var Sheet = function(canvas){
 
 			if (copy) {
 
-				if (sheet.data.objects) sheetData.data.objects = sheet.data.objects;
-				if (sheet.data.floating) sheetData.data.floating = sheet.data.floating;
-				if (sheet.data.collisions) sheetData.data.collisions = sheet.data.collisions;
+                for (var tileType in assetDetails.tileTypes) {
+                    if (tileType in sheet.data) sheetData.data[tileType] = sheet.data[tileType];
+                }
+
+                if (sheet.data.objects) sheetData.data.objects = sheet.data.objects;
 				if (sheet.data.animations) sheetData.data.animations = sheet.data.animations;
 				sheetData.tilesize = sheet.tilesize;
 				sheetData.sheet_offset.x = sheet.sheet_offset.x;
@@ -323,12 +314,12 @@ var Sheet = function(canvas){
 	};
 
 	interface.setMode = function(selectionType, highlightAnimation){
-		if (selectionType == 'objects') {
-			activeSelection = { type: 'objects', selection: selections.objects.selection };
-		} else if (selectionType == 'floating') {
-			activeSelection = { type: 'floating', selection: selections.floating.selection };
-		} else if (selectionType == 'collision') {
-			activeSelection = { type: 'collision', selection: selections.collisions.selection };
+
+        if (selectionType in assetDetails.tileTypes) {
+            // Tile?
+			activeSelection = { type: selectionType, selection: selections[selectionType].selection };
+        } else if (selectionType == 'objects') {
+			activeSelection = { type: selectionType, selection: selections.objects.selection };
 		} else if (selectionType == 'animation') {
 			activeSelection = { type: 'animation', selection: selections.animations.selection };
 			if (highlightAnimation) {
@@ -419,11 +410,10 @@ var Sheet = function(canvas){
 
 	interface.prepareSheet = function(sheetType){
 		if (sheetType == 'tilesheet') {
-			preparedSheetData = {
-				objects: [],
-				floating: [],
-				collisions: []
-			};
+            for (var tileType in assetDetails.tileTypes) {
+                preparedSheetData[tileType] = [];
+            }
+            preparedSheetData.objects = [];
 		} else if (sheetType == 'spritesheet') {
 			preparedSheetData = {
 				animations: [],

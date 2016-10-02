@@ -1,519 +1,678 @@
-// var domain = require('domain');
-// var d = domain.create();
-// 
-// d.on('error', function(e){
-// 	console.log('Domain Error: '+e.message);
-// 	console.trace();
-// });
-// 
-// d.run(function(){
-
-	var requirejs = require('requirejs');
-
-	requirejs.config({
-		nodeRequire: require,
-		baseUrl: "js",
-		paths: {
-			"jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
-			"underscore": "http://underscorejs.org/underscore",
-		},
-	});
-
-
-
-	var couldNotStartup = function(e){
-	   console.log("Could not startup server");
-	   if (e) {
-		   console.log(e);
-		   console.log(e.stack);
-	   }
-	   process.exit();
-	};
-
-	process.on('exit', couldNotStartup);
-	process.on('SIGINT', couldNotStartup);
-	process.on('uncaughtException', couldNotStartup);
-
-
-requirejs(['objectmgr','environment','utilities','extensions','keys','event','errors','fsm','profiler'],function(The,Env,Utils,Ext,Keys,Events,Errors,FSM,Profiler){
-
-	var _               = require('underscore'),
-		$               = require('jquery'),
-		fs              = require('fs'),
-		Promise         = require('bluebird'),
-		http            = require('http'),
-		WebSocketServer = require('ws').Server,
-		chalk           = require('chalk');
-
-	Promise.longStackTraces();
-
-	Env = (new Env());
-	Env.isServer=true;
-
-	GLOBAL['_']=_;
-	GLOBAL['$']=$;
-	GLOBAL['Ext']=Ext;
-	GLOBAL['Env']=Env;
-	GLOBAL['The']=The;
-	GLOBAL['Promise']=Promise;
-	GLOBAL['chalk']=chalk;
-
-	for(var util in Utils) {
-		GLOBAL[util]=Utils[util];
-	}
-
-	for(var evtObj in Events) {
-		GLOBAL[evtObj]=Events[evtObj];
-	}
-
-	for(var err in Errors) {
-		GLOBAL[err]=Errors[err];
-	} 
-
-	for(var key in FSM) {
-		GLOBAL[key]=FSM[key];
-	}
-	for(var i=0; i<FSM['states'].length; ++i) {
-		GLOBAL[FSM['states'][i]]=i;
-	}
-
-
-	Ext.ready(Ext.SERVER).then(function(){
-		loadedEnvironment();
-	}, function(){
-		// error loading extensions..
-		process.exit();
-	});
-
-	errorInGame = function(e){
-		console.error(chalk.red(e));
-		process.exit();
-	};
-
-	GLOBAL.errorInGame = errorInGame;
-
-
-	var loadedEnvironment = function(){
-
-		requirejs(['resources','movable','world','map','server/db','server/redis','loggable','server/player','scriptmgr','server/login'], function(Resources,Movable,World,Map,DB,Redis,Loggable,Player,ScriptMgr,LoginHandler) {
-			extendClass(this).with(Loggable);
-
-			var modulesToLoad={},
-				ready=false,
-				LOADING_CORE=1,
-				LOADING_RESOURCES=2,
-				LOADING_SCRIPTS=3,
-				LOADING_FINISHED=4,
-				loadingPhase=LOADING_CORE,
-				loading=function(module){ modulesToLoad[module]=false; },
-				loadResources=null,
-				startGame=null,
-				world=null,
-				loaded=function(module){
-					if (module) {
-						console.log("Loaded: "+module);
-						delete modulesToLoad[module];
-					}
-					if (ready && _.size(modulesToLoad)==0) {
-						++loadingPhase;
-						if (loadingPhase==LOADING_RESOURCES) loadResources();
-						if (loadingPhase==LOADING_SCRIPTS)   loadScripts();
-						if (loadingPhase==LOADING_FINISHED)  startGame();
-					}
-				};
-
-			loading('database');
-			var db = new DB();
-			db.connect().then(function(){
-				loaded('database');
-			}, function(){
-				console.error("Cannot startup server..");
-				process.exit();
-			});
-
-
-			loading('redis');
-			var redis = new Redis();
-			redis.initialize();
-			redis.onError = function(err){
-				console.error("Error w/ Redis: "+err);
-				console.error("Cannot startup server..");
-				process.exit();
-			};
-			loaded('redis');
-
-
-			// Load game resources
-			/////////////////////////
-			loadResources = function(){
-
-				loading('resources');
-				Resources = (new Resources());
-				GLOBAL['Resources'] = Resources;
-				Resources.initialize(['world', 'sheets', 'npcs', 'items', 'interactables', 'scripts']).then(function(assets){
-
-					// Load World
-					var data = assets.world,
-						json = JSON.parse(data),
-						world = new World();
-					The.world = world;
-					_.each(json.maps, function(mapFile, mapID) {
-						loading('map ('+mapID+')');
-						fs.readFile('data/'+mapFile, function(err, data) {
-							if (err) {
-								console.log(err);
-								process.exit();
-								return;
-							}
-
-							var json = JSON.parse(data),
-								data = json.MapFile;
-							Resources.maps[data.Map.id]={
-								data:data.Map,
-								properties:data.properties
-							};
-							world.addMap(mapID);
-							loaded('map ('+mapID+')');
-						});
-					});
-
-					loaded('resources');
-				}, function(err){
-					Log(err, LOG_ERROR);
-					errorInGame("Could not load resources");
-				}).catch(Error, errorInGame);
-
-			};
-
-
-
-			loadScripts = function(){
-
-				loading('scripts');
-
-				// Scripts
-				The.scripting.world = The.world;
-				The.scripting.redis = redis;
-				Resources.loadScripts(Resources._scriptRes).then(function(){
-					console.log("Starting script manager..");
-					delete Resources._scriptRes;
-					The.scriptmgr = new ScriptMgr();
-
-					if (Resources.items.hasOwnProperty('items-not-loaded')) {
-						delete Resources.items['items-not-loaded'];
-						loading('items');
-						Resources.loadItemScripts().then(function(){
-							loaded('items');
-						}, function(err){ errorInGame(err); })
-						.catch(Error, errorInGame);
-					}
-
-					if (Resources.interactables.hasOwnProperty('interactables-not-loaded')) {
-						delete Resources.interactables['interactables-not-loaded'];
-						loading('interactables');
-						Resources.loadInteractableScripts().then(function(){
-							loaded('interactables');
-						}, function(err){ errorInGame(err); })
-						.catch(Error, errorInGame);
-					}
-
-					loaded('scripts');
-				}, function(e){
-					console.error("Could not load scripts!");
-					console.error(e);
-				}).catch(Error, errorInGame);
-
-			};
-
-
-		   startGame = function(){
-
-			   var requestBuffer = new BufferQueue(),
-				   eventsArchive = new EventsArchive();
-				   players = {};
-
-			   var exitGame = function(e) {
-
-				   Log("Stopping Game, saving state");
-				   if (e) {
-					   Log(e, LOG_ERROR);
-					   Log(e.stack, LOG_ERROR);
-				   }
-				   for (var clientID in players) {
-					   // TODO: save players & D/C
-				   }
-
-				   Log("Closing database connection");
-				   db.disconnect();
-
-				   Log("Closing server, goodbye.");
-				   process.exit();
-			   };
-
-			   GLOBAL.exitGame = exitGame;
-
-			   process.on('exit', exitGame);
-			   process.on('SIGINT', exitGame);
-			   process.on('uncaughtException', exitGame);
-
-
-			   errorInGame = function(e){
-
-				   try {
-					   if (_.isError(e)) {
-						   console.error(e.message);
-						   console.trace();
-					   } else if (_.isString(e)) {
-						   console.error(e);
-						   console.trace();
-					   } else {
-						   console.trace();
-					   }
-				   } catch(e){ }
-				   exitGame(e);
-			   };
-
-			   GLOBAL.errorInGame = errorInGame;
-
-
-			   // change redis error handling to use errorInGame instead
-			   redis.onError = function(err){
-				   console.error("Error w/ Redis: "+err);
-				   console.error("Cannot startup server..");
-				   errorInGame(err);
-			   };
-
-			   websocket = new WebSocketServer({port:1338});
-			   websocket.on('connection', function(client){
-
-				   console.log('websocket connection open');
-
-				   var you  = new Player(client),
-					   your = you;
-
-				   you.onDisconnected = function(){
-					   return new Promise(function(resolved){
-						   requestBuffer.queue({
-							   you:you,
-							   action: { evtType: EVT_DISCONNECTED }
-						   });
-						   resolved();
-					   });
-				   };
-
-				   you.onRequestNewCharacter = function(){
-					   /*
-					   return new Promise(function(resolved, failed){
-						   db.createNewPlayer({map:'main', position:{y:60, x:53}}).then(function(newID){
-							   resolved(newID);
-						   }, function(){
-							   failed();
-						   })
-							.catch(Error, function(e){ errorInGame(e); })
-							.error(function(e){ errorInGame(e); });
-					   });
-					   */
-				   };
-
-				   you.onLogin = function(username, password){
-					   return new Promise(function(resolved, failed){
-						   db.loginPlayer(username, password).then(function(savedState){
-
-							   // Are you already online?
-							   for (var clientID in players) {
-								   var player = players[clientID],
-									   client = player.client;
-								   if (player.movable.name == username) {
-
-									   // Are you in a connected state?
-									   if (client.readyState !== 1) {
-										   // FIXME: SOMETHING WEIRD HAPPENED TO THIS USER!
-										   // User must have d/c'd without being cleaned up somehow.. Should
-										   // d/c existing user and login this user
-										   console.error("USER IS ALREADY CONNECTED BUT ALSO DISCONNECTED!?");
-									   }
-
-									   failed('Already connected!');
-									   return;
-								   }
-							   }
-
-							   // User is not online already..safe to connect
-							   resolved({
-								   savedState: savedState,
-								   callback: function(){
-									   players[savedState.id] = you;
-								   }
-							   });
-						   }, function(err){
-							   failed(err);
-						   })
-							.catch(Error, function(e){ errorInGame(e); })
-							.error(function(e){ errorInGame(e); });
-					   });
-				   };
-
-				   // TODO: clean this!
-				   you.onPreparingToWalk = function(evt){
-
-					   you.handleWalkRequest(evt);
-					   // requestBuffer.queue({
-						   // you:this,
-						   // action:evt
-					   // });
-				   };
-				   you.onSomeEvent = function(evt){
-					   requestBuffer.queue({
-						   you:this,
-						   action:evt
-					   });
-				   };
-
-			   });
-			   Log('Server running at http://127.0.0.1:1337/');
-
-			   // Listen for login/register related requests
-			   var loginHandler = new LoginHandler(http, db);
-
-			   var stepTimer=100,
-				   profilerReportElapsed = 0,
-				   buffer = null,
-				   request = null,
-				   you, your, action,
-				   eventsBuffer = null,
-			   step=function(){
-				   time=now();
-
-				   setTimeout(step, stepTimer);
-
-				   requestBuffer.switch();
-				   eventsArchive.pushArchive();
-
-				   buffer = requestBuffer.read();
-				   if (buffer.length) {
-					   Log("----Reading request buffer----");
-
-					   for (i=0; i<buffer.length; ++i) {
-
-						   // Check if request & client still here
-						   request = buffer[i];
-						   if (!request) continue; 
-						   if (!players[request.you.id]) continue;
-
-						   // TODO: handle events through a better abstraction structure
-						   you = request.you;
-						   your = you;
-						   action = null;
-						   if (!request) { 
-							   console.log("			BAD REQUEST!? Weirdness..");
-							   continue;
-						   }
-						   action=request.action;
-
-						   if (action.evtType==EVT_PREPARING_WALK) {
-
-							   // you.handleWalkRequest(action);
-
-						   } else if (action.evtType == EVT_DISCONNECTED) {
-
-							   var page = you.movable.page;
-							   you.disconnectPlayer();
-							   page.map.removeEntity( you.movable );
-							   page.eventsBuffer.push({
-								   evtType: EVT_REMOVED_ENTITY,
-								   entity: { id: you.movable.id }
-							   });
-
-							   Log("REMOVED PLAYER: "+you.id);
-							   db.savePlayer(you.movable);
-							   delete players[you.id];
-
-						   } else if (action.evtType == EVT_ATTACKED) {
-
-							   you.attackTarget(action.data.id);
-
-						   } else if (action.evtType == EVT_DISTRACTED) {
-							   // TODO: need to confirm same as current target?
-							   // you.player.brain.setTarget(null);
-							   Log("["+you.movable.id+"] Is Distracted..");
-							   you.movable.triggerEvent(EVT_DISTRACTED);
-						   } else {
-							   console.log("			Some strange unheard of event ("+action.evtType+") ??");
-						   }
-					   }
-
-					   requestBuffer.clear();
-					   console.log("----Cleared request buffer----");
-				   }
-
-				   // Timestep the world
-				   Profiler.profile('world');
-				   eventsBuffer = The.world.step(time);
-				   Profiler.profileEnd('world');
-
-				   Profiler.profile('scriptmgr');
-				   The.scriptmgr.step(time);
-				   Profiler.profileEnd('scriptmgr');
-
-
-				   Profiler.profile('players');
-
-				   for (var clientID in players) {
-					   var player = players[clientID],
-						   client = player.client;
-					   if (client.readyState !== 1) continue; // Not open (probably in the middle of d/c)
-					   player.step(time);
-					   for (var pageID in player.pages){
-						   var page = pageID;
-
-						   // FIXME: for some reason old pages are still stored in player.pages.. this could
-						   // potentially be a BIG problem with bugs laying around the program. Make sure to
-						   // check why this is occuring and if its occuring elsewhere too!
-						   if (!player.pages[pageID]) {
-							   console.log("Bad page:"+pageID);
-							   continue;
-						   }
-						   var mapID  = player.pages[pageID].map.id;
-						   if (eventsBuffer[mapID] && eventsBuffer[mapID][page]) {
-							   client.send(JSON.stringify({
-								   evtType: EVT_PAGE_EVENTS,
-								   page: page,
-								   events: eventsBuffer[mapID][page]
-							   }));
-						   }
-					   }
-
-					   // FIXME: find a better protocol for this.. need to send the player the last updates
-					   // from the page since they died, but need to immediately remove players pages
-					   // afterwards
-					   if (player.movable.character.alive == false) {
-						   player.pages = {};
-					   }
-				   }
-
-				   Profiler.profileEnd('players');
-
-				   // Report profile
-				   (++profilerReportElapsed);
-				   if (profilerReportElapsed >= 100) {
-					   Profiler.report();
-					   profilerReportElapsed = 0;
-					   Profiler.clear('world');
-					   Profiler.clear('scriptmgr');
-					   Profiler.clear('players');
-				   }
-
-			   };
-			   step();
-
-		   };
-
-		   ready=true;
-		   loaded(); // In case resources somehow loaded INSTANTLY fast
-
-		});
-
-	};
-
+// Server
+// This is the starting point for the server
+
+
+const requirejs = require('requirejs');
+requirejs.config({
+    nodeRequire: require,
+    baseUrl: __dirname,
+    paths: {
+        lodash: "https://cdn.jsdelivr.net/lodash/4.14.1/lodash.min.js"
+    }
 });
-// });
+
+
+// Error in Game
+// If there is any issue whatsoever, crash the server immediately and drop into here. The intention is that any error
+// whatsoever is a problem with the game, should not be ignored and should be investigated immediately. Crash the server
+// and allow the startup service to restart the server automatically. Dump as much information as possible to help with
+// the investigation
+let shutdownGame = null,
+    shuttingDown = false;
+const errorInGame = (e) => {
+
+    if (shuttingDown) {
+        return;
+    }
+
+    shuttingDown = true;
+
+    console.error("Error in game");
+    if (console.trace) console.trace();
+
+    if (e) {
+
+        // TODO: Organize source printing?
+
+        try {
+            console.log("");
+            let level = 0;
+
+            const parentDirectory    = filepath.dirname(__dirname),
+                grandparentDirectory = filepath.dirname(parentDirectory);
+
+            let frames = [];
+
+            e.stack.split('\n').forEach((s) => {
+                let frame = /\s*at\s*([^\(]+)\(([^\:]+)\:(\d*)\:(\d*)/g.exec(s.trim());
+
+                if (!frame || frame.length !== 5) {
+                    // This may or may not be an anonymous function
+                    if (s.indexOf(grandparentDirectory) >= 0) {
+                        frame = /\s*at\s*([^\:]+)\:(\d+)\:(\d+)/g.exec(s.trim());
+
+                        if (frame && frame.length === 4) {
+                            frame.splice(1, 0, ".<anonymous>");
+                        }
+                    }
+                }
+
+                if (frame && frame.length === 5) {
+                    let file = frame[2],
+                        func   = frame[1],
+                        line   = frame[3],
+                        col    = frame[4];
+
+                    if (file.indexOf(__dirname) >= 0) {
+                        // We're in the same path as the server.. include this frame
+                    } else {
+                        // Hide this frame (note; should have a "...." or something to convey that we're hiding outside of
+                        // scope frames)
+                        return;
+                    }
+
+                    let source = fs.readFileSync(file) || "",
+                        sourceLine = "";
+
+                    if (source) {
+
+                        let sourceIndex = -1;
+                        for (let i = 0; i < (line-1); ++i) {
+                            sourceIndex = source.indexOf('\n', sourceIndex + 1);
+                        }
+                        let sourceEnd = source.indexOf('\n', sourceIndex + 1);
+
+                        sourceLine = source.toString('utf8', sourceIndex, sourceEnd).trim();
+                    }
+
+                    let spacer = "    ";
+                    for (let i = 1; i < level; ++i) {
+                        spacer += "   ";
+                    }
+
+                    let treeLine = (level > 0 ? "   " : "") + "│  ",
+                        treeExpand = level > 0 ? "└─ " : "";
+
+                    console.log(`${spacer}${chalk.white(treeExpand)}${chalk.yellow(file.substr(__dirname.length + 1))}${chalk.dim(":")}${chalk.yellow(line)}   ${chalk.white(func)}`);
+                    console.log(`${spacer}${chalk.white(treeLine)}         ${chalk.green(sourceLine)}`);
+                    ++level;
+                } else {
+
+                    console.log(`    ${chalk.bgRed.white(s.trim())}`);
+                    console.log("");
+                }
+            });
+
+
+
+            console.log("");
+        } catch(err) {
+            console.error(err);
+            console.error(e);
+        }
+
+        /*
+        console.error(e.stack);
+        if (GLOBAL.Log) {
+            Log(e, LOG_ERROR);
+        } else {
+            console.log(util.inspect(e, { showHidden: true, depth: 4 }));
+        }
+        */
+    }
+
+    if (GLOBAL.shutdownGame) {
+        shutdownGame(e);
+    }
+
+    console.log("Looking for file: " + __filename);
+    fs.readFile(__filename, (err, data) => {
+        if (err) {
+            console.error("Couldn't find file..");
+            process.exit(e);
+            return;
+        }
+
+        //var consumer = new SourceMap.SourceMapConsumer(data);
+        //console.log(consumer.sources);
+
+        process.exit(e);
+    });
+
+    // Just in case the above promises take too long
+    setTimeout(() => {
+        process.exit(e);
+    }, 3000);
+};
+
+GLOBAL.errorInGame = errorInGame;
+
+// If anything happens make sure we go through the common error/exit routine
+process.on('exit', errorInGame);
+process.on('SIGINT', errorInGame);
+process.on('uncaughtException', errorInGame);
+
+
+    // ------------------------------------------------------------------------------------------------------ //
+    // ------------------------------------------------------------------------------------------------------ //
+
+
+const util          = require('util'),
+    _               = require('lodash'),
+    fs              = require('fs'),        // TODO: Promisify this
+    Promise         = require('bluebird'),
+    http            = require('http'),
+    WebSocketServer = require('ws').Server,
+    chalk           = require('chalk'),
+    prettyjson      = require('prettyjson'),
+    assert          = require('assert'),    // TODO: Disable in production
+    filepath        = require('path'),
+    SourceMap       = require('source-map');
+
+GLOBAL.util = util;
+GLOBAL._ = _;
+GLOBAL.Promise = Promise;
+GLOBAL.chalk = chalk;
+GLOBAL.prettyjson = prettyjson;
+GLOBAL.assert = assert;
+GLOBAL.WebSocketServer = WebSocketServer;
+
+// Promise.longStackTraces();
+
+requirejs(['keys', 'environment'], (Keys, Environment) => {
+
+    // Initialize our environment as the server
+    const Env = (new Environment());
+    Env.isServer = true;
+    GLOBAL.Env = Env;
+
+
+    // Process Server arguments
+    process.argv.forEach((val) => {
+
+        if (val === "--test") {
+            console.log("Enabling test mode");
+            Env.isTesting = true;
+        }
+    });
+
+    requirejs(
+        [
+            'objectmgr', 'utilities', 'extensions', 'event', 'errors', 'fsm', 'profiler'
+        ],
+        (
+            The, Utils, Ext, Events, Errors, FSM, Profiler
+        ) => {
+
+
+            GLOBAL.Ext = Ext;
+            GLOBAL.The = The;
+            GLOBAL.Profiler = Profiler;
+
+            // TODO: use Object.assign (when you can upgrade node)
+            _.assign(GLOBAL, Utils);
+            _.assign(GLOBAL, Events);
+            _.assign(GLOBAL, Errors);
+            _.assign(GLOBAL, FSM);
+
+            // FIXME: Necessary?
+            for(let i = 0; i < FSM['states'].length; ++i) {
+                GLOBAL[FSM.states[i]] = i;
+            }
+
+
+            // Loaded Environment
+            // This gets called once we have our extension/context defined
+            const loadedEnvironment = () => {
+
+                requirejs(
+                    [
+                        'resources', 'loggable',
+                        'movable', 'world', 'area', 'scriptmgr',
+                        'server/db', 'server/redis', 'server/player', 'server/login'
+                    ],
+                    (
+                        ResourceMgr, Loggable,
+                        Movable, World, Area, ScriptMgr,
+                        DB, Redis, Player, LoginHandler
+                    ) => {
+
+                        // TODO: Shouldn't have to bind/setLogPrefix like this..find a way to make extendClass bind if
+                        // using window/GLOBAL
+                        extendClass(GLOBAL).with(Loggable);
+                        Log = Log.bind(GLOBAL);
+                        GLOBAL.setLogPrefix('Server');
+
+                        // ----------------------------------------------------------------------------------------- //
+                        // ----------------------------------------------------------------------------------------- //
+
+
+                        // Module Loading
+                        // The game depends on certain modules being loaded and initialized before the game can run.
+                        //
+                        // Core: Core modules which need to be initialized before we can begin loading resources. In
+                        //          particular the database and Redis
+                        //
+                        // Resources: Scripts and content. Also load the world and areas here
+                        //
+                        // Scripts: Load scripts
+                        //
+                        // Start Game: Our core modules have been initialized, resources and scripts have been loaded,
+                        //              we are now free to start the game. A connection handler is established here and
+                        //              the game loop started
+                        //
+                        //
+                        // All of this works by keeping track of our loading phase and executing
+                        // `loading('moduleToLoad')`, then when the module is ready run `loaded('moduleToLoad')`. This
+                        // way we can have multiple things loading and not move to the next phase until we've completed
+                        // loading everything.
+                        //
+                        //
+                        // TODO: Restructure the module loading to utilize promises
+                        // TODO: This code is (mostly) duplicated for both client/server; find a way to better abstract
+                        //          this
+
+                        const modulesToLoad   = {},
+                            LOADING_CORE      = 1,
+                            LOADING_RESOURCES = 2,
+                            LOADING_SCRIPTS   = 3,
+                            LOADING_FINISHED  = 4;
+
+                        let ready             = false,
+                            loadingPhase      = LOADING_CORE,
+                            loadResources     = null,
+                            loadScripts       = null,
+                            startGame         = null;
+
+
+                        // Loading a module
+                        // Add to the list of modules currently being loaded
+                        const loading = (module) => {
+                            modulesToLoad[module] = false;
+                        };
+
+
+                        // Loaded a module
+                        // Remove from the list of modules currently being loaded. If we have no more modules that we're
+                        // waiting on then go to to the next loading phase
+                        const loaded = (module) => {
+                            if (module) {
+                                if (module in modulesToLoad) {
+                                    Log(`Loaded module: ${module}`);
+                                    delete modulesToLoad[module];
+                                } else {
+                                    Log(`Loaded module which was not previously being loaded: ${module}`, LOG_ERROR);
+                                }
+                            }
+                            if (ready && _.size(modulesToLoad) === 0) {
+                                ++loadingPhase;
+                                if (loadingPhase === LOADING_RESOURCES) loadResources();
+                                else if (loadingPhase === LOADING_SCRIPTS) loadScripts();
+                                else if (loadingPhase === LOADING_FINISHED) startGame();
+                            }
+                        };
+
+                        loading('database');
+                        const db = new DB();
+                        db.connect().then(() => { loaded('database'); },
+                            (e) => { errorInGame(e); });
+
+
+                        loading('redis');
+                        const redis = new Redis();
+                        redis.initialize().then(() => { loaded('redis'); },
+                            (e) => { errorInGame(e); });
+
+
+                        // Load game resources
+                        loadResources = () => {
+
+                            loading('resources');
+                            const Resources = (new ResourceMgr());
+                            GLOBAL.Resources = Resources;
+                            Resources.initialize(
+                                ['world', 'sheets', 'npcs', 'items', 'interactables', 'scripts']
+                            ).then((assets) => {
+
+                                // Load World
+                                const data = assets.world,
+                                    json   = JSON.parse(data),
+                                    world  = new World();
+
+                                The.world = world;
+
+                                // Load Areas
+                                _.each(json.areas, (areaFile, areaID) => {
+                                    loading(`area ${areaID}`);
+                                    fs.readFile(`data/${areaFile}`, (e, areaRawData) => {
+
+                                        if (e) errorInGame(e);
+
+                                        const areaJson = JSON.parse(areaRawData),
+                                            areaData   = areaJson.AreaFile;
+                                        Resources.areas[areaData.Area.id] = {
+                                            data: areaData.Area,
+                                            properties: areaData.properties
+                                        };
+
+                                        world.addArea(areaID);
+                                        loaded(`area ${areaID}`);
+                                    });
+                                });
+
+                                loaded('resources');
+                            })
+                            .catch((e) => {
+                                Log("Could not load resources", LOG_ERROR);
+                                errorInGame(e);
+                            });
+                        };
+
+
+                        // Load Scripts
+                        loadScripts = () => {
+
+                            loading('scripts');
+
+                            // Scripts
+                            The.scripting.world = The.world;
+                            The.scripting.redis = redis;
+                            Resources.loadScripts(Resources._scriptRes).then(() => {
+
+                                Log("Starting script manager..", LOG_INFO);
+                                delete Resources._scriptRes;
+                                The.scriptmgr = new ScriptMgr();
+
+                                // TODO: Cleanup items-not-loaded and interactables-not-loaded technique for loading
+                                // things..its weird and unorthadox
+                                if ('items-not-loaded' in Resources.items) {
+
+                                    delete Resources.items['items-not-loaded'];
+                                    loading('items');
+                                    Resources.loadItemScripts().then(() => { loaded('items'); })
+                                        .catch((e) => { errorInGame(e); });
+                                }
+
+                                if ('interactables-not-loaded' in Resources.interactables) {
+
+                                    delete Resources.interactables['interactables-not-loaded'];
+                                    loading('interactables');
+                                    Resources.loadInteractableScripts().then(() => { loaded('interactables'); })
+                                        .catch((e) => { errorInGame(e); });
+                                }
+
+                                loaded('scripts');
+                            })
+                            .catch((e) => { errorInGame(e); });
+                        };
+
+                        // Start Game
+                        // TODO: This should really load a script server/game.js (similar to the client's initialization
+                        // of the game)
+                        startGame = () => {
+
+                            Log("Game has started. Hello, World!");
+
+                            // Queued request buffer
+                            // This is a double buffer to allow queueing requests while safely reading from the previous
+                            // set of queued requests
+                            const requestBuffer = new BufferQueue();
+
+                            // TODO: Should we re-enable the events archive?
+                            // let eventsArchive = new EventsArchive();
+
+                            const players = {};
+
+                            // Shutdown Game
+                            // TODO: Cleanup the shutdown routine by gracefully unloading each module, saving the state
+                            // of (reliable) things (eg. players, areas), disconnecting from Mongo and Redis, and closing
+                            // the process
+                            shutdownGame = () => {
+
+                                Log("Stopping Game, saving state");
+
+                                _.each(players, (client, clientID) => {
+                                    // TODO: save players & D/C
+                                });
+
+                                Log("Closing Mongo connection");
+                                db.disconnect();
+
+                                Log("Closing Redis connection");
+                                redis.disconnect();
+
+                                Log("Closing server. Goodbye, World!");
+                                process.exit();
+                            };
+
+                            GLOBAL.shutdownGame = shutdownGame;
+
+
+                            // Establish a Server
+                            const websocket = new WebSocketServer({ port: Env.connection.port });
+
+                            // OnConnection
+                            // A User has connected to us
+                            // TODO: This should be abstracted to a better place
+                            websocket.on('connection', (client) => {
+
+                                Log("websocket connection open", LOG_INFO);
+
+                                const you = new Player(client);
+
+                                // Disconnected
+                                // You've disconnected. Turns out we can't disconnect just yet, what if you're in the
+                                // middle of a battle? Queue the disconnect to handle when we're ready to d/c you
+                                you.onDisconnected = () => {
+                                    return new Promise(() => {
+                                        requestBuffer.queue({
+                                            you, action: { evtType: EVT_DISCONNECTED }
+                                        });
+                                    });
+                                };
+
+                                // Login
+                                you.onLogin = (username, password) => {
+                                    return new Promise((resolved, failed) => {
+                                        db.loginPlayer(username, password).then((savedState) => {
+
+                                            // Are you already online?
+                                            const player = _.find(players, (player) => player.movable.name === username);
+                                            if (player) {
+                                                const client = player.client;
+
+                                                // Are you in a connected state?
+                                                if (client.readyState !== 1) {
+                                                    Log(`User ${username} is attempting to connect. Player is already
+                                                    connected yet client state is in an unready/disconnected state`,
+                                                        LOG_ERROR);
+                                                }
+
+                                                failed('Already connected!');
+                                                return;
+                                            }
+
+                                            // User is not online already..safe to connect
+                                            resolved({
+                                                savedState,
+                                                callback: () => { players[savedState.id] = you; }
+                                            });
+                                        }, (e) => {
+                                            failed(e);
+                                        })
+                                        .catch((e) => { errorInGame(e); });
+                                    });
+                                };
+
+                                // TODO: clean this!
+                                you.onPreparingToWalk = (evt) => {
+                                    you.handleWalkRequest(evt);
+                                };
+
+                                you.onSomeEvent = (evt) => {
+                                    requestBuffer.queue({
+                                        you: this,
+                                        action: evt
+                                    });
+                                };
+
+                            });
+
+                            // Listen for login/register related requests
+                            const loginHandler = new LoginHandler(http, db);
+
+                            // The Game Loop
+                            const stepTimer = 100; // TODO: Is this the best step timer?
+                            let lastTime = now();
+                            const step = () => {
+
+                                const time = now(),
+                                    delta  = time - lastTime;
+                                lastTime = time;
+
+                                // FIXME: Is this the best way to run the gameloop again?
+                                setTimeout(step, stepTimer);
+
+                                requestBuffer.switch();
+
+                                // TODO: Should we re-enable the events archive?
+                                // eventsArchive.pushArchive();
+
+                                // Read from buffer
+                                // Handle all of the queued requests
+                                const buffer = requestBuffer.read();
+                                if (buffer.length) {
+                                    Log("----Reading request buffer----");
+
+                                    buffer.forEach((request) => {
+
+                                        // Check if request & client still here
+                                        if (!request) return;
+                                        if (!players[request.you.id]) return;
+
+                                        // TODO: handle events through a better abstraction structure
+                                        const you = request.you,
+                                            action = request.action;
+                                        if (action.evtType === EVT_PREPARING_WALK) {
+
+                                            // you.handleWalkRequest(action);
+                                        } else if (action.evtType === EVT_DISCONNECTED) {
+
+                                            you.wantToDisconnect();
+                                        } else if (action.evtType === EVT_ATTACKED) {
+
+                                            you.attackTarget(action.data.id);
+                                        } else if (action.evtType === EVT_DISTRACTED) {
+                                            // TODO: need to confirm same as current target?
+                                            // you.player.brain.setTarget(null);
+                                            you.movable.triggerEvent(EVT_DISTRACTED);
+                                        } else {
+                                            Log(` Unknown event (${action.evtType}) from player: ${you.id}`, LOG_ERROR);
+                                        }
+                                    });
+
+                                    requestBuffer.clear();
+                                    Log("----Cleared request buffer----", LOG_DEBUG);
+                                }
+
+
+                                // Timestep the world
+                                const eventsBuffer = The.world.step(time);
+                                The.scriptmgr.step(time);
+
+
+                                // Pass events to each player
+                                _.each(players, (player, clientID) => {
+
+                                    const client = player.client;
+
+                                    // Is the player queued for d/c?
+                                    if (player.queuedDisconnect) {
+
+                                        // If we're active doing something else reset our d/c countdown
+                                        if (!player.canDisconnect()) {
+                                            Log("Player can't disconnect, he's busy!");
+                                            player.wantToDisconnect();
+                                            return;
+                                        }
+
+                                        player.timeToDisconnect -= delta;
+                                        Log(`Waiting to disconnect player: ${player.timeToDisconnect}`);
+                                        if (player.timeToDisconnect <= 0) {
+                                            // Allowed to disconnect now
+                                            const page = player.movable.page;
+                                            player.disconnectPlayer();
+                                            page.area.removeEntity(player.movable);
+                                            page.eventsBuffer.push({
+                                                evtType: EVT_REMOVED_ENTITY,
+                                                entity: { id: player.movable.id }
+                                            });
+
+                                            Log(`Removed player: ${player.id}`);
+                                            db.savePlayer(player.movable);
+                                            delete players[player.id];
+                                        }
+
+                                        return;
+                                    }
+
+                                    if (client.readyState !== 1) return; // Not open (probably in the middle of d/c)
+
+
+                                    // Step player and send the latest events to this player
+                                    // TODO: Should probably separate this by stepping all players and then sending page
+                                    // events to everyone
+                                    player.step(time);
+                                    _.each(player.pages, (page, pageID) => {
+
+                                        // FIXME: for some reason old pages are still stored in player.pages.. this
+                                        // could potentially be a BIG problem with bugs laying around the program. Make
+                                        // sure to check why this is occuring and if its occuring elsewhere too!
+                                        if (!player.pages[pageID]) {
+                                            Log(`Bad page: ${pageID}`, LOG_ERROR);
+                                            return;
+                                        }
+
+                                        const areaID = player.pages[pageID].area.id;
+                                        if (eventsBuffer[areaID] && eventsBuffer[areaID][pageID]) {
+                                            client.send(JSON.stringify({
+                                                evtType: EVT_PAGE_EVENTS,
+                                                page: pageID,
+                                                events: eventsBuffer[areaID][pageID]
+                                            }));
+                                        }
+                                    });
+
+                                    // FIXME: find a better protocol for this.. need to send the player the last updates
+                                    // from the page since they died, but need to immediately remove players pages
+                                    // afterwards
+                                    if (player.movable.character.alive === false) {
+                                        player.pages = {};
+                                    }
+                                });
+
+                            };
+
+                            step();
+                        };
+
+                        ready = true;
+                        loaded(); // In case resources somehow loaded INSTANTLY fast
+                    });
+            };
+
+            // Load extensions
+            // This is our environment context, used to extend loaded classes with their client/server counterpart
+            let extendedEnvironment = Ext.SERVER;
+            if (Env.isTesting) {
+                extendedEnvironment |= Ext.SERVER_TEST;
+            }
+
+            Ext.ready(extendedEnvironment).then(() => {
+                loadedEnvironment();
+
+                Ext.extend(this, 'server');
+            })
+            .catch((e) => { errorInGame(e); });
+        });
+});

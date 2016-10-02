@@ -1,4 +1,4 @@
-				// 		- client/renderer.js: init (pass canvases, camera, map/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
+				// 		- client/renderer.js: init (pass canvases, camera, area/page, player, spritesheets; set canvas settings); render (render each individual thing); set tileHover, tilePathHighlight
 define(['loggable'], function(Loggable){
 
 
@@ -15,7 +15,7 @@ define(['loggable'], function(Loggable){
 
 		this.camera    = null;
 		this.ui        = null;
-		this.map       = null;
+		this.area      = null;
 		this.tilesheet = null;
 		this.tilesheets= null;
 		
@@ -25,7 +25,7 @@ define(['loggable'], function(Loggable){
 			strokeStyle: '#CCCCCC'
 		};
 
-		this.setMap = function(map){ };
+		this.setArea = function(area){ };
 
 		this.initialize = function(options){ };
 

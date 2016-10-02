@@ -1,187 +1,215 @@
+define(['serializable'], (Serializable) => {
 
-define(['serializable'], function(Serializable){
+    const now = Date.now;
 
-	var numPaths=0,
-		localActionId=0;
+    const isObjectEmpty = function(obj) {
+        assert(obj instanceof Object, "Expected object");
 
-	var now=Date.now,
-		isObjectEmpty=function(obj){
-		if (!(obj instanceof Object)) return new Error("Expected object");
+        let empty = true;
+        for (const s in obj) {
+            empty = false;
+            break;
+        }
 
-		var empty=true;
-		for (var s in obj){
-			empty=false;
-			break;
-		}
-		return empty;
-	}, frontOfObject=function(obj){
-		if (!(obj instanceof Object)) return new Error("Expected object");
+        return empty;
+    };
 
-		for (var k in obj){
-			return k;
-		}
-		return null;
-	}, extendClass=function(toClass) {return{
-		with: function(module){
-			var copy=function(target){
-				var type = typeof target;
-				if (type == 'object') {
+    const frontOfObject = function(obj) {
+        assert(obj instanceof Object, "Expected object");
 
-					if (target == null) return null;
-					if (target instanceof Array) {
-						var arr=[];
-						for (var i=0; i<target.length; ++i) {
-							arr.push( copy(target[i]) );
-						}
-						return arr;
-					} else {
-						var obj={};
-						for (var key in target) {
-							obj[key]=copy(target[key]);
-						}
-						return obj;
-					}
-				} else {
-					return target;
-				}
-			};
-			for (var key in module){
-				toClass[key]=copy(module[key]);
-			}
-			return toClass;
-		}};
-	}, Point = function(x,y) {
-		extendClass(this).with(Serializable);
-		this.x=x;
-		this.y=y;
-	}, Tile=function(x, y, map){
-		if (!_.isFinite(x) || !_.isFinite(y)) throw new Error("Tile has bad x,y arguments ("+x+","+y+")");
-		extendClass(this).with(Serializable);
-		this.x=x;
-		this.y=y;
+        for (const k in obj){
+            return k;
+        }
+        return null;
+    };
 
+    const inRange = function(n, min, max) {
+        return n >= min && n <= max;
+    };
 
-		if (map) {
-			if (!map.hasOwnProperty('pages')) throw new Error("Expected Map object");
-			var pageY = parseInt(y / Env.pageHeight),
-				pageX = parseInt(x / Env.pageWidth);
-			this.page = map.pages[ map.pagesPerRow * pageY + pageX ];
-			if (!this.page) throw new Error("Could not find page in map ("+ pageX +", "+ pageY +")");
-		}
+    const extendClass = function(toClass) {
+        return {
+            with(module) {
+                const copy = (target) => {
+                    const type = typeof target;
+                    if (type === 'object') {
 
-		this.toJSON=function(){
-			var tile={
-				x:this.x,
-				y:this.y
-			};
-			if (this.hasOwnProperty('page')) tile.page = this.page.index;
-		};
-		this.offset=function(xOff, yOff) {
-			if (!_.isFinite(yOff) || !_.isFinite(xOff)) throw new Error("Tile offset requires number ("+ xOff +","+ yOff +")");
-			var y = this.y + yOff,
-				x = this.x + xOff;
-			if (y < 0 || x < 0) return new Error("Bad offset from tile.."); // TODO: check y/x too far?
-			return new Tile(x, y);
-		};
-	}, Walk=function(direction, distance, destination){
-		extendClass(this).with(Serializable);
-		this.direction   = direction;
-		this.distance    = distance; // distance (global real coordinates)
-		this.walked      = 0; // distance travelled already
-		this.destination = destination; 
-	}, Path=function(){
-		extendClass(this).with(Serializable);
-		this.id          = (++numPaths);
-		this.walks       = [];
-		this.start       = null; // TODO: NEED THIS (splitWalks)
-		this.onFinished  = new Function();
-		this.onFailed    = new Function();
+                        if (target === null) return null;
+                        if (target instanceof Array) {
+                            const arr = [];
+                            for (let i = 0; i < target.length; ++i) {
+                                arr.push( copy(target[i]) );
+                            }
+                            return arr;
+                        } else {
+                            const obj = {};
+                            for (const key in target) {
+                                obj[key] = copy(target[key]);
+                            }
+                            return obj;
+                        }
+                    } else {
+                        return target;
+                    }
+                };
 
-		this.length=function(){
-			var distance=0;
-			for (var i=0; i<this.walks.length; ++i) {
-				distance += this.walks[i].distance;
-			}
-			return distance;
-		};
+                for (const key in module) {
+                    toClass[key] = copy(module[key]);
+                }
 
-		this.addWalk=function(direction, distance, destination){
-			if (!_.isFinite(direction) || !_.isFinite(distance)) throw new Error("Expected direction/distance as numbers ("+ direction +","+ distance +")");
-			this.walks.push((new Walk(direction, distance, destination)));
-		};
+                return toClass;
+            }
+        };
+    };
 
-		this.splitWalks=function(){
-			var walks    = [],
-				maxWalk  = Env.game.splitWalkLength * Env.tileSize,
-				curTile  = this.start;
-			for (var i=0; i<this.walks.length; ++i) {
-				var walk    = this.walks[i],
-					walked  = 0,
-					steps   = walk.distance;
-					
-				while (walked < steps) {
-					var nextWalk  = new Walk(walk.direction, null, null),
-						xDistance = 0,
-						yDistance = 0;
-						
-					if (walked + maxWalk > steps) {
-						nextWalk.distance = (steps - walked);
-					} else {
-						nextWalk.distance = maxWalk;
-					}
+    const Tile = function(x, y, area) {
+        if (!_.isFinite(x) || !_.isFinite(y)) {
+            throw Err(`Tile has bad x,y arguments (${x}, ${y})`);
+        }
 
-					     if (walk.direction == NORTH) yDistance = -nextWalk.distance;
-					else if (walk.direction == SOUTH) yDistance =  nextWalk.distance;
-					else if (walk.direction == WEST)  xDistance = -nextWalk.distance;
-					else if (walk.direction == EAST)  xDistance =  nextWalk.distance;
-					curTile = curTile.offset( Math.round(xDistance/Env.tileSize),
-											  Math.round(yDistance/Env.tileSize) );
-					if (_.isError(curTile)) throw curTile;
-					nextWalk.destination = curTile;
+        extendClass(this).with(Serializable);
+        this.x = x;
+        this.y = y;
+        this.page = null;
 
-					walked += maxWalk;
-					walks.push(nextWalk);
-				}
-			}
+        if (area) {
+            if (!area.pages) throw Err("Expected Area object");
+            const pageY = parseInt(y / Env.pageHeight, 10),
+                pageX   = parseInt(x / Env.pageWidth, 10),
+                pageI   = area.pagesPerRow * pageY + pageX;
+            this.page = area.pages[pageI];
+            if (!this.page) throw Err(`Could not find page in area (${pageX}, ${pageY})`);
+        }
 
-			this.walks = walks;
-		};
+        this.toJSON = () => {
+            const tile = {
+                x: this.x,
+                y: this.y
+            };
+            if (this.page) tile.page = this.page.index;
+        };
 
-	}, loadLocalExtension=function(module,context){
-		var folder=(Env.isServer?'server':'client');
-		require([folder+'/'+module], function(module){
-			console.log(module);
-		});
-	}, BufferQueue=function(){
-		this.taco=[];
-		this.bell=[];
-		this.state=true;
-		this.switch=function(){
-			this.state=!this.state;
-		};
-		this.queue=function(data){
-			var buffer=(this.state?this.taco:this.bell);
-			buffer.push(data);
-		};
-		this.read=function(){
-			return (this.state?this.bell:this.taco);
-		};
-		this.clear=function(){
-			if (this.state) this.bell=[];
-			else this.taco=[];
-		};
-	};
+        this.offset = (xOff, yOff) => {
+            if (!_.isFinite(yOff) || !_.isFinite(xOff)) throw Err(`Tile offset requires number (${xOff}, ${yOff})`);
+            const y = this.y + yOff,
+                x   = this.x + xOff;
 
-	return {
-		now: now,
-		extendClass: extendClass,
-		Point: Point,
-		Walk: Walk,
-		Path: Path,
-		Tile: Tile,
-		loadLocalExtension: loadLocalExtension,
-		BufferQueue: BufferQueue,
-		isObjectEmpty: isObjectEmpty,
-		frontOfObject: frontOfObject
-	};
+            // FIXME: Is it necessary to return/throw error for bad offset from tile?
+            // if (y < 0 || x < 0) return new Error("Bad offset from tile.."); // TODO: check y/x too far?
+            return new Tile(x, y);
+        };
+    };
+
+    const Walk = function(direction, distance, destination) {
+        extendClass(this).with(Serializable);
+        this.direction   = direction;
+        this.distance    = distance; // distance (global real coordinates)
+        this.walked      = 0; // distance travelled already
+        this.destination = destination;
+    };
+
+    const Path = function() {
+        extendClass(this).with(Serializable);
+        this.id          = null;
+        this.flag        = 0;
+        this.walks       = [];
+        this.start       = null; // TODO: NEED THIS (splitWalks)
+        this.onFinished  = function(){}; 
+        this.onFailed    = function(){};
+        this.walked      = 0; // Number of steps into the path
+        this.walkIndex   = 0; // Index of the walk that we're currently on
+        this.lastMarkedWalked = 0; // How much had we walked at the last mark? In other words, triggering evt progress will mark the path `path.lastMarkedWalked = path.walked`
+
+        this.length = () => {
+            let distance = 0;
+            for (let i = 0; i < this.walks.length; ++i) {
+                distance += this.walks[i].distance;
+            }
+            return distance;
+        };
+
+        this.addWalk = (direction, distance, destination) => {
+            assert(_.isFinite(direction) && _.isFinite(distance), `Expected direction/distance as numbers (${direction}, ${distance})`);
+            this.walks.push((new Walk(direction, distance, destination)));
+        };
+
+        this.finished = () => {
+            if (this.walks.length === 0) return true;
+            if (this.walks.length === (this.walkIndex + 1) && this.walks[this.walkIndex].walked == this.walks[this.walkIndex].distance) return true;
+            return false;
+        };
+
+        this.splitWalks = () => {
+
+            const walks = [],
+                maxWalk = Env.game.splitWalkLength * Env.tileSize;
+            let curTile = this.start;
+            for (let i = 0; i < this.walks.length; ++i) {
+                const walk = this.walks[i],
+                    steps  = walk.distance;
+                let walked = 0;
+
+                while (walked < steps) {
+                    const nextWalk = new Walk(walk.direction, null, null);
+                    let xDistance  = 0,
+                        yDistance  = 0;
+
+                    if (walked + maxWalk > steps) {
+                        nextWalk.distance = (steps - walked);
+                    } else {
+                        nextWalk.distance = maxWalk;
+                    }
+
+                         if (walk.direction === NORTH) yDistance = -nextWalk.distance;
+                    else if (walk.direction === SOUTH) yDistance =  nextWalk.distance;
+                    else if (walk.direction === WEST)  xDistance = -nextWalk.distance;
+                    else if (walk.direction === EAST)  xDistance =  nextWalk.distance;
+                    curTile = curTile.offset( Math.round(xDistance / Env.tileSize),
+                                              Math.round(yDistance / Env.tileSize) );
+                    if (!curTile) throw Err("Bad tile");
+                    nextWalk.destination = curTile;
+
+                    walked += maxWalk;
+                    walks.push(nextWalk);
+                }
+            }
+
+            this.walks = walks;
+        };
+
+    };
+
+    const BufferQueue = function() {
+        this.taco  = [];
+        this.bell  = [];
+        this.state = true;
+
+        this.switch = () => {
+            this.state = !this.state;
+        };
+
+        this.queue = (data) => {
+            const buffer = (this.state ? this.taco : this.bell);
+            buffer.push(data);
+        };
+
+        this.read = () => (this.state ? this.bell : this.taco);
+
+        this.clear = () => {
+            if (this.state) this.bell = [];
+            else this.taco = [];
+        };
+    };
+
+    return {
+        now,
+        extendClass,
+        Walk,
+        Path,
+        Tile,
+        BufferQueue,
+        isObjectEmpty,
+        frontOfObject,
+        inRange
+    };
 });

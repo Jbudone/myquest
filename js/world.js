@@ -1,61 +1,54 @@
-define(['eventful','map'], function(Eventful,Map){
+define(['loggable', 'eventful', 'area'], (Loggable, Eventful, Area) => {
 
-	var World = function(){
-		Ext.extend(this,'world');
-		extendClass(this).with(Eventful);
+    const World = function() {
 
-		this.maps = {};
-		this.addMap = function(id) {
-			if (!this.maps[id]) {
-				console.log("Adding map to world: "+id);
-				var map = new Map(id);
-				map.loadMap();
-				this.maps[id] = map;
+        Ext.extend(this,'world');
+        extendClass(this).with(Eventful);
 
-				this.listenTo(map, EVT_ZONE_OUT, function(oldMap, oldPage, entity, zone) {
-					// try {
-						console.log(zone);
-						console.log("World zoning out");
-						var oldPage = oldPage,
-							oldMap  = oldMap,
-							map     = this.maps[zone.map],
-							page    = null;
-						console.log("Zoning user ["+entity.id+"] to new map..");
-						oldMap.removeEntity(entity);
-						page = map.zoneIn(entity, zone);
-						entity.triggerEvent(EVT_ZONE_OUT, oldMap, oldPage, map, page, zone);
-						entity.isZoning = true; // FIXME: this is a quickfix to tell the movement not to update position in movable.js
-					// } catch(e) {
-					// 	console.log("Error zoning entity..");
-					// 	console.log(e);
-					// 	// TODO: send entity to safe spot
-					// }
-				});
-			}
-		};
+        extendClass(this).with(Loggable);
+        this.setLogPrefix('world');
 
-		this.step = function(time) {
-			this.handlePendingEvents();
+        this.areas = {};
+        this.addArea = (id) => {
+            if (!this.areas[id]) {
+                this.Log(`Adding area to world: ${id}`);
 
-			var lag=time,
-				eventsBuffer = {};
-			for (var mapID in this.maps) {
-				var beforeStep=now();
+                const area = new Area(id);
+                area.loadArea();
+                this.areas[id] = area;
 
-				// try {
-					var mapEvents = this.maps[mapID].step(lag)
-					if (mapEvents) eventsBuffer[mapID] = mapEvents;
-				// } catch(e) {
-				// 	console.log(e);
-				// }
+                this.listenTo(area, EVT_ZONE_OUT, (oldArea, oldPage, entity, zone) => {
+                    this.Log(zone, LOG_DEBUG);
 
-				lag += (now() - beforeStep);
-			}
+                    const area = this.areas[zone.area];
 
-			return eventsBuffer;
-		};
-	};
+                    this.Log(`Zoning user [${entity.id}] to new area..`, LOG_INFO);
 
-	return World;
+                    oldArea.removeEntity(entity);
+                    const page = area.zoneIn(entity, zone);
+                    entity.triggerEvent(EVT_ZONE_OUT, oldArea, oldPage, area, page, zone);
+                    entity.isZoning = true; // FIXME: this is a quickfix to tell the movement not to update position in movable.js
+                });
+            }
+        };
 
+        this.step = (time) => {
+            this.handlePendingEvents();
+
+            let lag = time;
+            const eventsBuffer = {};
+            for (const areaID in this.areas) {
+                const beforeStep = now(),
+                    areaEvents   = this.areas[areaID].step(lag);
+
+                if (areaEvents) eventsBuffer[areaID] = areaEvents;
+
+                lag += (now() - beforeStep);
+            }
+
+            return eventsBuffer;
+        };
+    };
+
+    return World;
 });

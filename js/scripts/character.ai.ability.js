@@ -1,6 +1,6 @@
-define(['SCRIPTENV', 'scripts/character.ai.abilitystate'], function(SCRIPTENV, AbilityState){
+define(['SCRIPTINJECT', 'scripts/character.ai.abilitystate'], function(SCRIPTINJECT, AbilityState){
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
 	var Ability = function(){
 

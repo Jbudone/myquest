@@ -89,6 +89,22 @@
                  "width":16,
                  "x":32,
                  "y":144
+                }, 
+                {
+                 "height":16,
+                 "id":29,
+                 "name":"",
+                 "properties":
+                    {
+                     "map":"test-map-smallwithnpcs",
+                     "spawn":"1"
+                    },
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":16,
+                 "x":80,
+                 "y":32
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -169,7 +185,7 @@
          "x":0,
          "y":0
         }],
- "nextobjectid":27,
+ "nextobjectid":30,
  "orientation":"orthogonal",
  "properties":
     {

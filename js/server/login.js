@@ -10,8 +10,10 @@ define(function(){
 
 			res.writeHead(200, {'Content-Type': 'text/json', 'Access-Control-Allow-Origin' : '*'}); // FIXME: shouldn't need to do this
 
+            console.log(util.inspect(request));
+
 			var reply = null;
-			if (!request.hasOwnProperty('request')) {
+			if (!('request' in request)) {
 				reply = {success:false, reason:'No request'};
 			} else {
 				if (request.request == REQ_REGISTER) {

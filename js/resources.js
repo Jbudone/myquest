@@ -1,36 +1,39 @@
 define(['loggable'], function(Loggable){
 
 
+	// TODO: Cleanup resource loading to utilize Promises (Promise.all? Promise.join?)
 	var Resources = (function(){
 
 		Ext.extend(this,'resources');
 		extendClass(this).with(Loggable);
 		this.setLogGroup('Resources');
-		this.setLogPrefix('(Resources) ');
+		this.setLogPrefix('Resources');
 
 		var Log = this.Log.bind(this);
-		var interface = {
+		var _interface = {
 
 			sprites: {},
 			sheets: {},
-			maps: {},
+			areas: {},
 			npcs: {},
 			scripts: {},
 			items: {},
 			interactables: {},
 
-			initialize: new Function(),
-			findSheetFromFile: new Function(),
-			loadScript: new Function(),
+			initialize: function(){},
+			findSheetFromFile: function(){},
+			loadScript: function(){},
 
-			loadItemScripts: new Function(),
-			loadInteractableScripts: new Function()
+			loadItemScripts: function(){},
+			loadInteractableScripts: function(){}
 
 		}, initialize = (function(loadingResources){
 
 			return new Promise(function(loaded, failed){
 
-				this.read('data/resources.new.json').then((function(data){
+                const resourcesPath = Env.connection.resources;
+
+				this.read(resourcesPath).then((function(data){
 					var resources = JSON.parse(data),
 						assets    = { },
 						loading   = loadingResources.length;
@@ -60,7 +63,7 @@ define(['loggable'], function(Loggable){
 								loaded(assets);
 							}
 						}.bind(this)), function(){
-							console.log("Error loading resources");
+							this.Log("Error loading resources", LOG_ERROR);
 						})
 						.catch(Error, function(e){ errorInGame(e); })
 						.error(function(e){ errorInGame(e); });
@@ -82,7 +85,7 @@ define(['loggable'], function(Loggable){
 				}
 			}
 			return false;
-		}.bind(interface)),
+		}.bind(_interface)),
 
 		loadScripts = (function(scripts){
 			return new Promise(function(succeeded, failed){
@@ -99,14 +102,14 @@ define(['loggable'], function(Loggable){
 					if (script.script) {
 							
 
-						var scriptFile = "js/scripts/"+script.script;
+						var scriptFile = "dist/scripts/"+script.script;
 						script.name = scriptName;
 						Log("Loading script: "+scriptFile);
 						++scriptsToLoad;
 						require([scriptFile], function(script){
 							--scriptsToLoad;
 
-							interface.scripts[this.name] = {
+							_interface.scripts[this.name] = {
 								script: script,
 								components: {}
 							};
@@ -124,10 +127,10 @@ define(['loggable'], function(Loggable){
 							_.each(components, function(componentFile, componentName){
 								++scriptsToLoad;
 								Log("Loading script: "+componentFile);
-								require(["js/scripts/"+componentFile], function(component){
+								require(["dist/scripts/"+componentFile], function(component){
 									--scriptsToLoad;
 									Log("Loaded script: "+this.name+"."+componentName+" waiting on "+scriptsToLoad+" more..");
-									interface.scripts[this.name].components[componentName] = component;
+									_interface.scripts[this.name].components[componentName] = component;
 									if (scriptsToLoad==0 && ready) {
 										succeeded();
 									}
@@ -142,7 +145,7 @@ define(['loggable'], function(Loggable){
 
 					} else {
 
-						interface.scripts[scriptName] = {};
+						_interface.scripts[scriptName] = {};
 						var buildChildScripts = function(container, list){
 
 							for (var scriptPart in list) {
@@ -180,7 +183,7 @@ define(['loggable'], function(Loggable){
 							}
 						};
 
-						buildChildScripts(interface.scripts[scriptName], script);
+						buildChildScripts(_interface.scripts[scriptName], script);
 					}
 				}
 				ready = true;
@@ -210,7 +213,7 @@ define(['loggable'], function(Loggable){
 					return e;
 				}
 			}
-		}.bind(interface)),
+		}.bind(_interface)),
 
 		initializeAsset = (function(assetID, asset){
 			if (assetID == 'sheets') return initializeSheets(asset);
@@ -238,9 +241,15 @@ define(['loggable'], function(Loggable){
 					},
 					image: ((Env.isServer||Env.isBot)? null : (new Image())),
 					tilesPerRow: parseInt(_sheet.columns),
-					data: { },
-					gid: {}
+					data: { }
 				};
+
+				if (_sheet.hasOwnProperty('gid')) {
+					sheet.gid = {
+						first: parseInt(_sheet.gid.first),
+						last: parseInt(_sheet.gid.last)
+					}
+				}
 
 				if (!Env.isServer && !Env.isBot) {
 					sheet.image.src = location.origin + location.pathname + sheet.file;
@@ -253,9 +262,9 @@ define(['loggable'], function(Loggable){
 					sheet  = makeSheet( _sheet );
 
 
-				sheet.gid.first = gid;
-				gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
-				sheet.gid.last = gid - 1;
+				// sheet.gid.first = gid;
+				// gid += parseInt(_sheet.rows) * parseInt(_sheet.columns) + 1;
+				// sheet.gid.last = gid - 1;
 				if (_sheet.data.objects) {
 					sheet.data.objects = {};
 					for (var objCoord in _sheet.data.objects) {
@@ -275,6 +284,13 @@ define(['loggable'], function(Loggable){
 					sheet.data.floating = [];
 					for (var j=0; j<_sheet.data.floating.length; ++j) {
 						sheet.data.floating.push( parseInt( _sheet.data.floating[j] ) );
+					}
+				}
+
+				if (_sheet.data.shootable) {
+					sheet.data.shootable = [];
+					for (var j=0; j<_sheet.data.shootable.length; ++j) {
+						sheet.data.shootable.push( parseInt( _sheet.data.shootable[j] ) );
 					}
 				}
 
@@ -399,7 +415,7 @@ define(['loggable'], function(Loggable){
 
 			}
 
-		}.bind(interface)),
+		}.bind(_interface)),
 
 
 		initializeNPCs = (function(asset){
@@ -408,7 +424,7 @@ define(['loggable'], function(Loggable){
 				var npc = res[i];
 				this.npcs[npc.id]=npc;
 			}
-		}.bind(interface)),
+		}.bind(_interface)),
 
 		initializeItems = (function(asset){
 
@@ -476,7 +492,7 @@ define(['loggable'], function(Loggable){
 			this.items['items-not-loaded'] = true;
 			// NOTE: save item base scripts (like scripts) loading/initialization until we've setup the
 			// scripting environment
-		}.bind(interface)),
+		}.bind(_interface)),
 
 		initializeInteractables = (function(asset){
 
@@ -531,24 +547,24 @@ define(['loggable'], function(Loggable){
 			this.interactables['interactables-not-loaded'] = true;
 			// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
 			// scripting environment
-		}.bind(interface)),
+		}.bind(_interface)),
 
 
 		initializeScripts = (function(asset){
 			var scripts = JSON.parse(asset);
 			this._scriptRes = scripts;
 			// NOTE: save script loading/initialization until we've setup the scripting environment
-		}.bind(interface)),
+		}.bind(_interface)),
 
 		initializeWorld = (function(asset){
 			// Intentionally blank (only handled by server)
 		});
 
-		interface.initialize = initialize;
-		interface.findSheetFromFile = findSheetFromFile;
-		interface.loadScripts = loadScripts;
+		_interface.initialize = initialize;
+		_interface.findSheetFromFile = findSheetFromFile;
+		_interface.loadScripts = loadScripts;
 
-		return interface;
+		return _interface;
 	});
 
 	return Resources;

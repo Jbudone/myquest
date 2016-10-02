@@ -9,8 +9,8 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 
 		this.canvas = null;
-		this.onMouseMove = new Function();
-		this.onMouseDown = new Function();
+		this.onMouseMove = function(){};
+		this.onMouseDown = function(){};
 
 		this.tileHover = null;
 		this.hoveringEntity = null;
@@ -38,7 +38,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 		this.initialize = function(canvas){ };
 
 		this.postMessage = function(message, messageType){
-			console.log(message);
+            this.Log(message);
 		};
 
 		this.movables = {};

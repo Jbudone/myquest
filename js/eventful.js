@@ -31,15 +31,18 @@ define(function(){
 		},
 
 		triggerEvent:function(id){
+			Profiler.profile('event-'+id);
 			this.currentlyTriggeringEvent=true;
 			if (this.evtListeners[id]) {
 				var me=this,
 					evtArgs=arguments;
-				_.each(this.evtListeners[id],function(listener){
-					if (!listener) return; // We've stopped listening to this already when this triggered maybe?
+
+				for(var i=this.evtListeners[id].length-1; i>=0; --i){
+					var listener = this.evtListeners[id][i];
+					if (!listener) continue; // We've stopped listening to this already when this triggered maybe?
 					var args=[me];
-					for(var i=1; i<evtArgs.length; ++i) {
-						args.push(evtArgs[i]);
+					for(var j=1; j<evtArgs.length; ++j) {
+						args.push(evtArgs[j]);
 					}
 					if (listener.priority != LOW_PRIORITY) {
 						listener.callback.apply( listener.caller, args );
@@ -53,7 +56,8 @@ define(function(){
 							listener.callback.apply( listener.caller, args );
 						}
 					}
-				});
+				}
+
 			}
 			this.currentlyTriggeringEvent=false;
 			for (var i=0; i<this.pendingOperations.length; ++i) {
@@ -61,6 +65,7 @@ define(function(){
 				operation.callback.apply(operation.context, operation.args);
 			}
 			this.pendingOperations=[];
+			Profiler.profileEnd('event-'+id);
 		},
 
 		handlePendingEvents:function(){
@@ -80,7 +85,7 @@ define(function(){
 			//
 			// Is this new event listener a duplicate of one we already had before? We're checking that the
 			// function callbacks are both the same, and that the contexts are roughly similar. Contexts are
-			// harder to check since we can't compare types (eg. zoning between two maps will both issue the
+			// harder to check since we can't compare types (eg. zoning between two areas will both issue the
 			// same event handlers and be considered duplicates), but also can't compare uid's (eg. old
 			// character wasn't deleted and is still listening to event, and a new character was made which
 			// listens to this event too, but both characers are for the same entity). This assertion test is

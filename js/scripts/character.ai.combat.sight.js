@@ -1,123 +1,143 @@
-define(['SCRIPTENV', 'hookable', 'scripts/character.ai.ability'], function(SCRIPTENV, Hookable, Ability){
+define(['SCRIPTINJECT', 'hookable', 'scripts/character.ai.ability'], (SCRIPTINJECT, Hookable, Ability) => {
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
-	/* Sight
-	 *
-	 * 	TODO
-	 * 	 - keep track of tiles in game
-	 * 	 	> allow hooking/unhooking tiles; create a hash & add/remove tile
-	 * 	 	> game hook character movement; check if tile exists, if so then trigger hook
-	 * 	 - listen to tile
-	 * 	 - trigger movement on tile; callback here
-	 * 	 - initial look: clear current tiles/listening & listen to surrounding tiles; keep track of outer most
-	 * 	 tiles
-	 * 	 - update: (on move) loop through outer most tiles & update
-	 * 	 - only consider non-collision tiles
-	 *
-	 * 	 Edge tiles: used for efficiently updating which tiles we're watching
-	 ********/
-	var Sight = function(game, combat, character){
-		extendClass(this).with(Hookable);
+    // Sight
+    //
+    //  TODO
+    //   - keep track of tiles in game
+    //      > allow hooking/unhooking tiles; create a hash & add/remove tile
+    //      > game hook character movement; check if tile exists, if so then trigger hook
+    //   - listen to tile
+    //   - trigger movement on tile; callback here
+    //   - initial look: clear current tiles/listening & listen to surrounding tiles; keep track of outer most
+    //   tiles
+    //   - update: (on guard) loop through outer most tiles & update
+    //   - only consider non-collision tiles
+    //   - Might be worth it to setup megatiles (clumped convex regions of non-collidable tiles), then have
+    //   tiles point to which megatiles they belong to, and triggerEvent on each of those regions. Then we
+    //   could update sight infrequently and efficiently
+    //
+    //   Edge tiles: used for efficiently updating which tiles we're watching
 
-		this.base = Ability;
-		this.tiles = [];
-		this.tile = null;
+    const Sight = function(game, combat, character) {
 
-		this.onReady = new Function();
-		var _sight = this,
-			_script = null,
-			game = game,
-			character = character,
-			sightRange = 3;
-		this.server = {
-			initialize: function(){
-				_script = this;
+        Ability.call(this);
 
-				_sight.base();
-				_sight.start.bind(_sight)();
-			},
+        extendClass(this).with(Hookable);
+
+        this.tiles = [];
+        this.tile  = null;
+
+        this.onReady = function(){};
+
+        const _sight = this,
+            sightRange = 2;
+
+        let _script = null;
+
+        this.server = {
+
+            initialize() {
+                _script = this;
+
+                _sight.start();
+            },
+
+            standGuard: () => {
+
+            },
+
+            stopGuarding: () => {
+
+            },
+
+            start: () => {
+
+                character.hook('guard', this).after(() => {
+                    this.updatePosition();
+                    this.look();
+
+                    character.hook('moved', this).after(() => {
+                        character.hook('moved', this).remove();
+                        this.clearTiles();
+                    });
+
+                });
 
 
-			start: function(){
+                this.updatePosition();
+                this.look();
 
-				character.hook('moved', this).after(function(){
-					this.updatePosition();
-					this.look();
-				}.bind(this));
+                this.registerHook('see');
+                this.onReady();
+            },
 
-				this.updatePosition();
-				this.look();
+            updatePosition: () => {
+                const pos = character.entity.position.tile;
+                this.tile = pos;
+            },
 
-				this.registerHook('see');
-				this.onReady();
-			},
+            addTile: (tile) => {
+                this.tiles.push(tile);
+                game.tile(tile.x, tile.y).listen(this, (character) => {
+                    if (!this.doHook('see').pre(character)) return;
+                    this.doHook('see').post(character);
+                });
+            },
 
-			updatePosition: function(){
-				var pos = character.entity.position.tile;
-				this.tile = pos;
-			},
+            clearTiles: () => {
+                for (let i = 0; i < this.tiles.length; ++i) {
+                    const tile = this.tiles[i];
+                    game.tile(tile.x, tile.y).forget(this);
+                }
+                this.tiles = [];
+            },
 
-			addTile: function(tile){
-				this.tiles.push(tile);
-				game.tile(tile.x, tile.y).listen(this, function(character){
-					if (!this.doHook('see').pre(character)) return;
-					this.doHook('see').post(character);
-				});
-			},
+            look: () => {
 
-			clearTiles: function(){
-				for (var i=0; i<this.tiles.length; ++i){
-					var tile = this.tiles[i];
-					game.tile(tile.x, tile.y).forget(this);
-				}
-				this.tiles = [];
-			},
+                this.clearTiles();
+                if (!_.isObject(this.tile)) return;
 
-			look: function(){
+                const tilesToTest   = [],
+                    tilesConsidered = {},
+                    myTile          = this.tile;
 
-				this.clearTiles();
-				if (!_.isObject(this.tile)) return;
+                const hashTile = (x, y) => y * character.entity.page.area.areaWidth + x;
+                const isInRange = (x, y) => Math.abs(x - myTile.x) <= sightRange && Math.abs(y - myTile.y) <= sightRange;
 
-				var tilesToTest = [],
-					tilesConsidered = {},
-					myTile = this.tile,
-					hashTile = function(x, y){
-						return y*(character.entity.page.map.mapWidth)+x;
-					}, isInRange = function(x, y){
-						return (Math.abs(x - myTile.x) <= sightRange && Math.abs(y - myTile.y) <= sightRange);
-					};
+                tilesToTest.push(this.tile);
+                tilesConsidered[ hashTile(tilesToTest[0]) ] = true;
+                while (tilesToTest.length) {
+                    const tile = tilesToTest.shift();
 
-				tilesToTest.push(this.tile);
-				tilesConsidered[ hashTile(tilesToTest[0]) ] = true;
-				while(tilesToTest.length) {
-					var tile = tilesToTest.shift();
+                    if (isInRange(tile.x, tile.y)) {
+                        this.addTile(tile);
 
-					if (isInRange(tile.x, tile.y)) {
-						this.addTile(tile);
+                        const north  = { x: tile.x, y: tile.y - 1 },
+                            west     = { x: tile.x - 1, y: tile.y },
+                            south    = { x: tile.x, y: tile.y + 1 },
+                            east     = { x: tile.x + 1, y: tile.y },
+                            tryTiles = [north, west, south, east];
 
-						var north = { x: tile.x, y: tile.y - 1 },
-							west  = { x: tile.x - 1, y: tile.y },
-							south = { x: tile.x, y: tile.y + 1 },
-							east  = { x: tile.x + 1, y: tile.y },
-							tryTiles = [north, west, south, east];
+                        for (let i = 0; i < tryTiles.length; ++i) {
+                            const nTile = tryTiles[i],
+                                hash    = hashTile(nTile.x, nTile.y);
 
-						for (var i=0; i<tryTiles.length; ++i) {
-							var nTile = tryTiles[i],
-								hash = hashTile(nTile.x, nTile.y);
+                            if (!tilesConsidered[hash]) {
+                                tilesToTest.push(nTile);
+                                tilesConsidered[hash] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        };
 
-							if (!tilesConsidered.hasOwnProperty(hash)) {
-								tilesToTest.push(nTile);
-								tilesConsidered[hash] = true;
-							}
-						}
-					}
-				}
-			},
-		};
+    };
 
-	};
+    Sight.prototype = Object.create(Ability.prototype);
+    Sight.prototype.constructor = Sight;
 
-	return Sight;
+    return Sight;
 });
-

@@ -1,10 +1,15 @@
-define(['SCRIPTENV'], function(SCRIPTENV){
+define(['SCRIPTINJECT', 'loggable'], function(SCRIPTINJECT, Loggable){
 
-	eval(SCRIPTENV);
+    /* SCRIPTINJECT */
 
 	var AbilityState = function(){
 
-		this.update = new Function();
+		extendClass(this).with(Loggable);
+		this.setLogGroup('Ability');
+		this.setLogPrefix('(Ability: ');
+
+
+		this.update = function(){};
 
 		this.isActive = false;
 		this.enter = function(){
@@ -23,8 +28,8 @@ define(['SCRIPTENV'], function(SCRIPTENV){
 			this.onLeave.apply(this, arguments);
 		};
 
-		this.onEnter = new Function();
-		this.onLeave = new Function();
+		this.onEnter = function(){};
+		this.onLeave = function(){};
 
 	};
 

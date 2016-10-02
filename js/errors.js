@@ -56,11 +56,30 @@ define(['lib/stacktrace'], function(Stack){
 				if (this.data) console.log(data);
 			}
 		}
+
+        var e = new Error();
+        this.stack = e.stack;
 	};
 
 	allErrors['GameError'] = GameError; // NOTE: a Game error is not an error in code; its an error specific to within the game (eg. a player requests to pickup an item which is not there)
 
+  var Err = function ErrorMessage(message, ...args) {
+      var err = new Error(),
+          stack = err.stack;
 
+      stack = message + "\n" + stack;
+      if (!Env.isServer) {
+          console.error(message);
+          console.error(args);
+          debugger;
+      }
+    return { message: message, args: args, stack: stack };
+  }
+
+    allErrors['Err'] = Err;
+
+
+  /*
 	// An extendable error class
 	// arg1 is supposed to be a hint (o/w use it for args)
 	// arg2 is supposed to be args
@@ -77,6 +96,7 @@ define(['lib/stacktrace'], function(Stack){
 		e.args = arg2 || {};
 		return e;
 	};
+  */
 
 	return allErrors;
 });
