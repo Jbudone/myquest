@@ -24,7 +24,6 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
         //         in/out of this strategy because of chasing after target
         //         and being much faster than target
 
-        // FIXME: Player properties for attackInfo
         const attackInfo  = _character.entity.npc.attackInfo,
             chaseDistance = attackInfo.chaseDistance,
             attackTime    = attackInfo.attackTime,
