@@ -140,7 +140,7 @@ define(
                                 // Walk Denied!!
                                 this.Log("Walk denied! Going back to state", LOG_ERROR);
                                 this.Log(state, LOG_ERROR);
-                                this.Log(event, LOG_ERROR);
+                                this.Log(walk, LOG_ERROR);
 
                                 ui.tilePathHighlight = null;
 
