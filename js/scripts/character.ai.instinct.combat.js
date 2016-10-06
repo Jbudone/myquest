@@ -514,7 +514,7 @@ define(
 
                         if (this.targetsToForget.length !== l) {
                             this.Log("I forgot some targets..");
-                            brain.neuralNet.print();
+                            this.Log(brain.neuralNet.debugInfo(), LOG_DEBUG);
                         }
                     });
 
