@@ -30,6 +30,7 @@ define(
 
             this.queuedDisconnect      = false;
             this.timeToDisconnect      = null;
+            this.isConnected           = true;
 
 
             this.setPlayer = (player) => {
@@ -98,33 +99,35 @@ define(
                     this.pages             = {};
                     this.pages[page.index] = page;
 
+                    if (this.isConnected) {
 
-                    // Send new page & neighbours as necessary
-                    // If neighbour page was sent previously then don't send again
-                    const initialization =
-                        {
-                            zone: true,
-                            pages: {}
-                        };
+                        // Send new page & neighbours as necessary
+                        // If neighbour page was sent previously then don't send again
+                        const initialization =
+                            {
+                                zone: true,
+                                pages: {}
+                            };
 
-                    if (!oldNeighbours[page.index]) {
-                        const str = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-                        initialization.pages[page.index] = str;
-                    }
+                        if (!oldNeighbours[page.index]) {
+                            const str = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                            initialization.pages[page.index] = str;
+                        }
 
-                    for (const neighbour in page.neighbours) {
-                        const npage = page.neighbours[neighbour];
+                        for (const neighbour in page.neighbours) {
+                            const npage = page.neighbours[neighbour];
 
-                        if (npage) {
-                            this.pages[npage.index] = npage;
-                            if (!oldNeighbours[npage.index] && npage.index != oldPage.index) {
-                                const str = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-                                initialization.pages[npage.index] = str;
+                            if (npage) {
+                                this.pages[npage.index] = npage;
+                                if (!oldNeighbours[npage.index] && npage.index != oldPage.index) {
+                                    const str = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                                    initialization.pages[npage.index] = str;
+                                }
                             }
                         }
-                    }
 
-                    this.client.send(JSON.stringify(initialization));
+                        this.client.send(JSON.stringify(initialization));
+                    }
                 });
 
                 this.movable.addEventListener(EVT_ZONE_OUT, this, (player, oldArea, oldPage, area, page, zone) => {
@@ -137,21 +140,74 @@ define(
                     this.pages = { };
                     this.pages[page.index] = page;
 
-                    const initialization = {
-                        zoneArea: true,
-                        area: {
-                            id: area.id,
-                            pagesPerRow: area.pagesPerRow,
-                            areaWidth: area.area.properties.width,
-                            areaHeight: area.area.properties.height,
-                            tilesets: area.area.properties.tilesets
-                        },
-                        player: {
-                            position: this.movable.position,
-                            page: this.movable.page.index
-                        },
-                        pages: {}
-                    };
+                    if (this.isConnected) {
+
+                        const initialization = {
+                            zoneArea: true,
+                            area: {
+                                id: area.id,
+                                pagesPerRow: area.pagesPerRow,
+                                areaWidth: area.area.properties.width,
+                                areaHeight: area.area.properties.height,
+                                tilesets: area.area.properties.tilesets
+                            },
+                            player: {
+                                position: this.movable.position,
+                                page: this.movable.page.index
+                            },
+                            pages: {}
+                        };
+
+                        initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                        for (const neighbour in page.neighbours) {
+                            const npage = page.neighbours[neighbour];
+                            if (npage) {
+                                this.pages[npage.index] = npage;
+                                initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                            }
+                        }
+
+                        this.client.send(JSON.stringify(initialization));
+                    }
+                });
+
+                return true;
+            };
+
+            this.respawn = () => {
+
+                this.pages = {};
+                this.pages[this.movable.page.index] = this.movable.page;
+
+                if (this.isConnected) {
+
+                    const page = this.movable.page,
+                        area   = page.area,
+                        initialization = {
+                            respawn: true,
+                            area: {
+                                id: area.id,
+                                pagesPerRow: area.pagesPerRow,
+                                areaWidth: area.area.properties.width,
+                                areaHeight: area.area.properties.height,
+                                tilesets: area.area.properties.tilesets
+                            },
+                            player: {
+                                position: {
+                                    tile: {
+                                        x: this.movable.position.tile.x,
+                                        y: this.movable.position.tile.y },
+                                    global: {
+                                        x: this.movable.position.global.x,
+                                        y: this.movable.position.global.y }
+                                },
+                                page: this.movable.page.index,
+                                _character: {
+                                    health: this.movable.character.health
+                                }
+                            },
+                            pages: {}
+                        };
 
                     initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
                     for (const neighbour in page.neighbours) {
@@ -163,53 +219,7 @@ define(
                     }
 
                     this.client.send(JSON.stringify(initialization));
-                });
-
-                return true;
-            };
-
-            this.respawn = () => {
-
-                this.pages = {};
-                this.pages[this.movable.page.index] = this.movable.page;
-                const page = this.movable.page,
-                    area   = page.area,
-                    initialization = {
-                        respawn: true,
-                        area: {
-                            id: area.id,
-                            pagesPerRow: area.pagesPerRow,
-                            areaWidth: area.area.properties.width,
-                            areaHeight: area.area.properties.height,
-                            tilesets: area.area.properties.tilesets
-                        },
-                        player: {
-                            position: {
-                                tile: {
-                                    x: this.movable.position.tile.x,
-                                    y: this.movable.position.tile.y },
-                                global: {
-                                    x: this.movable.position.global.x,
-                                    y: this.movable.position.global.y }
-                            },
-                            page: this.movable.page.index,
-                            _character: {
-                                health: this.movable.character.health
-                            }
-                        },
-                        pages: {}
-                    };
-
-                initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-                for (const neighbour in page.neighbours) {
-                    const npage = page.neighbours[neighbour];
-                    if (npage) {
-                        this.pages[npage.index] = npage;
-                        initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-                    }
                 }
-
-                this.client.send(JSON.stringify(initialization));
             };
 
             this.handleWalkRequest = (action) => {
@@ -276,19 +286,22 @@ define(
                 if (!safePath) {
                     this.Log("Path is not safe for user... cancelling!");
 
-                    const response   = new Response(action.id);
-                    response.success = false;
-                    response.state   = {
-                        position: {
-                            global: {
-                                x: movableState.position.global.x,
-                                y: movableState.position.global.y },
-                            tile: {
-                                x: movableState.position.tile.x,
-                                y: movableState.position.tile.y }
-                        }
-                    };
-                    this.client.send(response.serialize());
+                    if (this.isConnected) {
+
+                        const response   = new Response(action.id);
+                        response.success = false;
+                        response.state   = {
+                            position: {
+                                global: {
+                                    x: movableState.position.global.x,
+                                    y: movableState.position.global.y },
+                                tile: {
+                                    x: movableState.position.tile.x,
+                                    y: movableState.position.tile.y }
+                            }
+                        };
+                        this.client.send(response.serialize());
+                    }
                     return;
                 }
 
@@ -302,18 +315,21 @@ define(
                     this.Log(pathState);
                     this.Log(movableState);
 
-                    const response = new Response(action.id);
-                    response.success = false;
-                    response.state   = { position: {
-                        global: {
-                            x: movableState.position.global.x,
-                            y: movableState.position.global.y },
-                        tile: {
-                            x: movableState.position.tile.x,
-                            y: movableState.position.tile.y }
+                    if (this.isConnected) {
+
+                        const response = new Response(action.id);
+                        response.success = false;
+                        response.state   = { position: {
+                            global: {
+                                x: movableState.position.global.x,
+                                y: movableState.position.global.y },
+                            tile: {
+                                x: movableState.position.tile.x,
+                                y: movableState.position.tile.y }
+                        }
+                        };
+                        this.client.send(response.serialize());
                     }
-                    };
-                    this.client.send(response.serialize());
                     return;
                 }
 
@@ -327,28 +343,33 @@ define(
                     this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${movableState.position.tile.x}, ${movableState.position.tile.y})`, LOG_DEBUG);
                     player.addPath(path);
 
-                    const response = new Response(action.id);
-                    response.success = true;
-                    this.client.send(response.serialize());
+                    if (this.isConnected) {
+                        const response = new Response(action.id);
+                        response.success = true;
+                        this.client.send(response.serialize());
+                    }
                 } else {
                     this.Log("Could not recalibrate our current position to the beginning of the requested path");
                     this.Log(pathState);
                     this.Log(movableState);
                     this.Log(path);
 
-                    const response = new Response(action.id);
-                    response.success = false;
-                    response.state   = {
-                        position: {
-                            global: {
-                                x: movableState.position.global.x,
-                                y: movableState.position.global.y },
-                            tile: {
-                                x: movableState.position.tile.x,
-                                y: movableState.position.tile.y }
-                        }
-                    };
-                    this.client.send(response.serialize());
+                    if (this.isConnected) {
+
+                        const response = new Response(action.id);
+                        response.success = false;
+                        response.state   = {
+                            position: {
+                                global: {
+                                    x: movableState.position.global.x,
+                                    y: movableState.position.global.y },
+                                tile: {
+                                    x: movableState.position.tile.x,
+                                    y: movableState.position.tile.y }
+                            }
+                        };
+                        this.client.send(response.serialize());
+                    }
                 }
             };
 
@@ -377,12 +398,14 @@ define(
 
             client.on('close', () => {
                 this.onDisconnected();
+                this.isConnected = false;
                 this.Log(`websocket connection close [${this.id}]`);
             });
 
             // FIXME: do we need to disconnect them from all errors ??
             client.on('error', () => {
                 this.onDisconnected();
+                this.isConnected = false;
                 this.Log(`websocket connection error.. disconnecting user [${this.id}]`);
             });
 
@@ -399,10 +422,13 @@ define(
                         this.Log("User requesting a new character..", LOG_DEBUG);
                         this.onRequestNewCharacter().then((newID) => {
                             this.Log(`Created new character for player [${newID}]`);
-                            const response        = new Response(evt.id);
-                            response.success      = true;
-                            response.newCharacter = { id: newID };
-                            this.client.send(response.serialize());
+
+                            if (this.isConnected) {
+                                const response        = new Response(evt.id);
+                                response.success      = true;
+                                response.newCharacter = { id: newID };
+                                this.client.send(response.serialize());
+                            }
                         }, () => {
                             this.Log("Could not create new player..", LOG_ERROR);
                             // TODO: tell user
@@ -421,31 +447,39 @@ define(
                                 succeeded    = this.setPlayer(savedState);
 
                             if (!succeeded) {
-                                const response   = new Response(evt.id);
-                                response.success = false;
-                                this.client.send(response.serialize());
+
+                                if (this.isConnected) {
+                                    const response   = new Response(evt.id);
+                                    response.success = false;
+                                    this.client.send(response.serialize());
+                                }
                                 return;
                             }
 
-                            const response   = new Response(evt.id);
-                            response.success = true;
-                            response.login   = true;
-                            response.player  = {
-                                position: savedState.position,
-                                playerID: this.movable.playerID,
-                                id: this.movable.id,
-                                name: this.movable.name
-                            };
-                            this.client.send(response.serialize());
+                            if (this.isConnected) {
+                                const response   = new Response(evt.id);
+                                response.success = true;
+                                response.login   = true;
+                                response.player  = {
+                                    position: savedState.position,
+                                    playerID: this.movable.playerID,
+                                    id: this.movable.id,
+                                    name: this.movable.name
+                                };
+                                this.client.send(response.serialize());
+                            }
 
                             callback();
                         }, (err) => {
 
                             this.Log("Could not login player..");
-                            const response   = new Response(evt.id);
-                            response.success = false;
-                            response.reason  = err;
-                            this.client.send(response.serialize());
+
+                            if (this.isConnected) {
+                                const response   = new Response(evt.id);
+                                response.success = false;
+                                response.reason  = err;
+                                this.client.send(response.serialize());
+                            }
                         })
                         .catch(errorInGame);
                     }
@@ -456,27 +490,30 @@ define(
                 if (evtType === EVT_REQUEST_MAP) {
 
                     this.Log("Sending requested area..", LOG_DEBUG);
-                    const page = this.movable.page,
-                        area   = page.area,
-                        initialization = {
-                            initialization: true,
-                            area: {
-                                id: area.id,
-                                pagesPerRow: area.pagesPerRow,
-                                areaWidth: area.area.properties.width,
-                                areaHeight: area.area.properties.height,
-                                tilesets: area.area.properties.tilesets
-                            },
-                            pages: {}
-                        };
 
-                    initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
-                    for (const neighbour in page.neighbours) {
-                        const npage = page.neighbours[neighbour];
-                        if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                    if (this.isConnected) {
+                        const page = this.movable.page,
+                            area   = page.area,
+                            initialization = {
+                                initialization: true,
+                                area: {
+                                    id: area.id,
+                                    pagesPerRow: area.pagesPerRow,
+                                    areaWidth: area.area.properties.width,
+                                    areaHeight: area.area.properties.height,
+                                    tilesets: area.area.properties.tilesets
+                                },
+                                pages: {}
+                            };
+
+                        initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                        for (const neighbour in page.neighbours) {
+                            const npage = page.neighbours[neighbour];
+                            if (npage) initialization.pages[npage.index] = npage.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
+                        }
+
+                        this.client.send(JSON.stringify(initialization));
                     }
-
-                    this.client.send(JSON.stringify(initialization));
 
                 } else if (evtType === EVT_PREPARING_WALK) {
 
@@ -522,19 +559,25 @@ define(
             });
 
             this.respond = (id, success, args) => {
-                const response = new Response(id);
-                response.success = success;
-                if (args) {
-                    _.extend(response, args);
+
+                if (this.isConnected) {
+                    const response = new Response(id);
+                    response.success = success;
+                    if (args) {
+                        _.extend(response, args);
+                    }
+                    this.client.send(response.serialize());
                 }
-                this.client.send(response.serialize());
             };
 
             this.send = (evt, args) => {
-                this.client.send(JSON.stringify({
-                    evtType: evt,
-                    data: args
-                }));
+
+                if (this.isConnected) {
+                    this.client.send(JSON.stringify({
+                        evtType: evt,
+                        data: args
+                    }));
+                }
             };
 
             this.step = (time) => {
