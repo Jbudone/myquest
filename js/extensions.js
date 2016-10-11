@@ -39,16 +39,10 @@ define(function(){
                         if (extensions[extension] & envPath.env) {
                             var module = envPath.path + extension;
                             ++loading;
-                            console.log("Loading extension: "+module);
                             var loadExtension = function(mod) {
 
                                 extensions[extension] = mod;
 
-                                // TODO: When using (for .. in) there were problems with require matching the wrong extensions callbacks.. Look into why
-                                if (extension == 'area' && mod.draw) {
-                                    console.log(module);
-                                    console.log("WOW ERROR!!!");
-                                }
                                 --loading;
                                 if (waiting && !loading) {
                                     loaded();
