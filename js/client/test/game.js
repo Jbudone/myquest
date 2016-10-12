@@ -1,8 +1,6 @@
 define(() => {
     const Game = {
-        _init() {
-            console.log("ZOMG IT LOADED");
-        },
+        _init() { },
 
         randomAreaPoint(attemptCount) {
             if (attemptCount > 100) return null;

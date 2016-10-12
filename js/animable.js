@@ -28,7 +28,7 @@ define(['sprite'], (Sprite) => {
         };
 
         this.dirAnimate = (spriteID, direction, repeat) => {
-            if (Env.isServer) return;
+            if (Env.isServer || Env.isTesting) return;
 
             let dir = "up";
                  if (direction === NORTH) dir = "up";
@@ -41,7 +41,7 @@ define(['sprite'], (Sprite) => {
             } else if (this.animations[spriteID]) {
                 this.animate(spriteID, repeat);
             } else {
-                Log(`Could not animate [${spriteID}] in direction (${direction})`, LOG_ERROR);
+                Log(`Could not animate [${spriteID}] in direction (${direction}). Possible Animations: [${Object.keys(this.animations)}]. Looking for (${spriteID}_${dir})`, LOG_ERROR);
             }
         };
 

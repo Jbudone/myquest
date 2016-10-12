@@ -13,7 +13,7 @@ const start = () => {
         if (msg.msg === 'ready') {
             bot.send({
                 command: BOT_CONNECT,
-                username: "bot1",
+                username: "bot2",
                 password: "iambot"
             });
         } else if (msg.msg === 'connected') {
@@ -27,7 +27,7 @@ const start = () => {
         } else if (msg.msg === 'nologin') {
             bot.send({
                 command: BOT_SIGNUP,
-                username: "bot1",
+                username: "bot2",
                 password: "iambot",
                 email: "k9@lol.bot"
             });
@@ -68,8 +68,10 @@ const start = () => {
 
 };
 
-const onCompleted = () => {};
+let onCompleted = () => {};
 
 module.exports = {
-    onCompleted, start
+    onCompleted: (cb) => {
+        onCompleted = cb;
+    }, start
 };

@@ -106,13 +106,17 @@ const bot = Test.addBot();
             console.error("Failed to walk along path..");
             --botMove;
             setTimeout(function(){
-                bot.send({ command: BOT_MOVE, tile: { x: botMoves[0].x, y: botMoves[0].y } });
+                console.log("Adding next path");
+                bot.send({ command: BOT_MOVE, tile: { x: botMoves[botMove].x, y: botMoves[botMove].y } });
             }, 500);
+        } else if (msg.msg == 'ondied') {
+            console.error("Zomg K9 has died!");
+            unitTest.succeeded();
+            onCompleted();
         } else {
-            console.log("FINISHED MOVE: "+botMove);
 
+            console.log("Finished path: " + botMove);
             if (++botMove >= botMoves.length) {
-                console.log("I've finished, master");
                 unitTest.succeeded();
 
                 onCompleted();
@@ -124,8 +128,10 @@ const bot = Test.addBot();
 
 };
 
-const onCompleted = () => {};
+let onCompleted = () => {};
 
 module.exports = {
-    onCompleted, start
+    onCompleted: (cb) => {
+        onCompleted = cb;
+    }, start
 };

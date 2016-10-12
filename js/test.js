@@ -12,7 +12,7 @@ requirejs.config({
 
 
 
-var couldNotStartup = function(e){
+const couldNotStartup = (e) => {
    console.log("Could not startup server");
    if (e) {
 	   console.log(e);
@@ -22,8 +22,12 @@ var couldNotStartup = function(e){
    process.exit();
 };
 
-process.on('exit', couldNotStartup);
-process.on('SIGINT', couldNotStartup);
+let exitingGame = () => {
+    process.exit();
+};
+
+process.on('exit', () => { exitingGame(); });
+process.on('SIGINT', () => { exitingGame(); });
 process.on('uncaughtException', couldNotStartup);
 
 
@@ -35,7 +39,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
     GLOBAL.Env = Env;
 
 
-	var _         = require('lodash'),
+	const _       = require('lodash'),
 		fs        = require('fs'),
 		Promise   = require('bluebird'),
 		http      = require('http'), // TODO: need this?
@@ -43,25 +47,25 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 		chalk     = require('chalk'),
         cluster   = require('cluster');
 
-    var $ = require('jquery')(require("jsdom").jsdom().parentWindow);
+    const $ = require('jquery')(require("jsdom").jsdom().parentWindow);
 
 	$.support.cors = true;
 	Promise.longStackTraces();
 
-    var Mocha = require('mocha');
+	const errorInGame = (e) => {
 
-    var mocha = new Mocha();
-
-    GLOBAL.describe = mocha.describe;
-
-	var errorInGame = function(e){
-
+        killBots();
 		console.error(chalk.red(e));
 		console.trace();
 		process.exit();
 	};
 
-	var printMsg = function(msg){
+    exitingGame = () => {
+        killBots();
+        process.exit();
+    };
+
+	const printMsg = (msg) => {
 		if (_.isObject(msg)) msg = JSON.stringify(msg);
 		console.log(chalk.bold.underline.green(msg));
 	};
@@ -70,7 +74,19 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
     const Test = {};
 
+    let killBots = () => {};
+
     GLOBAL.Test = Test;
+
+    const testsFinished = () => {
+        killBots();
+
+        // NOTE: Exiting too early results in bots not actually dying. Perhaps they aren't receiving the signal in time?
+        // Maybe its a queued operation or something. TODO: Look into this
+        setTimeout(() => {
+            process.exit();
+        }, 500);
+    };
 
     const prepareForTesting = () => {
 
@@ -81,10 +97,26 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
             exec: 'dist/test/bot2.js',
         });
 
-        var activeBots = [];
+        var activeBots = [],
+            activeTest = null;
 
         Test.addBot = () => {
             const bot = cluster.fork();
+
+            let testContext = activeTest;
+
+            bot.on('disconnect', () => {
+                if (testContext == activeTest) nextTest();
+            });
+
+            bot.on('error', () => {
+                console.log("Bot error");
+                if (testContext == activeTest) nextTest();
+            });
+
+            bot.on('exit', () => {
+                if (testContext == activeTest) nextTest();
+            });
 
             activeBots.push(bot);
 
@@ -108,7 +140,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
             };
 
             this.log = () => {
-                console.log(`  ${this.title}: ${this.success ? "succeeded" : "failed"}`);
+                const result = this.success ? chalk.bold.green("✓") : chalk.bold.red("✘");
+                console.log(`    ${result} ${chalk.gray(this.title)}`);
             };
         };
 
@@ -119,50 +152,49 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
             return unit;
         };
 
+        killBots = () => {
+            activeBots.forEach((bot) => {
+                console.log("Killing bot");
+                bot.kill('SIGTERM');
+            });
+        };
+
+        let nextTest = () => {};
+
         fs.readFile(testPath, 'utf8', (err, data) => {
             if (err) {
                 console.error(err);
             }
 
-            console.log(data);
-
             const testFiles = JSON.parse(data);
-
             console.log(testFiles);
-
-            const nextTest = () => {
+            nextTest = () => {
 
                 const test = testFiles.tests.shift();
 
-            //testFiles.tests.forEach((file) => {
-            //    require('../data/tests/' + file);
-            //    //mocha.addFile('data/tests/' + file);
-            //    //var m = mocha.run((err) => {
-            //    //    console.error(err);
+                if (!test) {
+                    console.log("Finished tests");
+                    testsFinished();
+                    return;
+                }
 
-            //    //    //process.exit();
-
-            //    //});
-
-            //});
-
-
+                console.log("Loading next test: " + test);
+                activeTest = test;
                 const Smoke = require('../data/tests/' + test);
 
-                Smoke.onCompleted = () => {
+                Smoke.onCompleted(() => {
 
                     // Clear bots
-                    activeBots.forEach((bot) => {
-                        bot.process.exit(0);
-                    });
+                    killBots();
 
                     activeBots = [];
 
                     // Print Unit Tests
-                    console.log("Test: " + test);
+                    console.log(`\n  ${chalk.bold(test)}`);
                     tests.forEach((t) => {
                         t.log();
                     });
+                    console.log(`\n\n`);
 
                     tests = [];
 
@@ -173,7 +205,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                         // Finished testing
                         console.log("Finished testing!");
                     }
-                };
+                });
 
                 Smoke.start();
             };

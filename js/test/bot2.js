@@ -15,13 +15,19 @@ requirejs.config({
     }
 });
 
+const exitingGame = () => {
+    process.exit();
+};
+
 const errorInGame = (e) => {
 
     console.error("Error in game");
 
-    DumpLog();
+    if (global['DumpLog']) DumpLog();
 
-    //if (console.trace) console.trace();
+    //process.exit(e);
+
+    if (console.trace) console.trace();
 
     debugger;
     if (e) {
@@ -138,8 +144,9 @@ const errorInGame = (e) => {
 GLOBAL.errorInGame = errorInGame;
 
 // If anything happens make sure we go through the common error/exit routine
-process.on('exit', errorInGame);
-process.on('SIGINT', errorInGame);
+process.on('exit', exitingGame);
+process.on('SIGTERM', exitingGame);
+process.on('SIGINT', exitingGame);
 process.on('uncaughtException', errorInGame);
 
 
@@ -169,7 +176,10 @@ GLOBAL.fs = fs;
 const Bot = (new function(){
 
     this.tellMaster = (msg, args) => {
-        process.send({msg, args});
+        // NOTE: Its possible that we've lost our connection with the master
+        try {
+            process.send({msg, args});
+        } catch(e) { }
     };
 
     this.onCommand = (command, callback) => {
@@ -480,7 +490,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             Game.start();
                         };
 
+                        let onDied = function(){};
+
                         const onGameStarted = () => {
+                            The.player.character.hook('die', this).after(() => {
+                                onDied();
+                            });
+
                             botIsReady();
 
                             // FIXME: Game extension (need to run _init)
@@ -578,10 +594,15 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             });
 
                             Bot.tellMaster('ready');
+
+                            onDied = () => {
+                                Bot.tellMaster('ondied');
+                            };
                         };
 
 
                     } catch (e) {
+                        console.log("TEST TEST HERE");
                         console.error(e.stack);
                     }
                 });
