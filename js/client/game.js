@@ -368,6 +368,7 @@ define(
                             if (addedEntity.path) {
                                 const path = JSON.parse(addedEntity.path);
                                 entity.addPath(path);
+                                entity.recordNewPath(path);
                             }
 
                             // Throw entity into the wild
@@ -499,6 +500,7 @@ define(
 
                             entity.path=null;
                             entity.addPath(path);
+                            entity.recordNewPath(path, pathState);
 
                         } else {
                             // find end path and jump movable to there
@@ -636,6 +638,7 @@ define(
 
                                     entity.path = null;
                                     entity.addPath(path);
+                                    entity.recordNewPath(path, state);
                                 }
 
                             } else if (entity.path) {
@@ -932,6 +935,7 @@ define(
 
                             entity.path = null;
                             entity.addPath(alternativePath);
+                            entity.recordNewPath(alternativePath, pathState);
 
                         } else if (recalibratePathResults) {
 
@@ -943,6 +947,7 @@ define(
 
                             entity.path = null;
                             entity.addPath(path);
+                            entity.recordNewPath(path, pathState);
 
                         } else {
 

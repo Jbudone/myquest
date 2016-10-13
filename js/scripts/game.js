@@ -524,6 +524,7 @@ define(
 
                             if (path.walks.length) {
                                 The.player.addPath(path, true);
+                                The.player.recordNewPath(path);
                             }
 
                             The.UI.tilePathHighlight = toTile;
@@ -568,6 +569,7 @@ define(
                             The.player.addPath(path).finished(pickupItem, () => {
                                 this.Log("Awww I couldn't get the item :(");
                             });
+                            The.player.recordNewPath(path);
                         }
                     });
 
@@ -690,6 +692,7 @@ define(
                             The.player.addPath(path).finished(readyToInteract, () => {
                                 this.Log("Awww I couldn't interact with the interactable thingy :(");
                             });
+                            The.player.recordNewPath(path);
                         }
                     });
 

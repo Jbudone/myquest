@@ -53,8 +53,10 @@ define(
                         if (!_.isFunction(failed)) failed = function(){};
 
                         if (addedPath === ALREADY_THERE) {
+                            this.Log("We're already there", LOG_DEBUG);
                             succeeded();
                         } else if (addedPath === PATH_TOO_FAR) {
+                            this.Log("You're too far!", LOG_DEBUG);
                             failed(addedPath);
                         } else if (addedPath) {
                             addedPath.finished(succeeded, failed);
@@ -96,6 +98,8 @@ define(
                         path.flag = PATH_CHASE;
                         addedPath = character.entity.addPath(path);
                         pathId    = character.entity.path.id;
+
+                        character.entity.recordNewPath(path);
 
                         /* Here for debugging purposes
                         const fromTile = character.entity.position.tile,
@@ -162,6 +166,7 @@ define(
                     } else {
                         path.flag = PATH_CHASE;
                         character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
+                        character.entity.recordNewPath(path);
                     }
                 }
 

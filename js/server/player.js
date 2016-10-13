@@ -342,6 +342,7 @@ define(
                     this.triggerEvent(EVT_USER_ADDED_PATH);
                     this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${movableState.position.tile.x}, ${movableState.position.tile.y})`, LOG_DEBUG);
                     player.addPath(path);
+                    player.recordNewPath(path, pathState);
 
                     if (this.isConnected) {
                         const response = new Response(action.id);

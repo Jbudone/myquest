@@ -8,6 +8,10 @@ define(
         Entity, Animable, Dynamic
     ) => {
 
+        addKey('REC_NEW_PATH');
+        addKey('REC_FINISHED_PATH');
+        addKey('REC_CANCELLED_PATH');
+
         const Movable = function(spriteID, page, params) {
 
             Entity.call(this, spriteID, page);
@@ -61,6 +65,136 @@ define(
                 if (!_.isFinite(this.position.tile.x) || !_.isFinite(this.position.tile.y)) {
                     throw Err("Bad tile!");
                 }
+            };
+
+            this.pathHistory = [];
+            this.pathHistoryCursor = 0; // Where are we pointing within the pathHistory?
+
+            // Store history of paths for entity: path id/flag, to/from, received path and current state (if client); print this out nicely, potentially with visuals (tiled on left, and zoom-in of recalibration on right)
+            const _movable = this;
+            const RecordablePath = function(path, pathState) {
+
+                this.id   = path.id;
+                this.flag = path.flag;
+                this.time = now();
+
+                this.localState = {
+                    global: {
+                        x: _movable.position.global.x,
+                        y: _movable.position.global.y
+                    },
+                    tile: {
+                        x: _movable.position.tile.x,
+                        y: _movable.position.tile.y
+                    }
+                };
+
+                this.pathState = null;
+
+                if (pathState) {
+                    this.pathState = {
+                        global: {
+                            x: pathState.position.global.x,
+                            y: pathState.position.global.y
+                        },
+                        tile: {
+                            x: pathState.position.tile.x,
+                            y: pathState.position.tile.y
+                        }
+                    };
+                }
+
+                const start = this.pathState ? this.pathState.tile : this.localState.tile;
+
+                this.destination = {
+                    x: start.x,
+                    y: start.y
+                };
+
+
+                // Recorded Path (tile/global, to, walks, area, id/flag, time)
+                // State: (tile/global)
+                this.walks = [];
+
+                let globalX = start.x * Env.tileSize,
+                    globalY = start.y * Env.tileSize;
+                for (let i = 0; i < path.walks.length; ++i) {
+                    let walk = path.walks[i];
+                    this.walks.push({ direction: walk.direction, distance: walk.distance, walked: walk.walked });
+
+                    // TODO: What about putting walk.walked into consideration? But then we would need to consider
+                    // the start state's global position as opposed to tile (I think?)
+                         if (walk.direction === NORTH) globalY -= walk.distance;
+                    else if (walk.direction === SOUTH) globalY += walk.distance;
+                    else if (walk.direction === WEST) globalX -= walk.distance;
+                    else if (walk.direction === EAST) globalX += walk.distance;
+                }
+
+                this.destination.x = Math.floor(globalX / Env.tileSize);
+                this.destination.y = Math.floor(globalY / Env.tileSize);
+
+                this.toString = () => {
+                    return `Added Path {${this.id}, ${this.flag}}: from (${start.x}, ${start.y}) to (${this.destination.x}, ${this.destination.y})`;
+                };
+            };
+
+            this.recordPathHistory = (evt) => {
+                const index = (this.pathHistoryCursor++) % Env.game.debugPath.pathHistory;
+                this.pathHistory[index] = evt;
+
+                if (evt.path) {
+                    evt.toString = evt.path.toString;
+                } else if (evt.type === REC_CANCELLED_PATH) {
+                    evt.toString = () => `Cancelled Path {${evt.id}, ${evt.flag}}`;
+                } else if (evt.type === REC_FINISHED_PATH) {
+                    evt.toString = () => `Finished Path {${evt.id}, ${evt.flag}}`;
+                }
+            };
+
+            this.recordCancelledPath = (path) => {
+                this.recordPathHistory({
+                    path: null,
+                    id: path.id,
+                    flag: path.flag,
+                    type: REC_CANCELLED_PATH
+                });
+            };
+
+            this.recordFinishedPath = (path) => {
+                this.recordPathHistory({
+                    path: null,
+                    id: path.id,
+                    flag: path.flag,
+                    type: REC_FINISHED_PATH
+                });
+            };
+
+            this.recordNewPath = (path, pathState) => {
+                this.recordPathHistory({
+                    path: new RecordablePath(path, pathState),
+                    id: path.id,
+                    flag: path.flag,
+                    type: REC_NEW_PATH
+                });
+            };
+
+            this.getPathHistory = () => {
+                const history = this.pathHistory
+                    .slice(this.pathHistoryCursor)
+                    .concat(
+                        this.pathHistory.slice(0, this.pathHistoryCursor)
+                    );
+                return history;
+            };
+
+            this.getPathHistoryString = () => {
+                const history = this.getPathHistory();
+                let historyString = "";
+                history.forEach((evt) => {
+                    historyString += evt.toString() + "\n";
+                });
+
+                return historyString;
             };
 
 
@@ -386,6 +520,7 @@ define(
                             // FIXME
                             this.triggerEvent(EVT_FINISHED_PATH, this.path.id);
                             if (_.isFunction(this.path.onFinished)) this.path.onFinished();
+                            this.recordFinishedPath(this.path);
                             this.path = null;
 
                             // Finished moving
@@ -455,11 +590,15 @@ define(
 
                 Log(`[${this.id}] Adding path {${path.id}, ${path.flag})`, LOG_DEBUG);
 
+                if (this.path) {
+                    this.recordCancelledPath(this.path);
+                }
 
                 if (this.path && _.isFunction(this.path.onFailed)) {
                     this.path.onFailed();
                 }
 
+                // TODO: Get rid of priority
                 if (this.path && priority) {
                     this.path = path; // replace current path with this
                     this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
@@ -490,6 +629,7 @@ define(
                     }
 
                     this.triggerEvent(EVT_CANCELLED_PATH, { id: this.path.id, flag: this.path.flag });
+                    this.recordCancelledPath(this.path);
                     this.path = null;
                     this.sprite.idle();
                 }

@@ -51,12 +51,16 @@ define(function(){
 			measureServerMessageTimes: false, // Log the amount of time between each message received from server
 
 			disconnecting: {
-				waitTimeToDisconnect: 0, // How long to wait between attempting to disconnecting and actually being disconnected
+				waitTimeToDisconnect: 3000, // How long to wait between attempting to disconnecting and actually being disconnected
 				dontDisconnectIfBusy: true,   // Disallow disconnecting if user busy (eg. in combat)
             },
 
             client: {
                 maxWalkDelay: 6000, // Maximum allowed delay (in ms) to catch up to server's position before giving up and teleporting
+            },
+
+            debugPath: {
+                pathHistory: 100 // History count of paths for movables
             }
 		};
 
