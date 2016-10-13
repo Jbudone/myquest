@@ -147,6 +147,7 @@ define(
                 this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, () => {
                     this.Log(`Entity ${entity.id} moving to tile (${entity.position.tile.x}, ${entity.position.tile.y})`, LOG_DEBUG);
                     this.Log(`      Path: ${entity.pathToStr()}`, LOG_DEBUG);
+                    assert(this.isTileOpen(entity.position.tile), "Entity moved to tile which is not open");
                     if (entity.hasOwnProperty('isZoning')) return;
                     this.checkEntityZoned(entity);
                 });
@@ -343,7 +344,7 @@ define(
                                     // This single walk is far too long
                                     path.walks.unshift(recalibration);
                                     if (recalibration.distance > (Env.tileSize * 2)) {
-                                        this.Log(`Recalibration is bigger than tile size: ${recalibration.distance}`, LOG_ERROR);
+                                        this.Log(`Recalibration is bigger than tile size: ${recalibration.distance}`, LOG_WARNING);
                                         this.Log(startTiles, LOG_ERROR);
                                         this.Log(endTiles, LOG_ERROR);
                                         return false;
@@ -352,7 +353,7 @@ define(
 
                                 // This entire path is greater than our maximum path length
                                 if (path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_ERROR);
+                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_WARNING);
                                     return false;
                                 }
 
@@ -360,7 +361,7 @@ define(
 
                                 // Path length is greater than our maximum path length
                                 if (startPath.path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${startPath.path.length()} > ${maxWalk}`, LOG_ERROR);
+                                    this.Log(`Recalibration is longer than our maxWalk: ${startPath.path.length()} > ${maxWalk}`, LOG_WARNING);
                                     this.Log(startTiles);
                                     this.Log(endTiles);
                                     return false;
