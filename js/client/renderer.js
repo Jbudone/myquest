@@ -300,8 +300,7 @@ define(['loggable'], (Loggable) => {
                                     tileSize * sx, tileSize * sy,
                                     tileSize, tileSize,
                                     px, py,
-                                    Env.tileScale * Env.tileSize,
-                                    Env.tileScale * Env.tileSize
+                                    Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize
                                 );
                             }
                         }
@@ -323,8 +322,8 @@ define(['loggable'], (Loggable) => {
                     const movable    = page.movables[id],
                         movableSheet = movable.sprite.sheet.image,
                         scale        = Env.tileScale,
-                        offsetY      = this.camera.offsetY + offY,
-                        offsetX      = this.camera.offsetX - offX,
+                        offsetY      = The.camera.globalOffsetY,
+                        offsetX      = The.camera.globalOffsetX,
                         movableOffX  = movable.sprite.tileSize / 4, // TODO: fix sprite centering with sheet offset
                         movableOffY  = movable.sprite.tileSize / 2;
 
@@ -333,24 +332,24 @@ define(['loggable'], (Loggable) => {
                         movableSheet = movable.sprite.state.sheet.image;
                     }
 
-                    const localX = movable.position.global.x % Env.pageRealWidth,
-                        localY   = movable.position.global.y % Env.pageRealHeight;
+                    const globalX = movable.position.global.x,
+                        globalY   = movable.position.global.y;
 
                     this.ctxEntities.drawImage(
                         movableSheet,
                         movable.sprite.state.x, movable.sprite.state.y,
                         movable.sprite.tileSize, movable.sprite.tileSize,
-                        scale * (localX - offsetX - movableOffX), scale * (localY + offsetY - movableOffY),
+                        scale * (globalX - offsetX - movableOffX), scale * (globalY + offsetY - movableOffY),
                         scale * movable.sprite.tileSize, scale * movable.sprite.tileSize
                     );
 
                     // Draw debug pathfinding/position highlights
                     if (Env.renderer.drawBorders) {
-                        if (movable._serverPosition) {
-                            const _x = movable._serverPosition.tile.x - movable.page.x,
-                                _y   = movable._serverPosition.tile.y - movable.page.y,
-                                _toX = movable._serverPosition.toTile.x - movable.page.x,
-                                _toY = movable._serverPosition.toTile.y - movable.page.y;
+                        if (movable.debugging._serverPosition) {
+                            const _x = movable.debugging._serverPosition.tile.x,
+                                _y   = movable.debugging._serverPosition.tile.y,
+                                _toX = movable.debugging._serverPosition.toTile.x,
+                                _toY = movable.debugging._serverPosition.toTile.y;
 
                             this.ctxEntities.strokeStyle = "gray";
                             this.ctxEntities.strokeRect(

@@ -275,29 +275,37 @@ define(
 
                         if (!isGameRunning) return;
 
-                        Profiler.profile('gameStep');
-                        const time = now();
+                        // NOTE: Need to try/catch here since setTimeout calls here and we lose the try/catch from
+                        // main.js (ie. this is the top of the stack)
+                        try {
 
-                        // Step Area
-                        Profiler.profile('areaStep');
-                        The.area.step(time);
-                        Profiler.profileEnd('areaStep');
+                            Profiler.profile('gameStep');
+                            const time = now();
 
-                        // Step Scripts
-                        Profiler.profile('scrptMgr');
-                        The.scriptmgr.step(time);
-                        Profiler.profileEnd('scrptMgr');
+                            // Step Area
+                            Profiler.profile('areaStep');
+                            The.area.step(time);
+                            Profiler.profileEnd('areaStep');
 
-                        // Update again
-                        setTimeout(gameLoop, gameLoopSpeed);
-                        Profiler.profileEnd('gameStep');
+                            // Step Scripts
+                            Profiler.profile('scrptMgr');
+                            The.scriptmgr.step(time);
+                            Profiler.profileEnd('scrptMgr');
+
+                            // Update again
+                            setTimeout(gameLoop, gameLoopSpeed);
+                            Profiler.profileEnd('gameStep');
 
 
-                        // Report profile
-                        (++profilerReportElapsed);
-                        if (profilerReportElapsed >= profilerReportTime) {
-                            Profiler.report();
-                            profilerReportElapsed = 0;
+                            // Report profile
+                            (++profilerReportElapsed);
+                            if (profilerReportElapsed >= profilerReportTime) {
+                                Profiler.report();
+                                profilerReportElapsed = 0;
+                            }
+
+                        } catch(e) {
+                            errorInGame(e);
                         }
                     };
 
@@ -323,6 +331,26 @@ define(
                     render();
 
 
+                    // Can we teleport entity to the path position?
+                    // If the entity is out of view and the beginning of his path is also out of view then we can safely
+                    // teleport him to his path state. This helps with preventing needless out of sync issues, and
+                    // needless performance loss.
+                    //
+                    // Though, more importantly it helps with odd cases where the entity may have a path which goes from
+                    // page A -> B, where page B is out of our view; then part way through the path he changes his mind
+                    // and remains in page A. If we've already processed him as entering page B, then we no longer have
+                    // his current state and can't safely find a path from his current position to the new path state.
+                    // Since he's out of view we shouldn't even have to worry about that anyways
+                    const canJumpTeleportEntityToPath = (entity, startTile) => {
+
+                        if (The.camera.canSeeTile(entity.position.tile) ||
+                            The.camera.canSeeTile(startTile)) {
+
+                            return false;
+                        }
+
+                        return true;
+                    };
 
 
                     // ---------------------------------------------------------------------------------------------- //
@@ -340,9 +368,21 @@ define(
                         // TODO: Find a better way to copy over the entity (duplicate code found in area initialization &
                         // zoning into area)
                         if (The.area.movables[addedEntity.id]) {
-                            // The entity was added to another page; however, we already have this entity in our area so
-                            // no need to do anything with this event
-                            return; // Already have this entity loaded
+
+                            const entity = The.area.movables[addedEntity.id],
+                                newPage = The.area.pages[page],
+                                oldPage = entity.page;
+                            if (oldPage === newPage) {
+                                // It looks like we already have your page set correctly
+                                return;
+                            }
+
+                            this.Log(`Zoning entity [${entity.id}] from (${oldPage.index}) to page (${newPage.index})`, LOG_DEBUG);
+                            oldPage.zoneEntity(newPage, entity);
+
+                            entity.triggerEvent(EVT_ZONE, oldPage, newPage);
+                            The.area.triggerEvent(EVT_ZONE, entity, oldPage, newPage);
+                            return;
                         }
 
                         if (addedEntity.id === The.player.id) {
@@ -461,17 +501,17 @@ define(
                         if (path.walks && path.walks[0]) path.walks[0].walked = 0;
 
                         // FIXME: USED FOR DEBUGGING PURPOSES
-                        var destination = null,
+                        let destination = null,
                             dX = pathState.position.global.x,
                             dY = pathState.position.global.y;
-                        for (var walkI=0; walkI<path.walks.length; ++walkI) {
-                            var _walk = path.walks[walkI];
+                        for (let walkI=0; walkI<path.walks.length; ++walkI) {
+                            let _walk = path.walks[walkI];
                                  if (_walk.direction == NORTH) dY -= _walk.distance;
                             else if (_walk.direction == SOUTH) dY += _walk.distance;
                             else if (_walk.direction == WEST)  dX -= _walk.distance;
                             else if (_walk.direction == EAST)  dX += _walk.distance;
                         }
-                        entity._serverPosition = {
+                        entity.debugging._serverPosition = {
                             tile: {
                                 x: reqState.position.tile.x,
                                 y: reqState.position.tile.y },
@@ -481,24 +521,33 @@ define(
                         };
 
                         // Adjust maxWalk so that we're only considering the recalibration delay
-                        for(var i=0; i<path.walks.length; ++i) {
+                        for(let i = 0; i < path.walks.length; ++i) {
                             maxWalk += path.walks[i].distance;
                         }
 
                         this.Log("Entity [" + entity.id +"] adding Path: from (" + movableState.position.tile.x + ", " + movableState.position.tile.y + ")  ====>  (" + pathState.position.tile.x + ", " + pathState.position.tile.y + ")");
                         this.Log("                   (REAL) from (" + movableState.position.global.x + ", " + movableState.position.global.y + ")   ====>  (" + pathState.position.global.x + ", " + pathState.position.global.y + ")");
 
-                        var success = The.area.recalibratePath(movableState, pathState, path, maxWalk);
+                        // If we can't see the entity moving from his local state to the beginning of the path then we
+                        // may as well teleport him there
+                        if (canJumpTeleportEntityToPath(entity, pathState.position.tile)) {
+
+                            The.area.teleportEntity(entity, pathState.position.global);
+                            entity.addPath(path);
+                            entity.recordNewPath(path, pathState);
+                            return;
+                        }
+
+                        let success = The.area.recalibratePath(movableState, pathState, path, maxWalk);
                         if (success) {
 
                             if (event.id === The.player.id) {
                                 // Do not send this path to the server (obviously, since we're receiving the path from the server)
-                                for(var i=0; i<path.walks.length; ++i) {
+                                for(let i = 0; i < path.walks.length; ++i) {
                                     path.walks[i].dontSendToServer = true;
                                 }
                             }
 
-                            entity.path=null;
                             entity.addPath(path);
                             entity.recordNewPath(path, pathState);
 
@@ -601,6 +650,18 @@ define(
                         if (moveToCancelledPosition) {
 
                             this.Log(`Entity ${event.id} Path (${pathFlag},${pathId}) cancelled`, LOG_DEBUG);
+
+                            // If we can't see the entity moving from his local state to the beginning of the path then we
+                            // may as well teleport him there
+                            if (canJumpTeleportEntityToPath(entity, state.position.tile)) {
+
+                                The.area.teleportEntity(entity, state.position.global);
+
+                                if (entity.path) {
+                                    entity.cancelPath();
+                                }
+                                return;
+                            }
 
                             // Already in cancelled position?
                             if (entity.position.global.x === state.position.global.x &&
@@ -899,6 +960,17 @@ define(
                         this.Log(`Entity [${entity.id}] adding Path: from (${movableState.position.tile.x}, ${movableState.position.tile.y})  ====>  (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
                         this.Log(`                   (REAL) from (${movableState.position.global.x}, ${movableState.position.global.y})   ====>  (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
 
+
+                        // If we can't see the entity moving from his local state to the beginning of the path then we
+                        // may as well teleport him there
+                        if (canJumpTeleportEntityToPath(entity, pathState.position.tile)) {
+
+                            The.area.teleportEntity(entity, pathState.position.global);
+                            entity.addPath(path);
+                            entity.recordNewPath(path, pathState);
+                            return;
+                        }
+
                         // Look for an alternative path, but also recalibrate the provided path. Given the two optional
                         // paths determine what the best option is
                         const alternativePath      = The.area.pathfinding.findPath(entity, pathState.destination.tile),
@@ -954,38 +1026,11 @@ define(
                             // find end path and jump movable to there
                             this.Log("COULD NOT MOVE ENTITY THROUGH PATH!! Teleporting entity directly to path start", LOG_WARNING);
 
-                            const localCoordinates = The.area.localFromGlobalCoordinates(pathState.position.tile.x, pathState.position.tile.y);
-
-                            if (!localCoordinates) {
-                                this.Log("Could not find proper tile for entity..", LOG_ERROR);
-                                return;
-                            }
-
-                            entity.path = null;
-
-                            // If the new page doesn't start from the current page then we'll need to swap your page
-                            if (localCoordinates.page.index !== page.index) {
-
-                                // TODO: Should abstract this stuff
-                                delete page.movables[entity.id];
-                                _.pull(page.updateList, entity);
-
-                                // TODO: stopListeningTo everything?
-                                page.stopListeningTo(entity, EVT_FINISHED_WALK);
-                                page.stopListeningTo(entity, EVT_STEP);
-                                page.stopListeningTo(entity, EVT_PREPARING_WALK);
-                                page.stopListeningTo(entity);
-
-                                // Add to new page
-                                The.area.pages[localCoordinates.page].addEntity(entity);
-                                entity.page = The.area.pages[localCoordinates.page];
-                            }
-
-                            // Teleport to position
-                            entity.position.global.y = pathState.position.global.y;
-                            entity.position.global.x = pathState.position.global.x;
-                            entity.updatePosition();
+                            The.area.teleportEntity(entity, pathState.position.global);
                             entity.sprite.idle();
+
+                            entity.addPath(path);
+                            entity.recordNewPath(path, pathState);
                         }
                     };
 

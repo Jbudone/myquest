@@ -97,6 +97,7 @@ define(
 
                         // Entity has zoned to another page which we don't have loaded yet.  There's no need to finish
                         // the rest of this, simply trigger a zone out
+                        // FIXME: This may not be necessary anymore since clients won't run this except for local player
                         entity.page.triggerEvent(EVT_ZONE_OUT, entity, null);
                         this.triggerEvent(EVT_ZONE_OUT, entity.page, entity, null);
                         return;
@@ -147,9 +148,26 @@ define(
                 this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, () => {
                     this.Log(`Entity ${entity.id} moving to tile (${entity.position.tile.x}, ${entity.position.tile.y})`, LOG_DEBUG);
                     this.Log(`      Path: ${entity.pathToStr()}`, LOG_DEBUG);
-                    assert(this.isTileOpen(entity.position.tile), "Entity moved to tile which is not open");
-                    if (entity.hasOwnProperty('isZoning')) return;
-                    this.checkEntityZoned(entity);
+
+                    // Only the server is authoritative in zoning the entity. This prevents weird potential issues where
+                    // the entity may have a path from page A -> B where B is outside of our view, then we zone him to a
+                    // non-existent page (does this mean we remove him entirely?). Later we receive a delayed event of
+                    // him changing the course of his path such that he remains in page A, hence he never would have
+                    // left page A.
+                    //
+                    // This leads us into potential states where entities may locally belong to another page but
+                    // actually be in their previous page still. Its the unfortunate tradeoff and lesser of the two
+                    // evils.
+                    //
+                    // On client entities will only zone when they receive an EVT_ZONE event from the server. The only
+                    // affects other entities, we still need to check for zoning on our local player since otherwise
+                    // there's too much of a delay to receive that event from the server.
+                    if (Env.isServer || entity === The.player) {
+                        if (entity.hasOwnProperty('isZoning')) return;
+                        this.checkEntityZoned(entity);
+                    }
+
+                    assert(!this.hasTile(entity.position.tile) || this.isTileOpen(entity.position.tile), "Entity moved to tile which is not open");
                 });
 
                 this.doHook('addedentity').post(entity);
@@ -410,9 +428,9 @@ define(
 
                                 // This entire path is longer than our maximum path length
                                 if (path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_ERROR);
-                                    this.Log(startTiles, LOG_ERROR);
-                                    this.Log(endTiles, LOG_ERROR);
+                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_WARNING);
+                                    this.Log(startTiles, LOG_WARNING);
+                                    this.Log(endTiles, LOG_WARNING);
                                     return false;
                                 }
                             }
@@ -693,6 +711,40 @@ define(
 
                     // No path found..
                     return false;
+                }
+            };
+
+            this.teleportEntity = (entity, globalPos) => {
+
+                this.Log(`Teleporting entity ${entity.id} to (${globalPos.x}, ${globalPos.y})  [${globalPos.x / Env.tileSize}, ${globalPos.y / Env.tileSize}]`, LOG_DEBUG);
+                entity.position.global.y = globalPos.y;
+                entity.position.global.x = globalPos.x;
+                entity.updatePosition();
+
+                // If the new page doesn't start from the current page then we'll need to swap your page
+                const tileX = globalPos.x / Env.tileSize,
+                    tileY = globalPos.y / Env.tileSize,
+                    localCoordinates = this.localFromGlobalCoordinates(tileX, tileY);
+                assert(localCoordinates.page || !Env.isServer, "Page not found for destination-teleport tile");
+
+                // As a client we cannot safely teleport you to another page without first receiving an EVT_ZONED event
+                // from the server. Although technically you're locally in another page we have to still consider you in
+                // your previous page
+                if (!Env.isServer) {
+                    return;
+                }
+
+                if (localCoordinates.page && localCoordinates.page.index !== entity.page.index) {
+
+                    // TODO: Should abstract this stuff
+                    delete entity.page.movables[entity.id];
+                    _.pull(entity.page.updateList, entity);
+
+                    entity.page.stopListeningTo(entity);
+
+                    // Add to new page
+                    this.pages[localCoordinates.page].addEntity(entity);
+                    entity.page = this.pages[localCoordinates.page];
                 }
             };
 

@@ -12,6 +12,8 @@ define(['eventful'], (Eventful) => {
         this.lastTime = now();
         this.offsetX  = 0;
         this.offsetY  = 0;
+        this.globalOffsetX = 0;
+        this.globalOffsetY = 0;
 
         this.isZoning    = false;
         this.updated     = false;
@@ -22,8 +24,10 @@ define(['eventful'], (Eventful) => {
         this.centerCamera = () => {
             const localY = The.player.position.global.y % Env.pageRealHeight,
                 localX   = The.player.position.global.x % Env.pageRealWidth;
-            The.camera.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;
-            The.camera.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
+            this.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;
+            this.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
+            this.globalOffsetX = The.area.curPage.x * Env.tileSize + this.offsetX;
+            this.globalOffsetY = -1 * The.area.curPage.y * Env.tileSize + this.offsetY;
         };
 
         this.initialize = () => {
@@ -34,6 +38,26 @@ define(['eventful'], (Eventful) => {
                 else if (direction === 'e') this.offsetX = -(Env.pageWidth - Env.pageBorder)  * Env.tileSize;
                 else if (direction === 's') this.offsetY = (Env.pageHeight - Env.pageBorder)  * Env.tileSize;
             });
+        };
+
+        this.canSeeTile = (tile) => {
+
+            const tileLeft = tile.x * Env.tileSize,
+                tileRight  = tileLeft + Env.tileSize,
+                tileTop    = tile.y * Env.tileSize,
+                tileBottom = tileTop + Env.tileSize;
+
+            const leftView = this.globalOffsetX,
+                rightView  = leftView + (Env.pageWidth + 2 * Env.pageBorder) * Env.tileSize,
+                topView    = -this.globalOffsetY,
+                bottomView = topView + (Env.pageHeight + 2 * Env.pageBorder) * Env.tileSize;
+
+            const xInRange = (tileLeft > leftView && tileLeft < rightView) ||
+                             (tileRight > leftView && tileRight < rightView);
+            const yInRange = (tileTop > topView && tileTop < bottomView) ||
+                             (tileBottom > topView && tileBottom < bottomView);
+
+            return xInRange && yInRange;
         };
 
         this.step = (time) => {
