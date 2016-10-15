@@ -104,11 +104,11 @@ define(
                     };
                 }
 
-                const start = this.pathState ? this.pathState.tile : this.localState.tile;
+                const start = this.pathState ? this.pathState : this.localState;
 
                 this.destination = {
-                    x: start.x,
-                    y: start.y
+                    x: start.tile.x,
+                    y: start.tile.y
                 };
 
 
@@ -116,8 +116,8 @@ define(
                 // State: (tile/global)
                 this.walks = [];
 
-                let globalX = start.x * Env.tileSize,
-                    globalY = start.y * Env.tileSize;
+                let globalX = start.tile.x * Env.tileSize,
+                    globalY = start.tile.y * Env.tileSize;
                 for (let i = 0; i < path.walks.length; ++i) {
                     let walk = path.walks[i];
                     this.walks.push({ direction: walk.direction, distance: walk.distance, walked: walk.walked });
@@ -134,12 +134,17 @@ define(
                 this.destination.y = Math.floor(globalY / Env.tileSize);
 
                 this.toString = () => {
-                    return `Added Path {${this.id}, ${this.flag}}: from (${start.x}, ${start.y}) to (${this.destination.x}, ${this.destination.y})`;
+                    let pathStr = "";
+                    this.walks.forEach((walk) => {
+                        pathStr += `${walk.distance - walk.walked} ${keyStrings[walk.direction]} - `;
+                    });
+                    return `Added Path {${this.id}, ${this.flag}}: from (${start.tile.x}, ${start.tile.y}) to (${this.destination.x}, ${this.destination.y}): {${start.global.x}, ${start.global.y}}  ${pathStr}`;
                 };
             };
 
             this.recordPathHistory = (evt) => {
-                const index = (this.pathHistoryCursor++) % Env.game.debugPath.pathHistory;
+                const index = this.pathHistoryCursor;
+                this.pathHistoryCursor = (index + 1) % Env.game.debugPath.pathHistory;
                 this.pathHistory[index] = evt;
 
                 if (evt.path) {
