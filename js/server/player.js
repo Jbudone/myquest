@@ -340,7 +340,8 @@ define(
                     player.path = null;
 
                     this.triggerEvent(EVT_USER_ADDED_PATH);
-                    this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${movableState.position.tile.x}, ${movableState.position.tile.y})`, LOG_DEBUG);
+                    this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
+                    this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y}): ${walk.distance} ${keyStrings[walk.direction]} (walked ${walk.walked})`, LOG_DEBUG);
                     player.addPath(path);
                     player.recordNewPath(path, pathState);
 

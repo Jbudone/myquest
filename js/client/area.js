@@ -560,6 +560,7 @@ define(
                                         path.walks.push(walk);
                                     });
                                     entity.addPath(path);
+                                    entity.recordNewPath(path);
                                 }
 
                                 this.pages[pageI].addEntity(entity);

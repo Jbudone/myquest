@@ -510,12 +510,14 @@ define(
                         // Have we moved enough to trigger some partial progress through the path?
                         // FIXME: stepsWalked in Env
                         if ((this.path.lastMarkedWalked === 0) ||  // Started the path
-                            (this.path.lastMarkedWalked - this.path.walked > 10)) { // Made some more notable progress through the path
+                            (this.path.lastMarkedWalked - this.path.walked > 100)) { // Made some more notable progress through the path
 
                             // Don't send the partial path progress if we've already sent this before our path handling
                             if (!sentInitialPath) {
                                 this.triggerEvent(EVT_PATH_PARTIAL_PROGRESS, this.path);
                             }
+
+                            this.path.lastMarkedWalked = this.path.walked;
                         }
 
 

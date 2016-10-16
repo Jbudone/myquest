@@ -364,6 +364,11 @@ define(
 
                         assert(!_.isNaN(addedEntity.id), `Expected valid entity id: ${addedEntity.id}`);
 
+                        // We handle all zoning for ourselves locally
+                        if (addedEntity.id === The.player.id) {
+                            return;
+                        }
+
                         
                         // TODO: Find a better way to copy over the entity (duplicate code found in area initialization &
                         // zoning into area)
@@ -385,39 +390,50 @@ define(
                             return;
                         }
 
-                        if (addedEntity.id === The.player.id) {
-                            // Intentionally blank
-                        } else {
+                        const entity = new Movable(addedEntity.spriteID, The.area.pages[page], { id: addedEntity.id });
 
-                            const entity = new Movable(addedEntity.spriteID, The.area.pages[page], { id: addedEntity.id });
+                        // Copy over entity properties
+                        this.Log(`Adding Entity: ${addedEntity.id}`, LOG_DEBUG);
+                        entity.id                = addedEntity.id;
+                        entity.position.global.y = addedEntity.position.global.y;
+                        entity.position.global.x = addedEntity.position.global.x;
+                        entity.sprite.state      = addedEntity.state;
+                        entity.zoning            = addedEntity.zoning;
+                        entity._character        = addedEntity._character;
 
-                            // Copy over entity properties
-                            this.Log(`Adding Entity: ${addedEntity.id}`, LOG_DEBUG);
-                            entity.id                = addedEntity.id;
-                            entity.position.global.y = addedEntity.position.global.y;
-                            entity.position.global.x = addedEntity.position.global.x;
-                            entity.sprite.state      = addedEntity.state;
-                            entity.zoning            = addedEntity.zoning;
-                            entity._character        = addedEntity._character;
+                        // If there's no name then copy over a blank name anyways to keep hidden classes the same
+                        entity.name              = addedEntity.name;
 
-                            // If there's no name then copy over a blank name anyways to keep hidden classes the same
-                            entity.name              = addedEntity.name;
+                        // Add path if necessary
+                        // TODO: This extra parse is probably unecessary. Find a way to not have to do it
+                        if (addedEntity.path) {
 
-                            // Add path if necessary
-                            // TODO: This extra parse is probably unecessary. Find a way to not have to do it
-                            if (addedEntity.path) {
-                                const path = JSON.parse(addedEntity.path);
-                                entity.addPath(path);
-                                entity.recordNewPath(path);
-                            }
+                            // FIXME: Abstract this (perhaps path.fromJSON(..))
+                            const movPath = JSON.parse(addedEntity.path),
+                                path      = new Path();
 
-                            // Throw entity into the wild
-                            // TODO: Find a way to abstract the watch/add/pageSet/updatePos routine
-                            The.area.watchEntity(entity);
-                            The.area.pages[page].addEntity(entity);
-                            entity.page = The.area.pages[page];
-                            entity.updatePosition();
+                            path.id        = movPath.id;
+                            path.flag      = movPath.flag;
+                            path.walkIndex = movPath.walkIndex;
+                            path.walked    = movPath.walked;
+
+                            movPath.walks.forEach((walk) => {
+                                // FIXME: This used to have walk.started as false, is it okay to ignore
+                                // that now?
+                                // walk.started = false; // in case walk has already started on server
+                                path.walks.push(walk);
+                            });
+
+                            entity.addPath(path);
+                            entity.recordNewPath(path);
                         }
+
+                        // Throw entity into the wild
+                        // TODO: Find a way to abstract the watch/add/pageSet/updatePos routine
+                        The.area.watchEntity(entity);
+                        The.area.pages[page].addEntity(entity);
+                        entity.page = The.area.pages[page];
+                        entity.updatePosition();
                     };
 
                     // Entity was removed from a page
@@ -804,10 +820,6 @@ define(
                             return; // Discard path
                         }
 
-                        this.Log(`Entity ${event.id} Adding Path (${path.flag},${path.id})`, LOG_DEBUG);
-                        this.Log(event.state, LOG_DEBUG);
-                        this.Log(event.path, LOG_DEBUG);
-
                         // Build our new path
                         // We're also trying to find where this path will lead us (destination)
                         const walks = event.path.walks;
@@ -843,6 +855,37 @@ define(
                                 y: pathState.destination.tile.y }
                         };
 
+                        // If this is some progress on a path for an entity which we already have, then its possible
+                        // that this path is redundant
+                        if
+                        (
+                            entity.path && // Entity has a path
+                            entity.path.id === event.path.id && event.path.flag === event.path.flag // And its the same path
+                        )
+                        {
+                            const currentDestination = {
+                                x: entity.position.global.x,
+                                y: entity.position.global.y
+                            };
+
+                            entity.path.walks.forEach((walk) => {
+                                const walkDist = walk.distance - walk.walked;
+                                     if (walk.direction === NORTH) currentDestination.y -= walkDist;
+                                else if (walk.direction === SOUTH) currentDestination.y += walkDist;
+                                else if (walk.direction === WEST)  currentDestination.x -= walkDist;
+                                else if (walk.direction === EAST)  currentDestination.x += walkDist;
+                            });
+
+                            if (currentDestination.x === pathState.destination.global.x && currentDestination.y === pathState.destination.global.y) {
+                                // This is the same path and its information is redundant. We can discard it
+                                return; // Discard path
+                            }
+                        }
+
+
+                        this.Log(`Entity ${event.id} Adding Path (${path.flag},${path.id})`, LOG_DEBUG);
+                        this.Log(event.state, LOG_DEBUG);
+                        this.Log(event.path, LOG_DEBUG);
 
                         // There's an issue with movables sending paths to go in one direction and then immediately
                         // changing their mind to go in another direction. Before we receive the next path we will have
@@ -996,6 +1039,17 @@ define(
 
                             // Alternative path from current position to path endpoint is faster
 
+                            // What if the recalibration of the provided path is too long, then its possible that our
+                            // total path length for the alternativePath is also too long. In this case we should
+                            // simply teleport
+                            if (alternativePath.length() > (path.length() + maxWalk)) {
+                                The.area.teleportEntity(entity, pathState.position.global);
+
+                                entity.addPath(path);
+                                entity.recordNewPath(path, pathState);
+                                return;
+                            }
+
                             alternativePath.id   = path.id;
                             alternativePath.flag = path.flag;
 
@@ -1005,7 +1059,6 @@ define(
                                 alternativePath.walks.forEach((walk) => { walk.dontSendToServer = true; });
                             }
 
-                            entity.path = null;
                             entity.addPath(alternativePath);
                             entity.recordNewPath(alternativePath, pathState);
 
@@ -1017,7 +1070,6 @@ define(
                                 path.walks.forEach((walk) => { walk.dontSendToServer = true; });
                             }
 
-                            entity.path = null;
                             entity.addPath(path);
                             entity.recordNewPath(path, pathState);
 
@@ -1027,7 +1079,6 @@ define(
                             this.Log("COULD NOT MOVE ENTITY THROUGH PATH!! Teleporting entity directly to path start", LOG_WARNING);
 
                             The.area.teleportEntity(entity, pathState.position.global);
-                            entity.sprite.idle();
 
                             entity.addPath(path);
                             entity.recordNewPath(path, pathState);

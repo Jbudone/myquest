@@ -730,7 +730,7 @@ define(
                 // As a client we cannot safely teleport you to another page without first receiving an EVT_ZONED event
                 // from the server. Although technically you're locally in another page we have to still consider you in
                 // your previous page
-                if (!Env.isServer) {
+                if (!Env.isServer && entity !== The.player) {
                     return;
                 }
 
@@ -745,6 +745,10 @@ define(
                     // Add to new page
                     this.pages[localCoordinates.page].addEntity(entity);
                     entity.page = this.pages[localCoordinates.page];
+
+                    if (!Env.isServer && entity === The.player) {
+                        this.curPage = entity.page;
+                    }
                 }
             };
 
