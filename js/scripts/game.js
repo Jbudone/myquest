@@ -475,6 +475,7 @@ define(
                             playerY      = The.player.position.global.y,
                             nearestTiles = The.area.findNearestTiles(playerX, playerY);
 
+                        this.Log(`Finding path from (${playerX}, ${playerY}) to (${toTile.x}, ${toTile.y})`, LOG_DEBUG);
                         let path = The.area.findPath(nearestTiles, [toTile]);
 
                         if (path && path.path) {
@@ -523,7 +524,7 @@ define(
                             }
 
                             if (path.walks.length) {
-                                The.player.addPath(path, true);
+                                The.player.addPath(path);
                                 The.player.recordNewPath(path);
                             }
 

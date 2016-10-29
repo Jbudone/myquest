@@ -146,8 +146,8 @@ define(
 
                 // Listen to the entity zoning
                 this.listenTo(entity, EVT_MOVED_TO_NEW_TILE, () => {
-                    this.Log(`Entity ${entity.id} moving to tile (${entity.position.tile.x}, ${entity.position.tile.y})`, LOG_DEBUG);
-                    this.Log(`      Path: ${entity.pathToStr()}`, LOG_DEBUG);
+                    //this.Log(`Entity ${entity.id} moving to tile (${entity.position.tile.x}, ${entity.position.tile.y})    {global: (${entity.position.global.x}, ${entity.position.global.y})}`, LOG_DEBUG);
+                    //this.Log(`      Path: ${entity.pathToStr()}`, LOG_DEBUG);
 
                     // Only the server is authoritative in zoning the entity. This prevents weird potential issues where
                     // the entity may have a path from page A -> B where B is outside of our view, then we zone him to a
@@ -167,7 +167,11 @@ define(
                         this.checkEntityZoned(entity);
                     }
 
-                    assert(!this.hasTile(entity.position.tile) || this.isTileOpen(entity.position.tile), "Entity moved to tile which is not open");
+                    if (this.hasTile(entity.position.tile) && !this.isTileOpen(entity.position.tile)) {
+                        this.Log(`Entity ${entity.id} moving to tile (${entity.position.tile.x}, ${entity.position.tile.y})    {global: (${entity.position.global.x}, ${entity.position.global.y})}`, LOG_ERROR);
+                        this.Log(entity.getPathHistory(), LOG_ERROR);
+                        throw Err("Entity moved to tile which is not open");
+                    }
                 });
 
                 this.doHook('addedentity').post(entity);
@@ -227,7 +231,7 @@ define(
             //  position to the start of the path
             //
             //
-            // state: The (x, y) global real position
+            // state: The local state of entity
             // pathState: Start position of path
             // path: Path object
             //
@@ -278,36 +282,84 @@ define(
                     // Path-Start Position (real coordinates)
 
                     // Are we already standing on the path start tile
+                    let tileDiffX = pathState.position.tile.x - state.position.tile.x,
+                        tileDiffY = pathState.position.tile.y - state.position.tile.y;
+                    // TODO: We could also consider differences < 2 (eg. path start is slightly more to the east, which
+                    // means they were clearly on their way to the next tile over which would have been a distance of 1)
                     if
                     (
-                        pathState.position.tile.x === state.position.tile.x &&
-                        pathState.position.tile.y === state.position.tile.y
+                        Math.abs(tileDiffX) <= 1 &&
+                        Math.abs(tileDiffY) <= 1 &&
+                        (tileDiffY === 0 || tileDiffX === 0)
                     ) {
 
-                        // In some cases we may be recalibrating a new path which starts on the same tile that the
-                        // movable is already on. If the path is leading us into the same direction that we're already
-                        // moving then don't bother to recalibrate, otherwise recalibrate to center
+                        // Simply walk to global path position
+                        // FIXME: Could easily consider initial walk   (could probably put this into Path object: addWalk)
+                        //          1) If both in same direction: merge walks
+                        //          2) If opposing directions: subtract from distance
+                        let globalDiffX = pathState.position.global.x - state.position.global.x,
+                            globalDiffY = pathState.position.global.y - state.position.global.y;
 
-                        // Early out for moving in the same direction as the path
-                        const pathDirection = path.walks[0].direction;
-                        if ((pathDirection === WEST  && (state.position.global.x % Env.tileSize) < 0) ||
-                            (pathDirection === EAST  && (state.position.global.x % Env.tileSize) > 0) ||
-                            (pathDirection === NORTH && (state.position.global.y % Env.tileSize) < 0) ||
-                            (pathDirection === SOUTH && (state.position.global.y % Env.tileSize) > 0)) {
 
-                            return true;
+                        // Its important that we recalibrate in order,
+                        //
+                        //  Player Position -> Near Tile/Path -> Path-Start Position
+                        // 
+                        // Otherwise you can end up running into collisions
+                        //
+                        //   +-----+-----+
+                        //   |     |  X  |   NEED To recalibrate to center of tile before recalibrating to path start
+                        //   |@.*..|..*  |
+                        //   |     |     |
+                        //   +-----+-----+
+                        //
+                        // this.Log("Recalibrations: Start State -> Start of Path Global", LOG_DEBUG);
+
+                        // Player Position -> Near Tile/Path
+                        if (tileDiffX !== 0) {
+                            let dir = EAST,
+                                dist = globalDiffX;
+                            if (dist < 0) {
+                                dir = WEST;
+                                dist = dist * -1;
+                            }
+                            let walk = new Walk(dir, dist, null);
+                            path.walks.unshift(walk);
+
+                            // Near Tile/Path -> Path-Start Position
+                            if (globalDiffY !== 0) {
+                                dir = SOUTH;
+                                dist = globalDiffY;
+                                if (dist < 0) {
+                                    dir = NORTH;
+                                    dist = dist * -1;
+                                }
+                                walk = new Walk(dir, dist, null);
+                                path.walks.unshift(walk);
+                            }
+                        } else {
+                            let dir = SOUTH,
+                                dist = globalDiffY;
+                            if (dist < 0) {
+                                dir = NORTH;
+                                dist = dist * -1;
+                            }
+                            let walk = new Walk(dir, dist, null);
+                            path.walks.unshift(walk);
+
+                            // Near Tile/Path -> Path-Start Position
+                            if (globalDiffX !== 0) {
+                                dir = EAST;
+                                dist = globalDiffX;
+                                if (dist < 0) {
+                                    dir = WEST;
+                                    dist = dist * -1;
+                                }
+                                walk = new Walk(dir, dist, null);
+                                path.walks.unshift(walk);
+
+                            }
                         }
-
-                        // TODO: What if we're doing a 180? Should merge recalibration with first walk
-
-                        // Otherwise we need to move to the center of the tile
-                        const startTile        = new Tile(state.position.tile.x, state.position.tile.y),
-                            recalibrationStart = recalibrationWalk(startTile, state.position.global.x, state.position.global.y);
-
-                        // Extend walk from position to start
-                        _.forEachRight(recalibrationStart, (recalibration) => {
-                            path.walks.unshift(recalibration);
-                        });
 
                         return true;
 
@@ -337,102 +389,82 @@ define(
 
                             if (foundPath.path) {
                                 startPath.path      = foundPath.path;
-                                startPath.startTile = foundPath.start;
-                                startPath.endTile   = foundPath.end;
+                                startPath.startTile = foundPath.start.tile;
+                                startPath.endTile   = foundPath.end.tile;
                             }
                         }
 
                         if (startPath) {
 
-                            // No path found
-                            if (!startPath.path) {
+                            // We may or may not have produced a path from our start position to the path position. If
+                            // we haven't then its most likely because one of our start tiles is equal to one of the end
+                            // tiles.
+                            const hasPath = !!startPath.path;
 
-                                // Player Position -> Path-Start Position
-                                const tile    = startPath.tile,
-                                    startTile = tile;
+                            const startTile = hasPath ? startPath.startTile : startPath.tile,
+                                endTile     = hasPath ? startPath.endTile : startPath.tile;
 
-                                if (startTile.tile) throw Err(`No startTile found`);
+                            const recalibrationStart = recalibrationWalk(startTile, state.position.global.x, state.position.global.y),
+                                recalibrationEnd     = recalibrationWalk(endTile, pathState.position.global.x, pathState.position.global.y);
 
-                                const recalibrationStart = recalibrationWalk(startTile, state.position.global.x, state.position.global.y);
-
-                                // extend walk from position to start
+                            // Is the recalibration greater than our maximum recalibration length?
+                            if (maxWalk > 0) {
+                                let recalibrationLength = 0;
                                 for (let j = 0; j < recalibrationStart.length; ++j) {
-                                    const recalibration = recalibrationStart[j];
-
-                                    // This single walk is far too long
-                                    path.walks.unshift(recalibration);
-                                    if (recalibration.distance > (Env.tileSize * 2)) {
-                                        this.Log(`Recalibration is bigger than tile size: ${recalibration.distance}`, LOG_WARNING);
-                                        this.Log(startTiles, LOG_ERROR);
-                                        this.Log(endTiles, LOG_ERROR);
-                                        return false;
-                                    }
+                                    recalibrationLength += recalibrationStart.distance;
+                                }
+                                for (let j = 0; j < recalibrationEnd.length; ++j) {
+                                    recalibrationLength += recalibrationEnd.distance;
                                 }
 
-                                // This entire path is greater than our maximum path length
-                                if (path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_WARNING);
-                                    return false;
+                                if (hasPath) {
+                                    recalibrationLength += startPath.path.length();
                                 }
 
-                            } else {
-
-                                // Path length is greater than our maximum path length
-                                if (startPath.path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${startPath.path.length()} > ${maxWalk}`, LOG_WARNING);
+                                if (recalibrationLength > maxWalk) {
+                                    this.Log(`Recalibration is longer than our maxWalk: ${recalibrationLength} > ${maxWalk}`, LOG_WARNING);
                                     this.Log(startTiles);
                                     this.Log(endTiles);
                                     return false;
                                 }
+                            }
 
-                                const startTile = startPath.startTile,
-                                    endTile     = startPath.endTile;
+                            // Excessive Debug logging here
+                            //if (hasPath) {
+                            //    this.Log("Recalibrations: Start State -> Start Tile -> Start of Path Tile -> Start of Path Global", LOG_DEBUG);
+                            //    this.Log(recalibrationStart, LOG_DEBUG);
+                            //    this.Log(startPath.path.walks, LOG_DEBUG);
+                            //    this.Log(recalibrationEnd, LOG_DEBUG);
+                            //} else {
+                            //    this.Log("Recalibrations: Start State -> Start of Path Tile -> Start of Path Global", LOG_DEBUG);
+                            //    this.Log(recalibrationStart, LOG_DEBUG);
+                            //    this.Log(recalibrationEnd, LOG_DEBUG);
+                            //}
 
-                                const recalibrationStart = recalibrationWalk(startTile.tile, state.position.global.x, state.position.global.y),
-                                    recalibrationEnd     = recalibrationWalk(endTile.tile, pathState.position.global.x, pathState.position.global.y);
+                            // Near Path/Tile -> Start Path-Position
+                            for (let j = recalibrationEnd.length - 1; j >= 0; --j) {
+                                const recalibration = recalibrationEnd[j],
+                                    dir = recalibration.direction;
 
-                                // extend walk from position to start
-                                for (let j = 0; j < recalibrationStart.length; ++j) {
-                                    const recalibration = recalibrationStart[j];
-                                    startPath.path.walks.unshift(recalibration);
+                                     if (dir === NORTH) recalibration.direction = SOUTH;
+                                else if (dir === SOUTH) recalibration.direction = NORTH;
+                                else if (dir === WEST)  recalibration.direction = EAST;
+                                else if (dir === EAST)  recalibration.direction = WEST;
+                                path.walks.unshift(recalibration);
+                            }
 
-                                    // This single walk is too long
-                                    if (recalibration.distance > (Env.tileSize * 2)) {
-                                        this.Log(`Recalibration is bigger than tile size: ${recalibration.distance}`, LOG_ERROR);
-                                        this.Log(startTiles, LOG_ERROR);
-                                        this.Log(endTiles, LOG_ERROR);
-                                        return false;
-                                    }
-                                }
-
-                                // extend walk from end to req state
-                                for (let j = 0; j < recalibrationEnd.length; ++j) {
-                                    const recalibration = recalibrationEnd[j],
-                                        dir = recalibration.direction;
-
-                                         if (dir === NORTH) recalibration.direction = SOUTH;
-                                    else if (dir === SOUTH) recalibration.direction = NORTH;
-                                    else if (dir === WEST)  recalibration.direction = EAST;
-                                    else if (dir === EAST)  recalibration.direction = WEST;
-                                    startPath.path.walks.push(recalibration);
-                                }
-
-
-                                // TODO: IF walk[0] AND adjusted walk are in same direction, add the steps together
-
-
+                            // Near Player/Tile -> Near Path/Tile
+                            if (hasPath) {
                                 _.forEachRight(startPath.path.walks, (walk) => {
                                     path.walks.unshift(walk);
                                 });
+                            }
 
 
-                                // This entire path is longer than our maximum path length
-                                if (path.length() > maxWalk && maxWalk > 0) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${path.length()} > ${maxWalk}`, LOG_WARNING);
-                                    this.Log(startTiles, LOG_WARNING);
-                                    this.Log(endTiles, LOG_WARNING);
-                                    return false;
-                                }
+                            // Player Position -> Near Player/Tile
+                            for (let j = recalibrationStart.length - 1; j>= 0; --j) {
+                                const recalibration = recalibrationStart[j];
+                                path.walks.unshift(recalibration);
                             }
 
                             return true;

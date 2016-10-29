@@ -85,7 +85,8 @@ define(function(){
 		this.connection = (testingLocal ? this.connection.local : this.connection.server);
 
 		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
-			logVerbose = logImportant | LOG_INFO | LOG_DEBUG,
+            logNormal = LOG_INFO | logImportant,
+			logVerbose = logNormal | LOG_DEBUG,
 			logDefault = logVerbose;
 		this.logmask = {
 			'AI': (logDefault),
@@ -94,12 +95,12 @@ define(function(){
 			'Renderer': (logDefault),
 			'UI': (logDefault),
 			'DB': (logDefault),
-			'Player': (logDefault),
+			'Player': (logNormal),
 			'Resources': (logDefault),
 			'ScriptMgr': (logDefault | LOG_INFO),
 			'Script': (logDefault),
 			'User': (logDefault),
-			'Game': (logDefault),
+			'Game': (logNormal),
 			'Character': (logDefault),
 			'AI': (logDefault),
 			'Instinct': (logDefault),
@@ -108,7 +109,7 @@ define(function(){
 			'Item': (logDefault),
 			'Interactable': (logDefault),
 			'Redis': (logDefault),
-			'Pathfinding': (logDefault),
+			'Pathfinding': (logNormal),
 			'Ability': (logDefault),
 			'Default': (logDefault),
 		};

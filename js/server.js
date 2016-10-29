@@ -504,11 +504,6 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                     });
                                 };
 
-                                // TODO: clean this!
-                                you.onPreparingToWalk = (evt) => {
-                                    you.handleWalkRequest(evt);
-                                };
-
                                 you.onSomeEvent = (evt) => {
                                     requestBuffer.queue({
                                         you: this,
@@ -553,9 +548,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         // TODO: handle events through a better abstraction structure
                                         const you = request.you,
                                             action = request.action;
-                                        if (action.evtType === EVT_PREPARING_WALK) {
+                                        if (action.evtType === EVT_USER_ADDED_PATH) {
 
-                                            // you.handleWalkRequest(action);
+                                            you.handlePathRequest(action);
                                         } else if (action.evtType === EVT_DISCONNECTED) {
 
                                             you.wantToDisconnect();

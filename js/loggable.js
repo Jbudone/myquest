@@ -94,12 +94,17 @@ define(function(){
         };
     } else {
 
-        jsonRenderer = function(obj){ return obj; };
+        jsonRenderer = function(obj){ return JSON.stringify(obj); };
 
         errorLog = function(header, message){
 
+            let _message = message;
+            if (typeof message == 'object') {
+                _message = jsonRenderer(message);
+            }
+
             if (header) {
-                var log = `%c[%c${header}%c]: %c${message}`;
+                var log = `%c[%c${header}%c]: %c${_message}`;
 
                 const c1 = "color: green; font-weight: bold;",
                     c2 = "color: red; font-weight: bold;",
@@ -107,7 +112,7 @@ define(function(){
 
                 console.error(log, c1, c2, c1, c3);
             } else {
-                var log = `%c${message}`;
+                var log = `%c${_message}`;
 
                 const c = "color: red; font-weight: normal;";
                 console.error(log, c);
@@ -116,8 +121,13 @@ define(function(){
 
         warnLog = function(header, message){
 
+            let _message = message;
+            if (typeof message == 'object') {
+                _message = jsonRenderer(message);
+            }
+
             if (header) {
-                var log = `%c[%c${header}%c]: %c${message}`;
+                var log = `%c[%c${header}%c]: %c${_message}`;
 
                 const c1 = "color: green; font-weight: bold;",
                     c2 = "color: orange; font-weight: bold;",
@@ -125,7 +135,7 @@ define(function(){
 
                 console.warn(log, c1, c2, c1, c3);
             } else {
-                var log = `%c${message}`;
+                var log = `%c${_message}`;
 
                 const c = "color: orange; font-weight: normal;";
                 console.warn(log, c);
@@ -134,8 +144,13 @@ define(function(){
 
         normLog = function(header, message, color){
 
+            let _message = message;
+            if (typeof message == 'object') {
+                _message = jsonRenderer(message);
+            }
+
             if (header) {
-                var log = `%c[%c${header}%c]: %c${message}`;
+                var log = `%c[%c${header}%c]: %c${_message}`;
 
                 const c1 = "color: green; font-weight: bold;",
                     c2 = "color: blue; font-weight: bold;",
@@ -143,7 +158,7 @@ define(function(){
 
                 console.log(log, c1, c2, c1, c3);
             } else {
-                var log = `%c${message}`;
+                var log = `%c${_message}`;
 
                 console.log(log, color);
             }

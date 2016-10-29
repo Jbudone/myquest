@@ -1,6 +1,7 @@
 {
 	"tests": [
 		"test.js",
-		"recalibration.js"
+		"recalibration.js",
+		"basic-collision-path.js"
 	]
 }

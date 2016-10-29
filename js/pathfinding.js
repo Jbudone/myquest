@@ -344,6 +344,8 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
             if (position.y - startTile.y * Env.tileSize !== 0) recalibrateY = true;
             if (position.x - startTile.x * Env.tileSize !== 0) recalibrateX = true;
 
+            assert(!(recalibrateX && recalibrateY), "We needed to recalibrate along both x/y to the beginning of the path tile");
+
             path.splitWalks();
 
             if (recalibrateY) {
@@ -478,6 +480,82 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
             }
         };
 
+        this.checkSafePath = (state, path) => {
+
+            //
+            // Check path is safe (no collisions)
+            //
+            //  This works by essentially finding the starting point for the path and walking along that path to check
+            //  if each tile is open.
+            //  FIXME: This routine was thrown together with virtually no optimizations in mind; fix that please
+            ////////////////////////////////////////
+
+            let tileX   = state.tile.x,
+                tileY   = state.tile.y,
+                globalX = state.global.x,
+                globalY = state.global.y,
+                tile    = { x: tileX, y: tileY };
+
+            let checkStr = "Checking Safe Path: ";
+
+            checkStr += `(${tile.x}, ${tile.y}) `;
+            if (!area.isTileOpen(tile)) {
+                checkStr += "NOPE";
+                this.Log(checkStr, LOG_DEBUG);
+                return false;
+            }
+
+            for (let i = 0; i < path.walks.length; ++i) {
+                let walk = path.walks[i],
+                    dist = walk.distance - walk.walked;
+
+                let vert      = walk.direction === NORTH || walk.direction === SOUTH,
+                    positive  = (walk.direction === SOUTH || walk.direction === EAST) ? 1 : -1;
+                let d;
+                this.Log(`Checking from (${globalX}, ${globalY}) for walk (${walk.direction}}, ${dist})`, LOG_DEBUG);
+                for (d = Math.min(dist, Env.tileSize); d <= dist; d += Env.tileSize) {
+                    this.Log("d: " + d, LOG_DEBUG);
+                    if (vert) {
+                        tile.y = Math.floor((globalY + positive * d) / Env.tileSize);
+                    } else {
+                        tile.x = Math.floor((globalX + positive * d) / Env.tileSize);
+                    }
+
+                    checkStr += `(${tile.x}, ${tile.y}) `;
+                    if (!area.isTileOpen(tile)) {
+                        checkStr += "NOPE";
+                        this.Log(checkStr, LOG_DEBUG);
+                        return false;
+                    }
+                }
+
+                let leftover = d - dist;
+                if (leftover > 0) {
+                    this.Log("leftover: " + leftover, LOG_DEBUG);
+                    if (vert) {
+                        tile.y = Math.floor((globalY + positive * dist) / Env.tileSize);
+                    } else {
+                        tile.x = Math.floor((globalX + positive * dist) / Env.tileSize);
+                    }
+
+                    checkStr += `(${tile.x}, ${tile.y}) `;
+                    if (!area.isTileOpen(tile)) {
+                        checkStr += "NOPE";
+                        this.Log(checkStr, LOG_DEBUG);
+                        return false;
+                    }
+                }
+
+                if (vert) {
+                    globalY += positive * dist;
+                } else {
+                    globalX += positive * dist;
+                }
+            }
+
+            this.Log(checkStr, LOG_DEBUG);
+            return true;
+        };
 
         this.checkSafeWalk = (state, walk) => {
 

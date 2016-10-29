@@ -222,7 +222,7 @@ define(
                 }
             };
 
-            this.handleWalkRequest = (action) => {
+            this.handlePathRequest = (action) => {
 
                 //  Create path from request
                 // =================================
@@ -234,19 +234,20 @@ define(
                     reqState = action.state,
                     maxWalk  = 1500 / player.moveSpeed; // maximum delay of 1.5s (1500/(moveSpeed*tileSize))
 
-                const result = walk.fromJSON(action.data);
+                const result = path.fromJSON(action.data);
                 if (_.isError(result)) {
-                    this.Log("Error serializing walk request");
+                    this.Log("Error serializing path request");
                     return;
                 }
-                walk.walked = 0;
-                path.walks.push(walk);
+                //walk.walked = 0;
+                //path.walks.push(walk);
 
-                if (path.length() > maxWalk) {
-                    this.Log("Path longer than maxwalk..", LOG_ERROR);
-                    this.Log(path, LOG_ERROR);
-                    return;
-                }
+                // FIXME: How to determine maxPath?
+                //if (path.length() > maxWalk) {
+                //    this.Log("Path longer than maxwalk..", LOG_ERROR);
+                //    this.Log(path, LOG_ERROR);
+                //    return;
+                //}
 
                 path.id = reqState.path.id;
                 path.flag = reqState.path.flag;
@@ -256,9 +257,7 @@ define(
                 //
                 // This works by essentially finding the starting point for the path and walking along that path to
                 // check if each tile is open.
-                // NOTE: currently we're only processing this on a per-walk basis (ie. this path consists of only 1
-                // walk)
-                const safePath = area.pathfinding.checkSafeWalk(reqState, walk);
+                const safePath = area.pathfinding.checkSafePath(reqState, path);
 
                 const movableState = {
                     position: {
@@ -333,17 +332,20 @@ define(
                     return;
                 }
 
-                const success = area.recalibratePath(movableState, pathState, path, maxWalk);
+                let maxPathLength = path.length() + maxWalk;
+                this.Log(path, LOG_DEBUG);
+                const success = area.recalibratePath(movableState, pathState, path, maxPathLength);
 
                 if (success) {
 
                     player.path = null;
 
-                    this.triggerEvent(EVT_USER_ADDED_PATH);
                     this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
-                    this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y}): ${walk.distance} ${keyStrings[walk.direction]} (walked ${walk.walked})`, LOG_DEBUG);
+                    this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
+                    this.Log(path, LOG_DEBUG);
                     player.addPath(path);
                     player.recordNewPath(path, pathState);
+                    this.triggerEvent(EVT_USER_ADDED_PATH);
 
                     if (this.isConnected) {
                         const response = new Response(action.id);
@@ -517,10 +519,11 @@ define(
                         this.client.send(JSON.stringify(initialization));
                     }
 
-                } else if (evtType === EVT_PREPARING_WALK) {
+                } else if (evtType === EVT_NEW_PATH) {
 
                     this.Log(`new message from user.. FROM (${evt.state.global.x}, ${evt.state.global.y}) ----> ${evt.data.distance}`, LOG_DEBUG);
-                    this.onPreparingToWalk(evt);
+                    this.handlePathRequest(evt);
+
                 } else if (evtType === TEST_CHECKJPS) {
 
                     if (Env.game.useJPS) {

@@ -83,7 +83,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                             if (evtType == EVT_ADDED_ENTITY) this.onEntityAdded( page, event.entity );
                             else if (evtType == EVT_REMOVED_ENTITY) this.onEntityRemoved( page, event.entity );
-                            else if (evtType == EVT_PREPARING_WALK) this.onEntityWalking( page, event.data );
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
                             else if (evtType == EVT_ATTACKED) this.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount, event.data.health );
@@ -148,7 +147,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onZone                 = function(){};
         this.onEntityAdded          = function(){};
         this.onEntityRemoved        = function(){};
-        this.onEntityWalking        = function(){};
         this.onEntityPathProgress   = function(){};
         this.onEntityPathCancelled  = function(){};
         this.onEntityHurt           = function(){};
@@ -189,6 +187,16 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
             // this.LogGroupEnd();
             const event = new Event((++this.requestsId), EVT_PREPARING_WALK, walk.toJSON(), state);
             if (walk.time) event.time = walk.time;
+            return this.request(event);
+        };
+
+        this.addPath = (path, state) => {
+            this.Log("Sending path request..", LOG_DEBUG);
+            // this.LogGroup();
+            // this.Log(walk, LOG_DEBUG);
+            // this.LogGroupEnd();
+            const event = new Event((++this.requestsId), EVT_NEW_PATH, path.toJSON(), state);
+            if (path.time) event.time = path.time;
             return this.request(event);
         };
 

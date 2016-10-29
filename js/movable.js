@@ -116,8 +116,8 @@ define(
                 // State: (tile/global)
                 this.walks = [];
 
-                let globalX = start.tile.x * Env.tileSize,
-                    globalY = start.tile.y * Env.tileSize;
+                let globalX = start.global.x,
+                    globalY = start.global.y;
                 for (let i = 0; i < path.walks.length; ++i) {
                     let walk = path.walks[i];
                     this.walks.push({ direction: walk.direction, distance: walk.distance, walked: walk.walked });
@@ -132,6 +132,10 @@ define(
 
                 this.destination.x = Math.floor(globalX / Env.tileSize);
                 this.destination.y = Math.floor(globalY / Env.tileSize);
+
+                if (!Env.isServer && !Env.isBot && The.area.hasTile(this.destination)) {
+                    assert(The.area.isTileOpen({ x: this.destination.x, y: this.destination.y }), "Path destination is not open!");
+                }
 
                 this.toString = () => {
                     let pathStr = "";
@@ -399,13 +403,15 @@ define(
                             deltaSteps = steps;
                         }
 
-                        // How much movement are we making this iteration
+                        // How much delta are we using up in this iteration
                         deltaTaken = deltaSteps * this.moveSpeed;
                         delta -= deltaTaken;
 
                         // Movement direction
                         if (direction == EAST || direction == SOUTH) posK += deltaSteps;
                         else                                         posK -= deltaSteps;
+
+                        //Log(keyStrings[direction] + deltaSteps + "   TO: " + posK, LOG_DEBUG);
 
                         // Are we just beginning this next walk?
                         if (!walk.started) {
@@ -492,11 +498,11 @@ define(
 
                             // Movable has finished the walk. This is only a final step to calibrate the user to the
                             // center of the tile
-                            if (finishedWalk) {
-                                // TODO: might need to change lastMoved to reflect this recalibration
-                                this.position.global.x = Env.tileSize * Math.round(this.position.global.x * Env.invTileSize);
-                                this.position.global.y = Env.tileSize * Math.round(this.position.global.y * Env.invTileSize);
-                            }
+                            //if (finishedWalk) {
+                            //    // TODO: might need to change lastMoved to reflect this recalibration
+                            //    this.position.global.x = Env.tileSize * Math.round(this.position.global.x * Env.invTileSize);
+                            //    this.position.global.y = Env.tileSize * Math.round(this.position.global.y * Env.invTileSize);
+                            //}
                             this.updatePosition();
 
                         }
@@ -571,11 +577,10 @@ define(
                 return str;
             };
 
-            this.addPath = (path, priority) => {
+            this.addPath = (path) => {
 
 
                 // add/replace path
-                // TODO: implement priority better?
 
                 // Keep track of this path so that we know we've already added/ran it
                 if (!this.lastPathId[path.flag]) this.lastPathId[path.flag] = 0;
@@ -605,13 +610,6 @@ define(
                     this.path.onFailed();
                 }
 
-                // TODO: Get rid of priority
-                if (this.path && priority) {
-                    this.path = path; // replace current path with this
-                    this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
-                    return null;
-                }
-
                 for (let j = 0; j < path.walks.length; ++j) {
                     path.walks[j].started = false; // in case walk has already started on server
                     path.walks[j].steps   = 0;
@@ -620,6 +618,7 @@ define(
 
                 this.path = path; // replace current path with this
                 this.triggerEvent(EVT_PREPARING_WALK, path.walks[0]);
+                this.triggerEvent(EVT_NEW_PATH, path);
 
                 return {
                     finished: (success, failed) => {
