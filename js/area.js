@@ -315,8 +315,12 @@ define(
                         //
                         // this.Log("Recalibrations: Start State -> Start of Path Global", LOG_DEBUG);
 
-                        // Player Position -> Near Tile/Path
-                        if (tileDiffX !== 0) {
+
+                        // Player Position -> Center of Tile
+                        const onX = state.position.global.x % Env.tileSize,
+                            onY = state.position.global.y % Env.tileSize;
+
+                        if (!onX) {
                             let dir = EAST,
                                 dist = globalDiffX;
                             if (dist < 0) {
@@ -326,7 +330,7 @@ define(
                             let walk = new Walk(dir, dist, null);
                             path.walks.unshift(walk);
 
-                            // Near Tile/Path -> Path-Start Position
+                            // Tile -> Path-Start Position
                             if (globalDiffY !== 0) {
                                 dir = SOUTH;
                                 dist = globalDiffY;
@@ -347,7 +351,7 @@ define(
                             let walk = new Walk(dir, dist, null);
                             path.walks.unshift(walk);
 
-                            // Near Tile/Path -> Path-Start Position
+                            // Tile -> Path-Start Position
                             if (globalDiffX !== 0) {
                                 dir = EAST;
                                 dist = globalDiffX;
@@ -357,9 +361,9 @@ define(
                                 }
                                 walk = new Walk(dir, dist, null);
                                 path.walks.unshift(walk);
-
                             }
                         }
+
 
                         return true;
 
