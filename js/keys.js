@@ -130,6 +130,9 @@ define(function(){
 	addKey('BOT_CONNECT'); // Bot commands
 	addKey('BOT_SIGNUP');
 	addKey('BOT_MOVE');
+    addKey('BOT_INQUIRE');
+
+    addKey('INQUIRE_MAP'); // Bot inquiries
 
 	addKey('REQ_REGISTER'); // Login requests
 

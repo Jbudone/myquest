@@ -341,7 +341,8 @@ define(
                                 walk = new Walk(dir, dist, null);
                                 path.walks.unshift(walk);
                             }
-                        } else {
+
+                        } else if (!onY) {
                             let dir = SOUTH,
                                 dist = globalDiffY;
                             if (dist < 0) {
@@ -361,6 +362,83 @@ define(
                                 }
                                 walk = new Walk(dir, dist, null);
                                 path.walks.unshift(walk);
+                            }
+
+                        } else {
+
+                            // We're already in the center of our own tile, so we don't need a start recalibration.
+                            // Essentially we just need to ensure that our end recalibration is done last
+                            if (tileDiffX !== 0) {
+
+                                let dir = EAST,
+                                    dist = globalDiffX;
+                                if (dist < 0) {
+                                    dir = WEST;
+                                    dist = dist * -1;
+                                }
+                                let walk = new Walk(dir, dist, null);
+                                path.walks.unshift(walk);
+
+                                // Tile -> Path-Start Position
+                                if (globalDiffY !== 0) {
+                                    dir = SOUTH;
+                                    dist = globalDiffY;
+                                    if (dist < 0) {
+                                        dir = NORTH;
+                                        dist = dist * -1;
+                                    }
+                                    walk = new Walk(dir, dist, null);
+                                    path.walks.unshift(walk);
+                                }
+
+                            } else if (tileDiffY !== 0) {
+
+                                let dir = SOUTH,
+                                    dist = globalDiffY;
+                                if (dist < 0) {
+                                    dir = NORTH;
+                                    dist = dist * -1;
+                                }
+                                let walk = new Walk(dir, dist, null);
+                                path.walks.unshift(walk);
+
+                                // Tile -> Path-Start Position
+                                if (globalDiffX !== 0) {
+                                    dir = EAST;
+                                    dist = globalDiffX;
+                                    if (dist < 0) {
+                                        dir = WEST;
+                                        dist = dist * -1;
+                                    }
+                                    walk = new Walk(dir, dist, null);
+                                    path.walks.unshift(walk);
+                                }
+
+                            } else {
+
+                                // We're in the same tile, so we only need the end recalibration (one walk)
+
+                                assert(globalDiffX === 0 || globalDiffY === 0, "We're in the same tile, no start recalibration but somehow end up off center of the tile");
+
+                                if (globalDiffX !== 0) {
+                                    let dir = EAST,
+                                        dist = globalDiffX;
+                                    if (dist < 0) {
+                                        dir = WEST;
+                                        dist = dist * -1;
+                                    }
+                                    walk = new Walk(dir, dist, null);
+                                    path.walks.unshift(walk);
+                                } else {
+                                    let dir = SOUTH,
+                                        dist = globalDiffY;
+                                    if (dist < 0) {
+                                        dir = NORTH;
+                                        dist = dist * -1;
+                                    }
+                                    let walk = new Walk(dir, dist, null);
+                                    path.walks.unshift(walk);
+                                }
                             }
                         }
 

@@ -19,6 +19,8 @@ const exitingGame = () => {
     process.exit();
 };
 
+let botName = null;
+
 const errorInGame = (e) => {
 
     console.error("Error in game");
@@ -27,9 +29,13 @@ const errorInGame = (e) => {
 
     //process.exit(e);
 
+    if (botName) {
+        console.log(`  I am ${botName}`);
+    }
+
     if (console.trace) console.trace();
 
-    debugger;
+    //debugger;
     if (e) {
 
         // TODO: Organize source printing?
@@ -63,13 +69,13 @@ const errorInGame = (e) => {
                         line   = frame[3],
                         col    = frame[4];
 
-                    if (file.indexOf(__dirname) >= 0) {
-                        // We're in the same path as the server.. include this frame
-                    } else {
-                        // Hide this frame (note; should have a "...." or something to convey that we're hiding outside of
-                        // scope frames)
-                        return;
-                    }
+                    //if (file.indexOf(__dirname) >= 0) {
+                    //    // We're in the same path as the server.. include this frame
+                    //} else {
+                    //    // Hide this frame (note; should have a "...." or something to convey that we're hiding outside of
+                    //    // scope frames)
+                    //    return;
+                    //}
 
                     let source = fs.readFileSync(file) || "",
                         sourceLine = "";
@@ -538,6 +544,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         Bot.tellMaster('connected');
                                     }
                                 });
+
+                                botName = username;
                             });
                             
                             Bot.onCommand(BOT_SIGNUP, ({username, password, email}) => {
@@ -591,6 +599,14 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                             Bot.tellMaster('badpath');
                                         }
                                     }, 100);
+                            });
+
+                            Bot.onCommand(BOT_INQUIRE, ({detail}) => {
+
+                                if (detail === INQUIRE_MAP) {
+                                    let map = Game.getMapName();
+                                    Bot.tellMaster('response', { map });
+                                }
                             });
 
                             Bot.tellMaster('ready');

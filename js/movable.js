@@ -124,10 +124,10 @@ define(
 
                     // TODO: What about putting walk.walked into consideration? But then we would need to consider
                     // the start state's global position as opposed to tile (I think?)
-                         if (walk.direction === NORTH) globalY -= walk.distance;
-                    else if (walk.direction === SOUTH) globalY += walk.distance;
-                    else if (walk.direction === WEST) globalX -= walk.distance;
-                    else if (walk.direction === EAST) globalX += walk.distance;
+                         if (walk.direction === NORTH) globalY -= walk.distance - walk.walked;
+                    else if (walk.direction === SOUTH) globalY += walk.distance - walk.walked;
+                    else if (walk.direction === WEST) globalX -= walk.distance - walk.walked;
+                    else if (walk.direction === EAST) globalX += walk.distance - walk.walked;
                 }
 
                 this.destination.x = Math.floor(globalX / Env.tileSize);
@@ -492,6 +492,8 @@ define(
                             }
                         }
 
+                        assert(this.position.global.x % Env.tileSize === 0 || this.position.global.y % Env.tileSize === 0, "Moved outside of both the horizontal and vertical center of the tile");
+
 
                         hasZoned = this.hasOwnProperty('isZoning');
                         if (!hasZoned) {
@@ -610,6 +612,28 @@ define(
                     this.path.onFailed();
                 }
 
+                let x = this.position.global.x,
+                    y = this.position.global.y;
+                for (let j = 0; j < path.walks.length; ++j) {
+                    let walk = path.walks[j];
+                         if (walk.direction === NORTH) y -= walk.distance - walk.walked;
+                    else if (walk.direction === SOUTH) y += walk.distance - walk.walked;
+                    else if (walk.direction === WEST) x -= walk.distance - walk.walked;
+                    else if (walk.direction === EAST) x += walk.distance - walk.walked;
+
+                    let onX = x % Env.tileSize === 0,
+                        onY = y % Env.tileSize === 0;
+
+                    if (!onX && !onY) {
+                        throw Err("Added path which will surely get us off center of tile!");
+                    }
+                }
+                Log(`Position: (${this.position.global.x}, ${this.position.global.y})`, LOG_DEBUG);
+                Log(path, LOG_DEBUG);
+
+                // FIXME: Is this a good idea? Probably not since we received their state at the point in time that they
+                // were partially through this walk (eg. we zone into a page where they're part way through their walk
+                // and we have their current state)
                 for (let j = 0; j < path.walks.length; ++j) {
                     path.walks[j].started = false; // in case walk has already started on server
                     path.walks[j].steps   = 0;

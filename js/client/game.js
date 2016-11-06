@@ -394,13 +394,15 @@ define(
                         const entity = new Movable(addedEntity.spriteID, The.area.pages[page], { id: addedEntity.id });
 
                         // Copy over entity properties
-                        this.Log(`Adding Entity: ${addedEntity.id}`, LOG_DEBUG);
+                        this.Log(`Adding Entity: ${addedEntity.id}  (page ${page})`, LOG_DEBUG);
                         entity.id                = addedEntity.id;
-                        entity.position.global.y = addedEntity.position.global.y;
-                        entity.position.global.x = addedEntity.position.global.x;
                         entity.sprite.state      = addedEntity.state;
                         entity.zoning            = addedEntity.zoning;
                         entity._character        = addedEntity._character;
+
+                        entity.position.global.y = addedEntity.position.global.y;
+                        entity.position.global.x = addedEntity.position.global.x;
+                        entity.updatePosition();
 
                         // If there's no name then copy over a blank name anyways to keep hidden classes the same
                         entity.name              = addedEntity.name;
@@ -434,7 +436,6 @@ define(
                         The.area.watchEntity(entity);
                         The.area.pages[page].addEntity(entity);
                         entity.page = The.area.pages[page];
-                        entity.updatePosition();
                     };
 
                     // Entity was removed from a page
@@ -457,6 +458,11 @@ define(
                     server.onEntityPathCancelled = (page, event) => {
 
                         assert(!_.isNaN(event.id), `Expected valid entity id: ${event.id}`);
+
+                        if (!(page in The.area.pages)) {
+                            this.Log(`server.onEntityPathCancelled(${page}) from a page which is not loaded`, LOG_DEBUG);
+                            return;
+                        }
 
                         const entity = The.area.movables[event.id],
                             pathId   = event.path.id,
@@ -967,14 +973,7 @@ define(
                     server.onZone = (pages) => {
 
                         // Zoning information (new pages)
-
-                        // We *should* only receive pages which we don't already own
-                        Object.keys(pages)
-                            .filter((pageI) => pageI in The.area.pages)
-                            .forEach((pageI) => {
-                                this.Log(`Server gave us a page which we already have! What a waste of latency: ${pageI}`, LOG_WARNING);
-                                delete pages[pageI];
-                            });
+                        this.Log(`I just zoned: ${Object.keys(pages).toString()}`, LOG_DEBUG);
 
                         // unload previous pages which are NOT neighbours to this page
                         const existingPages = _(The.area.pages)
@@ -986,6 +985,16 @@ define(
                                 ..._(The.area.curPage.neighbours).mapValues('index').values().pull(undefined).mapValues((o) => o.toString()).values().value()
                             )
                             .value();
+
+                        this.Log(`   Picking out pages: ${existingPages.toString()}`, LOG_DEBUG);
+
+                        // We *should* only receive pages which we don't already own
+                        Object.keys(pages)
+                            .filter((pageI) => pageI in The.area.pages)
+                            .forEach((pageI) => {
+                                this.Log(`Server gave us a page which we already have! What a waste of latency: ${pageI}`, LOG_WARNING);
+                                delete pages[pageI];
+                            });
 
                         _(The.area.pages)
                             .pick(existingPages)

@@ -34,15 +34,18 @@ define(
             if (!_.isFinite(entity.npc.health) || entity.npc.health <= 0) throw Err("Bad health for NPC");
             this.health = entity.npc.health;
             this.alive  = true;
-            this.respawnTime = null;
-            this.respawnPoint = entity.respawnPoint || {
-                area: entity.page.area.id,
-                page: entity.page.index,
-                tile: {
-                    x: entity.position.tile.x,
-                    y: entity.position.tile.y
-                }
-            };
+
+            if (Env.isServer) {
+                this.respawnTime = null;
+                this.respawnPoint = entity.respawnPoint || {
+                    area: entity.page.area.id,
+                    page: entity.page.index,
+                    tile: {
+                        x: entity.position.tile.x,
+                        y: entity.position.tile.y
+                    }
+                };
+            }
 
             // Get hurt by some amount, and possibly by somebody
             this.registerHook('hurt');
@@ -95,7 +98,7 @@ define(
                 if (!this.doHook('respawning').pre()) return;
 
                 this.Log("Respawning", LOG_DEBUG);
-                this.entity.path = null;
+                this.entity.cancelPath();
                 this.entity.zoning = false;
                 this.entity.lastMoved = now();
                 this.entity.lastStep = 0;

@@ -1,7 +1,5 @@
 {
 	"tests": [
-		"test.js",
-		"recalibration.js",
-		"basic-collision-path.js"
+		"complex-movement-and-combat.js"
 	]
 }

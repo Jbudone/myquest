@@ -27,6 +27,11 @@ define(() => {
 
         oink() {
             this.Log("Oink!");
+        },
+
+        getMapName() {
+            let map = The.area.id;
+            return map;
         }
 
     };
