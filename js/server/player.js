@@ -106,6 +106,7 @@ define(
                         const initialization =
                             {
                                 zone: true,
+                                page: page.index,
                                 pages: {}
                             };
 
@@ -126,8 +127,17 @@ define(
                             }
                         }
 
+                        // TODO: Since clients (currently) cannot determine their connected pages given only their new
+                        // zoned page, we have to provide a list of pages that they are now connected to. This is used
+                        // for clients to unload pages which they are no longer connected to. It could be nice to
+                        // provide some more information about the map so that clients can determine their connected
+                        // pages given their new page
+                        initialization.pageList = Object.keys(this.pages);
+
                         this.client.send(JSON.stringify(initialization));
                     }
+
+                    this.Log(`Player ${this.movable.id} has pages: ${Object.keys(this.pages)}`, LOG_DEBUG);
                 });
 
                 this.movable.addEventListener(EVT_ZONE_OUT, this, (player, oldArea, oldPage, area, page, zone) => {

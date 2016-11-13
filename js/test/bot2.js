@@ -30,7 +30,7 @@ const errorInGame = (e) => {
     //process.exit(e);
 
     if (botName) {
-        console.log(`  I am ${botName}`);
+        console.log(`  I am ${botName}: Entity ${The.player.id}`);
     }
 
     if (console.trace) console.trace();
@@ -77,8 +77,13 @@ const errorInGame = (e) => {
                     //    return;
                     //}
 
-                    let source = fs.readFileSync(file) || "",
+                    let source = "", sourceLine = "";
+                    try {
+                        source = fs.readFileSync(file) || "";
                         sourceLine = "";
+                    } catch(e) {
+                        return;
+                    }
 
                     if (source) {
 

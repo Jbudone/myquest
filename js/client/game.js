@@ -364,6 +364,7 @@ define(
                     server.onEntityAdded = (page, addedEntity) => {
 
                         assert(!_.isNaN(addedEntity.id), `Expected valid entity id: ${addedEntity.id}`);
+                        assert(page in The.area.pages, `Adding entity (${addedEntity.id}) to a page (${page}) which we don't have. We are in ${The.area.curPage.index} and have pages (${Object.keys(The.area.pages)})`);
 
                         // We handle all zoning for ourselves locally
                         if (addedEntity.id === The.player.id) {
@@ -970,19 +971,21 @@ define(
 
                     // Page Zoning
                     // This occurs when we enter another page
-                    server.onZone = (pages) => {
+                    server.onZone = (page, pages, pageList) => {
 
                         // Zoning information (new pages)
-                        this.Log(`I just zoned: ${Object.keys(pages).toString()}`, LOG_DEBUG);
+                        this.Log(`I just zoned page (${page}): ${Object.keys(pages).toString()}`, LOG_DEBUG);
 
                         // unload previous pages which are NOT neighbours to this page
+                        // NOTE: Our current page is not the same as the new page, so we need to pull from the provided
+                        // pageList which defines all of the pages that we now are connected to
                         const existingPages = _(The.area.pages)
                             .keys()
                             .without(...Object.keys(pages))
                             .pull(The.area.curPage.index.toString())
                             .pull
                             (
-                                ..._(The.area.curPage.neighbours).mapValues('index').values().pull(undefined).mapValues((o) => o.toString()).values().value()
+                                ...pageList
                             )
                             .value();
 

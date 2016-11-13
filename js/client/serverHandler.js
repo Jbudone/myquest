@@ -97,7 +97,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             }
                         }
                     } else if (evt.zone) {
-                        this.onZone( evt.pages );
+                        this.onZone( evt.page, evt.pages, evt.pageList );
                     } else if (evt.zoneArea) {
                         this.onLoadedArea( evt.area, evt.pages, evt.player );
                     } else if (evt.respawn) {

@@ -155,7 +155,10 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         killBots = () => {
             activeBots.forEach((bot) => {
                 console.log("Killing bot");
-                bot.kill('SIGTERM');
+
+                if (!bot.suicide) {
+                    bot.kill('SIGTERM');
+                }
             });
         };
 
