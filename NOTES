@@ -399,11 +399,8 @@ Next Priority
 	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login
 	- FIXME: Respawn/Zone pause renderer and UI, fadeout and fadein
 	- FIXME: Rename charComponents to components, and script components to scriptComponents
+	- FIXME: Move health to stats in npcs.json
 	- CLEAN: Go through entire serialize/restore system for Character
-				- Cleanup old comments for _character (DELETEME's)
-				- Cleanup everything referencing .npc , carry those over to .stats
-
-
 				- Server Restore
 				  	character.js setAsPlayer()
 				- Server Serialize

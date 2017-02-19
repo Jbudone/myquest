@@ -124,7 +124,7 @@ define(
                     this.health = health;
                 }
 
-                this.Log(`Just a scratch.. ${this.health} / ${this.entity.npc.health}   (${amount} dmg)`, LOG_DEBUG);
+                this.Log(`Just a scratch.. ${this.health} / ${this.stats.health.curMax}   (${amount} dmg)`, LOG_DEBUG);
                 this.triggerEvent(EVT_ATTACKED, from, amount);
 
                 if (!Env.isServer) {
@@ -171,8 +171,7 @@ define(
                 this.entity.pendingEvents = [];
 
                 this.alive = true;
-                assert(this.entity.npc.health > 0, "NPC has bad health value");
-                this.health = this.entity.npc.health;
+                this.health = this.stats.health.curMax;
                 this.brain.reset();
 
                 this.doHook('respawning').post();

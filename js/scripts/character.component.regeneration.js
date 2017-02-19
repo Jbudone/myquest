@@ -57,7 +57,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
                 // FIXME: Sleep/Wake step (change on characters componentsToUpdate list) when health changes
 
                 // FIXME: Use stats instead (stats.maxHealth)
-                if (character.health < character.entity.npc.health) {
+                if (character.health < character.stats.health.curMax) {
 
                     this.nextTick -= delta;
                     if (this.nextTick <= 0) {
@@ -65,8 +65,8 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
                         this.nextTick = this.tickTime;
 
                         let newHealth = character.health + 10;
-                        if (newHealth > character.entity.npc.health) {
-                            newHealth = character.entity.npc.health;
+                        if (newHealth > character.stats.health.curMax) {
+                            newHealth = character.stats.health.curMax;
                         }
 
                         this.Log(`Regen character health from ${character.health} to ${newHealth}`);

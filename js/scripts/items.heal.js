@@ -27,7 +27,7 @@ define(['SCRIPTINJECT', 'loggable', 'scripts/character'], function(SCRIPTINJECT,
 				if (character.alive !== true) return UnexpectedError("Character is not alive");
 
 				var healTo = character.health + args.amt;
-				if (healTo > character.entity.npc.health) healTo = character.entity.npc.health;
+				if (healTo > character.stats.health.curMax) healTo = character.stats.health.curMax;
 				character.health = healTo;
 
 				character.entity.page.broadcast(EVT_USE_ITEM, {
