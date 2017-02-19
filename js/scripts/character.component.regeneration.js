@@ -127,5 +127,12 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     Regeneration.prototype = Object.create(Component.prototype);
     Regeneration.prototype.constructor = Regeneration;
 
-    return Regeneration;
+    const initialState = {
+
+    };
+
+    return {
+        newInstance: function(character){ return new Regeneration(character); },
+        initialState: initialState
+    };
 });

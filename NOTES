@@ -237,7 +237,11 @@ WORKING ON (was previously working on)
 	- Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
 	- BUG: Reload in king room on Chromium and see wrong sprite for king
 	- BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
-	- Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker)
+	- Respawning/Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker); Also should pause renderer
+	- Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
+	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login. Currently using .initialization to prevent multiple reloads
+	- FIXME: Find a better name for charComponents on character. We can't use components since character is a script and depends on components (see scripts/game.js using components)
+	- Cleanup component serialization/restoring, currently its an array on character but object in db/netSerialize, and we have to find the component name by npc index. Overall gross and needs some cleanup
 	
 
 
@@ -372,75 +376,41 @@ Next Priority
 	- Levelling/Experience: listen to onCombatKill event, save/restore XP, refer to dependency levellingRules.json for finding XP for next level, level up message + rewards (eg. "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ]
 	- Combat: smarter target selection
 	- Combat: attack/speed formula (level/stats/randomness)
-	- Death system (animation, corpse, client scripts, respawn to safe spot, remove corpse after time, consequences) -- XP loss, stat sickness, drop non-worn items
-	  	Handle this through a buff (step continually deteriorates sickness); UI draws stats + healthbar a different colour because they're not equal to max
-		Listens to onRespawned on character, this will come up early on when death system is recreated
-		Should only be added for user on client
-		Should somehow interact with regeneration / XP components
 	- Buff system: register buffs under a buffs list similar to components, buffs can stack/etc.
 	  	UI should draw stuff for each buff
 		Allow UI hooks/etc. for changing screen/border colours etc.
-		Buffmgr on components list
 		Should save/restore buffs on server when logging out / reconnecting
 	- Questing / rewards
-	- Regeneration
 	- Periodic saving, logging out should also save: save everything (health, death sickness (buffs), etc.)
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
 	- Projectiles
 	- Admin commands from client -- to open server REPL
 	  	- Request login to server
-	- Component saving/loading on server (XP, etc.); confirm character is not recreated on server when zoning
-	- Character stats
 	- Easier server debugging
 	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
 	- Have error reporting parse the error and save file information (source for the crash site, etc.)
 	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
-	- FIXME: Db need to copy over stats, include health in stats, reference npc for stats list
-	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login
-	- FIXME: Respawn/Zone pause renderer and UI, fadeout and fadein
-	- FIXME: Rename charComponents to components, and script components to scriptComponents
 	- FIXME: Move health to stats in npcs.json
-	- CLEAN: Go through entire serialize/restore system for Character
-				- Server Restore
-				  	character.js setAsPlayer()
-				- Server Serialize
-				  	db.js savePlayer()
-				- Server NetSerialize
-				  	player.js EVT_ZONE_OUT  -- if we want to netSerialize here (currently no)
-					player.js respawn -- netSerializing here
-					player.js EVT_LOGIN -- netSerialize character, client/game.js loadedPlayer() loads it
-					server/page.js EVT_ADDED_ENTITY -- netSerialize _character
-					server/pages.js serialize -- netSerialize _character's
-				- Client Login
-				  	client/game.js loadedPlayer -- setup _character here
-				- Client Respawn
-				  	client/game.js onRespawn -- setup _character here
-				- Client Zone
-				- Client NetRestore (other users?)
-				  	character.js characterInit()
-					client/game.js onEntityAdded -- setup _character here
-				- Client setToUser() -- TODO get rid of manual restoring here. Should serialize before respawning/zoning
-				- Client scripts/game.js addCharacter -- TODO get rid of manual restoring ehre
-				  						initialize() -- TODO get rid of manual setting up _character here
-
-				NOTE: Character is recreated when we reloadScripts, however the movable for our player is the same
-
-	- NOTE: Communication between components is being done via. hooks (eg. Death system sends 'BuffedEvt' hook on character to communicate to BuffMgr). The bonus is that we can safely communicate useless/discarded information here (ie. something sends 'BuffedEvt'  yet character doesn't have BuffMgr, so evt is simply ignored). The other bonus is that other things could listen to a buff being added, AND we could utilize the pre/post cancellation. The problem is this is somewhat inefficient (creating data and sending useless evt, searching for hook), and may cause unecessary overhead. This is something we can change later on if we like by simply finding the component and communicating with it directly
-
-	- NOTE: Buffs are NOT scripts, cannot use The.scripting, complex functionality should simply communicate with Buff in BuffMgr
+	- FIXME: Check if stale SCRIPTINJECT on components is a problem with retaining old object (eg. old area saved in var even after zoning)
+	- Get bg back, allow online CDN, or if timeout use local copy instead
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
 
-
+	- Fix stats: stats in db, createNewCharacter loads npc stats
+	- Death sickness dies after X time; affects con/maxHealth
+	- Regen use con
+	- Death drops inventory
+	- Serialize buffs, level data for server
+	- UI hooks: UI.addEffect({ effectType: EFFECT_BUFF, data: { buff: BUFF_STINKY_BREATH, time: 10 } })  -- Resources.Effects.Buffs[BUFF_STINKY_BREATH] = { icon: "..", options: [EFFECT_BUFF_HOSTILE, EFFECT_BUFF_TIMER, EFFECT_BUFF_FADES], totalTime: 20 }
+	- Death makes you lose xp
+	- Level rewards (gain xp)
+	- Draw Buffs, XP, tainted HP when not max
+	- Death sickness fades (slowly regain con/curMax health)
 
 
 	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
-	- BuffMgr has its own container for buffs -- Buffs should have a base like items
-	- UI hooks: UI.addEffect({ effectType: EFFECT_BUFF, data: { buff: BUFF_STINKY_BREATH, time: 10 } })  -- Resources.Effects.Buffs[BUFF_STINKY_BREATH] = { icon: "..", options: [EFFECT_BUFF_HOSTILE, EFFECT_BUFF_TIMER, EFFECT_BUFF_FADES], totalTime: 20 }
 	- Death ==> Level; could have level component hook 'die' and lose XP
-
-	- FIXME: Can we somehow utilize netSerialize/netRestore for dynamic changes? -- 
 
 
 
@@ -768,6 +738,13 @@ DB
 
 	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
 	* Scripts are reloaded (recreated) upon zoning, dying, etc. -- beware of this for outside sources that reference scripts
+
+====== Component
+	
+	* Initialized on character (depends on npc components)
+	* Uses serialize/restore (server db, client script reloads), and netSerialize/netRestore for receiving state from server
+	* Components are loaded once, and never reloaded
+	* Uses SCRIPTINJECT environment, but could have stale vars on client when reloading (since components don't reload)
 
 ====== Functions
 

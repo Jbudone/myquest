@@ -227,6 +227,38 @@ define(['loggable'], function(Loggable){
                             active: false
                         });
 
+                        const npc = Resources.npcs.player;
+
+                        const components = {};
+                        for (let i = 0; i < npc.components.length; ++i) {
+                            const componentName = npc.components[i],
+                                componentInitialState = Resources.components[componentName].initialState;
+
+                            components[componentName] = componentInitialState;
+                        }
+
+                        const character = {
+                            health: npc.health,
+                            stats: {},
+                            inventory: starterInventory,
+                            components: components
+                        };
+
+                        for (const statName in npc.stats) {
+                            const stat = npc.stats[statName];
+                            character.stats[statName] = {
+                                cur: stat,
+                                curMax: stat,
+                                max: stat
+                            };
+                        }
+
+                        character.stats['health'] = {
+                            cur: npc.health,
+                            curMax: npc.health,
+                            max: npc.health,
+                        };
+
 						var player = _.defaults(playerAttributes, {
 							// Default player values
 							id: id,
@@ -247,10 +279,7 @@ define(['loggable'], function(Loggable){
 									}
 								},
 							},
-                            character: {
-                                health: 10,
-                                inventory: starterInventory
-                            },
+                            character: character,
 							area: "main"
 						});
 

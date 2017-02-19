@@ -94,5 +94,12 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     Levelling.prototype = Object.create(Component.prototype);
     Levelling.prototype.constructor = Levelling;
 
-    return Levelling;
+    const initialState = {
+
+    };
+
+    return {
+        newInstance: function(character){ return new Levelling(character); },
+        initialState: initialState
+    };
 });

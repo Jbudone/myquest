@@ -58,5 +58,12 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     DeathMgr.prototype = Object.create(Component.prototype);
     DeathMgr.prototype.constructor = DeathMgr;
 
-    return DeathMgr;
+    const initialState = {
+
+    };
+
+    return {
+        newInstance: function(character){ return new DeathMgr(character); },
+        initialState: initialState
+    };
 });

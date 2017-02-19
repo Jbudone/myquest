@@ -91,5 +91,12 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     BuffMgr.prototype = Object.create(Component.prototype);
     BuffMgr.prototype.constructor = BuffMgr;
 
-    return BuffMgr;
+    const initialState = {
+
+    };
+
+    return {
+        newInstance: function(character){ return new BuffMgr(character); },
+        initialState: initialState
+    };
 });

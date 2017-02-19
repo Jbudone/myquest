@@ -31,6 +31,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 			MovableUI: function(movable){ }
 		};
 
+        this.queueFullUpdate = function(){ };
 		this.step = function(time){ };
 		this.updateCursor = function(){ };
 		this.positionFromMouse = function(mouse){ };

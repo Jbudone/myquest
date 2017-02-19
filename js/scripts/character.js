@@ -54,8 +54,7 @@ define(
             this.loadComponents = function() {
                 for (let i = 0; i < this._charComponents.length; ++i) {
                     const componentName = this._charComponents[i],
-                        componentRes = Resources.components[componentName],
-                        component = new componentRes(this);
+                        component = Resources.components[componentName].newInstance(this);
                     
                     this.charComponents.push( component );
                     component.initialize();
@@ -299,14 +298,15 @@ define(
 
                     const _character = {
                         health: this.health,
-                        charComponents: [],
+                        components: {},
                         inventory: null
                     };
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                          serializedComponent = component.serialize();
-                        _character.charComponents.push(serializedComponent);
+                        const component         = this.charComponents[i],
+                            componentName       = entity.npc.components[i],
+                            serializedComponent = component.serialize();
+                        _character.components[componentName] = serializedComponent;
                     }
 
                     _character.inventory = this.inventory.serialize();
@@ -328,8 +328,9 @@ define(
                     });
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                            restoreComponent = _character.charComponents[i];
+                        const component      = this.charComponents[i],
+                            componentName    = entity.npc.components[i],
+                            restoreComponent = _character.components[componentName];
                         component.restore(restoreComponent);
                     }
 
@@ -341,13 +342,13 @@ define(
 
                     const _character = {
                         health: this.health,
-                        charComponents: []
+                        components: []
                     };
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
                         const component = this.charComponents[i],
                           netSerializedComponent = component.netSerialize();
-                        _character.charComponents.push(netSerializedComponent);
+                        _character.components.push(netSerializedComponent);
                     }
 
                     // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
@@ -672,14 +673,15 @@ define(
 
                     const _character = {
                         health: this.health,
-                        charComponents: [],
+                        components: {},
                         inventory: null
                     };
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                          serializedComponent = component.serialize();
-                        _character.charComponents.push(serializedComponent);
+                        const component         = this.charComponents[i],
+                            componentName       = entity.npc.components[i],
+                            serializedComponent = component.serialize();
+                        _character.components[componentName] = serializedComponent;
                     }
 
                     _character.inventory = this.inventory.serialize();
@@ -704,8 +706,9 @@ define(
                     });
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                            restoreComponent = _character.charComponents[i];
+                        const component      = this.charComponents[i],
+                            componentName    = entity.npc.components[i],
+                            restoreComponent = _character.components[componentName];
                         component.restore(restoreComponent);
                     }
 
@@ -735,7 +738,7 @@ define(
 
                     for (let i = 0; i < this.charComponents.length; ++i) {
                         const component = this.charComponents[i],
-                            restoreComponent = _character.charComponents[i];
+                            restoreComponent = _character.components[i];
                         component.netRestore(restoreComponent);
                     }
 

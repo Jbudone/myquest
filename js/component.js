@@ -1,5 +1,12 @@
 define(() => {
 
+    // NOTE: Communication between components is being done via. hooks (eg. Death system sends 'BuffedEvt' hook on
+    // character to communicate to BuffMgr). The bonus is that we can safely communicate useless/discarded information
+    // here (ie. something sends 'BuffedEvt'  yet character doesn't have BuffMgr, so evt is simply ignored). The other
+    // bonus is that other things could listen to a buff being added, AND we could utilize the pre/post cancellation.
+    // The problem is this is somewhat inefficient (creating data and sending useless evt, searching for hook), and may
+    // cause unecessary overhead. This is something we can change later on if we like by simply finding the component
+    // and communicating with it directly
     const Component = function() {
 
         // Should this component be updated every step?
