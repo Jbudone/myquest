@@ -129,8 +129,19 @@ define(() => {
 
         _hooks: {},
 
+        // Emitting a hook that doesn't exist, or registering a hook twice can cause the hook system to throw exceptions
+        // given the unexpected nature of not treating the hookable object exactly as intended. This can be a problem
+        // for objects where we're more relaxed over these callbacks,
+        //  eg. Character has a Levelling component which hooks the onKilled event to give XP. But if the Character is
+        //      an NPC then he wouldn't have a levelling component, and may not have the hook onKilled registered.
+        //      However we could still emit onKilled for characters regardless
+        //
+        // Relaxed mode prevents exceptions from being thrown when registering/unregistering hooks, or calling hooks
+        _hookRelaxedMode: false,
+
         registerHook(name) {
             if (this._hooks[name]) {
+                if (this._hookRelaxedMode) return;
                 throw Err(`Hook (${name}) already registered`);
             }
 
@@ -218,7 +229,11 @@ define(() => {
 
         hook(name, listener) {
             if (!this._hooks[name]) {
-                throw Err(`Hook (${name}) not registered`);
+                if (this._hookRelaxedMode) {
+                    this.registerHook(name);
+                } else {
+                    throw Err(`Hook (${name}) not registered`);
+                }
             }
 
             if (!listener) listener = arguments.callee.caller; // TODO: is this a ptr to the object?
@@ -270,6 +285,13 @@ define(() => {
             const _hook = this._hooks[name];
             if (!_hook) {
                 // FIXME: Should we throw instead?
+                if (this._hookRelaxedMode) {
+                    return {
+                        pre: function() {},
+                        post: function() {},
+                    };
+                }
+
                 console.error("NO HOOK REGISTERED AS ("+name+")");
                 return; // NOTE: this will break anything attempting to call doHook without a registered hook
             }
@@ -296,6 +318,10 @@ define(() => {
                 hook.remPostHook(listener);
                 hook.rebuildHandlers();
             }
+        },
+
+        setHookRelaxedMode(enabled) {
+            this._hookRelaxedMode = enabled;
         }
     };
 

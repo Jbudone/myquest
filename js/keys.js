@@ -11,19 +11,21 @@ define(function(){
 		MESSAGE_PROGRAM: 'program',
 		MESSAGE_INFO: 'info',
 		MESSAGE_GOOD: 'good',
-		MESSAGE_BAD: 'bad'
+        MESSAGE_BAD: 'bad',
+
+        OPT_BITWISE: 1<<0
 	};
 
 	var keyValue = 1,
-		global = (typeof window !== 'undefined' ? window : GLOBAL),
+		_global = (typeof window !== 'undefined' ? window : global),
 		keyStrings = {},
 		addKey = function(key){
-			if (global[key] !== undefined) {
+			if (_global[key] !== undefined) {
                 Log(`WARNING: KEY ${key} ALREADY DEFINED!`, LOG_WARNING);
 				return;
 			}
 			keys[key] = (keyValue++);
-			global[key]=keys[key];
+			_global[key]=keys[key];
 			keyStrings[keyValue-1] = key;
 		}, addKeys = function(keys){
 			for (var i=0; i<keys.length; ++i) {
@@ -31,15 +33,43 @@ define(function(){
 			}
 		};
 
+    // NOTE: keys from groups will not be added to keyStrings since those values are shared
+    var addKeyGroup = function(group, items, options) {
+
+        for (var i = 0; i < items.length; ++i) {
+            let item = `${group}_${items[i]}`,
+                val = i;
+
+            if (options & OPT_BITWISE) {
+                val = Math.pow(2, val);
+            }
+
+            keys[item] = val;
+            _global[item] = val;
+        }
+    };
+
 	for (var key in keys){
-		global[key] = keys[key];
+		_global[key] = keys[key];
 	}
-	global['addKey'] = addKey;
-	global['addKeys'] = addKeys;
-	global['keyStrings'] = keyStrings;
+	_global['addKey'] = addKey;
+	_global['addKeys'] = addKeys;
+	_global['keyStrings'] = keyStrings;
 
 
 	// TODO: organize with arrays, {'events':{prefix:'evt',keys:['step','zone','finished_moving',...]}} and automatically add
+
+	/// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	/// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+
+    /// These keys need to be stored in order, they are keys whose values are stored externally (eg.
+    //  JSON/DB). If you re-order any of these then you'll need to update those files
+
+	/// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+	/// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    addKeyGroup('ITM', ['USE', 'PICKUP', 'WORN_HELMET', 'WORN_CHEST', 'WIELD_LEFTHAND'], OPT_BITWISE);
+    _global['ITM_WEARABLE'] = ITM_WORN_HELMET | ITM_WORN_CHEST | ITM_WIELD_LEFTHAND; // FIXME: Need a cleaner way to do this; would also need it to work within group
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Event IDs
@@ -87,8 +117,11 @@ define(function(){
 	addKey('EVT_GET_ITEM');
 	addKey('EVT_USE_ITEM');
 	addKey('EVT_DROP_ITEM');
+    addKey('EVT_INV_USE_SLOT');
 
 	addKey('EVT_INTERACT');
+    addKey('EVT_ACTIVATE');
+    addKey('EVT_DEACTIVATE');
 
 
 	/// %%%%%%%%%%%%%%%%%%%%%
@@ -111,6 +144,10 @@ define(function(){
 
 	addKey('EVT_CHAT');
 
+    addKey('CMD_MESSAGE');
+    addKey('CMD_ADMIN');
+    addKey('CMD_BAD_COMMAND');
+
 	addKey('HOOK_INTO_MAP');
 
 	addKey('PAGE_SERIALIZE_BASE');
@@ -131,14 +168,22 @@ define(function(){
 	addKey('BOT_SIGNUP');
 	addKey('BOT_MOVE');
     addKey('BOT_INQUIRE');
+    addKey('BOT_SET_DEBUGURL');
 
     addKey('INQUIRE_MAP'); // Bot inquiries
+    addKey('INQUIRE_NAME');
 
 	addKey('REQ_REGISTER'); // Login requests
 
 	addKey('EVERYTHING'); // Indicator
 
 	addKey('TEST_CHECKJPS'); // Testing
+
+    addKey('EVT_REGENERATE');
+    addKey('EVT_GAIN_XP');
+    addKey('EVT_GAIN_LEVEL');
+    addKey('EVT_BUFFED');
+    addKey('EVT_BUFFED_PRIVATE');
 
 	return keys;
 });

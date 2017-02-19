@@ -1,0 +1,15 @@
+{
+    "regen": 1,
+    "regenClientCounter": 8000,
+    "regenLoopMsg": "Bazinga!!",
+    "level": [
+        {
+            "message": "Level 0",
+            "nextLevelXP": 10
+        },
+        {
+            "message": "You have reached level 1",
+            "nextLevelXP": 100
+        }
+    ]
+}

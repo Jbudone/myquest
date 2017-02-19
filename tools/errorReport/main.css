@@ -1,0 +1,40 @@
+body {
+    background-color: #111;
+}
+
+.stackframe {
+    margin: 4px;
+    padding-left: 40px;
+}
+
+.stackframe-line {
+    width: 60px;
+    display: block;
+    float: left;
+    color: #F0F0F0;
+}
+
+.stackframe-file {
+    min-width: 400px;
+    display: block;
+    float: left;
+
+    font-family: Georgia;
+    color: purple;
+    font-size: 18px;
+}
+
+.stackframe-file-script {
+    color: #1a6b1a;
+}
+
+.stackframe-file-lib {
+    color: #313131;
+}
+
+.stackframe-func {
+    color: #dede00;
+    font-weight: bold;
+    font-family: Verdana;
+    font-size: 16px;
+}

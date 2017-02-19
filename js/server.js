@@ -27,122 +27,39 @@ const errorInGame = (e) => {
 
     shuttingDown = true;
 
+
     console.error("Error in game");
+
+
+    if (global['DumpLog']) DumpLog();
+
     if (console.trace) console.trace();
 
-    if (e) {
 
-        // TODO: Organize source printing?
+    // Error Reporting
+    // Report as much as possible
+    if (global.ErrorReporter) {
 
-        try {
-            console.log("");
-            let level = 0;
-
-            const parentDirectory    = filepath.dirname(__dirname),
-                grandparentDirectory = filepath.dirname(parentDirectory);
-
-            let frames = [];
-
-            e.stack.split('\n').forEach((s) => {
-                let frame = /\s*at\s*([^\(]+)\(([^\:]+)\:(\d*)\:(\d*)/g.exec(s.trim());
-
-                if (!frame || frame.length !== 5) {
-                    // This may or may not be an anonymous function
-                    if (s.indexOf(grandparentDirectory) >= 0) {
-                        frame = /\s*at\s*([^\:]+)\:(\d+)\:(\d+)/g.exec(s.trim());
-
-                        if (frame && frame.length === 4) {
-                            frame.splice(1, 0, ".<anonymous>");
-                        }
-                    }
-                }
-
-                if (frame && frame.length === 5) {
-                    let file = frame[2],
-                        func   = frame[1],
-                        line   = frame[3],
-                        col    = frame[4];
-
-                    if (file.indexOf(__dirname) >= 0) {
-                        // We're in the same path as the server.. include this frame
-                    } else {
-                        // Hide this frame (note; should have a "...." or something to convey that we're hiding outside of
-                        // scope frames)
-                        return;
-                    }
-
-                    let source = fs.readFileSync(file) || "",
-                        sourceLine = "";
-
-                    if (source) {
-
-                        let sourceIndex = -1;
-                        for (let i = 0; i < (line-1); ++i) {
-                            sourceIndex = source.indexOf('\n', sourceIndex + 1);
-                        }
-                        let sourceEnd = source.indexOf('\n', sourceIndex + 1);
-
-                        sourceLine = source.toString('utf8', sourceIndex, sourceEnd).trim();
-                    }
-
-                    let spacer = "    ";
-                    for (let i = 1; i < level; ++i) {
-                        spacer += "   ";
-                    }
-
-                    let treeLine = (level > 0 ? "   " : "") + "│  ",
-                        treeExpand = level > 0 ? "└─ " : "";
-
-                    console.log(`${spacer}${chalk.white(treeExpand)}${chalk.yellow(file.substr(__dirname.length + 1))}${chalk.dim(":")}${chalk.yellow(line)}   ${chalk.white(func)}`);
-                    console.log(`${spacer}${chalk.white(treeLine)}         ${chalk.green(sourceLine)}`);
-                    ++level;
-                } else {
-
-                    console.log(`    ${chalk.bgRed.white(s.trim())}`);
-                    console.log("");
-                }
-            });
-
-
-
-            console.log("");
-        } catch(err) {
-            console.error(err);
-            console.error(e);
+        if (e) {
+            global.ErrorReporter.printStack(e);
         }
 
-        /*
-        console.error(e.stack);
-        if (GLOBAL.Log) {
-            Log(e, LOG_ERROR);
-        } else {
-            console.log(util.inspect(e, { showHidden: true, depth: 4 }));
-        }
-        */
+        // FIXME: There should be an array or object of items we intend to dump
+        const dump = {
+            'world': The.world
+        };
+
+        global.ErrorReporter.report(e, dump);
+    } else {
+        console.error("No error reporter yet!");
     }
 
+    // Just in case the above promises take too long
     if (GLOBAL.shutdownGame) {
         shutdownGame(e);
     }
 
-    console.log("Looking for file: " + __filename);
-    fs.readFile(__filename, (err, data) => {
-        if (err) {
-            console.error("Couldn't find file..");
-            process.exit(e);
-            return;
-        }
-
-        //var consumer = new SourceMap.SourceMapConsumer(data);
-        //console.log(consumer.sources);
-
-        process.exit(e);
-    });
-
-    // Just in case the above promises take too long
-    setTimeout(() => {
-        process.exit(e);
-    }, 3000);
+    process.exit(e);
 };
 
 GLOBAL.errorInGame = errorInGame;
@@ -176,6 +93,9 @@ GLOBAL.chalk = chalk;
 GLOBAL.prettyjson = prettyjson;
 GLOBAL.assert = assert;
 GLOBAL.WebSocketServer = WebSocketServer;
+GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('path').dirname('')  returns an empty string
+
+GLOBAL.fs = fs;
 
 // Promise.longStackTraces();
 
@@ -227,11 +147,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                 requirejs(
                     [
+                        'errorReporter',
                         'resources', 'loggable',
                         'movable', 'world', 'area', 'scriptmgr',
                         'server/db', 'server/redis', 'server/player', 'server/login'
                     ],
                     (
+                        ErrorReporter,
                         ResourceMgr, Loggable,
                         Movable, World, Area, ScriptMgr,
                         DB, Redis, Player, LoginHandler
@@ -331,7 +253,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const Resources = (new ResourceMgr());
                             GLOBAL.Resources = Resources;
                             Resources.initialize(
-                                ['world', 'sheets', 'npcs', 'items', 'interactables', 'scripts']
+                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'interactables', 'scripts', 'components']
                             ).then((assets) => {
 
                                 // Load World
@@ -377,31 +299,37 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             // Scripts
                             The.scripting.world = The.world;
                             The.scripting.redis = redis;
-                            Resources.loadScripts(Resources._scriptRes).then(() => {
+                            The.scripting.Rules = Resources.rules;
+                            The.scripting.Buffs = Resources.buffs;
 
-                                Log("Starting script manager..", LOG_INFO);
-                                delete Resources._scriptRes;
-                                The.scriptmgr = new ScriptMgr();
+                            Resources.loadComponents().then(() => {
+                                Resources.loadScripts(Resources._scriptRes).then(() => {
 
-                                // TODO: Cleanup items-not-loaded and interactables-not-loaded technique for loading
-                                // things..its weird and unorthadox
-                                if ('items-not-loaded' in Resources.items) {
+                                    Log("Starting script manager..", LOG_INFO);
+                                    delete Resources._scriptRes;
+                                    The.scriptmgr = new ScriptMgr();
 
-                                    delete Resources.items['items-not-loaded'];
-                                    loading('items');
-                                    Resources.loadItemScripts().then(() => { loaded('items'); })
-                                        .catch((e) => { errorInGame(e); });
-                                }
+                                    // TODO: Cleanup items-not-loaded and interactables-not-loaded technique for loading
+                                    // things..its weird and unorthadox
+                                    if ('items-not-loaded' in Resources.items) {
 
-                                if ('interactables-not-loaded' in Resources.interactables) {
+                                        delete Resources.items['items-not-loaded'];
+                                        loading('items');
+                                        Resources.loadItemScripts().then(() => { loaded('items'); })
+                                            .catch((e) => { errorInGame(e); });
+                                    }
 
-                                    delete Resources.interactables['interactables-not-loaded'];
-                                    loading('interactables');
-                                    Resources.loadInteractableScripts().then(() => { loaded('interactables'); })
-                                        .catch((e) => { errorInGame(e); });
-                                }
+                                    if ('interactables-not-loaded' in Resources.interactables) {
 
-                                loaded('scripts');
+                                        delete Resources.interactables['interactables-not-loaded'];
+                                        loading('interactables');
+                                        Resources.loadInteractableScripts().then(() => { loaded('interactables'); })
+                                            .catch((e) => { errorInGame(e); });
+                                    }
+
+                                    loaded('scripts');
+                                })
+                                .catch((e) => { errorInGame(e); });
                             })
                             .catch((e) => { errorInGame(e); });
                         };
@@ -515,6 +443,24 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                             // Listen for login/register related requests
                             const loginHandler = new LoginHandler(http, db);
+
+                            // Listen for error reporting requests from the client
+                            GLOBAL.ErrorReporter = ErrorReporter;
+                            ErrorReporter.initListener(http);
+                            ErrorReporter.onErrorReportRequest = (req) => {
+
+                                // Perform an error report on behalf of the client
+                                console.log("Requested error report");
+
+                                // FIXME: There should be an array of objects we intend to dump, and we should have some
+                                // way of filtering through only the necessary parts (eg. player from map 1 reports
+                                // error, we only need to dump map 1)
+                                const dump = {
+                                    'world': The.world
+                                };
+
+                                ErrorReporter.report(false, dump, req);
+                            };
 
                             // The Game Loop
                             const stepTimer = 100; // TODO: Is this the best step timer?

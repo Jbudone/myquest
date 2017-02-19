@@ -44,6 +44,8 @@ In-game card game like from M&M
 
 Store maps as BSP tree? then only have to pass events from server to clients which are in sight of a given BSP node. Could extend this into fog of war for client
 
+Store NPC history in local db, if we run into that same NPC or area again, recognize that locally and add some dialog fun, "You again?! You're ready to die again?"
+
 
 Quests
  - Romeo & Juliet
@@ -144,6 +146,20 @@ WORKING ON (was previously working on)
 	- "use strict"
 	- if checks on north/west/south/east have an else case and throw error
 	- AbilityState vs Instinct?
+	- Path Sync: If receiving path for an entity that's out of view, and the path position is also out of view, then teleport entity to that position
+	- Update "var" to let or const (lots of files still using var)
+	- Path/Walk destination tile (some places are using it, some aren't.. need to either go all the way and do it or not at all)
+	- Merge walks w/ same direction (seems to be more than recalibration; and messed up locally)
+	- On crash dump as much debugging details as possible (.dump() for entities, characters, etc.)
+	- Cancel character path on respawn: Is this a good idea?
+	- Clean ServerHandler response from server (loops through entire event archive from 0..n, this seems unecessary)
+	- Scripts are being loaded twice on startup: client/game.js initialize, then loadAreaIntoGame.. Find a way to only load once on startup
+	- Debugging
+	  	- Open Chromium for bot/server debug (exec chromium)
+		- Run bots with both --inspect and debug to auto break on debugger statements, but also leave room to debug through dev-tools later
+		- Error Report: Webpage that takes a report.json and displays it accordingly
+		- If live: email error reports to me
+		- Error Report: Fix dumps, and add dumps to *EVERYTHING*
 	- Cleanup player requests / error checking
 	  	- 1) Confirm we have expected and valid args
 		  2) Call handler: handler checks valid args, then attempts to run
@@ -160,9 +176,13 @@ WORKING ON (was previously working on)
 	    Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
 
 
-		- Cleanup console.log's (to suppress bot logging)
+		- Fix error reporting in bots (throw)
 		- Setup test resources
 		  	path/recalibration, signup/login/logout (also double logins) + chat
+			- rock-recalibrater: spam click around a rock that's between pages
+			- page-running: runs between neighbouring tiles on the corner of 4 pages
+			- zoner: zones in/out
+			- train: many bots running through large map (lots of ents)
 		- Bot interface to Game/test
 		- Close server test websocket
 		- Test framework: Loggable
@@ -179,13 +199,68 @@ WORKING ON (was previously working on)
 		- Fix error reporting
 		- Abstract stacktrace/error report from client/server/bots
 		- Timeout on tests
+		- Consider multiple bots running at the same time: most importantly would be one bot loading or zoning into a page or map where another bot is already doing stuff (running around, attacking, etc.)
 
-	- Area draw map; server.test should be able to return pages/data to test framework, and bot can draw both maps side-by-side to show differences
+		- Debugging:
+	        - Area draw map; server.test should be able to return pages/data to test framework, and bot can draw both maps side-by-side to show differences
+			- Store history of paths for entity: path id/flag, to/from, received path and current state (if client); print this out nicely, potentially with visuals (tiled on left, and zoom-in of recalibration on right)
+			- Enable log buffering on client
+			- Add times on logs (min/sec? no need for large timestamps)
+			- Make requests to server for history of paths on entity; log timestamps (between ranges)
+			- When bot (or server?) crashes, enter interactive console to allow debugging (eg. printing path history, etc.)
 
 
 	- BUG: If you're queued to d/c and then die before you have a chance to d/c, your queued request will still trigger and crash the server (since dying removes your player from the map and the d/c attempts to get your character)
 	- BUG: Start test bot then load in part way through; when receiving PathCancelled messages and bot is out of sight shit gets crazy
 	- BUG: Client throw Err doesn't actually print thrown message, just "uncaught exception"  eg. server handler functions (onPathCancelled)  (temporarily added console.error in Err class)
+	- BUG: Disconnecting player says, "Successfully updated player (5) position"
+	- BUG: Bot: server adds path for player which has its own onFailed function so we lose our onFailed callback
+	- BUG: On browser when running bots, open console and notice the lag, then we start hitting "Recalibration is longer than our maxwalk"; try suppressing logs to see if that fixes lag, and also turn this error into a warning
+	- BUG? Clients should not set combat/melee target since server paths will take over and cancel your current paths thus resetting the target
+	- BUG: UI offset on entities (possibly due to old page and local offset?)
+	- BUG: DB saves position without open tile checking
+	- BUG: Suppressed logs w/ LOG_INFO aren't being logged afterwards
+	- Check Promise/Deprecation errors:  --trace-warnings --trace-deprecation
+	- Roaming bot: preprocess map to build a nav graph; have the bot go between nav points on graph to satisfy his roaming goal
+	- BUG: Recalibration (working but need to finish)
+		- Merge walks (note: need to coordinate with ordering recalibrations too. eg. recalibrate north, recalibrate east, path goes south):
+		  	1) Prune walked walks
+		  	2) Take the 1st (non-walked) walk of the path and subtract its distance from the recalibration + add to that walk distance -- NOTE: This should ONLY be on the recalibrationEnd recalibration
+			3) Path.PushWalk(..)  which unshifts the new walk or otherwise merges it with the current front of array walk
+		- Fix walks of 0 distance (probably because walk.walked == walk.distance)
+	   - Max Path check (used to be maxWalk)
+	   - List ideas for avoiding spam clicking: request timout (spam click 3x, each path request replaces the previous and the most recent one is used during path check), path check cache (point A -> B checked and cached), map regions (convex hulls) then cache path checks from region A -> B. Otherwise we could accept all paths from people and simply cancel them if they're about to move into a collidable tile (this also helps with dynamic tiles!), then remote players could check the path for collision and if there's a collision simply walk up to that point?
+	   - Complex test: Have variable number of bots zoning in/out of house
+	- Change item "types" to "attributes", and add a "type" property for abstracted data: eg. "potion" has stack == 8, has attributes "USE" and "PICKUP", etc.
+	- Try converting AOE triggers into circles added to a trigger list in each page; then just listen to EVT_MOVE_NEW_TILE on the page and check the position against the point/radius
+	- Get rid of .before on hooks, and just have a 'hookX-pre', 'hookX-post' instead for those specific cases
+	- Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
+	- BUG: Reload in king room on Chromium and see wrong sprite for king
+	- BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
+	- Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker)
+	
+
+
+	(NOTE: Unable to repro these anymore; but keep open for now)
+	- BUG? On browser when shit gets super laggy from bot running around we often witness them moving onto an unopen tile
+
+
+
+	- Browser Debugging Snippets
+			var scaryTiles = [];
+			for (var x=13; x<=17; ++x) {
+				for (var y=27; y<=30; ++y) {
+					if (The.area.isTileOpen({x,y})) { scaryTiles.push({ x, y }); }
+				}
+			}
+			var times = 200;
+			var doTheDance = () => {
+				var randTile = scaryTiles[Math.floor(Math.random() * scaryTiles.length)];
+				The.user.clickedTile(new Tile(randTile.x, randTile.y));
+				if (--times > 0) setTimeout(doTheDance, 120);
+			}
+
+	- BUG? What if client / local player zones then receives a delayed packet that we had a server path to remain in the page? (We should only process zoning stuff of adding/removing pages and movables when we receive the zone event from server; also will we teleport/walk back to position?) Something to look into/test later 
 	  	
 
 		[requires]
@@ -294,16 +369,83 @@ Next Priority
 		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
 		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
 	- Sound
-	- Levelling/Experience
+	- Levelling/Experience: listen to onCombatKill event, save/restore XP, refer to dependency levellingRules.json for finding XP for next level, level up message + rewards (eg. "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ]
 	- Combat: smarter target selection
 	- Combat: attack/speed formula (level/stats/randomness)
-	- Inventory, loot, wearable/usable items, show worn items on sprite?
-	- Death system (animation, corpse, client scripts, respawn to safe spot, remove corpse after time, consequences)
-	- NPC chat bubble
+	- Death system (animation, corpse, client scripts, respawn to safe spot, remove corpse after time, consequences) -- XP loss, stat sickness, drop non-worn items
+	  	Handle this through a buff (step continually deteriorates sickness); UI draws stats + healthbar a different colour because they're not equal to max
+		Listens to onRespawned on character, this will come up early on when death system is recreated
+		Should only be added for user on client
+		Should somehow interact with regeneration / XP components
+	- Buff system: register buffs under a buffs list similar to components, buffs can stack/etc.
+	  	UI should draw stuff for each buff
+		Allow UI hooks/etc. for changing screen/border colours etc.
+		Buffmgr on components list
+		Should save/restore buffs on server when logging out / reconnecting
 	- Questing / rewards
 	- Regeneration
-	- Periodic saving
-	- Bug system (auto bug reports on client/server crash)
+	- Periodic saving, logging out should also save: save everything (health, death sickness (buffs), etc.)
+	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
+	- Projectiles
+	- Admin commands from client -- to open server REPL
+	  	- Request login to server
+	- Component saving/loading on server (XP, etc.); confirm character is not recreated on server when zoning
+	- Character stats
+	- Easier server debugging
+	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
+	- Have error reporting parse the error and save file information (source for the crash site, etc.)
+	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
+	- FIXME: Db need to copy over stats, include health in stats, reference npc for stats list
+	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login
+	- FIXME: Respawn/Zone pause renderer and UI, fadeout and fadein
+	- FIXME: Rename charComponents to components, and script components to scriptComponents
+	- CLEAN: Go through entire serialize/restore system for Character
+				- Cleanup old comments for _character (DELETEME's)
+				- Cleanup everything referencing .npc , carry those over to .stats
+
+
+				- Server Restore
+				  	character.js setAsPlayer()
+				- Server Serialize
+				  	db.js savePlayer()
+				- Server NetSerialize
+				  	player.js EVT_ZONE_OUT  -- if we want to netSerialize here (currently no)
+					player.js respawn -- netSerializing here
+					player.js EVT_LOGIN -- netSerialize character, client/game.js loadedPlayer() loads it
+					server/page.js EVT_ADDED_ENTITY -- netSerialize _character
+					server/pages.js serialize -- netSerialize _character's
+				- Client Login
+				  	client/game.js loadedPlayer -- setup _character here
+				- Client Respawn
+				  	client/game.js onRespawn -- setup _character here
+				- Client Zone
+				- Client NetRestore (other users?)
+				  	character.js characterInit()
+					client/game.js onEntityAdded -- setup _character here
+				- Client setToUser() -- TODO get rid of manual restoring here. Should serialize before respawning/zoning
+				- Client scripts/game.js addCharacter -- TODO get rid of manual restoring ehre
+				  						initialize() -- TODO get rid of manual setting up _character here
+
+				NOTE: Character is recreated when we reloadScripts, however the movable for our player is the same
+
+	- NOTE: Communication between components is being done via. hooks (eg. Death system sends 'BuffedEvt' hook on character to communicate to BuffMgr). The bonus is that we can safely communicate useless/discarded information here (ie. something sends 'BuffedEvt'  yet character doesn't have BuffMgr, so evt is simply ignored). The other bonus is that other things could listen to a buff being added, AND we could utilize the pre/post cancellation. The problem is this is somewhat inefficient (creating data and sending useless evt, searching for hook), and may cause unecessary overhead. This is something we can change later on if we like by simply finding the component and communicating with it directly
+
+	- NOTE: Buffs are NOT scripts, cannot use The.scripting, complex functionality should simply communicate with Buff in BuffMgr
+
+
+    - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
+
+
+
+
+	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+	- BuffMgr has its own container for buffs -- Buffs should have a base like items
+	- UI hooks: UI.addEffect({ effectType: EFFECT_BUFF, data: { buff: BUFF_STINKY_BREATH, time: 10 } })  -- Resources.Effects.Buffs[BUFF_STINKY_BREATH] = { icon: "..", options: [EFFECT_BUFF_HOSTILE, EFFECT_BUFF_TIMER, EFFECT_BUFF_FADES], totalTime: 20 }
+	- Death ==> Level; could have level component hook 'die' and lose XP
+
+	- FIXME: Can we somehow utilize netSerialize/netRestore for dynamic changes? -- 
+
+
 
 
 Future
@@ -313,17 +455,19 @@ Future
 	  	- Store messages in localization files & packages which slot messages & UI effects into UI
 	- Gameplay system/scripts, triggers/traps
 	- Questing DFA
+	- Groups or smarter XP (eg. people who assisted in killing, gave buffs, healing, etc.)
 	- Animated static sprites
 	- Multi-tiled movables (cthulu, boats)
 	- boat: walk on & off, can't get off on water, walk on boat while boat moving, walk on boat while boat zoning (pages, maps)
-	- dynamic collidables (drawbridge, shifting walls)
+	- dynamic collidables (drawbridge, shifting walls) -- NOTE: If we modify pathfinding such that clients send a full path, server broadcasts path without checking and everybody blindly accepts the path until a collision occurs, then they could halt from dynamic collisions. The server would only need to relay paths and broadcast halts, and could spend less timeprocessing paths
 	- Entity idle animation
 	- /admin
 	- Electron desktop application
 	- Replace Eventful w/ node.js native EventEmitter? (use Browserify event for browser)
 	- Performance
 	  	- Sleep/Wake entities/pages/maps
-		- JobList w/ Workers  (either self-contained processes, or shared context?)
+		- Cluster maps, use zeroMQ for IPC
+		- JobList w/ Workers  (either self-contained processes)
 		- WebRTC/UDP
 		- db sharding
 		- https://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
@@ -335,9 +479,15 @@ Future
 		- Immutable arguments
 		- Avoid for..in
 		- JPS pathfinding for suitable maps/regions? (eg. dungeons, tight corridors)
+		- Chasing (pathfinding): We can probably get away with only sending the target that we're chasing after rather than continuously sending updates paths (since our path continuously changes); or perhaps continue to use the same path and continue expanding on it assuming its a simple update (extending the end of the path rather than changing the path mid-way), then this is likely a deterministic operation that clients can be in sync with. We'd simply need to periodically send position updates of the movable if its been a while? Or path progress if its been a while?
+		  - Write a module to compress EVT messages into arrays: { evt: EVT_GAIN_XP, data: { entityId: 54, killedId: 32, XP: 10 } }  ==>  [EVT_GAIN_XP,54,32,10]  then based off the event format table, reconvert it back to its object format
 	- Fault tolerance
 	  	- On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
+		- Could add preprocessors in "parent" functions which act as a safety check, eg. #CHECK( ExpectObjectFormat(data.args.container.s, { numbers: ForEach(IsNumber), evt: IsValidEvent }) )  on retail converts to:
+		  		if (!_.isObject(data) || !_.isObject(data.args) || !_.isObject(data.args.container) || !_.isObject(data.args.container.s) || !_.isArray(data.args.container.s.numbers) || .....) { return } // Early out of function because of unexpected input, and log the error
+			This sucks but would save us from any crashing
 		- https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
+		- Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
 
 
 
@@ -588,6 +738,7 @@ DB
 
 ====== Dynamic
 
+	* Only ONE handler
 	* Error safe: return Error and the caller will be able to handle it accordingly
 	- registerHandler, handler set
 
@@ -619,6 +770,7 @@ DB
 ====== Script
 
 	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
+	* Scripts are reloaded (recreated) upon zoning, dying, etc. -- beware of this for outside sources that reference scripts
 
 ====== Functions
 

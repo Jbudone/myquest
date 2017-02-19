@@ -10,6 +10,9 @@ define(['loggable'], function(Loggable){
 		this.setLogPrefix('Resources');
 
 		var Log = this.Log.bind(this);
+
+        var componentsAssets = null;
+
 		var _interface = {
 
 			sprites: {},
@@ -18,14 +21,18 @@ define(['loggable'], function(Loggable){
 			npcs: {},
 			scripts: {},
 			items: {},
+            buffs: {},
 			interactables: {},
+            components: {},
+            rules: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
-			loadScript: function(){},
+			loadScripts: function(){},
+            loadComponents: function(){},
 
 			loadItemScripts: function(){},
-			loadInteractableScripts: function(){}
+            loadInteractableScripts: function(){},
 
 		}, initialize = (function(loadingResources){
 
@@ -58,9 +65,17 @@ define(['loggable'], function(Loggable){
 									return;
 								}
 
-								this.Log("Initialized resource assets");
+                                var onFinished = function(){
+                                    this.Log("Initialized resource assets");
+                                    loaded(assets);
+                                };
 
-								loaded(assets);
+                                if (result instanceof Promise) {
+                                    result.then(onFinished).catch(failed);
+                                } else {
+                                    onFinished();
+                                }
+
 							}
 						}.bind(this)), function(){
 							this.Log("Error loading resources", LOG_ERROR);
@@ -196,6 +211,7 @@ define(['loggable'], function(Loggable){
 
 		initializeAssets = (function(assets, orderOfInitialization){
 
+            let loadingAssets = [];
 			for (var i=0; i<orderOfInitialization.length; ++i) {
 				var assetID = orderOfInitialization[i],
 					asset   = assets[assetID],
@@ -207,21 +223,38 @@ define(['loggable'], function(Loggable){
 						Log("Failed to load asset: "+ assetID, LOG_ERROR);
 						return result;
 					}
-					Log("Loaded: "+ assetID);
+
+                    if (result instanceof Promise) {
+                        Log("Waiting on: "+ assetID);
+                        loadingAssets.push(result);
+                    } else {
+                        Log("Loaded: "+ assetID);
+                    }
 				} catch(e) {
 					Log(e, LOG_ERROR);
 					return e;
 				}
 			}
+
+            if (loadingAssets.length > 0) {
+                return new Promise((loaded, failed) => {
+                    Promise.all(loadingAssets).then(loaded).catch(failed);
+                });
+            } else {
+                return true;
+            }
 		}.bind(_interface)),
 
 		initializeAsset = (function(assetID, asset){
 			if (assetID == 'sheets') return initializeSheets(asset);
 			else if (assetID == 'npcs') return initializeNPCs(asset);
+			else if (assetID == 'rules') return initializeRules(asset);
 			else if (assetID == 'items') return initializeItems(asset);
+			else if (assetID == 'buffs') return initializeBuffs(asset);
 			else if (assetID == 'interactables') return initializeInteractables(asset);
 			else if (assetID == 'scripts') return initializeScripts(asset);
 			else if (assetID == 'world') return initializeWorld(asset);
+			else if (assetID == 'components') return initializeComponents(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
 
@@ -426,6 +459,38 @@ define(['loggable'], function(Loggable){
 			}
 		}.bind(_interface)),
 
+		initializeBuffs = (function(asset){
+
+            return new Promise((loaded, failed) => {
+                var res = JSON.parse(asset).buffs,
+                    loading = 0;
+                for (var i=0; i<res.length; ++i) {
+                    var buff = res[i];
+
+                    var buffBaseRes = buff.base,
+                        baseFile = "scripts/buffs."+buffBaseRes;
+                    ++loading;
+                    requirejs([baseFile], function(baseScript) {
+                        buff.base = baseScript;
+
+                        --loading;
+                        if (loading === 0) {
+                            loaded();
+                        }
+                    });
+
+                    this.buffs[buff.id]=buff;
+                    
+                }
+
+            });
+		}.bind(_interface)),
+
+		initializeRules = (function(asset){
+			var res = JSON.parse(asset);
+            this.rules = res;
+		}.bind(_interface)),
+
 		initializeItems = (function(asset){
 
 			var ItemBase = function(itemBase){
@@ -453,12 +518,14 @@ define(['loggable'], function(Loggable){
 					_.each(this.items.base, function(nothing, itemBase){
 						var baseFile = 'scripts/items.'+itemBase;
 						++itemsToLoad;
-						requirejs([baseFile], function(baseScript){
-							this.items.base[itemBase] = new ItemBase(baseScript);
-							if (--itemsToLoad === 0) {
-								loaded();
-							}
-						}.bind(this));
+                        requirejs([baseFile], function(baseScript){
+                            this.items.base[itemBase] = new ItemBase(baseScript);
+                            this.items.loading[itemBase].finished();
+                            delete this.items.loading[itemBase];
+                            if (--itemsToLoad === 0) {
+                                loaded();
+                            }
+                        }.bind(this));
 					}.bind(this));
 				}.bind(this));
 			};
@@ -469,11 +536,27 @@ define(['loggable'], function(Loggable){
 
 			this.items.list = {};
 			this.items.base = {};
+			this.items.loading = {};
 			for (var i=0; i<res.length; ++i) {
 				var item = res[i];
 				this.items.list[item.id] = item;
 				if (!this.items.base.hasOwnProperty(item.base)) {
 					this.items.base[item.base] = null;
+
+                    // Since some scripts may attempt to invoke an item before their scripts have been loaded, need to
+                    // setup this object for queued invocation.
+                    // TODO: Clean this up and potentially extend for other things (eg. interaction)
+                    this.items.loading[item.base] = {
+                        onLoadedList: [],
+                        finished: function() {
+                            for (let i = 0; i < this.onLoadedList.length; ++i) {
+                                this.onLoadedList[i]();
+                            }
+                        },
+                        then: function(fn) {
+                            this.onLoadedList.push(fn);
+                        }
+                    };
 				}
 				for (var sheetName in this.sheets) {
 					var sheet = this.sheets[sheetName];
@@ -488,6 +571,16 @@ define(['loggable'], function(Loggable){
 					}
 					if (item.hasOwnProperty('sprite')) break;
 				}
+
+
+                // Load item types
+                let itm_type = 0;
+                for (let i = 0; i < item.types.length; ++i) {
+                    let typeStr = 'ITM_' + item.types[i],
+                        type    = global[typeStr];
+                    itm_type |= type;
+                }
+                item.type = itm_type;
 			}
 			this.items['items-not-loaded'] = true;
 			// NOTE: save item base scripts (like scripts) loading/initialization until we've setup the
@@ -558,11 +651,31 @@ define(['loggable'], function(Loggable){
 
 		initializeWorld = (function(asset){
 			// Intentionally blank (only handled by server)
-		});
+		}),
+
+        initializeComponents = (function(asset){
+
+			var res = JSON.parse(asset);
+            componentsAssets = res;
+        }.bind(_interface)),
+
+        loadComponents = (function(){
+
+            return new Promise(function(loaded, failed){
+                _.each(componentsAssets, function(componentFilename, componentName){
+                    let componentFile = 'scripts/'+componentFilename;
+                    requirejs([componentFile], function(component){
+                        this.components[componentName] = component;
+                        loaded();
+                    }.bind(this));
+                }.bind(this));
+            }.bind(this));
+        }.bind(_interface));
 
 		_interface.initialize = initialize;
 		_interface.findSheetFromFile = findSheetFromFile;
 		_interface.loadScripts = loadScripts;
+        _interface.loadComponents = loadComponents;
 
 		return _interface;
 	});

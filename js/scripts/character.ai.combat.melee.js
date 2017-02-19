@@ -65,23 +65,6 @@ define(
                         return false;
                     }
 
-
-                    if (!this.attackBusy) {
-                        this.attackBusy = true;
-
-                        // Server request to attack
-                        server.request(EVT_ATTACK, {
-                            target: target.entity.id
-                        }).then(() => {
-                            this.Log("Success in attacking target..", LOG_DEBUG);
-                            this.attackBusy = false;
-                        }, () => {
-                            this.Log("FAILED TO ATTACK TARGET..", LOG_ERROR); // TODO: get error msg from server response
-                            this.attackBusy = false;
-                        })
-                        .catch(errorInGame);
-                    }
-
                     return true;
                 }
             };

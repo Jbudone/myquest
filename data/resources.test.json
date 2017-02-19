@@ -4,6 +4,9 @@
 	"npcs": "npcs.new.json",
 	"world": "world.json",
 	"items": "items.new.json",
+	"buffs": "buffs.json",
 	"interactables": "interactables.new.json",
-	"scripts": "scripts.json"
+	"scripts": "scripts.json",
+    "components": "components.json",
+	"rules": "rules.json"
 }

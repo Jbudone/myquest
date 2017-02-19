@@ -118,6 +118,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.state', 'loggable'], (SCRIP
 
         const setTarget = (_target) => {
 
+            this.Log("Setting target", LOG_DEBUG);
             this.target = _target;
             //reset();
             this.input(INPUT_TARGET);

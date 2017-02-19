@@ -1,0 +1,66 @@
+define(() => {
+
+    const Component = function() {
+
+        // Should this component be updated every step?
+        // TODO: If this goes false and will likely be false for a while, then we should remove component from update
+        // list. Then when this becomes true, run Character.ComponentNeedsUpdateChanged(this) to add it to step list
+        this.needsUpdate = false;
+
+        this.initialize = function() {
+            const localPart = (Env.isServer ? this.server : this.client);
+            let newInit = false;
+            if (localPart) {
+                if (typeof localPart === 'object') {
+                    for (const key in localPart) {
+                        if (key === 'initialize') newInit = true;
+                        if (key === 'initialize' && this.hasOwnProperty(key)) {
+                            const _preInitialize = this[key],
+                                _postInitialize  = localPart[key];
+                            this[key] = (function(){
+                                _preInitialize.apply(this, arguments);
+                                _postInitialize.apply(this, arguments);
+
+                            });
+                        } else {
+                            this[key] = localPart[key];
+                        }
+                    }
+                }
+            }
+            delete this.server;
+            delete this.client;
+
+            if (newInit) this.initialize();
+        };
+
+        // Restore this component from an earlier state
+        // Server: If the user disconnects then comes back
+        // Client: If the user zones between maps (NOTE: does not restore when you respawn)
+        this.restore = function(component) {
+
+        };
+
+        // Restore this component from a provided state
+        // This is only used for client, for restoring the component from the provided server state
+        this.netRestore = function(component) {
+
+        };
+
+        // Serialize component to save
+        // This is only used for server, for saving the component to the db
+        this.serialize = function() {
+            return {};
+        };
+
+        // Serialize component to players
+        // This is only used for server, for serializing component to users
+        // forOwner: Components can be netSerialized to the owner (eg. logging in), or to everyone in the region (eg.
+        // user zones into a map)
+        this.netSerialize = function(forOwner) {
+            return {};
+        };
+    };
+
+    return Component;
+});

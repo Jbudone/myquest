@@ -2,10 +2,12 @@
 // Character
 define(
     [
-        'SCRIPTINJECT', 'scripts/character.ai', 'eventful', 'hookable', 'loggable'
+        'SCRIPTINJECT',
+        'scripts/character.ai', 'scripts/character.inventory',
+        'eventful', 'hookable', 'loggable'
     ],
     (
-        SCRIPTINJECT, AI, Eventful, Hookable, Loggable
+        SCRIPTINJECT, AI, Inventory, Eventful, Hookable, Loggable
     ) => {
 
         /* SCRIPTINJECT */
@@ -21,18 +23,79 @@ define(
 
             this.entity      = entity;
             this.brain       = null;
+            this.inventory   = null;
             this._script     = null;
 
             this.entity.character = this;
+            this.initialized = false;
 
             this.setLogPrefix(`char: ${entity.id}`);
+            this.Log(`Setting character on entity ${entity.id}`, LOG_DEBUG);
+
+            // Components/Buffs will listen to events being emitted on the character. However, it doesn't make sense to
+            // register every possible hook for every character. Instead we should register them on a per-listener
+            // basis, and allow modules to emit events regardless of whether or not a hook exists for that event yet
+            this.setHookRelaxedMode(true);
+
+
+            // Serialization/Restoration
+            //
+            // FIXME: Find a way to abstract serialize/restore here since server/client evidently use mostly the same
+            // stuff. NOTE: The problem with just doing function(){ superSerialize.apply(..); localSerialize.apply(..);
+            // }  in script.js is that serialize() returns a value, and we'd need a way to merge the two returned values
+
+
+
+            // FIXME: Scripts have a components property, should rename that to scriptComponents so that we can rename
+            // this to components
+            this._charComponents = entity.npc.components;
+            this.charComponents = [];
+
+            this.loadComponents = function() {
+                for (let i = 0; i < this._charComponents.length; ++i) {
+                    const componentName = this._charComponents[i],
+                        componentRes = Resources.components[componentName],
+                        component = new componentRes(this);
+                    
+                    this.charComponents.push( component );
+                    component.initialize();
+                    // NOTE: Component will be restored later, either by restore (server/client) or netRestore (client)
+                }
+            };
+
 
             this.isPlayer = (entity.playerID ? true : false);
             this.delta = 0;
 
-            // FIXME: get these stats from npc
-            if (!_.isFinite(entity.npc.health) || entity.npc.health <= 0) throw Err("Bad health for NPC");
-            this.health = entity.npc.health;
+
+            // Setup stats from npc
+            this.stats = {};
+
+            {
+                let addStat = (statName, stat) => {
+                    this.stats[statName] = {
+                        cur: stat,
+                        curMax: stat,
+                        max: stat
+                    };
+                };
+
+                for (const statName in entity.npc.stats) {
+                    const stat = entity.npc.stats[statName];
+                    addStat(statName, stat);
+                }
+
+                assert(_.isFinite(entity.npc.health) && entity.npc.health > 0, `Bad health for NPC: ${entity.npc.health}`);
+                addStat('health', entity.npc.health);
+            }
+
+            Object.defineProperties(this, {
+                health: {
+                    "get": function() { return this.stats['health'].cur; },
+                    "set": function(hp) { this.stats['health'].cur = hp; }
+                }
+            });
+
             this.alive  = true;
 
             if (Env.isServer) {
@@ -71,7 +134,7 @@ define(
                 }
 
                 if (this.health <= 0) {
-                    this.die();
+                    this.die(from);
                     return; // do not post hurt since we've died
                 }
 
@@ -79,7 +142,7 @@ define(
             };
 
             this.registerHook('die');
-            this.die = () => {
+            this.die = (advocate) => {
                 if (!this.alive) throw Err("Dying when already died");
                 if (!this.doHook('die').pre()) return;
 
@@ -90,7 +153,9 @@ define(
                 this.brain.die();
                 this.triggerEvent(EVT_DIED);
 
-                this.doHook('die').post();
+                this.doHook('die').post({
+                    advocate: advocate
+                });
             };
 
             this.registerHook('respawning');
@@ -172,8 +237,11 @@ define(
                 }
 
                 // TODO: Check if character is busy in combat
+                // TODO: If character isn't alive then he's in the middle of respawning. It would be dangerous to let
+                // him d/c right now; however this would be really annoying for the user to have to wait until they
+                // respawn
                 this.canDisconnect = () => {
-                    return !this.brain.isBusy();
+                    return !this.brain.isBusy() && this.alive;
                 };
             }
 
@@ -197,6 +265,12 @@ define(
                     this.handlePendingEvents();
                     this.brain.step();
                     // }
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        if (this.charComponents[i].needsUpdate) {
+                            this.charComponents[i].step(delta);
+                        }
+                    }
                 });
             };
 
@@ -217,6 +291,80 @@ define(
                 characterInit: () => {
                     this.brain = this._script.addScript(new AI(game, _character)); // NOTE: brain will be initialized automatically after character is initialized
                     this.initListeners();
+                    this.loadComponents();
+                },
+
+                // Serialize character (saving)
+                // Used for saving character to DB
+                serialize: () => {
+
+                    const _character = {
+                        health: this.health,
+                        charComponents: [],
+                        inventory: null
+                    };
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                          serializedComponent = component.serialize();
+                        _character.charComponents.push(serializedComponent);
+                    }
+
+                    _character.inventory = this.inventory.serialize();
+
+                    return _character;
+                },
+
+                // Restore character from earlier state (load from DB)
+                restore: (_character) => {
+
+                    this.health = _character.health;
+
+                    this.inventory = new Inventory(this, _character.inventory);
+
+                    _.each(_character.stats, (stat, statName) => {
+                        this.stats[statName].cur = stat.cur;
+                        this.stats[statName].curMax = stat.curMax;
+                        this.stats[statName].max = stat.max;
+                    });
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                            restoreComponent = _character.charComponents[i];
+                        component.restore(restoreComponent);
+                    }
+
+                    this.initialized = true;
+                },
+
+                // NetSerialize character (serialized to users)
+                netSerialize: (forOwner) => {
+
+                    const _character = {
+                        health: this.health,
+                        charComponents: []
+                    };
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                          netSerializedComponent = component.netSerialize();
+                        _character.charComponents.push(netSerializedComponent);
+                    }
+
+                    // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
+                    if (this.inventory) {
+                        _character.inventory = this.inventory.serialize();
+                    }
+
+                    if (forOwner) {
+                        _character.stats = _.cloneDeep(this.stats);
+                        console.log(this.stats);
+                        console.log("Serializing Health: " + this.health);
+
+                        if (this.health == 1500) process.exit();
+                    }
+
+                    return _character;
                 },
 
                 setAsPlayer: () => {
@@ -240,8 +388,8 @@ define(
                         (
                             (
                                 confirm(_.isObject(data), evt, "No args given") &&
-                                confirm(data.coord && _.isFinite(data.coord), evt, "Bad coordinates given for item") &&
-                                confirm(data.page && _.isFinite(data.page), evt, "Bad page given")
+                                confirm('coord' in data && _.isFinite(data.coord), evt, "Bad coordinates given for item") &&
+                                confirm('page' in data && _.isFinite(data.page), evt, "Bad page given")
                             ) === false
                         )
                         {
@@ -320,22 +468,50 @@ define(
 
 
                         this.Log("Requesting to pickup item", LOG_DEBUG);
-                        delete page.items[coord];
-                        const result = itmBase.invoke(item.id, _character, itmRef.args);
 
-                        if (_.isError(result))
-                        {
-                            confirm(false, evt, result.message);
-                            return;
+                        let pickedUp = false;
+
+                        // Are we adding the item to our inventory or invoking it?
+                        if (itmRef.type & ITM_PICKUP) {
+
+                            // Add item to inventory
+                            const inventory = player.movable.character.inventory,
+                                result = inventory.addItem(itmRef);
+
+                            if (result !== false) {
+                                this.Log(`Adding item to player's inventory (${result}) (coord ${coord})`, LOG_DEBUG);
+                                player.respond(evt.id, true, {
+                                  slot: result
+                                });
+                                pickedUp = true;
+                            } else {
+                                player.respond(evt.id, false);
+                            }
+
+                        } else {
+
+                            // Invoke item
+                            const result = itmBase.invoke(item.id, _character, itmRef.args);
+
+                            if (_.isError(result))
+                            {
+                                confirm(false, evt, result.message);
+                                return;
+                            }
+
+                            player.respond(evt.id, true);
+                            pickedUp = true;
                         }
 
-                        player.respond(evt.id, true);
-                        page.broadcast(EVT_GET_ITEM, {
-                            page: page.index,
-                            coord: coord
-                        });
+                        if (pickedUp) {
+                            page.broadcast(EVT_GET_ITEM, {
+                                page: page.index,
+                                coord: coord
+                            });
 
-                        page.area.game.removeItem(page.index, coord);
+                            delete page.items[coord];
+                            page.area.game.removeItem(page.index, coord);
+                        }
                     };
 
                     player.registerHandler(EVT_GET_ITEM);
@@ -348,9 +524,9 @@ define(
                             (
 
                                 confirm(_.isObject(data), evt, "No args given") &&
-                                confirm(data.coord && _.isFinite(data.coord), evt, "Bad coordinates given for item") &&
-                                confirm(data.page && _.isFinite(data.page), evt, "Bad page given") &&
-                                confirm(data.tile && _.isFinite(data.tile.x) && _.isFinite(data.tile.y), evt, "Bad tile given")
+                                confirm('coord' in data && _.isFinite(data.coord), evt, "Bad coordinates given for item") &&
+                                confirm('page' in data && _.isFinite(data.page), evt, "Bad page index given") &&
+                                confirm('tile' in data && _.isFinite(data.tile.x) && _.isFinite(data.tile.y), evt, "Bad tile given")
                             ) === false
                         )
                         {
@@ -447,6 +623,8 @@ define(
                     player.handler(EVT_INTERACT).set((evt, data) => {
                         interact(evt, data);
                     });
+
+                    this.restore(player._character);
                 }
             };
 
@@ -460,6 +638,109 @@ define(
                 characterInit: () => {
                     this.brain = this._script.addScript(new AI(game, _character)); // NOTE: brain will be initialized automatically after character is initialized
                     this.initListeners();
+                    this.loadComponents();
+
+                    if (this.entity._character) {
+                        this.netRestore(this.entity._character);
+                    } else {
+                        // This character doesn't have a _character property for us to netRestore from.. The only reason
+                        // this should happen is if we're restoring ourselves due to zoning
+                        if (this.entity === The.player) {
+
+                            if (The._character) {
+                                // FIXME: Storing _character in The *sucks* find a better solution
+                                this.restore(The._character);
+                                delete The._character;
+                            } else {
+                                assert(false, "Initializing our local character without any _character to netRestore from, and The._character not set");
+                            }
+                        } else {
+                            assert(false, "Initializing character without any _character to netRestore from");
+                        }
+                    }
+
+                    // TODO: Is this a good idea? Currently we're only doing this because of the local player zoning out
+                    // and using a stale _character
+                    delete this.entity._character;
+                },
+
+                // Serialize character for restoring later
+                // Since Character is a script, it is recreated everytime we run reloadScripts(). In some cases (eg.
+                // respawning) we just depend on netRestore for restoring the character from the server, however that
+                // seems unecessary for other cases (eg. zoning) where our local state likely hasn't changed. In this
+                // case we serialize locally, store it, then restore
+                serialize: () => {
+
+                    const _character = {
+                        health: this.health,
+                        charComponents: [],
+                        inventory: null
+                    };
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                          serializedComponent = component.serialize();
+                        _character.charComponents.push(serializedComponent);
+                    }
+
+                    _character.inventory = this.inventory.serialize();
+                    _character.stats = _.cloneDeep(this.stats);
+
+                    return _character;
+                },
+
+                // Restore local character from previous state
+                // See serialize for more information
+                restore: (_character) => {
+
+                    this.health = _character.health;
+
+
+                    this.inventory = new Inventory(this, _character.inventory);
+
+                    _.each(_character.stats, (stat, statName) => {
+                        this.stats[statName].cur = stat.cur;
+                        this.stats[statName].curMax = stat.curMax;
+                        this.stats[statName].max = stat.max;
+                    });
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                            restoreComponent = _character.charComponents[i];
+                        component.restore(restoreComponent);
+                    }
+
+                    this.initialized = true;
+                },
+
+                // Restore this component from state given by server
+                netRestore: (_character) => {
+
+                    this.health = _character.health;
+
+                    if (_character.inventory) {
+                        assert(this.entity === The.player, "We should only be netRestoring the inventory for ourselves");
+
+                        this.inventory = new Inventory(this, _character.inventory);
+                    }
+
+                    if (_character.stats) {
+                        assert(this.entity === The.player, "We should only be netRestoring character stats for ourselves");
+
+                        _.each(_character.stats, (stat, statName) => {
+                            this.stats[statName].cur = stat.cur;
+                            this.stats[statName].curMax = stat.curMax;
+                            this.stats[statName].max = stat.max;
+                        });
+                    }
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component = this.charComponents[i],
+                            restoreComponent = _character.charComponents[i];
+                        component.netRestore(restoreComponent);
+                    }
+
+                    this.initialized = true;
                 },
 
                 setToUser: () => {

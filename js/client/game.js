@@ -195,6 +195,8 @@ define(
                         x: player.position.tile.x * Env.tileSize,
                         y: player.position.tile.y * Env.tileSize }
                 };
+
+                The.player._character = player._character;
             };
 
             // Initialize the game client
@@ -214,6 +216,10 @@ define(
                 listenToPlayer();
 
                 reloadScripts().then(callbacksReady);
+
+                callbackWhenReady(() => {
+                    server.runBufferedMessages();
+                });
             };
 
             // ------------------------------------------------------------------------------------------------------ //
@@ -293,6 +299,9 @@ define(
                             The.scriptmgr.step(time);
                             Profiler.profileEnd('scrptMgr');
 
+                            // Step UI
+                            The.UI.step(time);
+
                             // Update again
                             setTimeout(gameLoop, gameLoopSpeed);
                             Profiler.profileEnd('gameStep');
@@ -359,6 +368,15 @@ define(
                     //                                      Server Messaging
                     //
                     // ---------------------------------------------------------------------------------------------- //
+
+                    server.shouldQueueMessage = (msg) => {
+                        if (!ready) {
+                            const isLoadingMessage = msg.initialization || msg.zone || msg.zoneArea || msg.respawn;
+                            return !isLoadingMessage;
+                        }
+
+                        return false;
+                    };
 
                     // Entity was added to a page
                     server.onEntityAdded = (page, addedEntity) => {
@@ -450,7 +468,7 @@ define(
                         this.Log(`Removing Entity: ${removedEntity.id}`, LOG_DEBUG);
 
                         const entity = The.area.pages[page].movables[removedEntity.id];
-                        if (!entity) throw Err(`Entity not found in area: ${event.id}`);
+                        if (!entity) throw Err(`Entity not found in area: ${removedEntity.id}`);
 
                         The.area.removeEntity(entity);
                     };
@@ -471,6 +489,8 @@ define(
                             state    = event.state;
 
                         if (!entity) throw Err(`Entity not found in area: ${event.id}`);
+
+                        assert(The.area.hasTile(state.position.tile) && The.area.isTileOpen(state.position.tile), "Tile is not open!");
 
                         // Are we currently on this cancelled path?
                         //
@@ -558,9 +578,12 @@ define(
                                         });
                                     }
 
+
+                                    // NOTE: Don't include path state here since we're running the path relative to our
+                                    // current position
                                     entity.path = null;
                                     entity.addPath(path);
-                                    entity.recordNewPath(path, state);
+                                    entity.recordNewPath(path);
                                 }
 
                             } else if (entity.path) {
@@ -904,6 +927,7 @@ define(
                                 alternativePath.walks.forEach((walk) => { walk.dontSendToServer = true; });
                             }
 
+                            this.Log("Adding alternative path", LOG_DEBUG);
                             entity.addPath(alternativePath);
                             entity.recordNewPath(alternativePath, movableState);
 
@@ -915,6 +939,7 @@ define(
                                 path.walks.forEach((walk) => { walk.dontSendToServer = true; });
                             }
 
+                            this.Log("Adding recalibrated path", LOG_DEBUG);
                             entity.addPath(path);
                             entity.recordNewPath(path, movableState);
 
@@ -955,7 +980,7 @@ define(
                                 styleType = MESSAGE_BAD;
                             }
 
-                            ui.postMessage(`${target.npc.name} attacked ${entity.npc.name} for ${amount} damage`, styleType);
+                            ui.postMessage(`${target.npc.name} attacked ${entity.npc.name} for ${amount} damage (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
 
                             const direction = target.directionOfTarget(entity);
                             target.sprite.dirAnimate('atk', direction);
@@ -967,6 +992,8 @@ define(
                     // TODO: We should abstract this to UI
                     The.player.character.hook('die', this).after(function(){
                         ui.fadeToBlack();
+                        ui.pause();
+                        renderer.pause();
                     });
 
                     // Page Zoning
@@ -1041,7 +1068,13 @@ define(
                             // Need to abstract this to UI!
                             The.player.character.hook('die', this).after(function(){
                                 ui.fadeToBlack();
+                                ui.pause();
+                                renderer.pause();
                             });
+                        });
+
+                        callbackWhenReady(() => {
+                            server.runBufferedMessages();
                         });
 
                         The.camera.updated = true;
@@ -1066,6 +1099,8 @@ define(
 
                         // TODO: Abstract to UI
                         ui.fadeIn();
+                        ui.resume();
+                        renderer.resume();
                     };
 
                     // ---------------------------------------------------------------------------------------------- //
@@ -1118,6 +1153,8 @@ define(
                     registerHandler: server.registerHandler.bind(server),
                     handler: server.handler.bind(server)
                 };
+                The.scripting.Rules = Resources.rules;
+                The.scripting.Buffs = Resources.buffs;
 
 
                 // -------------------------------------------------------------------------------------------------- //
@@ -1337,36 +1374,40 @@ define(
 
                     let loading = 2; // TODO: Don't do this..
 
-                    Resources.loadScripts(Resources._scriptRes).then(() => {
+                    Resources.loadComponents().then(() => {
 
-                        The.scriptmgr = new ScriptMgr();
+                        Resources.loadScripts(Resources._scriptRes).then(() => {
 
-                        // Load items
-                        if ('items-not-loaded' in Resources.items) {
-                            delete Resources.items['items-not-loaded'];
-                            Resources.loadItemScripts().then(() => {
-                                if (--loading === 0) loaded();
-                            }, errorInGame)
-                            .catch(errorInGame);
-                        } else {
-                            --loading;
-                        }
+                            The.scriptmgr = new ScriptMgr();
 
-                        if ('interactables-not-loaded' in Resources.interactables) {
-                            delete Resources.interactables['interactables-not-loaded'];
-                            Resources.loadInteractableScripts().then(() => {
-                                if (--loading === 0) loaded();
-                            }, errorInGame)
-                            .catch(errorInGame);
-                        } else {
-                            --loading;
-                        }
+                            // Load items
+                            if ('items-not-loaded' in Resources.items) {
+                                delete Resources.items['items-not-loaded'];
+                                Resources.loadItemScripts().then(() => {
+                                    if (--loading === 0) loaded();
+                                }, errorInGame)
+                                .catch(errorInGame);
+                            } else {
+                                --loading;
+                            }
 
-                        if (loading === 0) {
-                            loaded();
-                        }
-                    }, () => {
-                        throw Err("Could not load scripts~");
+                            if ('interactables-not-loaded' in Resources.interactables) {
+                                delete Resources.interactables['interactables-not-loaded'];
+                                Resources.loadInteractableScripts().then(() => {
+                                    if (--loading === 0) loaded();
+                                }, errorInGame)
+                                .catch(errorInGame);
+                            } else {
+                                --loading;
+                            }
+
+                            if (loading === 0) {
+                                loaded();
+                            }
+                        }, () => {
+                            throw Err("Could not load scripts~");
+                        })
+                        .catch(errorInGame);
                     })
                     .catch(errorInGame);
                 });

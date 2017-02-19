@@ -111,15 +111,28 @@ define(
                 if (!this.doHook('addedcharacter').pre(entity)) return;
                 this.characters[entity.id] = character;
 
-                if (!Env.isServer && entity.hasOwnProperty('_character')) {
-                    character.health = entity._character.health;
-                    delete entity._character;
-                }
-
-                character.hook('die', this).after(() => {
+                character.hook('die', this).after((details) => {
                     if (Env.isServer) {
                         if (!character.isPlayer) {
                             this.handleLoot(character);
+
+                            // FIXME: Should find a cleaner way to do this; perhaps a Group system (would need to allow
+                            // 1 man groups) which hooks 'onKilled' and runs loot, experience, etc.
+
+                            // NOTE: There may be no advocate, in cases where we suicide, or the killer has
+                            // zoned out or died, etc.
+                            if (details.advocate) {
+                                const killer = details.advocate;
+                                assert(killer instanceof Character, "The listed advocate is not a Character type");
+
+                                const XP = character.entity.npc.XP;
+                                assert(_.isNumber(XP), "A character was killed by somebody, yet he has no XP");
+
+                                // FIXME: Store GainedXP symbol somewhere
+                                killer.doHook('GainedXP').post({
+                                    XP: XP
+                                });
+                            }
                         }
                     }
 
@@ -158,6 +171,15 @@ define(
                     this.characters[entityID].unload();
                 }
 
+                if (!Env.isServer && entityID === The.player.id) {
+                    // If we're zoning out then we need to serialize and store our _character details somewhere
+                    // This isn't strictly necessary since we could just netSerialize the character anytime we zone,
+                    // however at this point that doesn't seem necessary, and we could save a little bandwidth by only
+                    // local serializing
+                    // FIXME: It sucks to serialize into The, find a better solution
+                    The._character = this.characters[entityID].serialize();
+                }
+
                 delete this.characters[entityID];
 
                 // TODO: UI Should subscribe to Character unload and be removed there
@@ -186,7 +208,15 @@ define(
                 if (!this.doHook('addedplayer').pre(entity)) return;
 
                 this.players[playerID] = entity;
-                entity.character.setAsPlayer();
+
+                // FIXME: Not sure why we're setting player here, this is character specific stuff. This happens
+                // everytime we add the character to an area (eg. zoning, respawning). This makes sense on client, but
+                // not on server since we retain the character between maps/respawning (should confirm this)
+                if (!entity.character.initialized) {
+                    entity.character.setAsPlayer();
+                } else {
+                    entity.character.initialized = true;
+                }
 
                 this.Log(`Added player to Game: ${playerID}`);
                 this.doHook('addedplayer').post(entity);
@@ -351,12 +381,84 @@ define(
                 },
 
                 handleLoot: (character) => {
-                    if (Math.random() > 0.0) { // FIXME: handle this based off of loot details from NPC
-                        assert(character instanceof Character, `character not a Character`);
 
-                        const page   = character.entity.page,
-                            position = character.entity.position.tile,
-                            itm_id   = "itm_potion"; // FIXME: Hardcoded loot
+                    assert(character instanceof Character, `character not a Character`);
+
+                    // Loot is structured as follows:
+                    //  Groups: [lootGroup1, lootGroup2, ..]
+                    //  Group: { chance: 0.2, items: [item1, item2, ..] }
+                    //
+                    // Each loot group describes a list of items and their probability for dropping. The reason for a
+                    // loot group is to avoid situations where two items should not drop together (eg. potion_smallHeal,
+                    // potion_bigHeal; or  knife_rusted, knife_enchanted)
+                    //
+                    //
+                    //  Item: { chance: 0.3, item: "itm_potion" }
+                    //
+                    // Each item has a probability for its drop chance and an item id
+
+
+                    // Some npcs may not even have a loot list
+                    const loot = character.entity.npc.loot;
+                    if (!loot || !_.isArray(loot)) {
+                        return;
+                    }
+
+                    // Find a loot group
+                    let lootGroup   = null,
+                        itemsToDrop = [],
+                        diceRoll    = Math.random(),
+                        accumulator = 0.0;
+                    for (let i = 0; i < loot.length; ++i) {
+                        if
+                        (
+                            diceRoll < (loot[i].chance + accumulator) &&
+                            diceRoll > accumulator
+                        )
+                        {
+                            lootGroup = loot[i];
+                            break;
+                        }
+                    }
+
+                    // Did we find a loot group?
+                    // NOTE: Its possible to not get any loot group
+                    if (lootGroup) {
+
+                        // Find items that we should drop from this loot group
+                        // NOTE: We can drop any or none of the items in this group (including all of them). Each item
+                        // chance is completely independent of the rest
+                        const itemList = lootGroup.items;
+                        diceRoll = Math.random();
+                        for (let i = 0; i < itemList.length; ++i) {
+                            if (diceRoll <= itemList[i].chance) {
+                                itemsToDrop.push(itemList[i].item);
+                            }
+                        }
+                    }
+
+                    // Make sure that items don't overflow over existing items
+                    const entPage = character.entity.page,
+                        area      = entPage.area;
+
+                    const filterItemDrops = (tile) => {
+                        const localCoords = area.localFromGlobalCoordinates(tile.x, tile.y),
+                            localHash     = localCoords.y * Env.pageWidth + localCoords.x;
+                        return (localCoords.page && !localCoords.page.items[localHash]);
+                    };
+
+                    this.Log(`Found items to drop: ${itemsToDrop}`, LOG_DEBUG);
+                    const entPosition = character.entity.position.tile,
+                        freeTiles     = entPage.area.findOpenTilesAbout(entPosition, itemsToDrop.length, filterItemDrops),
+                        numDrops      = Math.min(itemsToDrop.length, freeTiles.length);
+                    for (let i = 0; i < numDrops; ++i) {
+
+                        const position = freeTiles[i],
+                            localPos   = area.localFromGlobalCoordinates(position.x, position.y),
+                            page       = localPos.page,
+                            // pageI      = area.pageIndex(position.x, position.y),
+                            // page       = area.pages[pageI],
+                            itm_id     = itemsToDrop[i];
 
                         page.broadcast(EVT_DROP_ITEM, {
                             position: { x: position.x, y: position.y },
@@ -371,13 +473,17 @@ define(
                             page: page.index
                         };
 
+                        const localCoord = localPos.y * Env.pageWidth + localPos.x;
+
+                        this.Log(`Dropping item ${itm_id} at (${position.x}, ${position.y}) ${localCoord}`, LOG_DEBUG);
+
                         const decay = {
-                            coord: { x: position.x, y: position.y },
+                            coord: localCoord,
                             page: page.index,
-                            decay: now() + 20000 // FIXME: put this somewhere.. NOTE: have to keep all decay rates the same, or otherwise change decayItems structure
+                            decay: now() + 10000 // FIXME: put this somewhere.. NOTE: have to keep all decay rates the same, or otherwise change decayItems structure
                         };
 
-                        page.items[(position.y - page.y) * Env.pageWidth + (position.x - page.x)] = item;
+                        page.items[localCoord] = item;
                         this.droppedItems.push(decay);
                     }
                 },
@@ -388,23 +494,25 @@ define(
                     for (; index < this.droppedItems.length; ++index) {
                         const item = this.droppedItems[index];
                         if (item.decay < now()) {
-                            const page = area.pages[item.page],
-                                coord  = (item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x);
+                            const page = area.pages[item.page];
 
                             // TODO: Find a better event than this to decay the item
                             page.broadcast(EVT_GET_ITEM, {
-                                coord,
+                                coord: item.coord,
                                 page: item.page
                             });
 
-                            delete page.items[coord];
+                            this.Log(`Decaying item from page ${item.page}, coord ${item.coord}`, LOG_DEBUG);
+                            delete page.items[item.coord];
                         } else {
                             break;
                         }
                     }
 
                     if (index) {
+                        this.Log(`Decaying ${index} / ${this.droppedItems.length} items`, LOG_DEBUG);
                         this.droppedItems.splice(0, index);
+                        this.Log(`${this.droppedItems.length} items left`, LOG_DEBUG);
                     }
                 },
 
@@ -415,10 +523,14 @@ define(
                         if (this.droppedItems[index].coord === coord &&
                             this.droppedItems[index].page === page) {
 
+                            this.Log(`Removing item ${coord} from ${page}`, LOG_DEBUG);
                             this.droppedItems.splice(index, 1);
-                            break;
+                            return;
                         }
                     }
+
+                    this.Log(`Items: ${Object.keys(this.droppedItems)}`, LOG_ERROR);
+                    assert(false, `Couldn't find item to remove (${page}, ${coord})`);
                 }
             };
 
@@ -429,14 +541,6 @@ define(
                     _script = this;
                     area = this.hookInto;
                     _game.detectEntities();
-
-                    // We need to re-create the character for the player; so copy over certain attributes here which
-                    // will be loaded into the new character
-                    if (The.player.character && !The.player._character) {
-                        The.player._character = {
-                            health: The.player.character.health
-                        };
-                    }
                     _game.addUser();
 
                     // Add all current characters in area
@@ -452,16 +556,23 @@ define(
                     _game.handleMoving();
                     _game.handleItems();
                     _game.handleInteractables();
+
+                    // TODO: Its sort of weird to call UI queue full update here. We should probably have the UI
+                    // listening to the script having finished loading insted. This is necessary since we won't have
+                    // characters ready yet until this point, so we don't have access to health or anything yet
+                    UI.queueFullUpdate();
                 },
 
                 addUser: () => {
                     const entity = The.player;
 
                     assert(entity instanceof Movable, "Player not a movable");
+                    The.user.doHook('initializedUser').pre();
                     this.createCharacter(entity);
                     this.addCharacter(entity);
                     this.addPlayer(entity);
                     this.characters[entity.id].setToUser();
+                    The.user.doHook('initializedUser').post();
                 },
 
                 handleMoving: () => {
@@ -552,9 +663,16 @@ define(
                                     coord: (item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x),
                                     page: item.page
                                 })
-                                .then(() => {
+                                .then((result) => {
                                     // Got item
                                     this.Log("Got item!");
+
+                                    // Have we picked up the item?
+                                    const itmRef = Resources.items.list[item.id];
+                                    if (itmRef.type & ITM_PICKUP) {
+                                        // Add item to our inventory
+                                        The.player.character.inventory.addItem(itmRef, result.slot);
+                                    }
                                 }, () => {
                                     // Couldn't get item
                                     this.Log("Couldn't get item", LOG_ERROR);
@@ -577,6 +695,7 @@ define(
                     server.registerHandler(EVT_GET_ITEM);
                     server.handler(EVT_GET_ITEM).set((evt, data) => {
                         const page = The.area.pages[data.page];
+                        this.Log(`Decaying item from page ${data.page}, coord ${data.coord}`, LOG_DEBUG);
 
                         assert(page.items[data.coord], "Item does not exist in page");
                         delete page.items[data.coord];
@@ -680,8 +799,8 @@ define(
                                 })
                                 .then(() => {
                                     this.Log("Clicked the interactable!", LOG_DEBUG);
-                                }, () => {
-                                    this.Log("Couldn't click the interactable", LOG_DEBUG);
+                                }, (reply) => {
+                                    this.Log(`Couldn't click the interactable: ${reply.msg}`, LOG_WARNING);
                                 })
                                 .catch(errorInGame);
                             }

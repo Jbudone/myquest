@@ -196,6 +196,8 @@ define(
                     if (this.target !== target) {
                         this.target = target;
                     }
+                    this.listenToTarget(target, COMBAT_TARGET_ACTIVE);
+
                 } else {
 
                     // We're not in combat mode yet. Tell the brain we'd like to attack now
@@ -230,7 +232,7 @@ define(
                 brain.neuralNet.remove(target.entity.id);
 
                 for (let i = 0; i < this.targetsToForget.length; ++i) {
-                    if (this.targetsToForget === target) {
+                    if (this.targetsToForget[i] === target) {
                         this.targetsToForget.splice(i, 1);
                         break;
                     }

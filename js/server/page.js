@@ -39,9 +39,7 @@ define(
                         state: entity.sprite.state,
                         zoning: entity.zoning,
                         path: (entity.path ? entity.path.serialize() : null),
-                        _character: {
-                            health: entity.character.health
-                        }
+                        _character: entity.character.netSerialize()
                     };
 
                     // TODO: Do entity.playerID check and simply start indices from 1 (hidden classes)
@@ -311,9 +309,7 @@ define(
                             if (_.isError(path)) throw path;
                         }
 
-                        const _character = {
-                            health: (entity.character ? entity.character.health : entity.npc.health)
-                        };
+                        const _character = entity.character.netSerialize();
 
                         const ent = {
                             id: entity.id,

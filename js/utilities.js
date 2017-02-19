@@ -133,6 +133,41 @@ define(['serializable'], (Serializable) => {
             this.walks.push((new Walk(direction, distance, destination)));
         };
 
+        this.unshiftWalk = (direction, distance) => {
+            if (this.walks.length > 0) {
+                let frontWalk = this.walks[0]
+
+                assert(frontWalk.walked === 0, "Unshifting a walk to a path that's already been partially walked in");
+
+                // Are we moving in either the same or opposing direction as our current walk? If so
+                // then we can merge with this walk
+                if (direction === frontWalk.direction) {
+                    frontWalk.distance += distance;
+                }
+                else if
+                (
+                    (direction === NORTH && frontWalk.direction === SOUTH) ||
+                    (direction === SOUTH && frontWalk.direction === NORTH) ||
+                    (direction === WEST && frontWalk.direction === EAST) ||
+                    (direction === EAST && frontWalk.direction === WEST)
+                )
+                {
+                    frontWalk.distance -= distance;
+                    if (frontWalk.distance === 0) {
+                        this.walks.shift();
+                    } else if (frontWalk.distance < 0) {
+                        frontWalk.direction = direction;
+                        frontWalk.distance *= -1;
+                    }
+                }
+                else {
+                    this.walks.unshift(new Walk(direction, distance));
+                }
+            } else {
+                this.walks.unshift(new Walk(direction, distance));
+            }
+        };
+
         this.finished = () => {
             if (this.walks.length === 0) return true;
             if (this.walks.length === (this.walkIndex + 1) && this.walks[this.walkIndex].walked == this.walks[this.walkIndex].distance) return true;

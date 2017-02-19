@@ -2,11 +2,22 @@
 	{
 		"id": "itm_potion",
 		"base": "heal",
-		"args": { "amt": 30 }
+		"args": { "amt": 30 },
+        "types": [ "PICKUP", "USE" ],
+        "stack": 8
 	},
 	{
 		"id": "itm_potion2",
 		"base": "heal",
-		"args": { "amt": 40 }
-	}
+		"args": { "amt": 40 },
+        "types": [ "PICKUP", "USE" ],
+        "stack": 8
+	},
+    {
+        "id": "itm_helmet",
+        "base": "armor",
+        "args": { "amt": 10 },
+        "types": [ "PICKUP", "WORN_HELMET" ],
+        "stack": 1
+    }
 ]}

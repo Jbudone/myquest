@@ -201,7 +201,7 @@ h3 {
 #overlay {
 	width: 100%;
 	height: 100%;
-	background: url('http://fc09.deviantart.net/fs71/f/2013/050/0/c/level_background_for_a_mobile_game__by_bvigec-d5vi8b0.jpg');
+	/* background: url('http://fc09.deviantart.net/fs71/f/2013/050/0/c/level_background_for_a_mobile_game__by_bvigec-d5vi8b0.jpg'); */
 	background-size: 100% 100%;
 	background-repeat: no-repeat;
 	background-size: 100% 100%;
@@ -280,6 +280,102 @@ h3 {
 	background: linear-gradient(135deg,  #9a291e 0%,#d82a2a 73%,#ca2320 100%,#e87e80 100%,#ca2320 101%); /* W3C */
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#9a291e', endColorstr='#ca2320',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
 
+}
+.bubble-ui {
+    position: absolute;
+    pointer-events: none;
+    background-color: #05b6e2;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: thin solid #000;
+    max-width: 300px;
+}
+
+.bubble-text {
+    color: #FFF;
+    font-family: Georgia;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+}
+
+#ui-inventory-bag {
+    display: block;
+    text-align: center;
+    display: box;
+    box-orient: horizontal;
+    box-pack: center;
+    box-align: center;
+    display: -webkit-box;
+    -webkit-box-orient: horizontal;
+    -webkit-box-pack: center;
+    -webkit-box-align: center;
+    -moz-box-orient: horizontal;
+    -moz-box-pack: center;
+    -moz-box-align: center;
+    display: -o-box;
+    -o-box-orient: horizontal;
+    -o-box-pack: center;
+    -o-box-align: center;
+    display: -ms-box;
+    -ms-box-orient: horizontal;
+    -ms-box-pack: center;
+    -ms-box-align: center;
+    margin: 0 auto;
+
+    height: 41px;
+}
+
+.ui-inventory-slot-container {
+    -moz-box-flex: 1.0;
+    -webkit-box-flex: 1.0;
+    box-flex: 1.0;
+    display: inline-box;
+    display: -webkit-inline-box;
+    display: -moz-inline-box;
+    display: -o-inline-box;
+    display: -ms-inline-box;
+    padding: 1px;
+    margin: 2px 2px;
+    border-color: #DDD;
+    position: relative;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+
+	overflow: hidden;
+    width: 40px;
+    height: 32px;
+	border: thin solid #a25223;
+}
+
+.ui-inventory-slot-container.hover {
+    border: thin solid #fa9300;
+	cursor: pointer;
+}
+
+.ui-inventory-slot-container.active {
+    border: 2px solid hsla(60, 60%, 50%, 1);
+}
+
+.ui-inventory-slot-container.hover.active {
+    border: 2px solid hsla(60, 80%, 50%, 1);
+}
+
+.ui-inventory-slot {
+	width: 100%;
+	height: 100%;
+
+	background: #b1856b;
+}
+
+.ui-inventory-slot.hover {
+    background: #d6690b;
+}
+
+.ui-inventory-slot-stack {
+	position: absolute;
+	font: 14px serif;
+	margin: 1px;
 }
 
 .noselect {

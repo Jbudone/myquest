@@ -20,7 +20,8 @@ define(function(){
 			page:(CLIENT|SERVER),
             resources:(CLIENT|SERVER),
             game:(CLIENT_TEST),
-            server:(SERVER_TEST)
+            server:(SERVER_TEST),
+            errorReporter:(CLIENT|SERVER|TEST)
 		}, ready=function(environment){
 			return new Promise(function(loaded) {
                 const envPaths = [];
@@ -73,7 +74,6 @@ define(function(){
 		ready:ready,
 		extensions:extensions,
 		extend:function(module,modulename){
-			modulename = modulename.toLowerCase();
 			if (extensions[modulename]) {
 				extendClass(module).with(extensions[modulename]);
 				if (module.hasOwnProperty('_init')) {

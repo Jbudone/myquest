@@ -3,7 +3,7 @@ define(
         'eventful', 'dynamic', 'loggable', 'movable'
     ],
     (
-        Eventful, Dynamic, Loggable, Movable
+        Eventful, Dynamic, Loggable, Movable, Inventory
     ) => {
 
         const Player = function(client) {
@@ -31,6 +31,8 @@ define(
             this.queuedDisconnect      = false;
             this.timeToDisconnect      = null;
             this.isConnected           = true;
+
+            this._character            = null; // Character read from DB
 
 
             this.setPlayer = (player) => {
@@ -70,6 +72,7 @@ define(
                 this.movable.name     = player.username;
                 this.movable.playerID = player.id;
                 this.movable.player   = this;
+                this._character       = player.character;
 
                 this.movable.page.addEntity(this.movable);
                 area.watchEntity(this.movable);
@@ -189,6 +192,8 @@ define(
                 this.pages = {};
                 this.pages[this.movable.page.index] = this.movable.page;
 
+                const inventory = this.movable.character.inventory;
+
                 if (this.isConnected) {
 
                     const page = this.movable.page,
@@ -212,9 +217,7 @@ define(
                                         y: this.movable.position.global.y }
                                 },
                                 page: this.movable.page.index,
-                                _character: {
-                                    health: this.movable.character.health
-                                }
+                                _character: this.movable.character.netSerialize(true)
                             },
                             pages: {}
                         };
@@ -354,7 +357,7 @@ define(
                     this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
                     this.Log(path, LOG_DEBUG);
                     player.addPath(path);
-                    player.recordNewPath(path, pathState);
+                    player.recordNewPath(path, movableState);
                     this.triggerEvent(EVT_USER_ADDED_PATH);
 
                     if (this.isConnected) {
@@ -478,7 +481,8 @@ define(
                                     position: savedState.position,
                                     playerID: this.movable.playerID,
                                     id: this.movable.id,
-                                    name: this.movable.name
+                                    name: this.movable.name,
+                                    _character: savedState.character
                                 };
                                 this.client.send(response.serialize());
                             }

@@ -64,6 +64,7 @@ define(['SCRIPTINJECT', 'loggable', 'scripts/character'], (SCRIPTINJECT, Loggabl
             interact: function(name, character, args){
                 if (character.entity.id === The.player.id) {
                     UI.postMessage(args.message);
+                    UI.interaction(name, args.message);
                 } else {
                     UI.postMessage("He ponders at that thing: "+ args.message);
                 }

@@ -37,30 +37,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     this.onDisconnect();
                 };
 
-                this.websocket.onmessage = (evt) => {
-                    this.Log("Message received", LOG_DEBUG);
-
-                    // FIXME: Clean this up
-                    if (Env.game.measureServerMessageTimes) {
-                        if (!window['lastMessage']){
-                            window['lastMessage'] = now();
-                            window['maxTimeLastMessage'] = now();
-                        } else {
-                            var timeSinceLast = now() - window['lastMessage'];
-                            console.log("Time since last message: " + timeSinceLast);
-                            if (window['maxTimeLastMessage'] < timeSinceLast) {
-                                window['maxTimeLastMessage'] = timeSinceLast;
-                                console.log("LONGEST TIME SINCE LAST MESSAGE");
-                            }
-
-                            window['lastMessage'] = now();
-                        }
-                    }
-
-                    evt = JSON.parse(evt.data);
-                    if (typeof evt !== "object") {
-                        this.Log("Bad message received from server", LOG_ERROR);
-                    }
+                this.handleEvent = (evt) => {
 
                     // TODO: form server as an FSM, since we can expect newCharacter or login first; and then area
                     // initialization responses next, and then area related events. Move from one state of responses to
@@ -133,6 +110,60 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         }
                     }
                 };
+
+                this.bufferedMessages = [];
+
+                this.bufferMessage = (msg) => {
+                    this.bufferedMessages.push(msg);
+                };
+
+                this.runBufferedMessages = () => {
+
+                    const buffer = this.bufferedMessages;
+                    this.bufferedMessages = [];
+                    for (let i = 0; i < buffer; ++i) {
+                        this.handleMessage(buffer[i]);
+                    };
+                };
+
+                this.handleMessage = (msg) => {
+
+                    if (this.shouldQueueMessage(msg)) {
+                        this.bufferMessage(msg);
+                        return;
+                    }
+
+                    this.handleEvent(msg);
+                };
+
+                this.websocket.onmessage = (evt) => {
+
+                    this.Log("Message received", LOG_DEBUG);
+
+                    // FIXME: Clean this up
+                    if (Env.game.measureServerMessageTimes) {
+                        if (!window['lastMessage']){
+                            window['lastMessage'] = now();
+                            window['maxTimeLastMessage'] = now();
+                        } else {
+                            var timeSinceLast = now() - window['lastMessage'];
+                            console.log("Time since last message: " + timeSinceLast);
+                            if (window['maxTimeLastMessage'] < timeSinceLast) {
+                                window['maxTimeLastMessage'] = timeSinceLast;
+                                console.log("LONGEST TIME SINCE LAST MESSAGE");
+                            }
+
+                            window['lastMessage'] = now();
+                        }
+                    }
+
+                    const msg = JSON.parse(evt.data);
+                    if (typeof msg !== "object") {
+                        this.Log("Bad message received from server", LOG_ERROR);
+                    }
+
+                    this.handleMessage(msg);
+                };
             });
         };
 
@@ -151,6 +182,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityPathCancelled  = function(){};
         this.onEntityHurt           = function(){};
         this.onFinishedMoving       = function(){}; // TODO: is this one necessary?
+
+        this.shouldQueueMessage     = function(){ return false; };
 
 
         this.login = (username, password) => {

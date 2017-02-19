@@ -21,7 +21,15 @@ define(function(){
 					console.log("User attempting to register..");
 					var username = request.username,
 						password = request.password,
-						email    = request.email;
+                        email    = request.email,
+                        spawn    = null;
+
+                    if (Env.isTest) {
+                        spawn = {
+                            spawnArea: request.spawnArea,
+                            spawnPosition: request.spawnPosition
+                        };
+                    }
 
 
 					// Validation
@@ -45,7 +53,7 @@ define(function(){
 						reply = {success:false, reason: err};
 						res.end(JSON.stringify(reply));
 					} else {
-						db.registerUser(username, password, email).then(function(err, id){
+						db.registerUser(username, password, email, spawn).then(function(err, id){
 							
 							if (err) {
 								reply = {success:false, reason: err};

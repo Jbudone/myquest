@@ -117,6 +117,10 @@ define(function(){
                 const c = "color: red; font-weight: normal;";
                 console.error(log, c);
             }
+
+			if (The.UI) {
+				The.UI.postMessage(_message);
+			}
         };
 
         warnLog = function(header, message){
@@ -140,6 +144,10 @@ define(function(){
                 const c = "color: orange; font-weight: normal;";
                 console.warn(log, c);
             }
+
+			if (The.UI) {
+				The.UI.postMessage(_message);
+			}
         };
 
         normLog = function(header, message, color){
@@ -214,6 +222,9 @@ define(function(){
                     this._Log(log.message, log.type);
                 }
             }
+        },
+        GetLogDump: function(){
+            return logDump;
         },
 		Log : function(message, type){
 

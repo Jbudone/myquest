@@ -51,7 +51,7 @@ define(function(){
 			measureServerMessageTimes: false, // Log the amount of time between each message received from server
 
 			disconnecting: {
-				waitTimeToDisconnect: 3000, // How long to wait between attempting to disconnecting and actually being disconnected
+				waitTimeToDisconnect: 0, // How long to wait between attempting to disconnecting and actually being disconnected
 				dontDisconnectIfBusy: true,   // Disallow disconnecting if user busy (eg. in combat)
             },
 
@@ -89,30 +89,33 @@ define(function(){
 			logVerbose = logNormal | LOG_DEBUG,
 			logDefault = logVerbose;
 		this.logmask = {
-			'AI': (logDefault),
-			'Movable': (logDefault),
-			'Connection': (logDefault),
-			'Renderer': (logDefault),
-			'UI': (logDefault),
-			'DB': (logDefault),
-			'Player': (logNormal),
-			'Resources': (logDefault),
-			'ScriptMgr': (logDefault | LOG_INFO),
-			'Script': (logDefault),
-			'User': (logDefault),
-			'Game': (logNormal),
-			'Character': (logDefault),
-			'AI': (logDefault),
-			'Instinct': (logDefault),
-			'Combat': (logDefault),
-			'Movement': (logImportant),
-			'Item': (logDefault),
-			'Interactable': (logDefault),
-			'Redis': (logDefault),
-			'Pathfinding': (logNormal),
-			'Ability': (logDefault),
-			'Default': (logDefault),
-		};
+            'AI': (logDefault),
+            'Movable': (logDefault),
+            'Connection': (logDefault),
+            'Renderer': (logDefault),
+            'UI': (logDefault),
+            'DB': (logDefault),
+            'Player': (logDefault),
+            'Resources': (logDefault),
+            'ScriptMgr': (logDefault | LOG_INFO),
+            'Script': (logDefault),
+            'User': (logDefault),
+            'Game': (logVerbose),
+            'Character': (logDefault),
+            'Component': (logVerbose),
+            'Inventory': (logDefault),
+            'AI': (logDefault),
+            'Instinct': (logDefault),
+            'Combat': (logDefault),
+            'Movement': (logDefault),
+            'Item': (logDefault),
+            'Buff': (logDefault),
+            'Interactable': (logDefault),
+            'Redis': (logDefault),
+            'Pathfinding': (logDefault),
+            'Ability': (logDefault),
+            'Default': (logDefault),
+        };
 
 		this.login = {
 			filterUsername: /\w{2,10}/,

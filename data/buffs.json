@@ -1,0 +1,15 @@
+{"buffs": [
+	{
+		"id": "DeathSickness",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "health",
+                    "amount": 0.75
+                }
+            ]
+        }
+	}
+]}

@@ -133,8 +133,9 @@ define(
                 this.destination.x = Math.floor(globalX / Env.tileSize);
                 this.destination.y = Math.floor(globalY / Env.tileSize);
 
-                if (!Env.isServer && !Env.isBot && The.area.hasTile(this.destination)) {
-                    assert(The.area.isTileOpen({ x: this.destination.x, y: this.destination.y }), "Path destination is not open!");
+                const area = _movable.page.area;
+                if (area.hasTile(this.destination)) {
+                    assert(area.isTileOpen({ x: this.destination.x, y: this.destination.y }), "Path destination is not open!");
                 }
 
                 this.toString = () => {
@@ -492,7 +493,13 @@ define(
                             }
                         }
 
-                        assert(this.position.global.x % Env.tileSize === 0 || this.position.global.y % Env.tileSize === 0, "Moved outside of both the horizontal and vertical center of the tile");
+                        if (this.position.global.x % Env.tileSize !== 0 && this.position.global.y % Env.tileSize !== 0) {
+                            Log("Moved outside of both the horizontal and vertical center of the tile", LOG_ERROR);
+                            Log(`I am: ${this.id}`, LOG_ERROR);
+                            Log(this.position.global, LOG_ERROR);
+                            Log(this.getPathHistoryString(), LOG_ERROR);
+                            assert(false, "Moved outside of both the horizontal and vertical center of the tile");
+                        }
 
 
                         hasZoned = this.hasOwnProperty('isZoning');
@@ -609,7 +616,7 @@ define(
                 }
 
                 if (this.path && _.isFunction(this.path.onFailed)) {
-                    this.path.onFailed();
+                    this.path.onFailed(EVT_NEW_PATH);
                 }
 
                 let x = this.position.global.x,
@@ -620,15 +627,20 @@ define(
                     else if (walk.direction === SOUTH) y += walk.distance - walk.walked;
                     else if (walk.direction === WEST) x -= walk.distance - walk.walked;
                     else if (walk.direction === EAST) x += walk.distance - walk.walked;
+                    else throw Err(`Bad direction: ${walk.direction}`);
 
                     let onX = x % Env.tileSize === 0,
                         onY = y % Env.tileSize === 0;
 
                     if (!onX && !onY) {
                         throw Err("Added path which will surely get us off center of tile!");
+                    } else if (!onX && (walk.direction === NORTH || walk.direction === SOUTH)) {
+                        throw Err("Added path which will surely get us off center of tile!");
+                    } else if (!onY && (walk.direction === WEST || walk.direction === EAST)) {
+                        throw Err("Added path which will surely get us off center of tile!");
                     }
                 }
-                Log(`Position: (${this.position.global.x}, ${this.position.global.y})`, LOG_DEBUG);
+                Log(`Position: (${this.position.global.x}, ${this.position.global.y}) ==> (${x}, ${y})`, LOG_DEBUG);
                 Log(path, LOG_DEBUG);
 
                 // FIXME: Is this a good idea? Probably not since we received their state at the point in time that they

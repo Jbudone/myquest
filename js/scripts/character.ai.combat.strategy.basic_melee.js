@@ -88,9 +88,18 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
                     isChasing = false;
                 }
 
-                // If we couldn't find a path to the target or its simply too far then forget the target
-                if (!e || e === PATH_TOO_FAR) {
-                    combat.forgetTarget(this.target);
+                // If we've added a new path somewhere else, then this path will be replaced (cancelled) with that new
+                // one. That's perfectly fine
+                if (e === EVT_NEW_PATH) {
+                    // Intentionally blank
+                } else {
+                    // If we couldn't find a path to the target or its simply too far then forget the target
+                    if (!e || e === PATH_TOO_FAR) {
+                        this.Log(`e == ${e}`, LOG_DEBUG);
+                        this.Log(`Do we have a target? ${this.target ? 'yes' : 'no'}`, LOG_DEBUG);
+                        this.Log(`Does our target have a character? ${this.target.character ? 'yes' : 'no'}`, LOG_DEBUG);
+                        combat.forgetTarget(this.target);
+                    }
                 }
             });
         });
@@ -99,7 +108,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
             // step
             // TODO: Abstract attack timing
             const _now = now();
-            this.Log(`AttackTarget ? ${_now - timeSinceLastAttack} > ${attackTime}`);
+            this.Log(`AttackTarget (${_character.entity.id}) ? ${_now - timeSinceLastAttack} > ${attackTime}`);
             if (_now - timeSinceLastAttack > attackTime) {
                 const options = { range: range, shootThrough: melee.canAttackThroughShootable };
                 options.filterFunc = melee.inRangeFilterFunc;

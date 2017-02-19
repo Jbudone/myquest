@@ -61,6 +61,7 @@ define(
                         } else if (addedPath) {
                             addedPath.finished(succeeded, failed);
                         } else if (failed) {
+                            this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
                             failed();
                         }
 

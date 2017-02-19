@@ -9,13 +9,18 @@
 		"damage":5,
 		"AI":true,
 		"strategy":"strategy.player.basic_melee",
+    "components":["regeneration","levelling","buffmgr","deathmgr"],
 		"attackInfo":
 		{
 			"ability":"melee",
 			"range":1,
 			"attackTime":1000,
 			"chaseDistance":20
-		}
+		},
+    "stats":
+    {
+      "str":4
+    }
 	},
 	{
 		"id":"firefox",
@@ -23,17 +28,23 @@
 		"sheet":"firefox",
 		"spawn":1500,
 		"killable":true,
+    "XP":10,
 		"speed":10,
 		"health":50,
 		"damage":5,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
 		"attackInfo":
 		{
 			"ability":"melee",
 			"range":1,
 			"attackTime":1000,
 			"chaseDistance":20
+		},
+    "stats":
+    {
+      "str":4
 		}
 	},
 	{
@@ -42,17 +53,23 @@
 		"sheet":"deathknight",
 		"spawn":8500,
 		"killable":true,
+    "XP":10,
 		"speed":8,
 		"health":70,
 		"damage":5,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
 		"attackInfo":
 		{
 			"ability":"melee",
 			"range":1,
 			"attackTime":1000,
 			"chaseDistance":20
+		},
+    "stats":
+    {
+      "str":4
 		}
 	},
 	{
@@ -61,17 +78,23 @@
 		"sheet":"goblin",
 		"spawn":5500,
 		"killable":true,
+    "XP":10,
 		"speed":30,
 		"health":8000,
 		"damage":3,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
 		"attackInfo":
 		{
 			"ability":"range",
 			"range":2,
 			"attackTime":100,
 			"chaseDistance":150
+		},
+    "stats":
+    {
+      "str":4
 		}
 	},
 	{
@@ -80,17 +103,23 @@
 		"sheet":"spider",
 		"spawn":5500,
 		"killable":true,
+    "XP":10,
 		"speed":10,
 		"health":80,
 		"damage":3,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
 		"attackInfo":
 		{
 			"ability":"melee",
 			"range":1,
 			"attackTime":1000,
 			"chaseDistance":20
+		},
+    "stats":
+    {
+      "str":4
 		}
 	},
 	{
@@ -99,17 +128,104 @@
 		"sheet":"snake",
 		"spawn":4500,
 		"killable":true,
+    "XP":10,
 		"speed":10,
-		"health":80,
+		"health":30,
 		"damage":3,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
 		"attackInfo":
 		{
 			"ability":"melee",
 			"range":1,
 			"attackTime":1000,
 			"chaseDistance":20
-		}
+		},
+    "stats":
+    {
+      "str":4
+		},
+    "loot": [
+        {
+          "chance":1.0,
+          "items": [
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            },
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            }
+          ]
+        },
+        {
+            "chance":0.8,
+            "items": [
+                {
+                    "chance": 0.2,
+                    "item": "itm_helmet"
+                },
+                {
+                    "chance": 0.6,
+                    "item": "itm_potion"
+                }
+            ]
+        },
+        {
+            "chance":0.2,
+            "items": [
+                {
+                    "chance": 1.0,
+                    "item": "itm_potion2"
+                }
+            ]
+        }
+    ]
 	}
 ] }

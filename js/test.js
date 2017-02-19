@@ -11,7 +11,6 @@ requirejs.config({
 });
 
 
-
 const couldNotStartup = (e) => {
    console.log("Could not startup server");
    if (e) {
@@ -30,6 +29,24 @@ process.on('exit', () => { exitingGame(); });
 process.on('SIGINT', () => { exitingGame(); });
 process.on('uncaughtException', couldNotStartup);
 
+// Setup options
+const options = {
+    debug: false
+};
+
+for (let i = 2; i < process.argv.length; ++i) {
+    let option = process.argv[i];
+
+    // Process option here
+    if (option === "--debug") {
+        console.log("Turning debug mode on");
+        options.debug = true;
+    } else {
+        console.error(`Test could not find option: ${option}`);
+        exitingGame();
+    }
+}
+
 
 requirejs(['keys', 'environment'], (Keys, Environment) => {
 
@@ -38,6 +55,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
     Env.isBot = true;
     GLOBAL.Env = Env;
 
+    GLOBAL.Err = Error; // Temporary shim for Err until we load errors
+
 
 	const _       = require('lodash'),
 		fs        = require('fs'),
@@ -45,9 +64,14 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 		http      = require('http'), // TODO: need this?
 		WebSocket = require('ws'),
 		chalk     = require('chalk'),
-        cluster   = require('cluster');
+        cluster   = require('cluster'),
+        spawn     = require('child_process').spawn;
 
-    const $ = require('jquery')(require("jsdom").jsdom().parentWindow);
+var jsdom = require('jsdom').jsdom;
+ var document = jsdom('<html></html>', {});
+ var window = document.defaultView;
+ const $ = require('jquery')(window);
+    //const $ = require('jquery')(require("jsdom").jsdom().parentWindow);
 
 	$.support.cors = true;
 	Promise.longStackTraces();
@@ -88,35 +112,125 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         }, 500);
     };
 
+    let x = 0;
+
     const prepareForTesting = () => {
 
         const testPath = 'data/tests/testFile.json';
-
-        cluster.setupMaster({
-            //execArgv: ['--debug'],
-            exec: 'dist/test/bot2.js',
-        });
 
         var activeBots = [],
             activeTest = null;
 
         Test.addBot = () => {
-            const bot = cluster.fork();
+
+            ++x;
+            let connectOn = 9222 + x;
+
+            const botOptions = ['./dist/test/bot2.js'];
+            if (options.debug) {
+                botOptions.unshift('--inspect=' + connectOn, '--debug-brk');
+            }
+
+            const bot = spawn('node', botOptions, { stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
+
+            // Detached/Unref doesn't seem to kill bot when we kill parent and attempt to kill bot
+            //const bot = spawn('node', ['--inspect', '--debug-brk', './dist/test/bot2.js'], { detached: true, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
+            //bot.unref();
+
+            // Pipe stdout to process stdout
+            // TODO: Find out why using 'pipe' and 'inherit' don't work in stdio option for spawn
+            bot.stdout.pipe(process.stdout);
+
+            let debugURL = null;
+
+            // Catch v8 Debug URL for bot
+            // The --inspect option on node (v8 devtools) writes the inspection URL to stderr, but this seems to happen
+            // before the bot script starts executing. Unfortunately the bot can't listen for his own stderr output and
+            // sniff out this URL.
+            // Sniff stderr for the debug URL (it should be the first thing output to stderr), then redirect the stderr
+            // pipe
+            const catchDebugURL = (chunk) => {
+                if (!debugURL) {
+                    const idx = chunk.indexOf("chrome-devtools:\/\/");
+                    if (idx >= 0) {
+                        const c = `${chunk}`;
+                        debugURL = c.substring(idx, c.length - 1);
+
+                        console.log(`Found Debug URL: "http://${debugURL}"`);
+
+                        bot.send({
+                            command: BOT_SET_DEBUGURL,
+                            debugURL: debugURL
+                        });
+                        
+                        // TODO: Open Chromium with the inspection debug URL. Unfortunately chromium seems to ignore the
+                        // chrome-devtools:// protocol, and simply remains on the new tab page
+                        //const execSync = require('child_process').execSync;
+                        ////const result = execSync('/usr/bin/chromium --app="http://' + debugURL +'"');
+                        //const result = execSync('/usr/bin/chromium "http://' + debugURL + '"');
+                        //console.log("Running this: " + '/usr/bin/chromium --app ' + debugURL);
+
+                        // We now have the inspect URL, redirect the stderr pipe to inherit from this process's pipe
+                        bot.stderr.removeListener('data', catchDebugURL);
+                        bot.stderr.pipe(process.stderr);
+                        bot.stderr.resume();
+                    }
+                } else {
+                    console.log(`${chunk}`);
+                }
+            };
+
+            bot.stderr.on('data', catchDebugURL);
+
+            console.log(`I spawned a bot: You are ${bot.pid}`);
 
             let testContext = activeTest;
 
-            bot.on('disconnect', () => {
-                if (testContext == activeTest) nextTest();
-            });
+            const onKilledBot = () => {
+                console.log(`Bot has been killed: ${bot.pid}`);
+                const index = activeBots.indexOf(bot);
+                if (index >= 0) {
+                    activeBots.splice(index, 1);
+                }
 
-            bot.on('error', () => {
+                if (activeBots.length === 0) {
+                    if (testContext == activeTest) {
+                        nextTest();
+                    }
+                }
+            };
+
+            const onBotError = () => {
+                /*
                 console.log("Bot error");
-                if (testContext == activeTest) nextTest();
+
+                activeBots.forEach((_bot) => {
+                    if (_bot == bot) return;
+                    console.log("Killing bot");
+
+                    if (!_bot.exitedAfterDisconnect) {
+                        _bot.kill('SIGTERM');
+                    }
+                });
+                activeBots = [];
+                */
+
+                // TODO: Start debugging?
+            };
+
+            bot.on('disconnect', () => {
+                console.log("Disconnecting bot..");
+                onKilledBot();
+            });
+            bot.on('exit', () => {
+                console.log("Exiting bot..");
+                onKilledBot();
+            });
+            bot.on('error', (d) => {
+                console.log("Bot error..");
+                onBotError();
             });
 
-            bot.on('exit', () => {
-                if (testContext == activeTest) nextTest();
-            });
 
             activeBots.push(bot);
 
@@ -154,12 +268,14 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
         killBots = () => {
             activeBots.forEach((bot) => {
-                console.log("Killing bot");
+                console.log(`KillBots: Killing bot: ${bot.pid}`);
 
-                if (!bot.suicide) {
+                if (!bot.exitedAfterDisconnect) {
                     bot.kill('SIGTERM');
                 }
             });
+
+            activeBots = [];
         };
 
         let nextTest = () => {};
@@ -169,6 +285,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                 console.error(err);
             }
 
+            let testRunning = false;
+
             const testFiles = JSON.parse(data);
             console.log(testFiles);
             nextTest = () => {
@@ -176,13 +294,17 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                 const test = testFiles.tests.shift();
 
                 if (!test) {
-                    console.log("Finished tests");
-                    testsFinished();
+                    if (testRunning) {
+                        console.log("Finished tests");
+                        testsFinished();
+                        testRunning = false;
+                    }
                     return;
                 }
 
                 console.log("Loading next test: " + test);
                 activeTest = test;
+                testRunning = true;
                 const Smoke = require('../data/tests/' + test);
 
                 Smoke.onCompleted(() => {
@@ -203,6 +325,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                     // Go to next test if there's more
                     if (testFiles.tests.length) {
+                        console.log(`Still more tests:  ${testFiles.tests.length}`);
                         nextTest();
                     } else {
                         // Finished testing
@@ -210,9 +333,25 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                     }
                 });
 
+                Smoke.onError((botPID) => {
+
+                    activeBots.forEach((bot) => {
+
+                        // Check if this is the same bot
+                        if (bot.pid == botPID) return;
+                        console.log(`Smoke.onError(${botPID}): Killing bot ${bot.pid}`);
+
+                        if (!bot.exitedAfterDisconnect) {
+                            bot.kill('SIGTERM');
+                        }
+                    });
+
+                });
+
                 Smoke.start();
             };
 
+            console.log("Starting tests");
             nextTest();
         });
     };
@@ -243,6 +382,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
         server.onerror = (evt) => {
             //server.Log("Error connecting to server", LOG_CRITICAL);
+            console.log(evt);
             throw new Err("Error connecting to server", evt);
         };
 
@@ -261,6 +401,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         };
     };
 
+
     connectToServer();
+    //prepareForTesting();
 
 });

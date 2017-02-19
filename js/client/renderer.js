@@ -36,6 +36,10 @@ define(['loggable'], (Loggable) => {
             }
         };
 
+        this.paused = false;
+        this.pause = () => { this.paused = true; };
+        this.resume = () => { this.paused = false; };
+
         this.setArea = (area) => {
 
             this.area       = area;
@@ -95,6 +99,7 @@ define(['loggable'], (Loggable) => {
         };
 
         this.render = () => {
+            if (this.paused) return;
 
             // Redraw the entities every frame
             this.ctxEntities.clearRect(0, 0, this.canvasEntities.width, this.canvasEntities.height);
@@ -478,7 +483,11 @@ define(['loggable'], (Loggable) => {
                             //      ty = parseInt(tile/tilesPerRow);
                             //      tx = tile%tilesPerRow;
 
-                            renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+                            // Chromium doesn't seem to be enabling image smoothing?
+                            // Need to add an extra margin relative to the scale of the tilesheet(?) to make up for the
+                            // lack of smoothing, otherwise artifact edges appear
+                            let AAEdgeLineMargin = 1.0 / scale;
+                            renderer.ctxBackground.drawImage(sheet, tileSize*tx + AAEdgeLineMargin, tileSize*ty + AAEdgeLineMargin, tileSize, tileSize, px, py, scale*Env.tileSize + AAEdgeLineMargin, scale*Env.tileSize + AAEdgeLineMargin);
                             // break;
                             //  }
                             // }

@@ -317,18 +317,12 @@ define(
 
 
                         // Player Position -> Center of Tile
-                        const onX = state.position.global.x % Env.tileSize,
-                            onY = state.position.global.y % Env.tileSize;
+                        const onX = state.position.global.x % Env.tileSize === 0,
+                            onY = state.position.global.y % Env.tileSize === 0;
 
                         if (!onX) {
-                            let dir = EAST,
-                                dist = globalDiffX;
-                            if (dist < 0) {
-                                dir = WEST;
-                                dist = dist * -1;
-                            }
-                            let walk = new Walk(dir, dist, null);
-                            path.walks.unshift(walk);
+
+                            let dir, dist, walk;
 
                             // Tile -> Path-Start Position
                             if (globalDiffY !== 0) {
@@ -342,15 +336,18 @@ define(
                                 path.walks.unshift(walk);
                             }
 
-                        } else if (!onY) {
-                            let dir = SOUTH,
-                                dist = globalDiffY;
+                            dir = EAST;
+                            dist = globalDiffX;
                             if (dist < 0) {
-                                dir = NORTH;
+                                dir = WEST;
                                 dist = dist * -1;
                             }
-                            let walk = new Walk(dir, dist, null);
+                            walk = new Walk(dir, dist, null);
                             path.walks.unshift(walk);
+
+                        } else if (!onY) {
+
+                            let dir, dist, walk;
 
                             // Tile -> Path-Start Position
                             if (globalDiffX !== 0) {
@@ -364,11 +361,22 @@ define(
                                 path.walks.unshift(walk);
                             }
 
+                            dir = SOUTH;
+                            dist = globalDiffY;
+                            if (dist < 0) {
+                                dir = NORTH;
+                                dist = dist * -1;
+                            }
+                            walk = new Walk(dir, dist, null);
+                            path.walks.unshift(walk);
+
                         } else {
 
                             // We're already in the center of our own tile, so we don't need a start recalibration.
                             // Essentially we just need to ensure that our end recalibration is done last
-                            if (tileDiffX !== 0) {
+                            // Since we're in the center of our own tile then we know that if globalDiffX % 16 !== 0
+                            // then the direction needs a recalibration and should be unshifted first
+                            if (globalDiffX % Env.tileSize !== 0) {
 
                                 let dir = EAST,
                                     dist = globalDiffX;
@@ -391,7 +399,7 @@ define(
                                     path.walks.unshift(walk);
                                 }
 
-                            } else if (tileDiffY !== 0) {
+                            } else if (globalDiffY % Env.tileSize !== 0) {
 
                                 let dir = SOUTH,
                                     dist = globalDiffY;
@@ -848,6 +856,14 @@ define(
                     return;
                 }
 
+                // Its possible that we're attempting to teleport the entity to a page that we don't have, in which case
+                // we can simply remove the entity
+                if (!Env.isServer && !this.pages[localCoordinates.page.index]) {
+                    this.Log("Entity teleported out of sight!", LOG_DEBUG);
+                    this.removeEntity(entity);
+                    return;
+                }
+
                 if (localCoordinates.page && localCoordinates.page.index !== entity.page.index) {
 
                     // TODO: Should abstract this stuff
@@ -857,8 +873,8 @@ define(
                     entity.page.stopListeningTo(entity);
 
                     // Add to new page
-                    this.pages[localCoordinates.page].addEntity(entity);
-                    entity.page = this.pages[localCoordinates.page];
+                    this.pages[localCoordinates.page.index].addEntity(entity);
+                    entity.page = this.pages[localCoordinates.page.index];
 
                     if (!Env.isServer && entity === The.player) {
                         this.curPage = entity.page;
@@ -974,6 +990,63 @@ define(
 
                 const sprite = localCoordinates.page.sprites[localCoordinates.y * Env.pageWidth + localCoordinates.x];
                 return (sprite && sprite.shootable);
+            };
+
+            this.findOpenTilesAbout = (tile, count, _filter, maxIteration = 40) => {
+                assert(this.isTileOpen(tile), "Provided tile is not open");
+                
+                const maxWeight     = 100,
+                    hashCoordinates = (x, y)  => (maxWeight + Env.pageWidth) * y + x,
+                    tilesToSearch   = [tile],
+                    tiles           = {},
+                    found           = 0,
+                    markedTiles     = {};
+
+                let iteration       = 0;
+
+                const filter = _filter ? _filter : () => true;
+
+                // Search for open tiles
+                while
+                (
+                    found < count && // Until we reach our desired count
+                    tilesToSearch.length && // Or we've exhausted our searchable tile list
+                    iteration < maxIteration // Or we've been searching for far too long
+                )
+                {
+                    const nextTile = tilesToSearch.shift(),
+                        hash = hashCoordinates(nextTile.x, nextTile.y);
+
+                    ++iteration;
+
+                    // Have we checked this tile yet?
+                    if (markedTiles[hash]) continue;
+                    markedTiles[hash] = true;
+
+                    // Open?
+                    if (!this.isTileOpen(nextTile)) continue;
+
+                    tiles[hash] = nextTile;
+
+                    // Add all of its neighbour tiles to the search list
+                    [
+                        new Tile(nextTile.x - 1, nextTile.y),
+                        new Tile(nextTile.x + 1, nextTile.y),
+                        new Tile(nextTile.x, nextTile.y - 1),
+                        new Tile(nextTile.x, nextTile.y + 1)
+                    ].filter((o) => this.isTileInRange(o))
+                     .filter(filter)
+                     .map((o) => tilesToSearch.push(o));
+                }
+
+                return _.toArray(tiles);
+            };
+
+
+            this.dump = function() {
+                return {
+                    'name': this.id
+                };
             };
         };
 

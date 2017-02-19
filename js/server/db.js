@@ -11,6 +11,8 @@ define(['loggable'], function(Loggable){
 
 		var crypto = require('crypto');
 
+        var queuedRegistrations = [];
+
 		this.connect = function(){
 
 			var me = this;
@@ -71,9 +73,65 @@ define(['loggable'], function(Loggable){
 			}).bind(this));
 		};
 
+		this.registerUser = function(username, password, email, overrideSpawn){
 
-		this.registerUser = function(username, password, email){
-			return new Promise(function(finished, failed){
+            let spawnArea = 'main';
+            let spawnPosition = { x: 53, y: 60 };
+
+            // FIXME: Only allow this on test, and need to double check valid spawn
+            if (overrideSpawn) {
+                spawnArea = overrideSpawn.spawnArea || spawnArea;
+                spawnPosition = overrideSpawn.spawnPosition || spawnPosition;
+            }
+
+            const spawn = {
+                area: spawnArea,
+                position: {
+                    tile: spawnPosition
+                },
+                respawn: {
+                    area: spawnArea,
+                    position: {
+                        tile: spawnPosition
+                    },
+                }
+            };
+
+            const registerDetails = {
+                username: username,
+                password: password,
+                email: email,
+                spawn: spawn,
+                attempts: 0
+            };
+
+            const register = function(finished, failed){
+
+                // Are we currently the next in line to register?
+                let nextInLine = queuedRegistrations[0];
+                if (nextInLine !== registerDetails) {
+                    // We are not currently the next in line. We need to give the other registerer time to find the next
+                    // sequential id and insert their document into the collection
+                    // This is necessary since the sequential id fetcher and insertion transactions together do not form
+                    // an atomic operation, so two people registering at the same time do not receive the same
+                    // sequential id
+
+                    // Have we exceeded the maximum number of attempts? Its possible that there's some other issue going
+                    // on that will prevent registering at all. Instead of making the user wait, lets assume something
+                    // has gone wrong and inform them
+                    ++registerDetails.attempts;
+                    if (registerDetails.attempts >= 10) {
+                        queuedRegistrations.shift();
+                        failed("Too many attempts");
+                        this.Log(`Error registering user: too many attempts (${registerDetails.attempts})`, LOG_ERROR);
+                        return;
+                    }
+
+                    setTimeout(function(){
+                        register(finished, failed);
+                    }, 100);
+                    return;
+                }
 
 				var usernameUpper = username.toUpperCase();
 
@@ -85,8 +143,13 @@ define(['loggable'], function(Loggable){
 					if (err) {
 						this.Log("Error finding player");
 						this.Log(username);
+                        queuedRegistrations.shift();
+
 						finished(err);
+                        return;
 					} else if (player) {
+                        queuedRegistrations.shift();
+
 						finished('Player already exists');
 						return;
 					}
@@ -95,18 +158,27 @@ define(['loggable'], function(Loggable){
 					var shasum = crypto.createHash('sha1');
 					shasum.update('SALTY'+password);
 
+                    const spawn = registerDetails.spawn;
+
 					// No player exists with these credentials.. register new user
-					this.createNewPlayer({area:'main', position:{tile:{y:60, x:53}}}, username, shasum.digest('hex'), email).then(function(newID){
+					this.createNewPlayer(spawn, username, shasum.digest('hex'), email).then(function(newID){
+                        queuedRegistrations.shift();
 						finished(null, newID);
 					}, function(err){
+                        queuedRegistrations.shift();
 						failed(err);
 					}).catch(Error, function(err){
 						console.error(err);
+                        queuedRegistrations.shift();
 						failed(err);
 					});
 
 				}.bind(this));
-			}.bind(this));
+            }.bind(this);
+
+            queuedRegistrations.push(registerDetails);
+
+			return new Promise(register);
 		};
 
 
@@ -140,6 +212,21 @@ define(['loggable'], function(Loggable){
 						// TODO: check if this works for certain cases (eg.  player.position.x=20 (but not
 						// setting defaults.position.y) will this still set default position.y but replace
 						// position.x?)
+                        let starterInventory = [];
+                        for (let i = 0; i < 4; ++i) {
+                            starterInventory.push({
+                                item: "itm_potion",
+                                stack: 1,
+                                active: false
+                            });
+                        }
+
+                        starterInventory.push({
+                            item: null,
+                            stack: 0,
+                            active: false
+                        });
+
 						var player = _.defaults(playerAttributes, {
 							// Default player values
 							id: id,
@@ -160,6 +247,10 @@ define(['loggable'], function(Loggable){
 									}
 								},
 							},
+                            character: {
+                                health: 10,
+                                inventory: starterInventory
+                            },
 							area: "main"
 						});
 
@@ -186,11 +277,21 @@ define(['loggable'], function(Loggable){
 				throw new Error("Cannot save player with bad position!");
 			}
 
+            const serializedChar = player.character.serialize();
+
 			db
 			.collection('players')
-			.update({id:player.playerID}, {"$set": {position:{tile:{y:y,x:x}}, area:areaID}}, function(err){
+            .update({id:player.playerID}, {
+                "$set": {
+                    position: {
+                        tile: { y: y, x: x }
+                    },
+                    area: areaID,
+                    character: serializedChar
+                }
+            }, function(err){
 				if (err) Log(err, LOG_ERROR);
-				Log("Successfully updated player ("+player.playerID+") position.. ("+y+","+x+") in area("+areaID+")");
+				Log(`Successfully updated player (${player.playerID}) position.. (${x}, ${y}) in area(${areaID})`);
 			});
 		};
 

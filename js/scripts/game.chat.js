@@ -2,6 +2,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
     /* SCRIPTINJECT */
 
+    const Commands = [
+        {
+            typedCommand: 'admin',
+            command: CMD_ADMIN
+        }
+    ];
+
     const Chatter = function() {
 
         const _self = this;
@@ -51,6 +58,21 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         }
                     });
                     player.timeSinceLastMessage = now();
+
+                    player.registerHandler(CMD_ADMIN, 'chat');
+                    player.handler(CMD_ADMIN).set(function(evt, data) {
+
+                        let success = false;
+                        if (_.isObject(data)) {
+                            if (data.password === "42") {
+                                success = true;
+                            }
+                        }
+
+                        player.respond(evt.id, success, {
+
+                        });
+                    });
                 });
 
                 game.hook('removedplayer', this).after(function(entity){
@@ -86,14 +108,23 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 }).after((msg) => {
                     this.Log("Chatter[post]: "+msg, LOG_DEBUG);
                     msg = msg.trim();
-                    server.request(EVT_CHAT, {
-                        message: msg
-                    }).then(function() {
-                        this.Log("Success in sending message! "+msg, LOG_DEBUG);
-                    }, function() {
-                        this.Log("Fail in message! "+msg, LOG_ERROR);
-                    })
-                    .catch(errorInGame);
+
+                    // This message could be a command (eg. "/tell TSwift Will you marry me?")
+                    const command = _self.transformMessage(msg);
+                    if (command.type === CMD_MESSAGE) {
+
+                        // Send server our chat message
+                        server.request(EVT_CHAT, {
+                            message: msg
+                        }).then(function() {
+                            this.Log("Success in sending message! "+msg, LOG_DEBUG);
+                        }, function() {
+                            this.Log("Fail in message! "+msg, LOG_ERROR);
+                        })
+                        .catch(errorInGame);
+                    } else {
+                        _self.handleCommand(command);
+                    }
                 });
 
                 server.registerHandler(EVT_CHAT, 'chat');
@@ -102,6 +133,52 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 });
 
                 _self.timeSinceLastMessage = now();
+            },
+
+            transformMessage: (msg) => {
+
+                const cmd = {
+                    type: CMD_MESSAGE
+                };
+
+                let tokens = msg.split(/\s+/g);
+                    request = tokens[0];
+                if (request[0] === "/") {
+                    // Yup, its a command
+                    cmd.type = CMD_BAD_COMMAND;
+
+                    const commandRequest = request.substr(1).toLowerCase();
+                    for (let i = 0; i < Commands.length; ++i) {
+                        const commandDetails = Commands[i];
+                        if (commandRequest === commandDetails.typedCommand) {
+                            cmd.type = commandDetails.command;
+                            cmd.password = tokens[1];
+                            break;
+                        }
+                    };
+                }
+
+                return cmd;
+            },
+
+            handleCommand: (cmd) => {
+
+                if (cmd.type === CMD_BAD_COMMAND) {
+
+                    UI.postMessage(`Wtf is ${request}?`, MESSAGE_BAD);
+                } else if (cmd.type === CMD_ADMIN) {
+
+                    UI.postMessage("So you think you can login eh?");
+
+                    server.request(CMD_ADMIN, {
+                        password: cmd.password
+                    }).then(function() {
+                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                    }, function() {
+                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                    })
+                    .catch(errorInGame);
+                }
             },
 
             unload: () => {

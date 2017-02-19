@@ -13,6 +13,7 @@ define(['hookable', 'dynamic', 'loggable'], (Hookable, Dynamic, Loggable) => {
         };
 
         this.initialize = () => {
+            this.registerHook('initializedUser');
             this.registerHook('clickedEntity');
             this.registerHook('clickedTile');
             this.registerHook('clickedItem');

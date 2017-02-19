@@ -511,7 +511,11 @@ define(
                                 if (!isZoning) {
 
                                     this.Log("  Adding player (me) to page", LOG_DEBUG);
-                                    The.player._character = movable._character;
+
+                                    // NOTE: We're explicity ignoring movable._character information netSerialized from
+                                    // server, since we should be restoring that ourselves, or otherwise should be
+                                    // netRestoring that elsewhere
+
                                     The.player.position.global = {
                                         y: movable.position.global.y,
                                         x: movable.position.global.x

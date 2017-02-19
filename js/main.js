@@ -4,10 +4,12 @@
 // establishing a connection with the server, and initializing the game
 define(
     [
+        'errorReporter',
         'resources', 'loggable', 'profiler',
         'client/serverHandler', 'client/user', 'client/game'
     ],
     (
+        ErrorReporter,
         Resources, Loggable, Profiler,
         ServerHandler, User, GameClient
     ) => {
@@ -17,7 +19,6 @@ define(
             extendClass(window).with(Loggable);
             Log = Log.bind(window);
             window.setLogPrefix('Main');
-
 
             const errorInGame = (e) => {
 
@@ -41,6 +42,7 @@ define(
             window.errorInGame = errorInGame;
             window.assert      = assert;
             window.Profiler    = Profiler;
+            window.ErrorReporter = ErrorReporter;
 
 
             // ------------------------------------------------------------------------------------------------------ //
@@ -215,19 +217,11 @@ define(
 
                 Resources = (new Resources());
                 window.Resources = Resources;
-                Resources.initialize(['sheets', 'npcs', 'items', 'interactables', 'scripts']).then((assets) => {
+                Resources.initialize(['sheets', 'npcs', 'rules', 'items', 'buffs', 'interactables', 'scripts', 'components']).then((assets) => {
                     loaded('resources');
                 })
                 .catch((e) => { errorInGame(e); });
             };
-
-            // Load extensions
-            // This is our environment context, used to extend loaded classes with their client/server counterpart
-            loading('extensions');
-            Ext.ready(Ext.CLIENT).then(() => {
-                loaded('extensions');
-            })
-            .catch((e) => { errorInGame(e); });
 
             // We've begun loading all of our necessary initial modules
             ready = true;
