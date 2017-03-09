@@ -5,7 +5,32 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
     const Commands = [
         {
             typedCommand: 'admin',
-            command: CMD_ADMIN
+            command: CMD_ADMIN,
+            args: [
+                {
+                    name: 'password',
+                    sanitize: (p) => p,
+                    test: (p) => _.isString(p),
+                    error: "Token expected to be a string"
+                }
+            ]
+        },
+        {
+            typedCommand: 'gain_xp',
+            command: CMD_ADMIN_GAIN_XP,
+            args: [
+                {
+                    name: 'XP',
+                    sanitize: (p) => parseInt(p, 10),
+                    test: (p) => _.isFinite(p),
+                    error: "Token should be a valid number"
+                }
+            ]
+        },
+        {
+            typedCommand: 'suicide',
+            command: CMD_ADMIN_SUICIDE,
+            args: []
         }
     ];
 
@@ -13,8 +38,9 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
         const _self = this;
 
-        this.name = "chatter";
-        this.keys = [];
+        this.name  = "chatter";
+        this.keys  = [];
+        this.admin = false;
 
         this.initialize = function() {
             this.Log("Loaded chatter");
@@ -60,13 +86,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     player.timeSinceLastMessage = now();
 
                     player.registerHandler(CMD_ADMIN, 'chat');
-                    player.handler(CMD_ADMIN).set(function(evt, data) {
+                    player.handler(CMD_ADMIN).set((evt, data) => {
 
                         let success = false;
-                        if (_.isObject(data)) {
-                            if (data.password === "42") {
-                                success = true;
-                            }
+                        if (_.isObject(data) && data.password === "42") {
+                            success = true;
+                            _self.admin = true;
+                            _self.setupAdmin(player);
                         }
 
                         player.respond(evt.id, success, {
@@ -78,6 +104,37 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 game.hook('removedplayer', this).after(function(entity){
 
                     entity.player.handler(EVT_CHAT).unset();
+                });
+            },
+
+            setupAdmin: (player) => {
+                player.registerHandler(CMD_ADMIN_GAIN_XP, 'admin');
+                player.handler(CMD_ADMIN_GAIN_XP).set(function(evt, data) {
+
+                    let success = false;
+                    if (_.isObject(data) && _.isFinite(data.XP)) {
+                        success = true;
+                        // FIXME: Should check XP amount is reasonable -- cannot level more than once
+                        this.Log(`Giving you some XP: ${data.XP}`);
+                        player.movable.character.doHook('GainedXP').post({ XP: data.XP });
+                    }
+
+                    player.respond(evt.id, success, {
+
+                    });
+                });
+
+                player.registerHandler(CMD_ADMIN_SUICIDE, 'admin');
+                player.handler(CMD_ADMIN_SUICIDE).set(function(evt, data) {
+
+                    let success = true;
+                    // FIXME: Check if we can die (currently alive)
+                    this.Log(`Committing suicide`);
+                    player.movable.character.die(null);
+
+                    player.respond(evt.id, success, {
+
+                    });
                 });
             },
 
@@ -152,10 +209,28 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         const commandDetails = Commands[i];
                         if (commandRequest === commandDetails.typedCommand) {
                             cmd.type = commandDetails.command;
-                            cmd.password = tokens[1];
+
+                            // Setup Args
+                            let badArg = false;
+                            for (let j = 0; j < commandDetails.args.length; ++j) {
+                                const arg = commandDetails.args[j];
+
+                                let token = tokens[1 + j];
+                                if (arg.sanitize) {
+                                    token = arg.sanitize(token);
+                                }
+
+                                if (arg.test && !arg.test(token)) {
+                                    badArg = true;
+                                    cmd.type = CMD_BAD_COMMAND; // FIXME: This is incorrect find a better way to do this, as well as including the error message
+                                    break;
+                                }
+
+                                cmd[arg.name] = token;
+                            }
                             break;
                         }
-                    };
+                    }
                 }
 
                 return cmd;
@@ -170,9 +245,27 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
                     UI.postMessage("So you think you can login eh?");
 
-                    server.request(CMD_ADMIN, {
-                        password: cmd.password
-                    }).then(function() {
+                    server.request(CMD_ADMIN, cmd)
+                    .then(function() {
+                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                        this.admin = true;
+                    }, function() {
+                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                    })
+                    .catch(errorInGame);
+                } else if (cmd.type === CMD_ADMIN_GAIN_XP) {
+
+                    server.request(cmd.type, cmd)
+                    .then(function() {
+                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                    }, function() {
+                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                    })
+                    .catch(errorInGame);
+                } else if (cmd.type === CMD_ADMIN_SUICIDE) {
+
+                    server.request(cmd.type, cmd)
+                    .then(function() {
                         UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
                     }, function() {
                         UI.postMessage("Fail in sending message! ", MESSAGE_BAD);

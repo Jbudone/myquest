@@ -2,23 +2,12 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
 
     /* SCRIPTINJECT */
 
-    const DeathEvt = 'die',
+    const DeathEvt    = 'die',
         RespawningEvt = 'respawning';
-
-    if (!Env.isServer) {
-
-        /*
-        server.registerHandler(EVT_GAIN_LEVEL, 'character.level');
-        server.handler(EVT_GAIN_LEVEL).set(function(evt, data) {
-            UI.postMessage(`Ding! ${data.entityId} levelled up to ${data.level}`, MESSAGE_INFO);
-            The.area.movables[data.entityId].character.doHook(GainLevelEvt).post(data);
-        });
-        */
-    }
 
     const DeathMgr = function(character) {
 
-        Component.call(this);
+        Component.call(this, 'deathmgr');
 
         extendClass(this).with(Loggable);
 
@@ -31,10 +20,22 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
 
                 character.hook(RespawningEvt, this).after(function(data){
 
-                    this.Log("You just died!", LOG_DEBUG);
+                    this.Log("You just respawned!", LOG_DEBUG);
                     character.doHook('BuffEvt').post({
                         buff: Buffs.DeathSickness
                     });
+                });
+
+                character.hook(DeathEvt, this).after(function(advocate){
+
+                    this.Log("You just died!", LOG_DEBUG);
+
+                    // Drop items
+                    console.log("Dropping inventory");
+                    const inventory = character.inventory;
+                    for (let i = 0; i < inventory.slots.length; ++i) {
+                        inventory.dropSlot(i);
+                    }
                 });
             }
         };
@@ -46,11 +47,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
                 character.hook(RespawningEvt, this).after(function(data){
                     UI.postMessage(`Alas, I have died!`, MESSAGE_BAD);
                 });
-            },
-
-            restore(component) {
-
-            },
+            }
         };
     };
 
@@ -63,6 +60,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     };
 
     return {
+        name: "DeathManager",
         newInstance: function(character){ return new DeathMgr(character); },
         initialState: initialState
     };

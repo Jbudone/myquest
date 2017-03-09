@@ -5,11 +5,23 @@
     "level": [
         {
             "message": "Level 0",
-            "nextLevelXP": 10
+            "nextLevelXP": 10,
+            "canLoseXP": false
         },
         {
             "message": "You have reached level 1",
-            "nextLevelXP": 100
+            "nextLevelXP": 20,
+            "canLoseXP": true
+        },
+        {
+            "message": "You have reached level 2",
+            "nextLevelXP": 20,
+            "canLoseXP": true
+        },
+        {
+            "message": "You have reached level 3",
+            "nextLevelXP": 30,
+            "canLoseXP": true
         }
     ]
 }

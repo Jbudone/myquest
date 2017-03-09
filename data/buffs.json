@@ -8,8 +8,19 @@
                     "type": "MAX_MULTIPLIER",
                     "stat": "health",
                     "amount": 0.75
+                },
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "con",
+                    "amount": 0.25
                 }
-            ]
+            ],
+            "options": {
+                "duration": 30000
+            }
+        },
+        "effects": {
+            "icon": "x"
         }
 	}
 ]}

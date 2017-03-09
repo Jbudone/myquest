@@ -7,7 +7,10 @@ define(() => {
     // The problem is this is somewhat inefficient (creating data and sending useless evt, searching for hook), and may
     // cause unecessary overhead. This is something we can change later on if we like by simply finding the component
     // and communicating with it directly
-    const Component = function() {
+    const Component = function(name) {
+
+        assert(_.isString(name), "Initialized Component without a name");
+        this.name = name;
 
         // Should this component be updated every step?
         // TODO: If this goes false and will likely be false for a while, then we should remove component from update
@@ -54,6 +57,10 @@ define(() => {
 
         };
 
+        this.netInitialize = function(component) {
+
+        };
+
         // Serialize component to save
         // This is only used for server, for saving the component to the db
         this.serialize = function() {
@@ -66,6 +73,13 @@ define(() => {
         // user zones into a map)
         this.netSerialize = function(forOwner) {
             return {};
+        };
+
+        // Unload component
+        // This is used for client, for unloading before we reload scripts so that we don't have stale components
+        // listening to and responding to events
+        this.unload = function() {
+
         };
     };
 

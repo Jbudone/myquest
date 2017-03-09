@@ -147,6 +147,8 @@ define(function(){
     addKey('CMD_MESSAGE');
     addKey('CMD_ADMIN');
     addKey('CMD_BAD_COMMAND');
+    addKey('CMD_ADMIN_GAIN_XP');
+    addKey('CMD_ADMIN_SUICIDE');
 
 	addKey('HOOK_INTO_MAP');
 
@@ -182,8 +184,13 @@ define(function(){
     addKey('EVT_REGENERATE');
     addKey('EVT_GAIN_XP');
     addKey('EVT_GAIN_LEVEL');
+    addKey('EVT_UPDATE_XP');
+    addKey('EVT_UPDATE_LEVEL');
     addKey('EVT_BUFFED');
     addKey('EVT_BUFFED_PRIVATE');
+    addKey('EVT_BUFF_REMOVED_PRIVATE');
+
+    addKey('EFFECT_BUFF');
 
 	return keys;
 });

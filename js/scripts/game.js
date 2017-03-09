@@ -164,13 +164,6 @@ define(
                 if (!(this.characters[entityID])) throw Err(`Character (${entityID}) not found`);
                 if (!this.doHook('removedcharacter').pre(entity)) return;
 
-                if (!Env.isServer && !this.respawning[entityID]) {
-                    // Only unload the character if we're respawning; this is because in a respawning case, we're going
-                    // to keep the same character and simply turn him back alive after respawning. Unloading only occurs
-                    // on client side since there's no point to delete and recreate a character on server side
-                    this.characters[entityID].unload();
-                }
-
                 if (!Env.isServer && entityID === The.player.id) {
                     // If we're zoning out then we need to serialize and store our _character details somewhere
                     // This isn't strictly necessary since we could just netSerialize the character anytime we zone,
@@ -178,6 +171,13 @@ define(
                     // local serializing
                     // FIXME: It sucks to serialize into The, find a better solution
                     The._character = this.characters[entityID].serialize();
+                }
+
+                if (!Env.isServer && !this.respawning[entityID]) {
+                    // Only unload the character if we're respawning; this is because in a respawning case, we're going
+                    // to keep the same character and simply turn him back alive after respawning. Unloading only occurs
+                    // on client side since there's no point to delete and recreate a character on server side
+                    this.characters[entityID].unload();
                 }
 
                 delete this.characters[entityID];
@@ -437,9 +437,21 @@ define(
                         }
                     }
 
-                    // Make sure that items don't overflow over existing items
-                    const entPage = character.entity.page,
-                        area      = entPage.area;
+                    this.Log(`Found items to drop: ${itemsToDrop}`, LOG_DEBUG);
+
+                    // TODO: Would be nice to upgrade dropItem to dropItems
+                    const entPosition = character.entity.position.tile;
+                    let itemDropped = null;
+                    for (let i = 0; i < itemsToDrop.length; ++i) {
+                        itemDropped = this.dropItem(entPosition, itemsToDrop[i]);
+                        if (!itemDropped) break;
+                    }
+                },
+
+                dropItem: (sourceTile, itm_id) => {
+
+                    const localCoord = area.localFromGlobalCoordinates(sourceTile.x, sourceTile.y),
+                        sourcePage   = localCoord.page;
 
                     const filterItemDrops = (tile) => {
                         const localCoords = area.localFromGlobalCoordinates(tile.x, tile.y),
@@ -447,18 +459,12 @@ define(
                         return (localCoords.page && !localCoords.page.items[localHash]);
                     };
 
-                    this.Log(`Found items to drop: ${itemsToDrop}`, LOG_DEBUG);
-                    const entPosition = character.entity.position.tile,
-                        freeTiles     = entPage.area.findOpenTilesAbout(entPosition, itemsToDrop.length, filterItemDrops),
-                        numDrops      = Math.min(itemsToDrop.length, freeTiles.length);
-                    for (let i = 0; i < numDrops; ++i) {
+                    const freeTiles = area.findOpenTilesAbout(sourceTile, 1, filterItemDrops);
+                    if (freeTiles.length !== 0) {
 
-                        const position = freeTiles[i],
+                        const position = freeTiles[0],
                             localPos   = area.localFromGlobalCoordinates(position.x, position.y),
-                            page       = localPos.page,
-                            // pageI      = area.pageIndex(position.x, position.y),
-                            // page       = area.pages[pageI],
-                            itm_id     = itemsToDrop[i];
+                            page       = localPos.page;
 
                         page.broadcast(EVT_DROP_ITEM, {
                             position: { x: position.x, y: position.y },
@@ -485,7 +491,10 @@ define(
 
                         page.items[localCoord] = item;
                         this.droppedItems.push(decay);
+                        return true;
                     }
+
+                    return false;
                 },
 
                 decayItems: () => {

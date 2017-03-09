@@ -3,3 +3,12 @@ js/scripts/ready/
 
 js/SCRIPT.INJECTION.min.js
 dist/
+node_modules*
+tests*
+*.taghl
+build
+.ctags
+.directory
+*.bak
+.tern-project
+reports

@@ -106,6 +106,7 @@ define(['loggable'], (Loggable) => {
 
                 const uiSlot = slots[i];
                 uiSlot.slot = inventory.slots[i];
+                uiSlot.needsUpdate = true;
             }
 
             inventory.hook('updatedSlot', this).after((slotIndex) => {
@@ -162,6 +163,7 @@ define(['loggable'], (Loggable) => {
                 }
 
                 if (!uiSlot.slot.item) {
+                    uiSlot.uiStack.text("");
                     continue;
                 }
 

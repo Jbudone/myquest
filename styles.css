@@ -451,3 +451,60 @@ input.error {
 	color: red;
 	font-size: 14px;
 }
+
+#character-bar {
+	display: flex;
+}
+
+/* === UI Effects === */
+
+#ui-effects-buffs {
+	display: flex;
+}
+
+.ui-effects-buff {
+	width: 40px;
+    height: 40px;
+	margin: 3px;
+}
+
+.ui-effects-buff-icon {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* === UI Stats === */
+
+#ui-stats {
+	display: flex;
+    flex-direction: column;
+}
+
+.ui-stats-stat {
+	margin: -3px 0px;
+    display: inline-flex;
+}
+
+.ui-stat-name {
+	color: #FFF;
+}
+
+.ui-stat-curVal {
+	color: #FFF;
+}
+
+.ui-stat-curMaxVal {
+	color: #FFF;
+}
+
+.ui-stat-maxVal {
+	color: #FFF;
+}
+
+.ui-stats-namecolon {
+	color: #AAA;
+}
+
+.ui-stats-statslash {
+	color: #AAA;
+}

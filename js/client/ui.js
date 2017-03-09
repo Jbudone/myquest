@@ -3,10 +3,14 @@
 define(
     [
         'client/ui.inventory',
+        'client/ui.effects',
+        'client/ui.stats',
         'eventful', 'hookable', 'loggable'
     ],
     (
         UI_Inventory,
+        UI_Effects,
+        UI_Stats,
         Eventful, Hookable, Loggable
     ) => {
 
@@ -324,6 +328,8 @@ define(
 
                 // Load UI modules
                 this.loadModule(UI_Inventory);
+                this.loadModule(UI_Effects);
+                this.loadModule(UI_Stats);
             };
 
             this.loadModule = (module) => {

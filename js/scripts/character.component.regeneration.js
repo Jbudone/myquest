@@ -27,7 +27,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
 
     const Regeneration = function(character) {
 
-        Component.call(this);
+        Component.call(this, 'regeneration');
 
         extendClass(this).with(Loggable);
 
@@ -36,24 +36,14 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
 
         this.server = {
 
-            initialize() {
+            initialize() { },
 
-                this.needsUpdate = true;
+            needsUpdate: true,
 
-                /*
-                const player = entity.player;
-                player.registerHandler(EVT_REGENERATE, 'chat');
-                player.handler(EVT_REGENERATE).set(function(evt, data) {
-
-                });
-                */
-            },
-
-            nextTick: 10000,
-            tickTime: 10000,
+            nextTick: 1000,
+            tickTime: 1000,
 
             step(delta) {
-                // TODO: Regen
                 // FIXME: Sleep/Wake step (change on characters componentsToUpdate list) when health changes
 
                 // FIXME: Use stats instead (stats.maxHealth)
@@ -64,7 +54,8 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
 
                         this.nextTick = this.tickTime;
 
-                        let newHealth = character.health + 10;
+                        let newHealth = character.health + character.stats.health.curMax * 0.01 * character.stats.con.cur;
+                        newHealth = parseInt(newHealth, 10);
                         if (newHealth > character.stats.health.curMax) {
                             newHealth = character.stats.health.curMax;
                         }
@@ -95,31 +86,10 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
                     this.Log(`Oh snap! I just regenerated to ${data.health}`);
                     character.health = data.health;
                 });
-
-                if (character.entity === The.player) {
-                    this.needsUpdate = true;
-
-                }
             },
 
-            restore(component) {
-                UI.postMessage("Restoring counter from previous character!");
-                this.counter = component.counter;
-            },
-
-            counter: Rules.regenClientCounter,
-
-            step(delta) {
-
-                /*
-                this.counter -= delta;
-                if (this.counter <= 0) {
-                    this.counter = Rules.regenClientCounter;
-                    UI.postMessage(Rules.regenLoopMsg);
-                } else {
-                    UI.postMessage("Counter: " + this.counter);
-                }
-                */
+            unload() {
+                server.handler(EVT_REGENERATE).unset();
             }
         };
     };
@@ -132,6 +102,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     };
 
     return {
+        name: "Regeneration",
         newInstance: function(character){ return new Regeneration(character); },
         initialState: initialState
     };

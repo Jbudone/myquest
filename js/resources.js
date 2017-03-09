@@ -662,11 +662,21 @@ define(['loggable'], function(Loggable){
         loadComponents = (function(){
 
             return new Promise(function(loaded, failed){
+                let numLoading = 0;
                 _.each(componentsAssets, function(componentFilename, componentName){
                     let componentFile = 'scripts/'+componentFilename;
+                    ++numLoading;
                     requirejs([componentFile], function(component){
                         this.components[componentName] = component;
-                        loaded();
+
+                        // FIXME: Should confirm component object
+                        if (!component.name) throw Err(`Component [${componentName}] did not have a name!`)
+                        if (!component.initialState) throw Err(`Component [${componentName}] did not have an initialState!`)
+                        if (!component.newInstance) throw Err(`Component [${componentName}] did not have a newInstance!`)
+                        
+                        if (--numLoading === 0) {
+                            loaded();
+                        }
                     }.bind(this));
                 }.bind(this));
             }.bind(this));

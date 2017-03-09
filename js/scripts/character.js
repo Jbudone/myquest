@@ -272,11 +272,67 @@ define(
                 });
             };
 
+
+            this.unloadComponents = () => {
+
+                // Unload all char components
+                for (let i = 0; i < this.charComponents.length; ++i) {
+                    const component = this.charComponents[i];
+                    component.unload();
+                }
+
+                this.charComponents = [];
+            };
+
             this.unload = () => {
                 this.Log("Unloading");
+                this.unloadComponents();
                 this.unloadListener();
                 this.entity.handler('step').unset();
                 delete this.entity.character;
+            };
+
+            this.commonSerialize = () => {
+
+                const _character = {
+                    health: this.health,
+                    components: {},
+                    inventory: null
+                };
+
+                for (let i = 0; i < this.charComponents.length; ++i) {
+                    const component         = this.charComponents[i],
+                        componentName       = entity.npc.components[i],
+                        serializedComponent = component.serialize();
+                    _character.components[componentName] = serializedComponent;
+                }
+
+                _character.inventory = this.inventory.serialize();
+                _character.stats = _.cloneDeep(this.stats);
+
+                return _character;
+            };
+
+            this.commonRestore = (_character) => {
+
+                this.health = _character.health;
+
+                this.inventory = new Inventory(this, _character.inventory);
+
+                _.each(_character.stats, (stat, statName) => {
+                    this.stats[statName].cur = stat.cur;
+                    this.stats[statName].curMax = stat.curMax;
+                    this.stats[statName].max = stat.max;
+                });
+
+                for (let i = 0; i < this.charComponents.length; ++i) {
+                    const component      = this.charComponents[i],
+                        componentName    = entity.npc.components[i],
+                        restoreComponent = _character.components[componentName];
+                    component.restore(restoreComponent);
+                }
+
+                this.initialized = true;
             };
 
             const _character = this;
@@ -295,60 +351,30 @@ define(
                 // Serialize character (saving)
                 // Used for saving character to DB
                 serialize: () => {
-
-                    const _character = {
-                        health: this.health,
-                        components: {},
-                        inventory: null
-                    };
-
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component         = this.charComponents[i],
-                            componentName       = entity.npc.components[i],
-                            serializedComponent = component.serialize();
-                        _character.components[componentName] = serializedComponent;
-                    }
-
-                    _character.inventory = this.inventory.serialize();
-
+                    const _character = this.commonSerialize();
                     return _character;
                 },
 
                 // Restore character from earlier state (load from DB)
                 restore: (_character) => {
-
-                    this.health = _character.health;
-
-                    this.inventory = new Inventory(this, _character.inventory);
-
-                    _.each(_character.stats, (stat, statName) => {
-                        this.stats[statName].cur = stat.cur;
-                        this.stats[statName].curMax = stat.curMax;
-                        this.stats[statName].max = stat.max;
-                    });
-
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component      = this.charComponents[i],
-                            componentName    = entity.npc.components[i],
-                            restoreComponent = _character.components[componentName];
-                        component.restore(restoreComponent);
-                    }
-
-                    this.initialized = true;
+                    this.commonRestore(_character);
                 },
 
                 // NetSerialize character (serialized to users)
                 netSerialize: (forOwner) => {
 
                     const _character = {
-                        health: this.health,
-                        components: []
+                        health: this.health
                     };
 
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                          netSerializedComponent = component.netSerialize();
-                        _character.components.push(netSerializedComponent);
+                    if (forOwner) {
+                        _character.components = [];
+                        for (let i = 0; i < this.charComponents.length; ++i) {
+                            const component = this.charComponents[i],
+                              netSerializedComponent = component.netSerialize();
+                            netSerializedComponent.name = component.name; // FIXME: THere's got to be a better way
+                            _character.components.push(netSerializedComponent);
+                        }
                     }
 
                     // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
@@ -359,9 +385,7 @@ define(
                     if (forOwner) {
                         _character.stats = _.cloneDeep(this.stats);
                         console.log(this.stats);
-                        console.log("Serializing Health: " + this.health);
-
-                        if (this.health == 1500) process.exit();
+                        console.log(_character.inventory);
                     }
 
                     return _character;
@@ -641,7 +665,13 @@ define(
                     this.loadComponents();
 
                     if (this.entity._character) {
-                        this.netRestore(this.entity._character);
+                        // Initialize for our player, but only restore for character
+                        // FIXME: Would be nice to get rid of netInitialize later
+                        if (this.entity === The.player && this.entity._character.init === true) {
+                            this.netInitialize(this.entity._character);
+                        } else {
+                            this.netRestore(this.entity._character);
+                        }
                     } else {
                         // This character doesn't have a _character property for us to netRestore from.. The only reason
                         // this should happen is if we're restoring ourselves due to zoning
@@ -670,49 +700,14 @@ define(
                 // seems unecessary for other cases (eg. zoning) where our local state likely hasn't changed. In this
                 // case we serialize locally, store it, then restore
                 serialize: () => {
-
-                    const _character = {
-                        health: this.health,
-                        components: {},
-                        inventory: null
-                    };
-
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component         = this.charComponents[i],
-                            componentName       = entity.npc.components[i],
-                            serializedComponent = component.serialize();
-                        _character.components[componentName] = serializedComponent;
-                    }
-
-                    _character.inventory = this.inventory.serialize();
-                    _character.stats = _.cloneDeep(this.stats);
-
+                    const _character = this.commonSerialize();
                     return _character;
                 },
 
                 // Restore local character from previous state
                 // See serialize for more information
                 restore: (_character) => {
-
-                    this.health = _character.health;
-
-
-                    this.inventory = new Inventory(this, _character.inventory);
-
-                    _.each(_character.stats, (stat, statName) => {
-                        this.stats[statName].cur = stat.cur;
-                        this.stats[statName].curMax = stat.curMax;
-                        this.stats[statName].max = stat.max;
-                    });
-
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component      = this.charComponents[i],
-                            componentName    = entity.npc.components[i],
-                            restoreComponent = _character.components[componentName];
-                        component.restore(restoreComponent);
-                    }
-
-                    this.initialized = true;
+                    this.commonRestore(_character);
                 },
 
                 // Restore this component from state given by server
@@ -736,13 +731,43 @@ define(
                         });
                     }
 
-                    for (let i = 0; i < this.charComponents.length; ++i) {
-                        const component = this.charComponents[i],
-                            restoreComponent = _character.components[i];
-                        component.netRestore(restoreComponent);
+                    if (_character.components) {
+                        for (let i = 0; i < _character.components.length; ++i) {
+                            const restoreComponent = _character.components[i],
+                                componentName = restoreComponent.name,
+                                component = this.charComponents.find((c) => c.name === componentName);
+                            component.netRestore(restoreComponent);
+                        }
                     }
 
                     this.initialized = true;
+                },
+
+                // Initialize Character on login
+                // FIXME: This sucks to separate this from netRestore; especially since we use netRestore for respawn.
+                // We should fix the server login flow to create your character before sending your character to you,
+                // which allows the server to netSerialize your character
+                netInitialize: (_character) => {
+
+                    this.health = _character.health;
+
+                    this.inventory = new Inventory(this, _character.inventory);
+
+                    _.each(_character.stats, (stat, statName) => {
+                        this.stats[statName].cur = stat.cur;
+                        this.stats[statName].curMax = stat.curMax;
+                        this.stats[statName].max = stat.max;
+                    });
+
+                    for (let i = 0; i < this.charComponents.length; ++i) {
+                        const component      = this.charComponents[i],
+                            componentName    = entity.npc.components[i],
+                            restoreComponent = _character.components[componentName];
+                        component.netInitialize(restoreComponent);
+                    }
+
+                    this.initialized = true;
+
                 },
 
                 setToUser: () => {

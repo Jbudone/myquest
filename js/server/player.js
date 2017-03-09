@@ -192,8 +192,6 @@ define(
                 this.pages = {};
                 this.pages[this.movable.page.index] = this.movable.page;
 
-                const inventory = this.movable.character.inventory;
-
                 if (this.isConnected) {
 
                     const page = this.movable.page,
@@ -484,6 +482,7 @@ define(
                                     name: this.movable.name,
                                     _character: savedState.character
                                 };
+                                response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead
                                 this.client.send(response.serialize());
                             }
 

@@ -242,12 +242,10 @@ WORKING ON (was previously working on)
 	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login. Currently using .initialization to prevent multiple reloads
 	- FIXME: Find a better name for charComponents on character. We can't use components since character is a script and depends on components (see scripts/game.js using components)
 	- Cleanup component serialization/restoring, currently its an array on character but object in db/netSerialize, and we have to find the component name by npc index. Overall gross and needs some cleanup
+	- FIXME: Cleanup server login control flow to create your character before sending you character info, that way we can netSerialize your character rather than send your serialized db state -- afterwards would be nice to remove netInitialize and use netRestore instead
+	- Look into async/defer scripts: https://bitsofco.de/async-vs-defer/
+	- Merge Character/Components netRestore and restore common code somehow (sucks to duplicate code)
 	
-
-
-	(NOTE: Unable to repro these anymore; but keep open for now)
-	- BUG? On browser when shit gets super laggy from bot running around we often witness them moving onto an unopen tile
-
 
 
 	- Browser Debugging Snippets
@@ -386,31 +384,42 @@ Next Priority
 	- Projectiles
 	- Admin commands from client -- to open server REPL
 	  	- Request login to server
+		- Commands
+		   - Set health/stats (cur)
+		   - Drop items around you
+		   - Put items in inventory
+		   - Add buff
+		- Logging in should change textbox so that it opens an admin script instead (like game.chat but game.admin instead)
+		- Abstract client side handle command: mostly repeated code
+		- Abstract server side handle command: should be grouped with command definition (all in one place)
 	- Easier server debugging
 	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
 	- Have error reporting parse the error and save file information (source for the crash site, etc.)
 	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
 	- FIXME: Move health to stats in npcs.json
 	- FIXME: Check if stale SCRIPTINJECT on components is a problem with retaining old object (eg. old area saved in var even after zoning)
+	- FIXME: Add an icons json; allow spritesheets and add a bunch of buffs
 	- Get bg back, allow online CDN, or if timeout use local copy instead
+	- Abstract loot into a character component for npcs
+	- BUG: Kill snake (loot drops) some of the items can't be picked up (timing issue? coord issue?)
+	- Draw XP/Level (also achieved level/XP)
+	- Stats: colour differently when curMax !== max
+	- Effects: Hover displays buff name & effects
+	- Death sickness fades (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
+	- Player: response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
 
-	- Fix stats: stats in db, createNewCharacter loads npc stats
-	- Death sickness dies after X time; affects con/maxHealth
-	- Regen use con
-	- Death drops inventory
-	- Serialize buffs, level data for server
-	- UI hooks: UI.addEffect({ effectType: EFFECT_BUFF, data: { buff: BUFF_STINKY_BREATH, time: 10 } })  -- Resources.Effects.Buffs[BUFF_STINKY_BREATH] = { icon: "..", options: [EFFECT_BUFF_HOSTILE, EFFECT_BUFF_TIMER, EFFECT_BUFF_FADES], totalTime: 20 }
-	- Death makes you lose xp
-	- Level rewards (gain xp)
-	- Draw Buffs, XP, tainted HP when not max
-	- Death sickness fades (slowly regain con/curMax health)
+	- NOTE: User logs in, server loads player from db and sends to player (no netSerialize since no character exists yet). NEED To netInitialize?
+	- NOTE: User dies, respawns, after setting self to alive we call hook('respawning').post()  which triggers deathmgr to add death sickness (since we're now alive). Which means we'll send buff to user. The trick is to unload the buffmgr so the user doesn't handle the EVT_BUFF_PRIVATE evt
 
 
+	== Design
+	 - Regen use con
+	 - Level rewards (gain xp)
+	 - Level XP loss calculation
 	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
-	- Death ==> Level; could have level component hook 'die' and lose XP
 
 
 
@@ -739,12 +748,13 @@ DB
 	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
 	* Scripts are reloaded (recreated) upon zoning, dying, etc. -- beware of this for outside sources that reference scripts
 
-====== Component
+====== Character Component
 	
 	* Initialized on character (depends on npc components)
 	* Uses serialize/restore (server db, client script reloads), and netSerialize/netRestore for receiving state from server
 	* Components are loaded once, and never reloaded
 	* Uses SCRIPTINJECT environment, but could have stale vars on client when reloading (since components don't reload)
+	* Be careful with serializing/restoring extra information on client, since if the character dies we netRestore and lose all local data
 
 ====== Functions
 

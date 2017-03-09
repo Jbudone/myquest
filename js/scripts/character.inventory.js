@@ -250,6 +250,31 @@ define(
 
                 player.registerHandler(EVT_INV_USE_SLOT);
                 player.handler(EVT_INV_USE_SLOT).set(useSlot);
+
+
+                this.dropSlot = (slotI) => {
+
+                    const slot = this.slots[slotI],
+                        item   = slot.item;
+                    if (item) {
+
+                        const character = player.movable.character,
+                            inventory   = character.inventory,
+                            game        = character.entity.page.area.game,
+                            sourceTile  = character.entity.position.tile;
+
+                        // Drop items
+                        let dropped = null;
+                        for (let i = 0; i < slot.stack; ++i) {
+                            dropped = game.dropItem(sourceTile, item.id);
+                            if (!dropped) break;
+                        }
+
+                        slot.item = null;
+                        slot.stack = 0;
+                    }
+                };
+
             } else {
 
                 this.useSlot = (slotI) => {
