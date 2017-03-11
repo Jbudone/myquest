@@ -20,7 +20,11 @@
             }
         },
         "effects": {
-            "icon": "x"
+            "icon": "x",
+            "tooltip": {
+                "name": "Death Sickness",
+                "description": "Lol! Looks like you've died. wutanub"
+            }
         }
 	}
 ]}

@@ -28,10 +28,79 @@ define(['loggable'], (Loggable) => {
 
                 const effect = {
                     ui: effectEl,
+                    tooltip: null,
                     data: data,
                     id: effectID
                     //expires: now() + 1000,
                 };
+
+                if (effects.tooltip) {
+                    const tooltip = effects.tooltip,
+                        tooltipEl = $('<div/>')
+                        .addClass('buff-tooltip')
+                        .append(
+                            $('<div/>')
+                            .addClass('buff-tooltip-header')
+                            .append(
+                                $('<img/>')
+                                .addClass('buff-tooltip-icon')
+                                .attr('src', 'data/icons/deathsickness.png')
+                            )
+                            .append(
+                                $('<a/>')
+                                .addClass('buff-tooltip-title')
+                                .text(tooltip.name)
+                            )
+                        )
+                        .append(
+                            $('<div/>')
+                            .addClass('buff-tooltip-title-sep')
+                        )
+                        .append(
+                            $('<a/>')
+                            .addClass('buff-tooltip-description')
+                            .text(tooltip.description)
+                        )
+                        .addClass('hidden')
+                        .insertAfter(effectEl);
+
+                    effect.tooltip = tooltipEl;
+
+                    let hoveringEffect = false,
+                        hoveringTooltip = false;
+
+                    const updateTooltipDisplay = () => {
+                        if (hoveringEffect || hoveringTooltip) {
+                            tooltipEl.removeClass('hidden');
+                        } else {
+                            tooltipEl.addClass('hidden');
+                        }
+                    };
+
+                    effectEl.hover(() => {
+                        // Hover In
+
+                        // FIXME: Cannot get the height of tooltipEl while its hidden
+                        const bottom = effectEl.offset().top,
+                            top = bottom - tooltipEl.height() - 50; // 50 until we can find the actual height
+                        tooltipEl.css({ top: top });
+                        hoveringEffect = true;
+                        updateTooltipDisplay();
+                    }, () => {
+                        // Hover Out
+
+                        hoveringEffect = false;
+                        updateTooltipDisplay();
+                    });
+
+                    tooltipEl.hover(() => {
+                        hoveringTooltip = true;
+                        updateTooltipDisplay();
+                    }, () => {
+                        hoveringTooltip = false;
+                        updateTooltipDisplay();
+                    });
+                }
 
                 ++effectID;
 
@@ -56,6 +125,10 @@ define(['loggable'], (Loggable) => {
             }
 
             effect.ui.remove();
+
+            if (effect.tooltip) {
+                effect.tooltip.remove();
+            }
         };
 
         this.initialize = () => {

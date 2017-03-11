@@ -482,7 +482,7 @@ define(
                                     name: this.movable.name,
                                     _character: savedState.character
                                 };
-                                response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead
+                                response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead (for netInitialize)
                                 this.client.send(response.serialize());
                             }
 

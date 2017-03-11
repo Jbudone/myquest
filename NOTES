@@ -245,6 +245,9 @@ WORKING ON (was previously working on)
 	- FIXME: Cleanup server login control flow to create your character before sending you character info, that way we can netSerialize your character rather than send your serialized db state -- afterwards would be nice to remove netInitialize and use netRestore instead
 	- Look into async/defer scripts: https://bitsofco.de/async-vs-defer/
 	- Merge Character/Components netRestore and restore common code somehow (sucks to duplicate code)
+	- Buff Fading: Death sickness fade (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
+	- Look into image rendering tricks for building anims: https://css-tricks.com/almanac/properties/i/image-rendering/
+	- FIXME: ToolUI.effects tooltip can't get height while its not visible
 	
 
 
@@ -404,9 +407,6 @@ Next Priority
 	- BUG: Kill snake (loot drops) some of the items can't be picked up (timing issue? coord issue?)
 	- Draw XP/Level (also achieved level/XP)
 	- Stats: colour differently when curMax !== max
-	- Effects: Hover displays buff name & effects
-	- Death sickness fades (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
-	- Player: response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)

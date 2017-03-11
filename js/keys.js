@@ -149,6 +149,7 @@ define(function(){
     addKey('CMD_BAD_COMMAND');
     addKey('CMD_ADMIN_GAIN_XP');
     addKey('CMD_ADMIN_SUICIDE');
+    addKey('CMD_ADMIN_GIVE_BUFF');
 
 	addKey('HOOK_INTO_MAP');
 

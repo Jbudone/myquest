@@ -31,6 +31,18 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'suicide',
             command: CMD_ADMIN_SUICIDE,
             args: []
+        },
+        {
+            typedCommand: 'give_buff',
+            command: CMD_ADMIN_GIVE_BUFF,
+            args: [
+                {
+                    name: 'buffres',
+                    sanitize: (p) => p,
+                    test: (p) => p in Buffs,
+                    error: "BuffRes not valid"
+                }
+            ]
         }
     ];
 
@@ -131,6 +143,29 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     // FIXME: Check if we can die (currently alive)
                     this.Log(`Committing suicide`);
                     player.movable.character.die(null);
+
+                    player.respond(evt.id, success, {
+
+                    });
+                });
+
+                player.registerHandler(CMD_ADMIN_GIVE_BUFF, 'admin');
+                player.handler(CMD_ADMIN_GIVE_BUFF).set(function(evt, data) {
+
+                    let success = false;
+                    if
+                    (
+                        _.isObject(data) &&
+                        _.isString(data.buffres) &&
+                        data.buffres in Buffs
+                    )
+                    {
+                        success = true;
+                        this.Log(`Giving you a buff: ${data.buffres}`);
+                        player.movable.character.doHook('BuffEvt').post({
+                            buff: Buffs[data.buffres]
+                        });
+                    }
 
                     player.respond(evt.id, success, {
 
@@ -263,6 +298,15 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     })
                     .catch(errorInGame);
                 } else if (cmd.type === CMD_ADMIN_SUICIDE) {
+
+                    server.request(cmd.type, cmd)
+                    .then(function() {
+                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                    }, function() {
+                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                    })
+                    .catch(errorInGame);
+                } else if (cmd.type === CMD_ADMIN_GIVE_BUFF) {
 
                     server.request(cmd.type, cmd)
                     .then(function() {
