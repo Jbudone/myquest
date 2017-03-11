@@ -306,7 +306,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
                             const activeEffects = UI.getEffects();
                             for (let i = 0; i < activeEffects.length; ++i) {
                                 const effect = activeEffects[i];
-                                if (_.isFinite(effect.data.buffID) && effect.data.buffID === localBuff.id) {
+                                if (_.isFinite(effect.data.buffID) && effect.data.buffID === buff.id) {
                                     UI.removeEffect(effect.effectID);
                                 }
                             }
