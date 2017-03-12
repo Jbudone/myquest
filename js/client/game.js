@@ -1160,10 +1160,7 @@ define(
                 // -------------------------------------------------------------------------------------------------- //
                 // -------------------------------------------------------------------------------------------------- //
 
-                // Event Listeners
-                // TODO: abstract event listeners to call "tryPath" or "hoverArea"
-                ui.onMouseMove = function(mouse){
-
+                const onMouseMove = function(mouse){
                     ui.tileHover = new Tile(mouse.x, mouse.y);
 
                     // Display the JumpPoints here (for testing purposes)
@@ -1262,7 +1259,14 @@ define(
                     ui.updateCursor();
                 };
 
+                // Event Listeners
+                // TODO: abstract event listeners to call "tryPath" or "hoverArea"
+                ui.onMouseMove = onMouseMove;
+
+
                 ui.onMouseDown = (mouse) => {
+
+                    onMouseMove(mouse);
 
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {

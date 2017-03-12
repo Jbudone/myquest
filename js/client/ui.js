@@ -301,11 +301,15 @@ define(
                 this.canvas = canvas;
                 this.messageBox = $('#messages');
 
+                let lastMouseEvt = null;
+
                 this.canvas.addEventListener('mousemove', (evt) => {
+                    lastMouseEvt = evt;
                     this.onMouseMove( this.positionFromMouse(evt) );
                 });
 
                 this.canvas.addEventListener('mousedown', (evt) => {
+                    lastMouseEvt = evt;
                     this.onMouseDown( this.positionFromMouse(evt) );
                 });
 
@@ -326,6 +330,14 @@ define(
 
                     _UI.doHook('inputSubmit').post(msg);
                     return false;
+                });
+
+                this.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, (entity) => {
+                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
+                });
+
+                this.listenTo(The.player, EVT_MOVING_TO_NEW_TILE, (entity) => {
+                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
                 });
 
                 // Load UI modules

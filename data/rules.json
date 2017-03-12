@@ -20,7 +20,6 @@
         },
         {
             "message": "You have reached level 3",
-            "nextLevelXP": 30,
             "canLoseXP": true
         }
     ]

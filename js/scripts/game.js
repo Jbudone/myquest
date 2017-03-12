@@ -486,7 +486,7 @@ define(
                         const decay = {
                             coord: localCoord,
                             page: page.index,
-                            decay: now() + 10000 // FIXME: put this somewhere.. NOTE: have to keep all decay rates the same, or otherwise change decayItems structure
+                            decay: now() + 100000 // FIXME: put this somewhere.. NOTE: have to keep all decay rates the same, or otherwise change decayItems structure
                         };
 
                         page.items[localCoord] = item;
@@ -682,9 +682,9 @@ define(
                                         // Add item to our inventory
                                         The.player.character.inventory.addItem(itmRef, result.slot);
                                     }
-                                }, () => {
+                                }, (e) => {
                                     // Couldn't get item
-                                    this.Log("Couldn't get item", LOG_ERROR);
+                                    this.Log(`Couldn't get item: ${e.msg}`, LOG_ERROR);
                                 })
                                 .catch(errorInGame);
                             };
