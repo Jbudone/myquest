@@ -248,7 +248,6 @@ WORKING ON (was previously working on)
 	- Buff Fading: Death sickness fade (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
 	- Look into image rendering tricks for building anims: https://css-tricks.com/almanac/properties/i/image-rendering/
 	- FIXME: ToolUI.effects tooltip can't get height while its not visible
-	- Update mouse (tileHover, item hover, etc.) both when the camera updates and on mouse move
 	
 
 
@@ -405,7 +404,6 @@ Next Priority
 	- FIXME: Add an icons json; allow spritesheets and add a bunch of buffs
 	- Get bg back, allow online CDN, or if timeout use local copy instead
 	- Abstract loot into a character component for npcs
-	- BUG: Kill snake (loot drops) some of the items can't be picked up (timing issue? coord issue?)
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
