@@ -534,8 +534,16 @@ input.error {
 	color: #FFF;
 }
 
+.ui-stat-curVal.notfull {
+	color: #F00;
+}
+
 .ui-stat-curMaxVal {
 	color: #FFF;
+}
+
+.ui-stat-curMaxVal.notfull {
+	color: #F00;
 }
 
 .ui-stat-maxVal {

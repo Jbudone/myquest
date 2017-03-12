@@ -78,14 +78,13 @@ define(['loggable'], (Loggable) => {
                         container: uiStat,
                         name: uiStatName,
                         curVal: uiStatCurVal,
-                        curMaxVal: uiStatCurMaxVal,
-                        //maxVal: uiStatMaxVal
+                        curMaxVal: uiStatCurMaxVal
                     },
                     stat: stat,
                     name: statName,
-                    curVal: stat.cur,
-                    curMaxVal: stat.curMax,
-                    //maxVal: stat.max
+                    curVal: null,
+                    curMaxVal: null,
+                    maxVal: null
                 };
 
                 statContainerList.push(statContainer);
@@ -116,16 +115,31 @@ define(['loggable'], (Loggable) => {
                     charStat = statContainer.stat;
 
                 if (charStat.cur !== statContainer.curVal ||
-                    charStat.curMax !== statContainer.curMaxVal) {// ||
-                    //charStat.max !== statContainer.maxVal) {
+                    charStat.curMax !== statContainer.curMaxVal ||
+                    charStat.max !== statContainer.maxVal) {
+
+                    statContainer.curVal    = charStat.cur;
+                    statContainer.curMaxVal = charStat.curMax;
+                    statContainer.maxVal    = charStat.max;
+
+                    const curFull  = statContainer.curVal === charStat.curMax,
+                        curMaxFull = statContainer.curMaxVal === charStat.max;
 
                     statContainer.ui.curVal.text(charStat.cur);
                     statContainer.ui.curMaxVal.text(charStat.curMax);
                     //statContainer.ui.maxVal.text(charStat.max);
 
-                    statContainer.curVal = charStat.cur;
-                    statContainer.curMaxVal = charStat.curMax;
-                    //statContainer.maxVal = charStat.max;
+                    if (!curFull) {
+                        statContainer.ui.curVal.addClass('notfull');
+                    } else {
+                        statContainer.ui.curVal.removeClass('notfull');
+                    }
+
+                    if (!curMaxFull) {
+                        statContainer.ui.curMaxVal.addClass('notfull');
+                    } else {
+                        statContainer.ui.curMaxVal.removeClass('notfull');
+                    }
                 }
             }
         };
