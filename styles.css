@@ -549,3 +549,11 @@ input.error {
 .ui-stats-statslash {
 	color: #AAA;
 }
+
+/* === UI CharBars === */
+
+#charBar-levelling {
+	display: flex;
+	color: #FFF;
+	flex-direction: column;
+}

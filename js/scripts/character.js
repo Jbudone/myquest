@@ -62,6 +62,9 @@ define(
                 }
             };
 
+            this.charComponent = function(name) {
+                return this.charComponents.find((c) => c.name === name);
+            };
 
             this.isPlayer = (entity.playerID ? true : false);
             this.delta = 0;

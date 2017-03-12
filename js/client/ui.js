@@ -5,12 +5,14 @@ define(
         'client/ui.inventory',
         'client/ui.effects',
         'client/ui.stats',
+        'client/ui.charbars',
         'eventful', 'hookable', 'loggable'
     ],
     (
         UI_Inventory,
         UI_Effects,
         UI_Stats,
+        UI_CharBars,
         Eventful, Hookable, Loggable
     ) => {
 
@@ -330,6 +332,7 @@ define(
                 this.loadModule(UI_Inventory);
                 this.loadModule(UI_Effects);
                 this.loadModule(UI_Stats);
+                this.loadModule(UI_CharBars);
             };
 
             this.loadModule = (module) => {

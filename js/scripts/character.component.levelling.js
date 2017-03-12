@@ -69,6 +69,7 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
             levelRules = Rules.level[this.level];
         };
 
+        this.nextLevelXP = () => levelRules.nextLevelXP;
 
         this.server = {
 

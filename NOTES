@@ -405,7 +405,6 @@ Next Priority
 	- Get bg back, allow online CDN, or if timeout use local copy instead
 	- Abstract loot into a character component for npcs
 	- BUG: Kill snake (loot drops) some of the items can't be picked up (timing issue? coord issue?)
-	- Draw XP/Level (also achieved level/XP)
 	- Stats: colour differently when curMax !== max
 
 
