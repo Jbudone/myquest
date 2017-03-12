@@ -89,17 +89,11 @@ define(['scripts/buffs.base'], function(BuffBase){
 			activate(character, args, modified) {
 
                 for (const statName in modified) {
-                    const charStat = character.stats[statName];
-                    charStat.curMax = modified.curMax;
-                    charStat.cur = modified.cur;
+                    const charStat = character.stats[statName],
+                        modStat    = modified[statName];
+                    charStat.curMax = modStat.curMax;
+                    charStat.cur = modStat.cur;
                 }
-
-				//character.health = args.health;
-				//if (character.entity.id === The.player.id) {
-				//	UI.postMessage("You healed up!");
-				//} else {
-				//	UI.postMessage("He totally healed up!");
-				//}
             },
 
             deactivate(character, args, modified) {
