@@ -86,9 +86,6 @@ define(
                     const stat = entity.npc.stats[statName];
                     addStat(statName, stat);
                 }
-
-                assert(_.isFinite(entity.npc.health) && entity.npc.health > 0, `Bad health for NPC: ${entity.npc.health}`);
-                addStat('health', entity.npc.health);
             }
 
             Object.defineProperties(this, {
@@ -298,7 +295,6 @@ define(
             this.commonSerialize = () => {
 
                 const _character = {
-                    health: this.health,
                     components: {},
                     inventory: null
                 };
@@ -317,8 +313,6 @@ define(
             };
 
             this.commonRestore = (_character) => {
-
-                this.health = _character.health;
 
                 this.inventory = new Inventory(this, _character.inventory);
 

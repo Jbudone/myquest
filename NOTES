@@ -248,6 +248,9 @@ WORKING ON (was previously working on)
 	- Buff Fading: Death sickness fade (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
 	- Look into image rendering tricks for building anims: https://css-tricks.com/almanac/properties/i/image-rendering/
 	- FIXME: ToolUI.effects tooltip can't get height while its not visible
+	- Abstract loot into a character component for npcs
+	- Buff stacking
+	- Add an icons json; allow spritesheets
 	
 
 
@@ -377,10 +380,6 @@ Next Priority
 	- Levelling/Experience: listen to onCombatKill event, save/restore XP, refer to dependency levellingRules.json for finding XP for next level, level up message + rewards (eg. "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ]
 	- Combat: smarter target selection
 	- Combat: attack/speed formula (level/stats/randomness)
-	- Buff system: register buffs under a buffs list similar to components, buffs can stack/etc.
-	  	UI should draw stuff for each buff
-		Allow UI hooks/etc. for changing screen/border colours etc.
-		Should save/restore buffs on server when logging out / reconnecting
 	- Questing / rewards
 	- Periodic saving, logging out should also save: save everything (health, death sickness (buffs), etc.)
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
@@ -395,15 +394,12 @@ Next Priority
 		- Logging in should change textbox so that it opens an admin script instead (like game.chat but game.admin instead)
 		- Abstract client side handle command: mostly repeated code
 		- Abstract server side handle command: should be grouped with command definition (all in one place)
+		- Enable admin on login
 	- Easier server debugging
 	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
 	- Have error reporting parse the error and save file information (source for the crash site, etc.)
 	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
-	- FIXME: Move health to stats in npcs.json
 	- FIXME: Check if stale SCRIPTINJECT on components is a problem with retaining old object (eg. old area saved in var even after zoning)
-	- FIXME: Add an icons json; allow spritesheets and add a bunch of buffs
-	- Get bg back, allow online CDN, or if timeout use local copy instead
-	- Abstract loot into a character component for npcs
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)

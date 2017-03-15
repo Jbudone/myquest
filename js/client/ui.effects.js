@@ -22,7 +22,7 @@ define(['loggable'], (Loggable) => {
                     .append(
                         $('<img/>')
                         .addClass('ui-effects-buff-icon')
-                        .attr('src', 'data/icons/deathsickness.png')
+                        .attr('src', 'data/icons/' + effects.icon)
                     )
                     .appendTo(uiEffects);
 
@@ -44,7 +44,7 @@ define(['loggable'], (Loggable) => {
                             .append(
                                 $('<img/>')
                                 .addClass('buff-tooltip-icon')
-                                .attr('src', 'data/icons/deathsickness.png')
+                                .attr('src', 'data/icons/' + effects.icon)
                             )
                             .append(
                                 $('<a/>')

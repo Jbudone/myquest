@@ -39,17 +39,6 @@ define(['scripts/buffs.base'], function(BuffBase){
                 }
 
                 return modified;
-
-				// var healTo = character.health + args.amt;
-				// if (healTo > character.entity.npc.health) healTo = character.entity.npc.health;
-				// character.health = healTo;
-
-				// character.entity.page.broadcast(EVT_USE_ITEM, {
-				// 	base: 'heal',
-				// 	character: character.entity.id,
-				// 	health: character.health,
-				// 	name: name
-				// });
             },
 
             deactivate(character, args, modified) {

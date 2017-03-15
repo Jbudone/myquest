@@ -102,7 +102,7 @@ define(
                             // not yet been replaced with the new character, so use the new character parameters
                             // before they're transferred to the new character object
                             realHealth = this.movable._character.health;
-                            maxHealth  = this.movable.npc.health;
+                            maxHealth  = this.movable.npc.stats.health;
                         } else if (this.movable.character) {
                             realHealth = this.movable.character.health;
                             maxHealth = this.movable.character.stats.health.curMax;

@@ -238,7 +238,6 @@ define(['loggable'], function(Loggable){
                         }
 
                         const character = {
-                            health: npc.health,
                             stats: {},
                             inventory: starterInventory,
                             components: components
@@ -252,12 +251,6 @@ define(['loggable'], function(Loggable){
                                 max: stat
                             };
                         }
-
-                        character.stats['health'] = {
-                            cur: npc.health,
-                            curMax: npc.health,
-                            max: npc.health,
-                        };
 
 						var player = _.defaults(playerAttributes, {
 							// Default player values
