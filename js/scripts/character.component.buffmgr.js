@@ -1,10 +1,12 @@
-define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Component) => {
+define(['loggable', 'component'], (Loggable, Component) => {
 
-    /* SCRIPTINJECT */
+    const BuffEvt = 'BuffEvt',
+        Buffs     = Resources.buffs;
 
-    const BuffEvt = 'BuffEvt';
-
+    let server, UI;
     if (!Env.isServer) {
+        server = The.scripting.server;
+        UI     = The.UI;
     }
 
     const Buff = function(buffRes) {

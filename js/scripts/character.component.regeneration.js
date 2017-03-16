@@ -1,6 +1,4 @@
-define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Component) => {
-
-    /* SCRIPTINJECT */
+define(['loggable', 'component'], (Loggable, Component) => {
 
     // FIXME: Check if JS uses string/symbol tables behind the scene, which is more efficient to pass around and
     // compare? 
@@ -10,8 +8,10 @@ define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Compo
     // TODO: Toss forwardToCharacter into SCRIPTINJECT
     // FIXME: Is the wait necessary? Could we init immediately?
     let staticInit = function() {};
+    let server;
     if (!Env.isServer) {
 
+        server = The.scripting.server;
         staticInit = function() {
             server.registerHandler(EVT_REGENERATE, 'character.regeneration');
             server.handler(EVT_REGENERATE).set(function(evt, data) {

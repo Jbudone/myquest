@@ -251,6 +251,7 @@ WORKING ON (was previously working on)
 	- Abstract loot into a character component for npcs
 	- Buff stacking
 	- Add an icons json; allow spritesheets
+	- Look into a better solution for Components referencing The.scripting stuff
 	
 
 
@@ -399,7 +400,6 @@ Next Priority
 	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
 	- Have error reporting parse the error and save file information (source for the crash site, etc.)
 	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
-	- FIXME: Check if stale SCRIPTINJECT on components is a problem with retaining old object (eg. old area saved in var even after zoning)
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)

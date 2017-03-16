@@ -1,9 +1,8 @@
-define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Component) => {
-
-    /* SCRIPTINJECT */
+define(['loggable', 'component'], (Loggable, Component) => {
 
     const DeathEvt    = 'die',
-        RespawningEvt = 'respawning';
+        RespawningEvt = 'respawning',
+        Buffs         = Resources.buffs;
 
     const DeathMgr = function(character) {
 

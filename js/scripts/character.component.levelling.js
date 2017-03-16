@@ -1,16 +1,17 @@
-define(['SCRIPTINJECT', 'loggable', 'component'], (SCRIPTINJECT, Loggable, Component) => {
-
-    /* SCRIPTINJECT */
+define(['loggable', 'component'], (Loggable, Component) => {
 
     const GainXPEvt     = 'GainedXP',
         GainLevelEvt    = 'GainedLevel',
         UpdatedLevelEvt = 'UpdatedLevel',
-        DeathEvt        = 'die';
+        DeathEvt        = 'die',
+        Rules           = Resources.rules;
 
 
     let staticInit = function() {};
+    let server;
     if (!Env.isServer) {
 
+        server = The.scripting.server;
         staticInit = function() {
 
             server.registerHandler(EVT_UPDATE_LEVEL, 'character.level');
