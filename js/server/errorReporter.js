@@ -48,6 +48,11 @@ define(() => {
 
         },
 
+        reportDir() {
+            return global.__dirname;  // FIXME: For some reason   require('path').dirname('')  returns an empty string when called from here (as opposed to from bot.js or server.js)
+
+        },
+
         report(e, dumpObjects, clientReport) {
 
             let logDump = null;
@@ -56,10 +61,12 @@ define(() => {
             let err = false;
 
             if (e) {
+                const parsedError = this.parseError(e);
                 err = {
                     name: e.name,
                     message: e.message,
-                    stack: e.stack
+                    stack: e.stack,
+                    parsed: parsedError
                 };
             }
 

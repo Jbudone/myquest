@@ -150,6 +150,8 @@ define(function(){
     addKey('CMD_ADMIN_GAIN_XP');
     addKey('CMD_ADMIN_SUICIDE');
     addKey('CMD_ADMIN_GIVE_BUFF');
+    addKey('CMD_ADMIN_CRASH');
+    addKey('CMD_CRASH');
 
 	addKey('HOOK_INTO_MAP');
 

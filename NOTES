@@ -252,6 +252,8 @@ WORKING ON (was previously working on)
 	- Buff stacking
 	- Add an icons json; allow spritesheets
 	- Look into a better solution for Components referencing The.scripting stuff
+	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
+	- Client ErrorReporter: fix parseError to work on client/server (webpack? polyfill?)
 	
 
 
@@ -397,9 +399,6 @@ Next Priority
 		- Abstract server side handle command: should be grouped with command definition (all in one place)
 		- Enable admin on login
 	- Easier server debugging
-	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
-	- Have error reporting parse the error and save file information (source for the crash site, etc.)
-	- Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
@@ -450,6 +449,7 @@ Future
 		- JPS pathfinding for suitable maps/regions? (eg. dungeons, tight corridors)
 		- Chasing (pathfinding): We can probably get away with only sending the target that we're chasing after rather than continuously sending updates paths (since our path continuously changes); or perhaps continue to use the same path and continue expanding on it assuming its a simple update (extending the end of the path rather than changing the path mid-way), then this is likely a deterministic operation that clients can be in sync with. We'd simply need to periodically send position updates of the movable if its been a while? Or path progress if its been a while?
 		  - Write a module to compress EVT messages into arrays: { evt: EVT_GAIN_XP, data: { entityId: 54, killedId: 32, XP: 10 } }  ==>  [EVT_GAIN_XP,54,32,10]  then based off the event format table, reconvert it back to its object format
+		  - Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
 	- Fault tolerance
 	  	- On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
 		- Could add preprocessors in "parent" functions which act as a safety check, eg. #CHECK( ExpectObjectFormat(data.args.container.s, { numbers: ForEach(IsNumber), evt: IsValidEvent }) )  on retail converts to:
@@ -457,6 +457,8 @@ Future
 			This sucks but would save us from any crashing
 		- https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
 		- Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
+	- Debugging/Testing
+	  	- Agent bots which follow player around, have sight to attack nearby enemies, use precomputed waypoints to catch up to player (if died)
 
 
 

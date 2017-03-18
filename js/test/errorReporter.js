@@ -1,6 +1,7 @@
 define(() => {
 
-    const http = require('http');
+    const http = require('http'),
+        filepath = require('path');
 
     const ErrorReporter = {
         _init() {
@@ -24,6 +25,11 @@ define(() => {
                 if(error) console.log(error);
                 else console.log(body);
             });
+        },
+
+        reportDir() {
+            const dirname = global.__dirname;  // FIXME: For some reason   require('path').dirname('')  returns an empty string when called from here (as opposed to from bot.js or server.js)
+            return filepath.dirname(dirname);
         },
 
         report(e, dumpObjects) {

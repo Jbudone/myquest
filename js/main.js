@@ -27,6 +27,24 @@ define(
                 console.error(e.stack);
                 if (console.trace) console.trace();
 
+                // Error Reporting
+                // Report as much as possible
+                if (window.ErrorReporter) {
+
+                    if (e) {
+                        window.ErrorReporter.printStack(e);
+                    }
+
+                    // FIXME: There should be an array or object of items we intend to dump
+                    const dump = {
+                        'area': The.area
+                    };
+
+                    window.ErrorReporter.report(e, dump);
+                } else {
+                    console.error("No error reporter yet!");
+                }
+
                 // FIXME: stop game! unexpected and uncaught error..
             };
 

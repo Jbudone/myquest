@@ -6,6 +6,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
         {
             typedCommand: 'admin',
             command: CMD_ADMIN,
+            requiresAdmin: false,
             args: [
                 {
                     name: 'password',
@@ -16,8 +17,21 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             ]
         },
         {
+            typedCommand: 'crash',
+            command: CMD_CRASH,
+            requiresAdmin: false,
+            args: []
+        },
+        {
+            typedCommand: 'admin_crash',
+            command: CMD_ADMIN_CRASH,
+            requiresAdmin: true,
+            args: []
+        },
+        {
             typedCommand: 'gain_xp',
             command: CMD_ADMIN_GAIN_XP,
+            requiresAdmin: true,
             args: [
                 {
                     name: 'XP',
@@ -30,11 +44,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
         {
             typedCommand: 'suicide',
             command: CMD_ADMIN_SUICIDE,
+            requiresAdmin: true,
             args: []
         },
         {
             typedCommand: 'give_buff',
             command: CMD_ADMIN_GIVE_BUFF,
+            requiresAdmin: true,
             args: [
                 {
                     name: 'buffres',
@@ -171,6 +187,15 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
                     });
                 });
+
+                player.registerHandler(CMD_ADMIN_CRASH, 'admin');
+                player.handler(CMD_ADMIN_CRASH).set(function(evt, data) {
+                    try {
+                        throw Err("Crashing the game from script");
+                    } catch(e) {
+                        errorInGame(e);
+                    }
+                });
             },
 
             unload: () => {
@@ -263,6 +288,12 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
                                 cmd[arg.name] = token;
                             }
+
+                            // Admin?
+                            if (commandDetails.requiresAdmin && !this.admin) {
+                                cmd.type = CMD_BAD_COMMAND; // FIXME: This is incorrect find a better way to do this, as well as including the error message
+                            }
+                            
                             break;
                         }
                     }
@@ -315,6 +346,21 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
                     })
                     .catch(errorInGame);
+                } else if (cmd.type === CMD_ADMIN_CRASH) {
+
+                    server.request(cmd.type, cmd)
+                    .then(function() {
+                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                    }, function() {
+                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                    })
+                    .catch(errorInGame);
+                } else if (cmd.type === CMD_CRASH) {
+                    try {
+                        throw Err("Crashing the game from script");
+                    } catch(e) {
+                        errorInGame(e);
+                    }
                 }
             },
 

@@ -10,34 +10,88 @@ define(() => {
 
         Ext.extend(this, 'errorReporter');
 
-        // FIXME: Merge with server.js
-        // FIXME: This is specific to bots/server, should not be exposed to client
-        this.printStack = (e) => {
+        this.parseError = (e) => {
 
-            // TODO: Organize source printing?
-            const filepath = require('path');
+            const parsedError = {
+                error: e,
+                description: "",
+                stack: [],
+                reportDir: ""
+            };
 
             try {
-                console.log("");
                 let level = 0;
 
-                const dirname            = global.__dirname, // FIXME: For some reason   require('path').dirname('')  returns an empty string when called from here (as opposed to from bot.js or server.js)
-
-                    parentDirectory      = filepath.dirname(dirname),
-                    grandparentDirectory = filepath.dirname(parentDirectory);
-
-                let reportDir = parentDirectory; // Bot needs parent dir
-                if (Env.isServer) {
-                    reportDir = dirname;
-                }
-
-                console.log(`You are in ${dirname}, child of ${parentDirectory}, child of ${grandparentDirectory}`);
+                const reportDir = this.reportDir();
+                parsedError.reportDir = reportDir;
 
                 let frames = [];
 
                 e.stack.split('\n').forEach((s) => {
-                    let frame = /\s*at\s*(\w+\.?\w*(\(.+\))?).+\(([^\:]+)\:(\d*)\:(\d*)/g.exec(s.trim());
+                    //let frame = /\s*at\s*(\w+\.?\w*(\(.+\))?).+\(([^\:]+)\:(\d*)\:(\d*)/g.exec(s.trim());
+
+                    // ====== Client ======
+                    // 
+                    // Crashing the game from script
+                    // Error
+                    //     at ErrorMessage (http://myquest.local/dist/errors.js:67:17)
+                    //     at Chatter.handleCommand (http://myquest.local/dist/scripts/game.chat.js:325:31)
+                    //     at Chatter.UI.hook.before.after (http://myquest.local/dist/scripts/game.chat.js:223:31)
+                    //     at Hook.post (http://myquest.local/dist/hookable.js:113:50)
+                    //     at Object.callPostHook [as post] (http://myquest.local/dist/hookable.js:303:35)
+                    //     at HTMLFormElement.<anonymous> (http://myquest.local/dist/client/ui.js:331:47)
+                    //     at HTMLFormElement.dispatch (http://myquest.local/dist/lib/jquery-2.1.1.min.js:3:6404)
+                    //     at HTMLFormElement.r.handle (http://myquest.local/dist/lib/jquery-2.1.1.min.js:3:3179)
+                    //
+                    // ===== Server ======
+                    //
+                    // Crashing the game from script
+                    // Error
+                    //     at ErrorMessage (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/dist/errors.js:67:17)
+                    //     at Player.<anonymous> (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/dist/scripts/game.chat.js:188:31)
+                    //     at Object.handler [as call] (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/dist/dynamic.js:27:72)
+                    //     at WebSocket.Player.client.on (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/dist/server/player.js:572:40)
+                    //     at emitTwo (events.js:106:13)
+                    //     at WebSocket.emit (events.js:194:7)
+                    //     at Receiver.ontext (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/node_modules/ws/lib/WebSocket.js:841:10)
+                    //     at /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/node_modules/ws/lib/Receiver.js:536:18
+                    //     at /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/node_modules/ws/lib/Receiver.js:368:7
+                    //     at /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/node_modules/ws/lib/PerMessageDeflate.js:249:5
+                    //     at afterWrite (_stream_writable.js:383:3)
+                    //     at onwrite (_stream_writable.js:374:7)
+                    //     at afterTransform (_stream_transform.js:79:3)
+                    //     at TransformState.afterTransform (_stream_transform.js:54:12)
+                    //     at Zlib.callback (zlib.js:625:5)
+                    //
+                    // ===== Anonymous Frames ======
+                    //
+                    //
+                    // at Player.<anonymous> (/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/dist/scripts/game.chat.js:188:31)
+                    //
                     // at BuffMgr.(anonymous function) [as initialize] 
+                    //
+                    //
+                    //
+                    // ============ Parsing ============
+                    //
+                    // at FUNCTION [as thing] (FILE:LINE:COL)
+                    //
+                    // at FUNCTION [as initialize]
+                    //
+                    //  at ([^\s]+)\s*(\[as [^\]]+)?\s*(\(([^\:]+)\:(\d*)\:(\d*)\))?
+                    //
+                    let revisedFrameString = s.trim(); // FIXME: Client remove http://.... stuff to only show root folder (mostly necessary for getting rid of : in http://)
+                    if (!Env.isServer && !Env.isBot) {
+                        revisedFrameString = revisedFrameString.replace(new RegExp("\\(.*"+ window.location.hostname), "(")
+                    }
+
+                    // This has troubles with the following parses:
+                    //      at BuffMgr.(anonymous function) [as initialize] 
+                    //      at /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/node_modules/ws/lib/Receiver.js:536:18
+                    let frame = /\s*at\s*(.*)? (\[[^\]]+\])?\s*(\(([^\:]+)\:(\d*)\:(\d*)\))?/g.exec(revisedFrameString);
+
+                    //let frame = /\s*at\s*(\w+\.?\w*(\(.+\))?).+\(([^\:]+)\:(\d*)\:(\d*)/g.exec(s.trim());
+
 
 
                     // FIXME: Get rid of anonymous function technique below (should have been added above)
@@ -54,26 +108,25 @@ define(() => {
                     //    }
                     //}
 
-                    if (frame && frame.length === 6) {
-                        let file   = frame[3],
+                    if (frame && frame.length === 7) {
+                        let file   = frame[4],
                             func   = frame[1],
-                            line   = frame[4],
-                            col    = frame[5];
+                            line   = frame[5],
+                            col    = frame[6];
 
-                        if (file.indexOf(reportDir) >= 0) {
-                            // We're in the same path as the server.. include this frame
-                        } else {
-                            // Hide this frame (note; should have a "...." or something to convey that we're hiding outside of
-                            // scope frames)
-                            return;
-                        }
-
+                        let inWorkingDir = false;
+                        
                         let source = "", sourceLine = "";
-                        try {
-                            source = fs.readFileSync(file) || "";
-                            sourceLine = "";
-                        } catch(e) {
-                            return;
+                        if (file) {
+                            inWorkingDir = file.indexOf(reportDir) >= 0;
+
+                            try {
+                                source = fs.readFileSync(file) || "";
+                                sourceLine = "";
+                            } catch(e) {
+                                // Silently do nothing, probably an invalid file (which is okay)
+                                //return;
+                            }
                         }
 
                         if (source) {
@@ -87,30 +140,65 @@ define(() => {
                             sourceLine = source.toString('utf8', sourceIndex, sourceEnd).trim();
                         }
 
-                        let spacer = "    ";
-                        for (let i = 1; i < level; ++i) {
-                            spacer += "   ";
-                        }
-
-                        let treeLine = (level > 0 ? "   " : "") + "│  ",
-                            treeExpand = level > 0 ? "└─ " : "";
-
-                        console.log(`${spacer}${chalk.white(treeExpand)}${chalk.yellow(file.substr(parentDirectory.length + 1))}${chalk.dim(":")}${chalk.yellow(line)}   ${chalk.white(func)}`);
-                        console.log(`${spacer}${chalk.white(treeLine)}         ${chalk.green(sourceLine)}`);
-                        ++level;
+                        parsedError.stack.push({
+                            file, func, line, col, inWorkingDir,
+                            source: sourceLine,
+                            rawFrame: s.trim()
+                        });
                     } else {
 
-                        console.log(`    ${chalk.bgRed.white(s.trim())}`);
-                        console.log("");
+                        parsedError.stack.push({
+                            rawFrame: s.trim()
+                        });
                     }
                 });
-
-
-
-                console.log("");
             } catch(err) {
                 console.error(err);
                 console.error(e);
+            }
+
+            return parsedError;
+        };
+
+        this.printStack = (e) => {
+
+            const parsedError = this.parseError(e);
+
+            const reportDir = parsedError.reportDir; // FIXME: Maybe this should be parentDirectory instead?
+
+            let level = 0;
+            for (let i = 0; i < parsedError.stack.length; ++i) {
+
+                const frame = parsedError.stack[i];
+
+                if (!frame.inWorkingDir) continue;
+
+                if (frame.source) {
+                    let file       = frame.file,
+                        func       = frame.func,
+                        line       = frame.line,
+                        col        = frame.col,
+                        source     = frame.source;
+
+                    let spacer = "    ";
+                    for (let i = 1; i < level; ++i) {
+                        spacer += "   ";
+                    }
+
+                    let treeLine = (level > 0 ? "   " : "") + "│  ",
+                        treeExpand = level > 0 ? "└─ " : "";
+
+                    console.log(`${spacer}${chalk.white(treeExpand)}${chalk.yellow(file.substr(reportDir.length + 1))}${chalk.dim(":")}${chalk.yellow(line)}   ${chalk.white(func)}`);
+                    console.log(`${spacer}${chalk.white(treeLine)}         ${chalk.green(source)}`);
+                    ++level;
+                } else {
+
+                    console.log(`    ${chalk.bgRed.white(frame.rawFrame)}`);
+                    console.log("");
+                }
+
+                console.log("");
+
             }
 
             /*
@@ -121,6 +209,7 @@ define(() => {
                 console.log(util.inspect(e, { showHidden: true, depth: 4 }));
             }
             */
+
         };
     };
 

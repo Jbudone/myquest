@@ -18,6 +18,10 @@ define(() => {
             });
         },
 
+        reportDir() {
+            return window.location.pathname;
+        },
+
         report(e, dumpObjects) {
 
             let logDump = null;
