@@ -253,7 +253,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const Resources = (new ResourceMgr());
                             GLOBAL.Resources = Resources;
                             Resources.initialize(
-                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'interactables', 'scripts', 'components']
+                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactables', 'scripts', 'components']
                             ).then((assets) => {
 
                                 // Load World

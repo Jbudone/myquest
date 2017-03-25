@@ -212,7 +212,9 @@ define(function(){
         addLogDump: function(message, type){
             if (++logDumpIndex > logDumpSize) logDumpIndex = 1;
 
-            logDump[logDumpIndex - 1] = { message, type }; // FIXME: Preallocate these objects on init
+            const timestamp = now(),
+                prefix = this.logPrefix;
+            logDump[logDumpIndex - 1] = { message, type, timestamp, prefix }; // FIXME: Preallocate these objects on init
         },
         SuppressLogs: function(b) { suppressLogs = b },
         DumpLog: function(){

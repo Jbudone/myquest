@@ -2,9 +2,43 @@ body {
     background-color: #111;
 }
 
+.error-stack {
+    display: grid;
+}
+
+.error-stack-site {
+    width: 60%;
+    margin: auto auto;
+}
+
+.error-stack-site-line-container {
+
+}
+
+.error-stack-site-line {
+    color: #F0F0F0;
+    font-weight: bold;
+    font-family: Verdana;
+    font-size: 16px;
+    white-space: pre;
+}
+
+
 .stackframe {
     margin: 4px;
     padding-left: 40px;
+}
+
+.stackframe.active {
+    background-color: #381717;
+}
+
+.stackframe:hover {
+    background-color: #F00;
+}
+
+.stackframe-link {
+    text-decoration: none;
 }
 
 .stackframe-line {
@@ -37,4 +71,27 @@ body {
     font-weight: bold;
     font-family: Verdana;
     font-size: 16px;
+    width: 300px;
+    display: block;
+    float: left;
+}
+
+.stackframe-source {
+    color: #F0F0F0;
+    font-weight: bold;
+    font-family: Verdana;
+    font-size: 16px;
+
+    display: inline !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+#report-server-logs {
+    padding: 20px 100px;
+}
+
+.log {
+    font-family: Verdana;
+    color: #FFF;
 }

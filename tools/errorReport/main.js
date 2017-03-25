@@ -99,8 +99,63 @@ $(document).ready(() => {
                     }
 
                     if (report) {
-                        System.Report = report;
-                        setupReport(report);
+
+                        // Load source code for each frame on the stack
+                        const reportContextList = [];
+                        if (report.server) reportContextList.push(report.server);
+                        if (report.client) reportContextList.push(report.client);
+
+                        reportContextList.forEach((reportContext) => {
+                            if
+                            (
+                                reportContext.error &&
+                                reportContext.error.parsed &&
+                                reportContext.error.parsed.stack // FIXME: Yuck!
+                            )
+                            {
+                                const gitHead = report.gitHead,
+                                    reportDir = reportContext.error.parsed.reportDir,
+                                    stack     = reportContext.error.parsed.stack;
+
+                                let loadingList = [];
+                                for (let i = 0; i < stack.length; ++i) {
+                                    let stackFrame = stack[i],
+                                        file = stackFrame.file;
+
+                                    if (!file || !stackFrame.inWorkingDir) continue;
+
+                                    file = 'js' + file.replace(reportDir, ''); // Strip out the dir
+
+                                    const loadFilePromise = new Promise((loadedFile, failedToLoadFile) => {
+
+                                        $.post('reports.php', {
+                                            request: "fetchSource",
+                                            file: file,
+                                            gitHead: gitHead
+                                        }, (data) => {
+                                            const json  = JSON.parse(data),
+                                                success = !!json.success;
+
+                                            if (success) {
+                                                stackFrame.source = json.source.split('\n');
+                                                loadedFile(stackFrame.source);
+                                            } else {
+                                                console.error(`Could not fetch source for file ${file}`);
+                                                debugger;
+                                                failedToLoadFile(json);
+                                            }
+                                        });
+                                    });
+
+                                    loadingList.push(loadFilePromise);
+                                }
+
+                                Promise.all(loadingList).then(files => {
+                                    System.Report = report;
+                                    setupReport(report);
+                                });
+                            }
+                        });
                     }
                 }
             });
@@ -145,60 +200,64 @@ $(document).ready(() => {
                 if (report.error) {
 
                     let err = report.error,
+                        frames = err.parsed.stack,
+                        reportDir = err.parsed.reportDir,
                         stack = err.stack.split('\n');
+
+                    const crashSiteEl = $('<pre/>')
+                                        .addClass('prettyprint')
+                                        .addClass('lang-js')
+                                        .addClass('error-stack-site')
+                                        .appendTo(context.error);
 
                     const stackEl = $('<div/>')
                                         .addClass('error-stack')
                                         .appendTo(context.error);
 
-                    // FIXME: stack[0] is the message
-
-                    // Parse the frames
-                    const frames = [];
-                    for (let i = 1; i < stack.length; ++i) {
-
-                        const stackFrame = stack[i],
-                            frame = /\s*at\s*(\w+\.?\w*(\(.+\))?).+\(([^\:]+)\:(\d*)\:(\d*)/g.exec(stackFrame.trim());
-                        // at BuffMgr.(anonymous function) [as initialize] 
-                        if (frame && frame.length === 6) {
-                            let file   = frame[3],
-                                fileType = "";
-                                func   = frame[1],
-                                line   = frame[4],
-                                col    = frame[5];
-
-
-                            let formatedFile = /.*myquest\/dist\/(.+)$/g.exec(file);
-                            if (formatedFile && formatedFile.length === 2) {
-                                formatedFile = formatedFile[1];
-
-                                if (formatedFile.indexOf("scripts/") === 0) {
-                                    fileType = "script";
-                                }
-                            } else if (file.indexOf("node_modules") >= 0) {
-                                formatedFile = file.substr(file.indexOf("node_modules"));
-                                fileType = "lib";
-                            } else {
-                                formatedFile = file;
-                            }
-
-                            frames.push({
-                                file: formatedFile,
-                                fileType: fileType,
-                                func: func,
-                                line: line,
-                                col: col
-                            });
-                        } else {
-                            console.error(`Not sure what to make of ${stackFrame}`);
-                        }
-                    }
-
+                    let activeFrame = null;
                     for (let i = 0; i < frames.length; ++i) {
 
-                        let frame = frames[i];
+                        let frame    = frames[i],
+                            file     = frame.file,
+                            fileType = "",
+                            source   = frame.source,
+                            sourceLine = "";
 
-                        $('<div/>')
+                        if (file) {
+                            if (frame.inWorkingDir) {
+
+                                file = file.replace(reportDir, "");
+                                if (file.indexOf("scripts/") !== -1) {
+                                    fileType = "script";
+                                }
+                            } else {
+
+                                if (file.indexOf("node_modules") !== -1) {
+                                    file = file.substr(file.indexOf("node_modules"));
+                                }
+
+                                fileType = "lib";
+                            }
+                        } else {
+                            continue;
+                        }
+
+                        if (source) {
+                            sourceLine = source[frame.line-1] || ".";
+                            sourceLine = sourceLine.trim();
+                        } else {
+                            sourceLine = ".";
+                        }
+
+                        const stackframeLinkEl = $('<a/>')
+                            .addClass('stackframe-link')
+                            .attr('href', '#')
+                            .click(() => {
+                                highlightFrame();
+                                return false;
+                            })
+                            .appendTo(stackEl);
+                        const stackframeEl = $('<div/>')
                             .addClass('stackframe')
                             .append(
                                 $('<a/>')
@@ -208,29 +267,88 @@ $(document).ready(() => {
                             .append(
                                 $('<a/>')
                                 .addClass('stackframe-file')
-                                .addClass('stackframe-file-'+frame.fileType)
-                                .text(frame.file)
+                                .addClass('stackframe-file-'+fileType)
+                                .text(file)
                             )
                             .append(
                                 $('<a/>')
                                 .addClass('stackframe-func')
                                 .text(frame.func)
                             )
-                            .appendTo(stackEl);
+                            .append(
+                                $('<pre/>')
+                                .addClass('prettyprint')
+                                .addClass('lang-js')
+                                .addClass('stackframe-source')
+                                .text(sourceLine)
+                            )
+                            .appendTo(stackframeLinkEl);
+
+
+                        const highlightFrame = function(){
+
+                            if (activeFrame) {
+                                activeFrame.removeClass('active');
+                            }
+                            activeFrame = stackframeEl;
+                            activeFrame.addClass('active');
+
+                            const crashSite = [],
+                                linesAbout = 3,
+                                lineMin = Math.max(0, frame.line - 1 - linesAbout),
+                                lineMax = Math.min(source.length - 1, frame.line - 1 + linesAbout);
+
+                            crashSiteEl.html('');
+                            for (let line = lineMin; line <= lineMax; ++line) {
+                                const codeLine = frame.source[line];
+                                crashSiteEl.text(crashSiteEl.text() + codeLine + '\n');
+                            }
+
+                            crashSiteEl.removeClass('prettyprinted');
+                            PR.prettyPrint();
+                        };
+
+                        // Highlight the first available stackframe
+                        if (!activeFrame) {
+                            highlightFrame();
+                            activeFrame = stackframeEl;
+                        }
                     }
+
+                    PR.prettyPrint();
                 }
 
                 // TODO: Add Logs/Dump/Errors
                 if (report.logs) {
-                    for (let i = 0; i < report.logs.length; ++i) {
+                    for (let i = report.logs.length - 1; i >= 0; --i) {
                         const log = report.logs[i];
 
                         if (!log) break; // Log buffer may have not been filled yet
 
+                        let logType = "";
+                             if (log.type === 1) logType = 'critical';
+                        else if (log.type === 2) logType = 'error';
+                        else if (log.type === 4) logType = 'warning';
+                        else if (log.type === 8) logType = 'info';
+                        else if (log.type === 16) logType = 'debug';
+                        else logType = 'normal';
+
                         $('<div/>')
                             .addClass('log')
+                            .addClass('log-type-'+logType)
                             .append(
                                 $('<a/>')
+                                .addClass('log-timestamp')
+                                .text(log.timestamp)
+                            )
+                            .append(
+                                $('<a/>')
+                                .addClass('log-prefix')
+                                .text(log.prefix)
+                            )
+                            .append(
+                                $('<a/>')
+                                .addClass('log-message')
                                 .text(log.message)
                             )
                             .appendTo(context.logs);

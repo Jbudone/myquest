@@ -1,7 +1,8 @@
 define(() => {
 
     const filepath = require('path'),
-        fs = require('fs');
+        fs         = require('fs'),
+        execSync   = require('child_process').execSync;
 
     const ErrorReporter = {
         _init() {
@@ -70,7 +71,11 @@ define(() => {
                 };
             }
 
+            const gitHeadResult = execSync('git rev-parse --verify HEAD'),
+                gitHead = gitHeadResult.toString('utf8');
+
             let dump = {
+                gitHead: gitHead,
                 server: {
                     error: err,
                     logs: logDump,
