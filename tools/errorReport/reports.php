@@ -65,10 +65,27 @@ if ($request == "fetchReport") {
         $filesInHead = explode("\n", $filesInHeadBuff);
         $indexOfFile = array_search($fileReq, $filesInHead);
         if ($indexOfFile === False) {
-            $data = array(
-                "success" => false,
-                "reason" => "File ($fileReq) does not exist in commit $gitHead"
-            );
+            // This file is not in the commit..Perhaps its a new file in staging and waiting to be added in the next
+            // commit?
+
+            $addedFilesInHeadBuff = shell_exec("git diff --name-only --cached");
+            $addedFilesInHead = explode("\n", $addedFilesInHeadBuff);
+            $indexOfFile = array_search($fileReq, $addedFilesInHead);
+            if ($indexOfFile === False) {
+                $data = array(
+                    "success" => false,
+                    "reason" => "File ($fileReq) does not exist in commit $gitHead"
+                );
+            } else {
+                $file = $addedFilesInHead[$indexOfFile];
+                $source = shell_exec("cat ../../$file"); // FIXME: There must be a way to do this safely within git?
+
+                $data = array(
+                    "ranthis" => "cat ../../$file",
+                    "source" => $source,
+                    "success" => true
+                );
+            }
         } else {
 
             $file = $filesInHead[$indexOfFile];

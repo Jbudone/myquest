@@ -18,6 +18,8 @@ if (Env.isServer) {
     var redis; __scriptInject_definedVar('redis', true);
     var Rules; __scriptInject_definedVar('Rules', true);
     var Buffs; __scriptInject_definedVar('Buffs', true);
+    var Quests; __scriptInject_definedVar('Quests', true);
+    var Interactions; __scriptInject_definedVar('Interactions', true);
 } else {
     var player; __scriptInject_definedVar('player', true);
     var UI;     __scriptInject_definedVar('UI', true);
@@ -27,6 +29,8 @@ if (Env.isServer) {
     var area;   __scriptInject_definedVar('area', true);
     var Rules; __scriptInject_definedVar('Rules', true);
     var Buffs; __scriptInject_definedVar('Buffs', true);
+    var Quests; __scriptInject_definedVar('Quests', true);
+    var Interactions; __scriptInject_definedVar('Interactions', true);
 }
 
 eval(SCRIPTINJECT);

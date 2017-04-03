@@ -46,6 +46,8 @@ Store maps as BSP tree? then only have to pass events from server to clients whi
 
 Store NPC history in local db, if we run into that same NPC or area again, recognize that locally and add some dialog fun, "You again?! You're ready to die again?"
 
+RvR style areas for different factions (you can work your way into factions); taking over keeps/etc. gives a global stat gain/buff to everyone in that faction
+
 
 Quests
  - Romeo & Juliet
@@ -253,7 +255,13 @@ WORKING ON (was previously working on)
 	- Add an icons json; allow spritesheets
 	- Look into a better solution for Components referencing The.scripting stuff
 	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
-	- Client ErrorReporter: fix parseError to work on client/server (webpack? polyfill?)
+	- Fix interactables: currently we invoke from Resources interactables list, which runs new every invocation. We should only instantiate the base once, then treat it as a static from then on
+	- Fix catch on requirejs errors (OR switch to another AMD loader, but still need to catch on script errors)
+	- QUESTS: How to handle events which affect later quests? Perhaps the quest could be opened/initialized, and then store the questkey or flip some flags in order to 
+	- Quests/Interaction: Client side execution for nodes (eg. killing boss npc, "You feel the evil spirit has disappeared")
+	- Quests/Interaction: Abstract conditions/executions between interaction/quest (and other stuff later); perhaps some scripting functionality (similar to The.scripting)
+	- Quests: Listening to other events on character (certain NPCs could have an array of events they trigger on character that kills them; how can quests listen to that? should we save those event keys on questmgr in case later quests depend on it (ie. not needing to kill some boss character again after initiating the quest)).. To prevent unnecessary over-listening, we could instead emit EVT_QUESTKEY with some value which the questmgr forwards to the corresponding quest
+	- Quests: If quests need to listen to events independently: Might need to store non-active questing stuff in db, and only load quests when necessary: quest node isn't listening to anything, so only load quest into component when we talk to guy. We can improve this later to only load quests from db when we enter the map which affects this quest, or only load parts of the quest from the db as they become necessary (eg. list of steps in the quest which I've achieved)
 	
 
 
@@ -380,12 +388,31 @@ Next Priority
 		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
 		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
 	- Sound
-	- Levelling/Experience: listen to onCombatKill event, save/restore XP, refer to dependency levellingRules.json for finding XP for next level, level up message + rewards (eg. "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ]
+	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
-	- Combat: attack/speed formula (level/stats/randomness)
-	- Questing / rewards
-	- Periodic saving, logging out should also save: save everything (health, death sickness (buffs), etc.)
+	- Get rid of interaction scripts, move entirely into interactionmgr; could have client side only stuff for lookto and pure talking; can add moving/retry stuff in interactionmgr too (perhaps client side when you receive EVT_MOVE_FINISHED from server?)
+	- Conversation shows in UI; able to select options (text on top, spacing, then links underneath for responses)
+		- Differentiating server/client FSM in interaction/quest logic
+		- Interaction could send FSM state transition for client-side execution
+		- Client side interaction state change checks if there's any inputs
+		- Add inputs to UI: Link w/ action that somehow calls something in interactionmgr
+		- UI should group inputs together w/ message
+	- Periodic saving (worth it to save active players to Redis, then slowly flush to db in the background every X time?)
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
+	  	- Object Dump()
+		- Client read source in errorParse
+		- ErrorReport tool
+		  	- Server/Client side-by-side
+			- Logging colours
+			- Header show error (should only be one)
+			- Report list: "Report 05/02/2017 10:01 PM -- Client Report:  ASSERT: Cannot divide by 0"
+			- Syntax highlighting on source
+			- Select source line, loads code region (NOTE: may need reports to include git details, so we can load file from certain timeframe)
+			- Interactive JSON for client/server dumps (highlight dump region a different bg colour depending on client/server)
+			- Get rid of source parse from game errorReporter, integrate entirely into tool w/ git support
+			- Setup grid for error stack (Chrome 57)
+			- Log: if JSON then prettify log
+			- Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
 	- Projectiles
 	- Admin commands from client -- to open server REPL
 	  	- Request login to server
@@ -394,10 +421,10 @@ Next Priority
 		   - Drop items around you
 		   - Put items in inventory
 		   - Add buff
-		- Logging in should change textbox so that it opens an admin script instead (like game.chat but game.admin instead)
 		- Abstract client side handle command: mostly repeated code
 		- Abstract server side handle command: should be grouped with command definition (all in one place)
 		- Enable admin on login
+		- Twitter plugin for autocomplete
 	- Easier server debugging
 
 
@@ -411,7 +438,8 @@ Next Priority
 	 - Regen use con
 	 - Level rewards (gain xp)
 	 - Level XP loss calculation
-	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+	 - Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+	 - Combat: attack/speed formula (level/stats/randomness)
 
 
 
@@ -422,7 +450,7 @@ Future
 	- Better UI
 	  	- Store messages in localization files & packages which slot messages & UI effects into UI
 	- Gameplay system/scripts, triggers/traps
-	- Questing DFA
+	- Quest rewards: faction / opening up conversations with other npcs; epic quest; class quest; keys to locked areas (need key to get in, but lose key on death -- key quests should be weekly/different quests so you're punished for losing your key)
 	- Groups or smarter XP (eg. people who assisted in killing, gave buffs, healing, etc.)
 	- Animated static sprites
 	- Multi-tiled movables (cthulu, boats)
@@ -459,6 +487,7 @@ Future
 		- Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
 	- Debugging/Testing
 	  	- Agent bots which follow player around, have sight to attack nearby enemies, use precomputed waypoints to catch up to player (if died)
+	- Tracking variables during stack unwinding/crashes: could have a preprocessor go through scripts and recognize all variable assignments in scripts, then append global['STACK.FUNC.var']=var
 
 
 
@@ -747,9 +776,10 @@ DB
 	
 	* Initialized on character (depends on npc components)
 	* Uses serialize/restore (server db, client script reloads), and netSerialize/netRestore for receiving state from server
-	* Components are loaded once, and never reloaded
-	* Uses SCRIPTINJECT environment, but could have stale vars on client when reloading (since components don't reload)
+	* Components are loaded once per character. When the character is reloaded, a new component is created from it
+	* The component file is only loaded once, so cannot use SCRIPTINJECT (otherwise we hold onto stale vars and prolong their lifetime)
 	* Be careful with serializing/restoring extra information on client, since if the character dies we netRestore and lose all local data
+	* Make sure to unload
 
 ====== Functions
 

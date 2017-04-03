@@ -156,7 +156,7 @@ define(['loggable'], function(Loggable){
 							if (scriptsToLoad==0 && ready) {
 								succeeded();
 							}
-						}.bind(script));
+						}.bind(script), function(err){ errorInGame(err); });
 
 					} else {
 
@@ -252,6 +252,8 @@ define(['loggable'], function(Loggable){
 			else if (assetID == 'items') return initializeItems(asset);
 			else if (assetID == 'buffs') return initializeBuffs(asset);
 			else if (assetID == 'interactables') return initializeInteractables(asset);
+			else if (assetID == 'quests') return initializeQuests(asset);
+			else if (assetID == 'interactions') return initializeInteractions(asset);
 			else if (assetID == 'scripts') return initializeScripts(asset);
 			else if (assetID == 'world') return initializeWorld(asset);
 			else if (assetID == 'components') return initializeComponents(asset);
@@ -464,12 +466,12 @@ define(['loggable'], function(Loggable){
             return new Promise((loaded, failed) => {
                 var res = JSON.parse(asset).buffs,
                     loading = 0;
-                for (var i=0; i<res.length; ++i) {
-                    var buff = res[i];
+                res.forEach((buff) => {
 
                     var buffBaseRes = buff.base,
                         baseFile = "scripts/buffs."+buffBaseRes;
                     ++loading;
+                    this.buffs[buff.id]=buff;
                     requirejs([baseFile], function(baseScript) {
                         buff.base = baseScript;
 
@@ -478,11 +480,7 @@ define(['loggable'], function(Loggable){
                             loaded();
                         }
                     });
-
-                    this.buffs[buff.id]=buff;
-                    
-                }
-
+                });
             });
 		}.bind(_interface)),
 
@@ -642,6 +640,15 @@ define(['loggable'], function(Loggable){
 			// scripting environment
 		}.bind(_interface)),
 
+		initializeQuests = (function(asset){
+			var res = JSON.parse(asset);
+            this.quests = res;
+		}.bind(_interface)),
+
+		initializeInteractions = (function(asset){
+			var res = JSON.parse(asset);
+            this.interactions = res;
+		}.bind(_interface)),
 
 		initializeScripts = (function(asset){
 			var scripts = JSON.parse(asset);

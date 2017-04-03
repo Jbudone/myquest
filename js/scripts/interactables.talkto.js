@@ -22,36 +22,58 @@ define(['SCRIPTINJECT', 'loggable', 'scripts/character'], (SCRIPTINJECT, Loggabl
             interact: (name, character, args) => {
                 if (!(character instanceof Character)) return new Error("Character is not a character");
                 if (!_.isObject(args)) return new Error("Provided args is not an object");
-                if (!args.hasOwnProperty('messages')) return new Error("Arguments does not provide messages");
-                if (!_.isArray(args.messages)) return new Error("Description is not a string");
                 if (character.alive !== true) return new Error("Character is not alive");
 
-                redis.getValue(name, character.entity.id).then(function(value){
+                // Is this a conversation tree? Or just an array of messages
+                console.log(args);
+                if (args.interaction) {
+                    const interactionMgr = character.charComponent('interactionmgr');
 
-                    if (value === null) {
-                        // Key was not set yet, this is our first interaction with this script
-                        // NOTE: unless the interaction has expired already
-                        value = 0;
-                    } else {
-                        if (!value.hasOwnProperty('interaction')) throw new Error("Interaction not provided for ("+name+", "+character.entity.id+")");
-                        value = parseInt(value.interaction);
-                        if (!_.isFinite(value) || isNaN(value)) throw new Error("Interaction value is not a number");
+                    const reply = interactionMgr.interact(name); // TODO: Eventually include args for particular phrases
+
+                    if (reply) {
+
+                        character.entity.player.send(EVT_INTERACT, {
+                            base: 'talkto',
+                            character: character.entity.id,
+                            message: reply,
+                            name: name
+                        });
                     }
+                } else {
 
-                    var message   = args.messages[value],
-                        nextValue = (value + 1) % args.messages.length;
-                    redis.setValue(name, character.entity.id, 'interaction', nextValue);
+                    if (!args.hasOwnProperty('messages')) return new Error("Arguments does not provide messages");
+                    if (!_.isArray(args.messages)) return new Error("Description is not a string");
 
-                    character.entity.player.send(EVT_INTERACT, {
-                        base: 'talkto',
-                        character: character.entity.id,
-                        message: message,
-                        name: name
-                    });
+                    redis.getValue(name, character.entity.id).then(function(value){
 
-                }, function(err){ errorInGame(err);
-                }).catch(Error, function(err){ errorInGame(err);
-                }).error(function(){ errorInGame(err); });
+                        if (value === null) {
+                            // Key was not set yet, this is our first interaction with this script
+                            // NOTE: unless the interaction has expired already
+                            value = 0;
+                        } else {
+                            if (!value.hasOwnProperty('interaction')) throw new Error("Interaction not provided for ("+name+", "+character.entity.id+")");
+                            value = parseInt(value.interaction, 10);
+                            if (!_.isFinite(value) || isNaN(value)) throw new Error("Interaction value is not a number");
+                        }
+
+                        // Value is the 
+
+                        var message   = args.messages[value],
+                            nextValue = (value + 1) % args.messages.length;
+                        redis.setValue(name, character.entity.id, 'interaction', nextValue);
+
+                        character.entity.player.send(EVT_INTERACT, {
+                            base: 'talkto',
+                            character: character.entity.id,
+                            message: message,
+                            name: name
+                        });
+
+                    }, function(err){ errorInGame(err);
+                    }).catch(Error, function(err){ errorInGame(err);
+                    }).error(function(){ errorInGame(err); });
+                }
             }
         };
 

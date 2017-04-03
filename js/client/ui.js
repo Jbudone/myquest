@@ -660,6 +660,12 @@ define(
 
             this.pause = () => { this.paused = true; };
             this.resume = () => { this.paused = false; };
+
+            this.setAdminUI = () => {
+
+                $('#input').addClass('admin');
+                $('#inputForm').addClass('admin');
+            };
         };
 
         return UI;

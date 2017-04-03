@@ -836,7 +836,7 @@ var exportAreas = function(){
 									if (name.indexOf('#') != -1) {
 										if (!interactableNameCount.hasOwnProperty(name)) interactableNameCount[name] = 0;
 										var count = interactableNameCount[name]++;
-										name = name.replace(/#/count/g);
+										name = name.replace(/#/g, count);
 									}
 									if (area.interactables.hasOwnProperty(name)) throw new Error("Duplicate interactable found: "+name);
 										

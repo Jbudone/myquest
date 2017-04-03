@@ -565,3 +565,21 @@ input.error {
 	color: #FFF;
 	flex-direction: column;
 }
+
+
+
+#inputForm.admin {
+	padding: 2px 2px;
+	background: #6f798e;
+}
+
+#input.admin {
+	height: 32px;
+	border-radius: 4px;
+	border: 2px #F00;
+	padding: 2px 8px;
+	background-color: #2c313b !important;
+	color: #cbd6e0 !important;
+	font-size: 18px;
+	font-family: monospace;
+}

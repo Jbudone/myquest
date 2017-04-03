@@ -6,6 +6,8 @@
 	"items": "items.new.json",
 	"buffs": "buffs.json",
 	"interactables": "interactables.new.json",
+    "quests": "quests.json",
+    "interactions": "interactions.json",
 	"scripts": "scripts.json",
     "components": "components.json",
     "rules": "rules.json"

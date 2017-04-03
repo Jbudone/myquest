@@ -1153,8 +1153,10 @@ define(
                     registerHandler: server.registerHandler.bind(server),
                     handler: server.handler.bind(server)
                 };
-                The.scripting.Rules = Resources.rules;
-                The.scripting.Buffs = Resources.buffs;
+                The.scripting.Rules  = Resources.rules;
+                The.scripting.Buffs  = Resources.buffs;
+                The.scripting.Quests = Resources.quests;
+                The.scripting.Interactions = Resources.interactions;
 
 
                 // -------------------------------------------------------------------------------------------------- //

@@ -4,7 +4,8 @@ define(['loggable', 'component'], (Loggable, Component) => {
         GainLevelEvt    = 'GainedLevel',
         UpdatedLevelEvt = 'UpdatedLevel',
         DeathEvt        = 'die',
-        Rules           = Resources.rules;
+        Rules           = Resources.rules,
+        UI              = The.UI;
 
 
     let staticInit = function() {};

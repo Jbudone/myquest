@@ -52,6 +52,7 @@ const errorInGame = (e) => {
         global.ErrorReporter.report(e, dump);
     } else {
         console.error("No error reporter yet!");
+        console.log(e);
     }
 
     // Just in case the above promises take too long
@@ -210,6 +211,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                         // Loading a module
                         // Add to the list of modules currently being loaded
                         const loading = (module) => {
+                            Log(`Loading: ${module}`);
                             modulesToLoad[module] = false;
                         };
 
@@ -253,7 +255,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const Resources = (new ResourceMgr());
                             GLOBAL.Resources = Resources;
                             Resources.initialize(
-                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactables', 'scripts', 'components']
+                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components']
                             ).then((assets) => {
 
                                 // Load World
@@ -297,10 +299,12 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             loading('scripts');
 
                             // Scripts
-                            The.scripting.world = The.world;
-                            The.scripting.redis = redis;
-                            The.scripting.Rules = Resources.rules;
-                            The.scripting.Buffs = Resources.buffs;
+                            The.scripting.world  = The.world;
+                            The.scripting.redis  = redis;
+                            The.scripting.Rules  = Resources.rules;
+                            The.scripting.Buffs  = Resources.buffs;
+                            The.scripting.Quests = Resources.quests;
+                            The.scripting.Interactions = Resources.interactions;
 
                             Resources.loadComponents().then(() => {
                                 Resources.loadScripts(Resources._scriptRes).then(() => {

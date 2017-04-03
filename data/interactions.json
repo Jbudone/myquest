@@ -1,0 +1,41 @@
+{
+    "king": {
+        "fsm": {
+            "states": [
+                {
+                    "execution": {
+                        "multipleExecution": {
+                            "executions": [
+                                { "message": "Hullo" },
+                                { "message": "How are you" },
+                                { "message": "I too am well" },
+                                {
+                                    "message": "Thank you for talking to me -- Now I grant you a buff",
+                                    "questKey": {
+                                        "id": "kingsquest",
+                                        "value": "talkedToKing-Good"
+                                    }
+                                },
+                                { "message": "You should now have extra health" },
+                                { "message": "And extra constitution" },
+                                { "message": "Now be on your way, young knightly fellow!" },
+                                { "message": "I said be gone good sir!" },
+                                {
+                                    "message": "Ahh tough guy huh? Time for a debuff",
+                                    "questKey": {
+                                        "id": "kingsquest",
+                                        "value": "talkedToKing-Bad"
+                                    }
+                                },
+                                { "message": "Now gtfo" },
+                                { "message": "Asshole.." }
+                            ],
+                            "transitionToState": 0
+                        }
+                    },
+                    "transitions": []
+                }
+            ]
+        }
+    }
+}

@@ -314,7 +314,8 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     server.request(CMD_ADMIN, cmd)
                     .then(function() {
                         UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                        this.admin = true;
+                        _self.admin = true;
+                        UI.setAdminUI();
                     }, function() {
                         UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
                     })
