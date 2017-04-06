@@ -2,6 +2,12 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
     const Interactions = Resources.interactions;
 
+    let server, UI;
+    if (!Env.isServer) {
+        server = The.scripting.server;
+        UI     = The.UI;
+    }
+
     const Interaction = function(character, id) {
 
         const interactionRef = Interactions[id];
@@ -16,21 +22,57 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
         this.execute = (execution) => {
 
-            // Handle Quest key
-            if (execution.questKey) {
-                const questKey = execution.questKey;
-                character.doHook('QuestEvt').post({
-                    id: questKey.id,
-                    value: questKey.value
-                });
-            }
+            if (Env.isServer) {
+                // Handle Quest key
+                if (execution.questKey) {
+                    const questKey = execution.questKey;
+                    character.doHook('QuestEvt').post({
+                        id: questKey.id,
+                        value: questKey.value
+                    });
+                }
+            } else {
 
-            if (execution.message) {
-                return execution.message;
+                if (execution.speak) {
+                    UI.postMessage(execution.speak);
+                    UI.interaction(id, execution.speak);
+                }
+                
+                if (execution.message) {
+                    UI.postMessage(execution.message);
+                }
             }
-
-            return null;
         };
+
+        if (!Env.isServer) {
+            this.processResult = (stateInfo) => {
+                const fsm = this.interactionRef.fsm;
+
+                let execute = null;
+                if
+                (
+                    this.state !== stateInfo.state ||
+                    this.subState !== stateInfo.subState
+                )
+                {
+                    this.state = stateInfo.state;
+                    this.subState = stateInfo.subState;
+
+                    const state = fsm.states[this.state];
+                    let execute = null;
+                    if (state.execution.multipleExecution) {
+                        const executions = state.execution.multipleExecution.executions;
+                        execute = executions[this.subState];
+                    } else {
+
+                    }
+
+                    if (execute) {
+                        this.execute(execute);
+                    }
+                }
+            };
+        }
 
         this.interact = (key) => {
             // TODO: Magic here (fetch next FSM node, execute, return reply)
@@ -59,13 +101,16 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 // TODO: Regular FSM logic
             }
 
-            let reply = null;
             if (execute) {
                 // TODO: Execute shit here
-                reply = this.execute(execute);
+                this.execute(execute);
             }
 
-            return reply;
+            let result = {
+                state: this.state,
+                subState: this.subState
+            };
+            return result;
 
             /*
  "fsm": {
@@ -136,8 +181,14 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     this.interactions[id] = interaction;
                 }
 
-                const reply = interaction.interact();
-                return reply;
+                const result = interaction.interact();
+
+                character.entity.player.send(EVT_INTERACT, {
+                    id: id,
+                    result: result
+                });
+
+                return result;
             },
 
             serialize() {
@@ -167,6 +218,43 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
             initialize() {
 
+                server.registerHandler(EVT_INTERACT, 'character.interactionmgr');
+                server.handler(EVT_INTERACT).set((evt, data) => {
+                    const {id, result} = data;
+
+                    let interaction = this.interactions[id];
+                    if (!interaction) {
+                        interaction = new Interaction(character, id);
+                        this.interactions[id] = interaction;
+                    }
+
+                    interaction.processResult(result);
+                });
+            },
+
+            unload() {
+                server.handler(EVT_INTERACT).unset();
+            },
+
+            interact(interactableID) {
+
+                let interaction = this.interactions[interactableID];
+                if (!interaction) {
+                    interaction = new Interaction(character, interactableID);
+                    this.interactions[interactableID] = interaction;
+                }
+
+                interaction.interact();
+            },
+
+            simpleInteract(interactionID) {
+
+                let interactable = Resources.interactables.list[interactionID],
+                    args = interactable.args;
+
+                if (args.description) {
+                    UI.postMessage(args.description);
+                }
             }
         };
     };

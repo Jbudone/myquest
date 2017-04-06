@@ -607,37 +607,10 @@ define(
                             return;
                         }
 
+                        const interactionMgr = _character.charComponent('interactionmgr');
+                        const result = interactionMgr.interact(data.interactable);
 
-                        const interactableRef = Resources.interactables.list[interactable];
-
-                        if
-                        (
-                            (
-                                confirm(interactableRef, evt, `No resource for interactable ${interactable}`) &&
-                                confirm(interactableRef.base, evt, "Interactable does not contain a base script") &&
-                                confirm(Resources.interactables.base[interactableRef.base], evt, `Base script (${interactableRef.base}) not found`)
-                            ) === false
-                        )
-                        {
-                            return;
-                        }
-
-                        const interactableBase = Resources.interactables.base[interactableRef.base];
-
-                        if (confirm(interactableBase.invoke, evt, "Base interactable script not prepared") === false) {
-                            return;
-                        }
-
-
-                        this.Log(`Requesting to interact with interactable (${interactable})`, LOG_DEBUG);
-                        const result = interactableBase.invoke(interactable, _character, interactableRef.args);
-
-                        if (_.isError(result)) {
-                            confirm(false, evt, result.message);
-                            return;
-                        }
-
-                        player.respond(evt.id, true);
+                        player.respond(evt.id, true, result);
                     };
 
                     player.registerHandler(EVT_INTERACT);

@@ -390,10 +390,8 @@ Next Priority
 	- Sound
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
-	- Get rid of interaction scripts, move entirely into interactionmgr; could have client side only stuff for lookto and pure talking; can add moving/retry stuff in interactionmgr too (perhaps client side when you receive EVT_MOVE_FINISHED from server?)
+	- Get rid of interaction scripts
 	- Conversation shows in UI; able to select options (text on top, spacing, then links underneath for responses)
-		- Differentiating server/client FSM in interaction/quest logic
-		- Interaction could send FSM state transition for client-side execution
 		- Client side interaction state change checks if there's any inputs
 		- Add inputs to UI: Link w/ action that somehow calls something in interactionmgr
 		- UI should group inputs together w/ message

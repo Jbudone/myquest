@@ -1,11 +1,13 @@
 {"interactables": [
 	{
 		"id": "window",
+        "notouch": true,
 		"base": "lookat",
 		"args": { "description": "What a shiny looking window" }
 	},
 	{
 		"id": "chair",
+        "notouch": true,
 		"base": "lookat",
 		"args": { "description": "What a comfy looking chair" }
 	},
@@ -14,9 +16,8 @@
 		"base": "talkto",
 		"args": {
 			"name": "tv",
-			"messages": [
-				"*static*", "*kkrrcchhhhh*", "I am yo*kchhhrr*", "*kchchhrr*ur master"
-		] }
+			"interaction": "tv"
+		}
 	},
 	{
 		"id": "king",
@@ -28,6 +29,7 @@
 	},
 	{
 		"id": "carpet",
+        "notouch": true,
 		"base": "lookat",
 		"args": { "description": "Why am I looking at a carpet?" }
 	}

@@ -740,8 +740,9 @@ define(
 
                         assert(area.interactables[interactableID], `Interactable (${interactableID}) not found!`);
 
-                        const interactable = area.interactables[interactableID],
-                            path           = area.pathfinding.findPath(The.player, interactable.positions, { range: 1, adjacent: false });
+                        const interactable  = area.interactables[interactableID],
+                            path            = area.pathfinding.findPath(The.player, interactable.positions, { range: 1, adjacent: false }),
+                            interactableRes = Resources.interactables.list[interactableID];
 
                         if (!path) {
                             this.Log("No path found to interactable");
@@ -782,31 +783,26 @@ define(
 
                         const readyToInteract = () => {
 
-                            const interactableDetails  = Resources.interactables.list[interactableID];
-                            if (!interactableDetails || !interactableDetails.base) throw Err(`No type script found for interactable (${interactableID})`);
+                            const interaction = Resources.interactions[interactableID];
+                            if (!interaction) {
 
-                            const args               = interactableDetails.args || {},
-                                interactableScriptID = interactableDetails.base,
-                                interactableRes      = Resources.interactables.base[interactableScriptID];
-                            if (!interactableRes) throw Err(`No base script found for interactable script (${interactableScriptID})`);
+                                // Simple interaction, no FSM involved
+                                const interactionMgr = The.player.character.charComponent('interactionmgr');
+                                interactionMgr.simpleInteract(interactableID);
 
-                            if (interactableRes.handledBy === CLIENT_ONLY) {
+                            } else if (interaction.clientOnly === true) {
 
-                                const data = _.extend({
-                                    base: interactableScriptID,
-                                    character: The.player.id,
-                                    name: interactableID
-                                }, args);
-                                interact(null, data);
-
+                                const interactionMgr = The.player.character.charComponent('interactionmgr');
+                                interactionMgr.interact(interactableID);
                             } else {
+
                                 server.request(EVT_INTERACT, {
                                     interactable: interactableID,
                                     tile: { x: nearestTile.x, y: nearestTile.y },
                                     coord,
                                     page: nearestTile.page
                                 })
-                                .then(() => {
+                                .then((result) => {
                                     this.Log("Clicked the interactable!", LOG_DEBUG);
                                 }, (reply) => {
                                     this.Log(`Couldn't click the interactable: ${reply.msg}`, LOG_WARNING);
@@ -815,7 +811,9 @@ define(
                             }
                         };
 
-                        if (path === ALREADY_THERE) {
+                        if (interactableRes.notouch) {
+                            readyToInteract(); // No need to walk up to ("touch") the interactable
+                        } else if (path === ALREADY_THERE) {
                             readyToInteract(); // Already there
                         } else {
                             The.player.addPath(path).finished(readyToInteract, () => {
@@ -824,18 +822,6 @@ define(
                             The.player.recordNewPath(path);
                         }
                     });
-
-                    const interact = (evt, data) => {
-
-                        const base    = Resources.interactables.base[data.base],
-                            character = The.area.movables[data.character].character;
-
-                        base.invoke(data.name, character, data);
-                    };
-
-                    server.registerHandler(EVT_INTERACT);
-                    server.handler(EVT_INTERACT).set(interact);
-
                 },
 
                 unload: () => {

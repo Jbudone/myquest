@@ -6,29 +6,50 @@
                     "execution": {
                         "multipleExecution": {
                             "executions": [
-                                { "message": "Hullo" },
-                                { "message": "How are you" },
-                                { "message": "I too am well" },
+                                { "speak": "Hullo" },
+                                { "speak": "How are you" },
+                                { "speak": "I too am well" },
                                 {
-                                    "message": "Thank you for talking to me -- Now I grant you a buff",
+                                    "speak": "Thank you for talking to me -- Now I grant you a buff",
                                     "questKey": {
                                         "id": "kingsquest",
                                         "value": "talkedToKing-Good"
                                     }
                                 },
-                                { "message": "You should now have extra health" },
-                                { "message": "And extra constitution" },
-                                { "message": "Now be on your way, young knightly fellow!" },
-                                { "message": "I said be gone good sir!" },
+                                { "speak": "You should now have extra health" },
+                                { "speak": "And extra constitution" },
+                                { "speak": "Now be on your way, young knightly fellow!" },
+                                { "speak": "I said be gone good sir!" },
                                 {
-                                    "message": "Ahh tough guy huh? Time for a debuff",
+                                    "speak": "Ahh tough guy huh? Time for a debuff",
                                     "questKey": {
                                         "id": "kingsquest",
                                         "value": "talkedToKing-Bad"
                                     }
                                 },
-                                { "message": "Now gtfo" },
-                                { "message": "Asshole.." }
+                                { "speak": "Now gtfo" },
+                                { "speak": "Asshole.." }
+                            ],
+                            "transitionToState": 0
+                        }
+                    },
+                    "transitions": []
+                }
+            ]
+        }
+    },
+    "tv": {
+        "clientOnly": true,
+        "fsm": {
+            "states": [
+                {
+                    "execution": {
+                        "multipleExecution": {
+                            "executions": [
+                                { "message": "*static*" },
+                                { "message": "*kkrrcchhhhh*" },
+                                { "message": "I am yo*kchhhrr*" },
+                                { "message": "*kchchhrr*ur master" }
                             ],
                             "transitionToState": 0
                         }
