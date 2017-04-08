@@ -2,10 +2,11 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
     const Interactions = Resources.interactions;
 
-    let server, UI;
+    let server, UI, User;
     if (!Env.isServer) {
         server = The.scripting.server;
         UI     = The.UI;
+        User   = The.user;
     }
 
     const Interaction = function(character, id) {
@@ -13,11 +14,11 @@ define(['loggable', 'component'], (Loggable, Component) => {
         const interactionRef = Interactions[id];
         this.interactionRef = interactionRef;
         this.state = 0;
-        this.subState = 0; // Processing an array within a state
+        this.subState = -1; // Processing an array within a state
 
         this.transition = (state) => {
             this.state = state;
-            this.subState = 0;
+            this.subState = -1;
         };
 
         this.execute = (execution) => {
@@ -40,6 +41,12 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 
                 if (execution.message) {
                     UI.postMessage(execution.message);
+                }
+
+                if (execution.dialog) {
+                    UI.postDialogOptions(execution.dialog, (dialog) => {
+                        User.clickedInteractable(id, dialog.key);
+                    });
                 }
             }
         };
@@ -91,14 +98,106 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 const executions      = state.execution.multipleExecution.executions,
                     transitionToState = state.execution.multipleExecution.transitionToState;
 
-                execute = executions[this.subState];
                 ++this.subState;
-
                 if (this.subState >= executions.length) {
                     this.transition(transitionToState);
+                    this.interact(key);
+                } else {
+                    execute = executions[this.subState];
                 }
+
+                /*
+                    "multipleExecution": {
+                        "executions": [
+                            { "message": "Hullo" },
+                            { "message": "How are you" },
+                            { "message": "I too am well" },
+                            {
+                                "message": "LOLWUTWUT",
+                                "questEvent": {
+                                    "id": "kinglyquest",
+                                    "value": "talkedToKing-13"
+                                }
+                            }
+                        ],
+                        "transitionToState": 0
+                    }
+                */
+
             } else {
-                // TODO: Regular FSM logic
+
+                if ('transitionToState' in state) {
+                    this.transition(state.transitionToState);
+                    state = fsm.states[this.state];
+                    execute = state.execution;
+                } else {
+
+                    // Try to transition
+                    let transitioned = false;
+                    for (let i = 0; i < state.transitions.length; ++i) {
+                        const transition = state.transitions[i];
+                        if (transition.key === key) {
+
+                            // FIXME: Matches conditions?
+                            let shouldTransition = true;
+                            if (transition.conditions) {
+                                const conditions = transition.conditions;
+                                conditions.forEach((condition) => {
+                                    const { variable, op, expectedValue } = condition;
+
+                                    // Matches condition?
+                                    let value;
+                                    if (variable === "CHARACTER_LEVEL") {
+                                        value = character.charComponent('levelling').level;
+                                    } else {
+                                        throw Err(`Unknown variable ${variable}`);
+                                    }
+
+                                    let result;
+                                    if (op === "GTEQ") {
+                                        result = value >= expectedValue;
+                                    } else {
+                                        throw Err(`Unknown op ${op}`);
+                                    }
+
+                                    if (!result) {
+                                        shouldTransition = false;
+                                    }
+                                });
+                            }
+
+                            if (shouldTransition) {
+                                Log(`Interaction ${id} Transitioning from state ${this.state} to ${transition.state}`);
+                                this.transition(transition.state);
+                                state = fsm.states[this.state];
+                                execute = state.execution;
+                                transitioned = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!transitioned) {
+                        execute = state.execution;
+                    }
+                }
+
+
+                /*
+                    "execution": {
+                        "speak": "Which pill do you pick?",
+                        "dialog": [
+                            {
+                                "key": "redPill",
+                                "message": "Pick the Red Pill"
+                            },
+                            {
+                                "key": "bluePill",
+                                "message": "Pick the Blue Pill"
+                            }
+                        ]
+                    },
+                */
             }
 
             if (execute) {
@@ -111,33 +210,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 subState: this.subState
             };
             return result;
-
-            /*
- "fsm": {
-            "states": [
-                {
-                    "execution": {
-                        "multipleExecution": {
-                            "executions": [
-                                { "message": "Hullo" },
-                                { "message": "How are you" },
-                                { "message": "I too am well" },
-                                {
-                                    "message": "LOLWUTWUT",
-                                    "questEvent": {
-                                        "id": "kinglyquest",
-                                        "value": "talkedToKing-13"
-                                    }
-                                }
-                            ],
-                            "transitionToState": 0
-                        }
-                    },
-                    "transitions": []
-                }
-            ]
-        }
-             */
         };
 
 
@@ -181,7 +253,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     this.interactions[id] = interaction;
                 }
 
-                const result = interaction.interact();
+                const result = interaction.interact(key);
 
                 character.entity.player.send(EVT_INTERACT, {
                     id: id,
@@ -236,7 +308,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 server.handler(EVT_INTERACT).unset();
             },
 
-            interact(interactableID) {
+            interact(interactableID, key) {
 
                 let interaction = this.interactions[interactableID];
                 if (!interaction) {
@@ -244,7 +316,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     this.interactions[interactableID] = interaction;
                 }
 
-                interaction.interact();
+                interaction.interact(key);
             },
 
             simpleInteract(interactionID) {

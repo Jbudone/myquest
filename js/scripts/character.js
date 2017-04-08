@@ -608,7 +608,7 @@ define(
                         }
 
                         const interactionMgr = _character.charComponent('interactionmgr');
-                        const result = interactionMgr.interact(data.interactable);
+                        const result = interactionMgr.interact(data.interactable, data.key);
 
                         player.respond(evt.id, true, result);
                     };

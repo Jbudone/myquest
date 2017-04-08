@@ -46,15 +46,51 @@
                     "execution": {
                         "multipleExecution": {
                             "executions": [
-                                { "message": "*static*" },
-                                { "message": "*kkrrcchhhhh*" },
-                                { "message": "I am yo*kchhhrr*" },
-                                { "message": "*kchchhrr*ur master" }
+                                { "speak": "*static*" },
+                                { "speak": "*kkrrcchhhhh*" }
                             ],
-                            "transitionToState": 0
+                            "transitionToState": 1
                         }
+                    }
+                },
+                {
+                    "execution": {
+                        "speak": "Which pill do you pick?",
+                        "dialog": [
+                            {
+                                "key": "redPill",
+                                "message": "Pick the Red Pill"
+                            },
+                            {
+                                "key": "bluePill",
+                                "message": "Pick the Blue Pill"
+                            }
+                        ]
                     },
-                    "transitions": []
+                    "transitions": [
+                        {
+                            "key": "redPill",
+                            "state": 2
+                        },
+                        {
+                            "key": "bluePill",
+                            "state": 3
+                        }
+                    ]
+                },
+                {
+                    "execution": {
+                        "speak": "Red Pill",
+                        "message": "You stay in Wonderland and see how deep the rabbit hole goes"
+                    },
+                    "transitionToState": 0
+                },
+                {
+                    "execution": {
+                        "speak": "Blue Pill",
+                        "message": "It was all just a dream.."
+                    },
+                    "transitionToState": 0
                 }
             ]
         }

@@ -32,10 +32,10 @@ define(['hookable', 'dynamic', 'loggable'], (Hookable, Dynamic, Loggable) => {
             this.doHook('clickedItem').post(item);
         };
 
-        this.clickedInteractable = (interactable) => {
-            if (!this.doHook('clickedInteractable').pre(interactable)) return;
+        this.clickedInteractable = (interactable, key) => {
+            if (!this.doHook('clickedInteractable').pre(interactable, key)) return;
             this.Log("Clicked interactable");
-            this.doHook('clickedInteractable').post(interactable);
+            this.doHook('clickedInteractable').post(interactable, key);
         };
 
         this.clickedTile = (tile) => {

@@ -365,6 +365,33 @@ define(
                 this.messageBox[0].scrollTop = this.messageBox[0].scrollHeight;
             };
 
+            this.postDialogOptions = (dialog, callback) => {
+                const dialogElList = [];
+                dialog.forEach((dialogOption) => {
+                    const dialogOptionEl = $('<a/>')
+                        .attr('href', '#')
+                        .append(
+                            $('<span/>')
+                            .addClass('message')
+                            .addClass('message-dialog')
+                            .text(dialogOption.message)
+                        )
+                        .click(() => {
+                            callback(dialogOption);
+
+                            // Invalidate the other dialog options
+                            dialogElList.forEach((dialogEl) => {
+                                dialogEl.off('click').on('click', () => { return false; });
+                            });
+
+                            return false;
+                        });
+                    this.messageBox.append(dialogOptionEl);
+                    dialogElList.push(dialogOptionEl);
+                });
+                this.messageBox[0].scrollTop = this.messageBox[0].scrollHeight;
+            };
+
             // Interactive entities
             // When you interact with an entity (eg. talking to an npc) this is responsible for popping up a chat bubble
             this.interaction = (name, message) => {

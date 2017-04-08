@@ -736,7 +736,7 @@ define(
 
                 handleInteractables: () => {
 
-                    user.hook('clickedInteractable', this).after((interactableID) => {
+                    user.hook('clickedInteractable', this).after((interactableID, key) => {
 
                         assert(area.interactables[interactableID], `Interactable (${interactableID}) not found!`);
 
@@ -793,14 +793,15 @@ define(
                             } else if (interaction.clientOnly === true) {
 
                                 const interactionMgr = The.player.character.charComponent('interactionmgr');
-                                interactionMgr.interact(interactableID);
+                                interactionMgr.interact(interactableID, key);
                             } else {
 
                                 server.request(EVT_INTERACT, {
                                     interactable: interactableID,
                                     tile: { x: nearestTile.x, y: nearestTile.y },
                                     coord,
-                                    page: nearestTile.page
+                                    page: nearestTile.page,
+                                    key
                                 })
                                 .then((result) => {
                                     this.Log("Clicked the interactable!", LOG_DEBUG);
