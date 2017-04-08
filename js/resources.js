@@ -32,7 +32,6 @@ define(['loggable'], function(Loggable){
             loadComponents: function(){},
 
 			loadItemScripts: function(){},
-            loadInteractableScripts: function(){},
 
 		}, initialize = (function(loadingResources){
 
@@ -587,57 +586,14 @@ define(['loggable'], function(Loggable){
 
 		initializeInteractables = (function(asset){
 
-			var InteractableBase = function(interactableBase){
-				var interactable = interactableBase.base,
-					environment  = (Env.isServer ? 'server' : 'client');
-				this.invoke = function(name, character, args){
-					var new_interactable = new interactable(name, character, args);
-					if (new_interactable.hasOwnProperty(environment)) {
-						for (var itm_key in new_interactable[environment]) {
-							new_interactable[itm_key] = new_interactable[environment][itm_key];
-						}
-						delete new_interactable.client;
-						delete new_interactable.server;
-					}
-
-					if (new_interactable.hasOwnProperty('initialize')) {
-						return new_interactable.initialize(name, character, args);
-					}
-				};
-				this.handledBy = interactableBase.handledBy;
-			};
-
-			this.loadInteractableScripts = function(){
-				return new Promise(function(loaded, failed){
-					var interactablesToLoad = 0;
-					_.each(this.interactables.base, function(nothing, interactableBase){
-						var baseFile = 'scripts/interactables.'+interactableBase;
-						++interactablesToLoad;
-						requirejs([baseFile], function(baseScript){
-							this.interactables.base[interactableBase] = new InteractableBase(baseScript);
-							if (--interactablesToLoad === 0) {
-								loaded();
-							}
-						}.bind(this));
-					}.bind(this));
-				}.bind(this));
-			};
-
 			// Interactables
 			var res = JSON.parse(asset).interactables;
 
 			this.interactables.list = {};
-			this.interactables.base = {};
 			for (var i=0; i<res.length; ++i) {
 				var interactable = res[i];
 				this.interactables.list[interactable.id] = interactable;
-				if (!this.interactables.base.hasOwnProperty(interactable.base)) {
-					this.interactables.base[interactable.base] = null;
-				}
 			}
-			this.interactables['interactables-not-loaded'] = true;
-			// NOTE: save interactable base scripts (like scripts) loading/initialization until we've setup the
-			// scripting environment
 		}.bind(_interface)),
 
 		initializeQuests = (function(asset){

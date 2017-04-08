@@ -112,7 +112,7 @@ var exportAreas = function(){
 					console.log("Processing area: "+areaID);
 
 
-					exec('tiled --export-area '+filename+'.tmx '+filename+'.json', function(){
+					exec('tiled --export-map '+filename+'.tmx '+filename+'.json', function(){
 					
 						fs.readFile(filename + '.json', function(err,data){
 							if (err) {
@@ -819,8 +819,7 @@ var exportAreas = function(){
 										txE          = (interactable.x+interactable.width) / tileSize,
 										tyE          = (interactable.y+interactable.height) / tileSize,
 										tiles        = [],
-										name         = interactable.name,
-										type         = interactable.type;
+										name         = interactable.name;
 
 									if (interactable.x % tileSize !== 0 || interactable.y % tileSize !== 0) {
 										throw new Error("Bad interactable tile: ("+interactable.y+","+interactable.x+") for area ["+areaID+"]");
@@ -831,7 +830,6 @@ var exportAreas = function(){
 									}
 
 									if (!name) throw new Error("No name given for interactable");
-									if (!type) throw new Error("No type given for interactable");
 
 									if (name.indexOf('#') != -1) {
 										if (!interactableNameCount.hasOwnProperty(name)) interactableNameCount[name] = 0;
@@ -849,8 +847,7 @@ var exportAreas = function(){
 									}
 
 									area.interactables[name] = {
-										tiles: tiles,
-										script: type
+										tiles: tiles
 									};
 
 

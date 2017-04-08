@@ -2,18 +2,15 @@
 	{
 		"id": "window",
         "notouch": true,
-		"base": "lookat",
 		"args": { "description": "What a shiny looking window" }
 	},
 	{
 		"id": "chair",
         "notouch": true,
-		"base": "lookat",
 		"args": { "description": "What a comfy looking chair" }
 	},
 	{
 		"id": "tv",
-		"base": "talkto",
 		"args": {
 			"name": "tv",
 			"interaction": "tv"
@@ -21,7 +18,6 @@
 	},
 	{
 		"id": "king",
-		"base": "talkto",
 		"args": {
             "name": "king",
 			"interaction": "king"
@@ -30,7 +26,6 @@
 	{
 		"id": "carpet",
         "notouch": true,
-		"base": "lookat",
 		"args": { "description": "Why am I looking at a carpet?" }
 	}
 ]}

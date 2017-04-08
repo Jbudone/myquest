@@ -35,6 +35,10 @@
                     {
                      "spot":"1"
                     },
+                 "propertytypes":
+                    {
+                     "spot":"string"
+                    },
                  "rotation":0,
                  "type":"",
                  "visible":true,
@@ -48,8 +52,13 @@
                  "name":"",
                  "properties":
                     {
-                     "map":"main",
+                     "area":"main",
                      "spawn":"1"
+                    },
+                 "propertytypes":
+                    {
+                     "area":"string",
+                     "spawn":"string"
                     },
                  "rotation":0,
                  "type":"",
@@ -64,8 +73,13 @@
                  "name":"",
                  "properties":
                     {
-                     "map":"main",
+                     "area":"main",
                      "spawn":"1"
+                    },
+                 "propertytypes":
+                    {
+                     "area":"string",
+                     "spawn":"string"
                     },
                  "rotation":0,
                  "type":"",
@@ -80,8 +94,13 @@
                  "name":"",
                  "properties":
                     {
-                     "map":"test-map-toobig",
+                     "area":"test-map-toobig",
                      "spawn":"1"
+                    },
+                 "propertytypes":
+                    {
+                     "area":"string",
+                     "spawn":"string"
                     },
                  "rotation":0,
                  "type":"",
@@ -96,8 +115,13 @@
                  "name":"",
                  "properties":
                     {
-                     "map":"test-map-smallwithnpcs",
+                     "area":"test-map-smallwithnpcs",
                      "spawn":"1"
+                    },
+                 "propertytypes":
+                    {
+                     "area":"string",
+                     "spawn":"string"
                     },
                  "rotation":0,
                  "type":"",
@@ -122,12 +146,8 @@
                  "height":32,
                  "id":7,
                  "name":"chair",
-                 "properties":
-                    {
-
-                    },
                  "rotation":0,
-                 "type":"lookat",
+                 "type":"",
                  "visible":true,
                  "width":16,
                  "x":176,
@@ -137,12 +157,8 @@
                  "height":32,
                  "id":9,
                  "name":"tv",
-                 "properties":
-                    {
-
-                    },
                  "rotation":0,
-                 "type":"talkto",
+                 "type":"",
                  "visible":true,
                  "width":32,
                  "x":384,
@@ -152,12 +168,8 @@
                  "height":16,
                  "id":11,
                  "name":"carpet",
-                 "properties":
-                    {
-
-                    },
                  "rotation":0,
-                 "type":"lookat",
+                 "type":"",
                  "visible":true,
                  "width":16,
                  "x":176,
@@ -167,12 +179,8 @@
                  "height":32,
                  "id":13,
                  "name":"king",
-                 "properties":
-                    {
-
-                    },
                  "rotation":0,
-                 "type":"talkto",
+                 "type":"",
                  "visible":true,
                  "width":32,
                  "x":352,
@@ -187,41 +195,33 @@
         }],
  "nextobjectid":30,
  "orientation":"orthogonal",
- "properties":
-    {
-
-    },
  "renderorder":"right-down",
  "tileheight":16,
  "tilesets":[
         {
+         "columns":20,
          "firstgid":1,
          "image":"..\/tilesheet.png",
          "imageheight":1568,
          "imagewidth":320,
          "margin":0,
          "name":"tilesheet",
-         "properties":
-            {
-
-            },
          "spacing":0,
+         "tilecount":1960,
          "tileheight":16,
          "tilewidth":16,
          "transparentcolor":"#ff00ff"
         }, 
         {
+         "columns":4,
          "firstgid":1961,
          "image":"..\/sprites\/king.png",
          "imageheight":32,
          "imagewidth":64,
          "margin":0,
          "name":"king",
-         "properties":
-            {
-
-            },
          "spacing":0,
+         "tilecount":8,
          "tileheight":16,
          "tilewidth":16
         }],

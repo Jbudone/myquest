@@ -313,21 +313,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                     delete Resources._scriptRes;
                                     The.scriptmgr = new ScriptMgr();
 
-                                    // TODO: Cleanup items-not-loaded and interactables-not-loaded technique for loading
-                                    // things..its weird and unorthadox
+                                    // TODO: Cleanup items-not-loaded technique for loading things..its weird and
+                                    // unorthadox
                                     if ('items-not-loaded' in Resources.items) {
 
                                         delete Resources.items['items-not-loaded'];
                                         loading('items');
                                         Resources.loadItemScripts().then(() => { loaded('items'); })
-                                            .catch((e) => { errorInGame(e); });
-                                    }
-
-                                    if ('interactables-not-loaded' in Resources.interactables) {
-
-                                        delete Resources.interactables['interactables-not-loaded'];
-                                        loading('interactables');
-                                        Resources.loadInteractableScripts().then(() => { loaded('interactables'); })
                                             .catch((e) => { errorInGame(e); });
                                     }
 

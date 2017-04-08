@@ -264,6 +264,8 @@ WORKING ON (was previously working on)
 	- Quests: If quests need to listen to events independently: Might need to store non-active questing stuff in db, and only load quests when necessary: quest node isn't listening to anything, so only load quest into component when we talk to guy. We can improve this later to only load quests from db when we enter the map which affects this quest, or only load parts of the quest from the db as they become necessary (eg. list of steps in the quest which I've achieved)
 	- Interaction: Conversation shows in UI; able to select options (text on top, spacing, then links underneath for responses)
 	- Interaction: After running an action don't display dialog options again (ie. repeatedly clicking the interactable shouldn't flood your messagebox with the dialog)
+	- ExportMap: Support new data format (zlib compression, currently using CSV)
+	- Interaction: Hook interaction fsm into interactable
 	
 
 
@@ -392,7 +394,6 @@ Next Priority
 	- Sound
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
-	- Get rid of interaction scripts; re-organize to link interactables with their FSM?
 	- Questmgr/interactionmgr Use FSM (abstract FSM logic)
 		- Fix Questmgr ==>  Transition THEN Execute (same as interactionmgr)
 	- Periodic saving (worth it to save active players to Redis, then slowly flush to db in the background every X time?)

@@ -1378,7 +1378,7 @@ define(
                         The.scriptmgr.unload();
                     }
 
-                    let loading = 2; // TODO: Don't do this..
+                    let loading = 1; // TODO: Don't do this..
 
                     Resources.loadComponents().then(() => {
 
@@ -1390,16 +1390,6 @@ define(
                             if ('items-not-loaded' in Resources.items) {
                                 delete Resources.items['items-not-loaded'];
                                 Resources.loadItemScripts().then(() => {
-                                    if (--loading === 0) loaded();
-                                }, errorInGame)
-                                .catch(errorInGame);
-                            } else {
-                                --loading;
-                            }
-
-                            if ('interactables-not-loaded' in Resources.interactables) {
-                                delete Resources.interactables['interactables-not-loaded'];
-                                Resources.loadInteractableScripts().then(() => {
                                     if (--loading === 0) loaded();
                                 }, errorInGame)
                                 .catch(errorInGame);
