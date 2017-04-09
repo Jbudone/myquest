@@ -266,6 +266,7 @@ WORKING ON (was previously working on)
 	- Interaction: After running an action don't display dialog options again (ie. repeatedly clicking the interactable shouldn't flood your messagebox with the dialog)
 	- ExportMap: Support new data format (zlib compression, currently using CSV)
 	- Interaction: Hook interaction fsm into interactable
+	- Periodic saving: look into partial saves on dirty components for characters; and saving all players at once. Dirty position when you near a new "safe" checkpoint?
 	
 
 
@@ -394,11 +395,6 @@ Next Priority
 	- Sound
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
-	- Periodic saving (worth it to save active players to Redis, then slowly flush to db in the background every X time?)
-	  	- Periodically serialize everyone (should be good enough for now)
-		- Components set themselves to dirty on serializable change; then periodic changes can only flush the latest changes
-		  	- Would need to be able to only change certain parts of the character
-			- Character position is set to dirty when you enter a new zone (not position change)
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
 	  	- Object Dump()
 		- Client read source in errorParse

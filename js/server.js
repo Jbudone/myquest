@@ -459,9 +459,11 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             };
 
                             // The Game Loop
-                            const stepTimer = 100; // TODO: Is this the best step timer?
-                            let lastTime = now();
+                            const stepTimer         = 100; // TODO: Is this the best step timer?
+                            let lastTime            = now(),
+                                timeToBackupPlayers = Env.game.periodicBackupTime; // Time to backup the players? (done periodically)
                             const step = () => {
+
 
                                 const time = now(),
                                     delta  = time - lastTime;
@@ -519,6 +521,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
 
                                 // Pass events to each player
+                                timeToBackupPlayers -= delta;
                                 _.each(players, (player, clientID) => {
 
                                     const client = player.client;
@@ -548,9 +551,15 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                             Log(`Removed player: ${player.id}`);
                                             db.savePlayer(player.movable);
                                             delete players[player.id];
+                                        } else if (timeToBackupPlayers <= 0.0) {
+                                            db.savePlayer(player.movable);
                                         }
 
                                         return;
+                                    }
+
+                                    if (timeToBackupPlayers <= 0.0) {
+                                        db.savePlayer(player.movable);
                                     }
 
                                     if (client.readyState !== 1) return; // Not open (probably in the middle of d/c)
@@ -588,6 +597,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                     }
                                 });
 
+                                if (timeToBackupPlayers <= 0.0) {
+                                    timeToBackupPlayers = Env.game.periodicBackupTime;
+                                }
                             };
 
                             step();

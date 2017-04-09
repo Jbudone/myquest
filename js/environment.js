@@ -55,6 +55,8 @@ define(function(){
 				dontDisconnectIfBusy: true,   // Disallow disconnecting if user busy (eg. in combat)
             },
 
+            periodicBackupTime: 10000, // Periodic time to backup all players
+
             client: {
                 maxWalkDelay: 6000, // Maximum allowed delay (in ms) to catch up to server's position before giving up and teleporting
             },
