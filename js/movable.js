@@ -412,7 +412,7 @@ define(
                         if (direction == EAST || direction == SOUTH) posK += deltaSteps;
                         else                                         posK -= deltaSteps;
 
-                        //Log(keyStrings[direction] + deltaSteps + "   TO: " + posK, LOG_DEBUG);
+                        //Log(`(${path.id}, ${path.flag}) Moving ${keyStrings[direction]} ${deltaSteps}  TO: ${posK}  (${steps} steps)`, LOG_DEBUG);
 
                         // Are we just beginning this next walk?
                         if (!walk.started) {

@@ -41,11 +41,9 @@ const errorInGame = (e) => {
 
     // Error Reporting
     // Report as much as possible
-    if (global.ErrorReporter) {
+    if (global.ErrorReporter && e) {
 
-        if (e) {
-            global.ErrorReporter.printStack(e);
-        }
+        global.ErrorReporter.printStack(e);
 
         // FIXME: There should be an array or object of items we intend to dump
         const dump = {

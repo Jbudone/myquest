@@ -267,6 +267,9 @@ WORKING ON (was previously working on)
 	- ExportMap: Support new data format (zlib compression, currently using CSV)
 	- Interaction: Hook interaction fsm into interactable
 	- Periodic saving: look into partial saves on dirty components for characters; and saving all players at once. Dirty position when you near a new "safe" checkpoint?
+	- Projectiles: Add shooting bone/offset from archer's sprite
+	- Projectiles: Find a better way to determine if the attacker is firing a projectile, and the projectile type
+	- Projectiles: Better time-to-die calculation for projectile (per projectile number?)
 	
 
 
@@ -410,7 +413,6 @@ Next Priority
 			- Setup grid for error stack (Chrome 57)
 			- Log: if JSON then prettify log
 			- Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
-	- Projectiles
 	- Admin commands from client -- to open server REPL
 	  	- Request login to server
 		- Commands

@@ -11,7 +11,7 @@
         {
             "message": "You have reached level 1",
             "nextLevelXP": 20,
-            "canLoseXP": true
+            "canLoseXP": false
         },
         {
             "message": "You have reached level 2",

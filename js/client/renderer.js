@@ -9,6 +9,8 @@ define(['loggable'], (Loggable) => {
         this.setLogGroup('Renderer');
         this.setLogPrefix('Renderer');
 
+        this.lastUpdateTime   = now();
+
         this.canvasEntities   = null;
         this.canvasBackground = null;
         this.ctxEntities      = null;
@@ -19,6 +21,8 @@ define(['loggable'], (Loggable) => {
         this.area             = null;
         this.tilesheet        = null;
         this.tilesheets       = null;
+
+        this.projectiles      = [];
 
         this.settings  = {
             lineWidth: 3,
@@ -80,6 +84,20 @@ define(['loggable'], (Loggable) => {
             this.ctxBackground.ImageSmoothingEnabled       = this.settings.smoothing;
             this.ctxBackground.strokeStyle                 = this.settings.strokeStyle;
             this.ctxBackground.lineWidth                   = this.settings.lineWidth;
+        };
+
+        this.step = (time) => {
+            const delta = time - this.lastUpdateTime;
+            this.lastUpdateTime = time;
+
+            for (let i = this.projectiles.length - 1; i >= 0; --i) {
+                const projectile = this.projectiles[i];
+                projectile.timeToDie -= delta;
+
+                if (projectile.timeToDie <= 0) {
+                    this.projectiles.splice(i, 1);
+                }
+            }
         };
 
         this.sheetFromGID = (gid) => {
@@ -371,6 +389,37 @@ define(['loggable'], (Loggable) => {
                 }
             });
 
+            // Draw Projectiles
+            {
+                for (let i = 0; i < this.projectiles.length; ++i) {
+                    const projectile = this.projectiles[i],
+                        fromPos = { x: projectile.from.x, y: projectile.from.y },
+                        toPos = { x: projectile.to.x, y: projectile.to.y },
+                        interp = 1.0 - projectile.timeToDie / 100,
+                        pos = { x: fromPos.x + (toPos.x - fromPos.x) * interp, y: fromPos.y + (toPos.y - fromPos.y) * interp },
+                        pageX = parseInt(pos.x / Env.tileSize, 10) % Env.pageWidth,
+                        pageY = parseInt(pos.y / Env.tileSize, 10) % Env.pageHeight,
+                        sheetData = projectile.sheet || this.sheetFromGID(projectile.spriteGID),
+                        tilesPerRow = sheetData.tilesPerRow,
+                        sy          = Math.max(-1, Math.floor((projectile.spriteGID - sheetData.gid.first) / tilesPerRow)),
+                        sx          = Math.max(-1, (projectile.spriteGID - sheetData.gid.first) % tilesPerRow),
+                        tileSize    = sheetData.tileSize.width,
+                        py          = (pos.y + this.camera.globalOffsetY) * Env.tileScale,
+                        px          = (pos.x - this.camera.globalOffsetX) * Env.tileScale;
+
+                    if (!projectile.sheet) projectile.sheet = sheetData;
+                    if (sy !== -1 && sx !== -1) {
+                        this.ctxEntities.drawImage(
+                            sheetData.image,
+                            tileSize * sx, tileSize * sy,
+                            tileSize, tileSize,
+                            px, py,
+                            Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize
+                        );
+                    }
+                }
+            }
+
 
             // Draw floating sprites
             for (let i = 0; i < floatingSprites.length; ++i) {
@@ -534,6 +583,28 @@ define(['loggable'], (Loggable) => {
                     this.ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
                 }
             }
+        };
+
+        this.addProjectile = function(fromEntity, toEntity, spriteGID) {
+
+            const offset = { x: 0, y: -8 }; // FIXME: Determine offset based off of the entity sprite (shooting bone)
+
+            const fromPos = {
+                x: fromEntity.position.global.x + offset.x,
+                y: fromEntity.position.global.y + offset.y
+            };
+
+            const toPos = {
+                x: toEntity.position.global.x + offset.x,
+                y: toEntity.position.global.y + offset.y
+            };
+
+            this.projectiles.push({
+                timeToDie: 80,
+                from: fromPos,
+                to: toPos,
+                spriteGID: spriteGID
+            });
         };
     };
 

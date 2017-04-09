@@ -329,6 +329,7 @@ define(
                         // TODO: Should the camera/UI be stepped here?
                         The.camera.step(time);
                         renderer.ui.step(time);
+                        renderer.step(time);
 
                         renderer.render();
 
@@ -986,6 +987,13 @@ define(
                             target.sprite.dirAnimate('atk', direction);
 
                             entity.character.hurt(amount, target.character, health);
+
+                            // Is this a ranged attack? Spawn a projectile
+                            // FIXME: Find a better way to fetch ranged flag and projectile id
+                            if (target.npc.attackInfo.ability === "range") {
+                                const projectileSprite = 1960;
+                                The.renderer.addProjectile(target, entity, projectileSprite);
+                            }
                         }
                     };
 

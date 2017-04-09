@@ -29,11 +29,9 @@ define(
 
                 // Error Reporting
                 // Report as much as possible
-                if (window.ErrorReporter) {
+                if (window.ErrorReporter && e) {
 
-                    if (e) {
-                        window.ErrorReporter.printStack(e);
-                    }
+                    window.ErrorReporter.printStack(e);
 
                     // FIXME: There should be an array or object of items we intend to dump
                     const dump = {
