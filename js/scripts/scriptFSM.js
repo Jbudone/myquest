@@ -41,6 +41,8 @@ define(() => {
             };
         }
 
+        let activeDialog = null;
+
         this.execute = (execution) => {
 
             let UI, User;
@@ -79,9 +81,15 @@ define(() => {
                     UI.postMessage(execution.message);
                 }
 
+                // FIXME: Dialog belongs in the interactionmgr; need to be able to override this.execute to handle
+                // execution.dialog, but call super.execute(..) .. Will need to use class instead of prototypes for that
+                // to work
                 if (execution.dialog) {
+                    activeDialog = execution.dialog;
                     UI.postDialogOptions(execution.dialog, (dialog) => {
+                        if (execution.dialog !== activeDialog) return; // This is a stale dialog option from earlier
                         User.clickedInteractable(id, dialog.key);
+                        activeDialog = null;
                     });
                 }
             }

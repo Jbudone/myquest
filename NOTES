@@ -394,7 +394,6 @@ Next Priority
 	- Sound
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
-	- Interaction: Invalidate older dialog callbacks (in case multiple show up); use a dialogId and callback checks if dialogId matches
 	- Periodic saving (worth it to save active players to Redis, then slowly flush to db in the background every X time?)
 	  	- Periodically serialize everyone (should be good enough for now)
 		- Components set themselves to dirty on serializable change; then periodic changes can only flush the latest changes
