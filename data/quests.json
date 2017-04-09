@@ -3,12 +3,12 @@
          "fsm": {
             "states": [
                 {
-                    "execution": [
-                        {
+                    "execution": {
+                        "evt": {
                             "evt": "BuffEvt",
                             "buff": "KingBadBuff"
                         }
-                    ],
+                    },
                     "transitions": [
                         {
                             "key": "talkedToKing-Good",
@@ -28,12 +28,12 @@
                     ]
                 },
                 {
-                    "execution": [
-                        {
+                    "execution": {
+                        "evt": {
                             "evt": "BuffEvt",
                             "buff": "KingGoodBuff"
                         }
-                    ],
+                    },
                     "transitions": [
                         {
                             "key": "talkedToKing-Bad",
