@@ -396,6 +396,15 @@ Next Priority
 		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
 		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
 	- Sound
+	  	- FX.Event('Attacked', this, { .. })
+		- FXMgr:
+		  	Event: trigger hook
+			Register hooks (relaxed mode); 
+
+			What about 'Attacked' from certain monster types/states?  Could fetch FX symbol from event/args:   if(npc.type == goblin) evt = 'Attacked-goblin'
+			Keep track of active entities playing FX, then determine if another event should be accepted (some conditions/rules per evt)
+			Have UI entity? Game entity for music? -- Perhaps different regions (Game, UI, Background), each with its own settings and its own list of entities
+			Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)

@@ -14,19 +14,65 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     test: (p) => _.isString(p),
                     error: "Token expected to be a string"
                 }
-            ]
+            ],
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                    self.admin = true;
+                    UI.setAdminUI();
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            },
+            server: (evt, data, self) => {
+
+                let success = false;
+                if (_.isObject(data) && data.password === "42") {
+                    success = true;
+                    self.admin = true;
+                    self.setupAdmin();
+                }
+
+                self.player.respond(evt.id, success, {
+
+                });
+            }
         },
         {
             typedCommand: 'crash',
             command: CMD_CRASH,
             requiresAdmin: false,
-            args: []
+            args: [],
+            client: () => {
+
+                try {
+                    throw Err("Crashing the game from script");
+                } catch(e) {
+                    errorInGame(e);
+                }
+            }
         },
         {
             typedCommand: 'admin_crash',
             command: CMD_ADMIN_CRASH,
             requiresAdmin: true,
-            args: []
+            args: [],
+            server: (evt, data, self) => {
+                try {
+                    throw Err("Crashing the game from script");
+                } catch(e) {
+                    errorInGame(e);
+                }
+            },
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
         },
         {
             typedCommand: 'gain_xp',
@@ -39,13 +85,60 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     test: (p) => _.isFinite(p),
                     error: "Token should be a valid number"
                 }
-            ]
+            ],
+            server: (evt, data, self) => {
+
+                const player = self.player;
+                let success = false;
+                if (_.isObject(data) && _.isFinite(data.XP)) {
+                    success = true;
+                    // FIXME: Should check XP amount is reasonable -- cannot level more than once
+                    this.Log(`Giving you some XP: ${data.XP}`);
+                    player.movable.character.doHook('GainedXP').post({ XP: data.XP });
+                }
+
+                player.respond(evt.id, success, {
+
+                });
+            },
+            client: {
+                pre: () => {
+                    UI.postMessage("So you think you can login eh?");
+                },
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
         },
         {
             typedCommand: 'suicide',
             command: CMD_ADMIN_SUICIDE,
             requiresAdmin: true,
-            args: []
+            args: [],
+            server: (evt, data, self) => {
+
+                const player = self.player;
+
+                let success = true;
+                // FIXME: Check if we can die (currently alive)
+                this.Log(`Committing suicide`);
+                player.movable.character.die(null);
+
+                player.respond(evt.id, success, {
+
+                });
+            },
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
         },
         {
             typedCommand: 'give_buff',
@@ -58,7 +151,38 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     test: (p) => p in Buffs,
                     error: "BuffRes not valid"
                 }
-            ]
+            ],
+            server: (evt, data, self) => {
+
+                const player = self.player;
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isString(data.buffres) &&
+                    data.buffres in Buffs
+                )
+                {
+                    success = true;
+                    this.Log(`Giving you a buff: ${data.buffres}`);
+                    player.movable.character.doHook('BuffEvt').post({
+                        buff: Buffs[data.buffres]
+                    });
+                }
+
+                player.respond(evt.id, success, {
+
+                });
+            },
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
         }
     ];
 
@@ -113,19 +237,16 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     });
                     player.timeSinceLastMessage = now();
 
-                    player.registerHandler(CMD_ADMIN, 'chat');
-                    player.handler(CMD_ADMIN).set((evt, data) => {
+                    _self.player = player;
+                    Commands.forEach((cmd) => {
+                        if (cmd.server && !cmd.requiresAdmin) {
 
-                        let success = false;
-                        if (_.isObject(data) && data.password === "42") {
-                            success = true;
-                            _self.admin = true;
-                            _self.setupAdmin(player);
+                            // Register this command
+                            player.registerHandler(cmd.command, 'chat');
+                            player.handler(cmd.command).set((evt, data) => {
+                                cmd.server(evt, data, _self);
+                            });
                         }
-
-                        player.respond(evt.id, success, {
-
-                        });
                     });
                 });
 
@@ -135,65 +256,19 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 });
             },
 
-            setupAdmin: (player) => {
-                player.registerHandler(CMD_ADMIN_GAIN_XP, 'admin');
-                player.handler(CMD_ADMIN_GAIN_XP).set(function(evt, data) {
+            setupAdmin: () => {
+                const player = _self.player;
 
-                    let success = false;
-                    if (_.isObject(data) && _.isFinite(data.XP)) {
-                        success = true;
-                        // FIXME: Should check XP amount is reasonable -- cannot level more than once
-                        this.Log(`Giving you some XP: ${data.XP}`);
-                        player.movable.character.doHook('GainedXP').post({ XP: data.XP });
-                    }
+                console.log("Setting player as admin");
+                Commands.forEach((cmd) => {
+                    if (cmd.server && cmd.requiresAdmin) {
+                        console.log("Registering command " + cmd.typedCommand);
 
-                    player.respond(evt.id, success, {
-
-                    });
-                });
-
-                player.registerHandler(CMD_ADMIN_SUICIDE, 'admin');
-                player.handler(CMD_ADMIN_SUICIDE).set(function(evt, data) {
-
-                    let success = true;
-                    // FIXME: Check if we can die (currently alive)
-                    this.Log(`Committing suicide`);
-                    player.movable.character.die(null);
-
-                    player.respond(evt.id, success, {
-
-                    });
-                });
-
-                player.registerHandler(CMD_ADMIN_GIVE_BUFF, 'admin');
-                player.handler(CMD_ADMIN_GIVE_BUFF).set(function(evt, data) {
-
-                    let success = false;
-                    if
-                    (
-                        _.isObject(data) &&
-                        _.isString(data.buffres) &&
-                        data.buffres in Buffs
-                    )
-                    {
-                        success = true;
-                        this.Log(`Giving you a buff: ${data.buffres}`);
-                        player.movable.character.doHook('BuffEvt').post({
-                            buff: Buffs[data.buffres]
+                        // Register this command
+                        player.registerHandler(cmd.command, 'admin');
+                        player.handler(cmd.command).set((evt, data) => {
+                            cmd.server(evt, data, _self);
                         });
-                    }
-
-                    player.respond(evt.id, success, {
-
-                    });
-                });
-
-                player.registerHandler(CMD_ADMIN_CRASH, 'admin');
-                player.handler(CMD_ADMIN_CRASH).set(function(evt, data) {
-                    try {
-                        throw Err("Crashing the game from script");
-                    } catch(e) {
-                        errorInGame(e);
                     }
                 });
             },
@@ -269,6 +344,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         const commandDetails = Commands[i];
                         if (commandRequest === commandDetails.typedCommand) {
                             cmd.type = commandDetails.command;
+                            cmd.ref = commandDetails;
 
                             // Setup Args
                             let badArg = false;
@@ -307,61 +383,21 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 if (cmd.type === CMD_BAD_COMMAND) {
 
                     UI.postMessage(`Wtf is ${request}?`, MESSAGE_BAD);
-                } else if (cmd.type === CMD_ADMIN) {
+                } else if (cmd.ref.server) {
 
-                    UI.postMessage("So you think you can login eh?");
-
-                    server.request(CMD_ADMIN, cmd)
-                    .then(function() {
-                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                        _self.admin = true;
-                        UI.setAdminUI();
-                    }, function() {
-                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
-                    })
-                    .catch(errorInGame);
-                } else if (cmd.type === CMD_ADMIN_GAIN_XP) {
-
-                    server.request(cmd.type, cmd)
-                    .then(function() {
-                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                    }, function() {
-                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
-                    })
-                    .catch(errorInGame);
-                } else if (cmd.type === CMD_ADMIN_SUICIDE) {
-
-                    server.request(cmd.type, cmd)
-                    .then(function() {
-                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                    }, function() {
-                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
-                    })
-                    .catch(errorInGame);
-                } else if (cmd.type === CMD_ADMIN_GIVE_BUFF) {
-
-                    server.request(cmd.type, cmd)
-                    .then(function() {
-                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                    }, function() {
-                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
-                    })
-                    .catch(errorInGame);
-                } else if (cmd.type === CMD_ADMIN_CRASH) {
-
-                    server.request(cmd.type, cmd)
-                    .then(function() {
-                        UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
-                    }, function() {
-                        UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
-                    })
-                    .catch(errorInGame);
-                } else if (cmd.type === CMD_CRASH) {
-                    try {
-                        throw Err("Crashing the game from script");
-                    } catch(e) {
-                        errorInGame(e);
+                    if (cmd.ref.client.pre) {
+                        cmd.ref.client.pre();
                     }
+
+                    server.request(cmd.type, cmd)
+                        .then((data) => {
+                            cmd.ref.client.succeeded(_self, data);
+                        }, (data) => {
+                            cmd.ref.client.failed(_self, data);
+                        })
+                        .catch(errorInGame);
+                } else {
+                    cmd.ref.client();
                 }
             },
 

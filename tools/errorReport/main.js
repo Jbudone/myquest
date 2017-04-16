@@ -304,8 +304,10 @@ $(document).ready(() => {
                                 crashSiteEl.text(crashSiteEl.text() + codeLine + '\n');
                             }
 
-                            crashSiteEl.removeClass('prettyprinted');
-                            PR.prettyPrint();
+                            if (window['PR'] !== undefined) {
+                                crashSiteEl.removeClass('prettyprinted');
+                                PR.prettyPrint();
+                            }
                         };
 
                         // Highlight the first available stackframe
@@ -315,7 +317,9 @@ $(document).ready(() => {
                         }
                     }
 
-                    PR.prettyPrint();
+                    if (window['PR'] !== undefined) {
+                        PR.prettyPrint();
+                    }
                 }
 
                 // TODO: Add Logs/Dump/Errors
