@@ -148,13 +148,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                     [
                         'errorReporter',
                         'resources', 'loggable',
-                        'movable', 'world', 'area', 'scriptmgr',
+                        'movable', 'world', 'area', 'scriptmgr', 'test/pseudofxmgr',
                         'server/db', 'server/redis', 'server/player', 'server/login'
                     ],
                     (
                         ErrorReporter,
                         ResourceMgr, Loggable,
-                        Movable, World, Area, ScriptMgr,
+                        Movable, World, Area, ScriptMgr, FXMgr,
                         DB, Redis, Player, LoginHandler
                     ) => {
 
@@ -334,6 +334,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                         startGame = () => {
 
                             Log("Game has started. Hello, World!");
+                            GLOBAL.FX = FXMgr;
 
                             // Queued request buffer
                             // This is a double buffer to allow queueing requests while safely reading from the previous

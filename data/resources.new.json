@@ -10,5 +10,6 @@
     "interactions": "interactions.json",
 	"scripts": "scripts.json",
     "components": "components.json",
-    "rules": "rules.json"
+    "rules": "rules.json",
+    "fx": "fx.json"
 }

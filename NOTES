@@ -398,13 +398,20 @@ Next Priority
 	- Sound
 	  	- FX.Event('Attacked', this, { .. })
 		- FXMgr:
-		  	Event: trigger hook
-			Register hooks (relaxed mode); 
 
-			What about 'Attacked' from certain monster types/states?  Could fetch FX symbol from event/args:   if(npc.type == goblin) evt = 'Attacked-goblin'
-			Keep track of active entities playing FX, then determine if another event should be accepted (some conditions/rules per evt)
-			Have UI entity? Game entity for music? -- Perhaps different regions (Game, UI, Background), each with its own settings and its own list of entities
+		  	Future: entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
+			Future: Improve sound buffer loader: promise/load all, then set FX as ready when everything is loaded
+			Future: Utilize WebStorage to store/load sounds (need some way to determine if sounds have changed on the server)
+			Future: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample? limit to X number of sounds on an entity? etc.)
+			Future: Sound groups (weapon -> combat -> world -> global); each group can have its own settings
+			Future: Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
+			Future: LocalStorage settings (volume)
+
+			Transform events: get name of entity (movable -> ctx.npc.name, ui -> ..)
 			Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely
+			Starting screen sound/music
+
+
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	- Combat: smarter target selection
 	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
@@ -429,8 +436,6 @@ Next Priority
 		   - Drop items around you
 		   - Put items in inventory
 		   - Add buff
-		- Abstract client side handle command: mostly repeated code
-		- Abstract server side handle command: should be grouped with command definition (all in one place)
 		- Enable admin on login
 		- Twitter plugin for autocomplete
 	- Easier server debugging

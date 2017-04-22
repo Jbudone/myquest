@@ -25,6 +25,7 @@ define(['loggable'], function(Loggable){
 			interactables: {},
             components: {},
             rules: {},
+            fx: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
@@ -248,6 +249,7 @@ define(['loggable'], function(Loggable){
 			if (assetID == 'sheets') return initializeSheets(asset);
 			else if (assetID == 'npcs') return initializeNPCs(asset);
 			else if (assetID == 'rules') return initializeRules(asset);
+            else if (assetID == 'fx') return initializeFX(asset);
 			else if (assetID == 'items') return initializeItems(asset);
 			else if (assetID == 'buffs') return initializeBuffs(asset);
 			else if (assetID == 'interactables') return initializeInteractables(asset);
@@ -487,6 +489,11 @@ define(['loggable'], function(Loggable){
 			var res = JSON.parse(asset);
             this.rules = res;
 		}.bind(_interface)),
+
+        initializeFX = (function(asset){
+			var res = JSON.parse(asset);
+            this.fx = res;
+        }.bind(_interface)),
 
 		initializeItems = (function(asset){
 

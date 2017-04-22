@@ -1,0 +1,40 @@
+{
+    "regions": {
+        "world": {
+            "gain": 1.0
+        }
+    },
+
+    "sfx": {
+        "samples": {
+            "playerHitA": {
+                "sound": "data/sounds/grunt.mp3",
+                "gain": 0.5
+            },
+            "playerHitB": {
+                "sound": "data/sounds/grunt.mp3"
+            }
+        },
+
+        "banks": {
+            "playerHit": {
+                "samples": ["playerHitA", "playerHitB"]
+            }
+        }
+    },
+
+    "events": {
+        "attacked.player": {
+            "region": "world",
+            "bank": "playerHit",
+            "conditions": {
+                "timeoutOnSample": 1000,
+                "limitSamples": 1
+            }
+        }
+    },
+
+    "settings": {
+        "volume": 1.0
+    }
+}

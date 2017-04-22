@@ -8,9 +8,10 @@ define(['loggable', 'component'], (Loggable, Component) => {
     // TODO: Toss forwardToCharacter into SCRIPTINJECT
     // FIXME: Is the wait necessary? Could we init immediately?
     let staticInit = function() {};
-    let server;
+    let server, UI;
     if (!Env.isServer) {
 
+        UI     = The.UI;
         server = The.scripting.server;
         staticInit = function() {
             server.registerHandler(EVT_REGENERATE, 'character.regeneration');

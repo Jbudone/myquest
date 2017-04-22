@@ -106,7 +106,7 @@ define(function(){
             'Character': (logDefault),
             'Component': (logVerbose),
             'Inventory': (logDefault),
-            'AI': (logDefault),
+            'FX': (logDefault),
             'Instinct': (logDefault),
             'Combat': (logDefault),
             'Movement': (logDefault),

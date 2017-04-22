@@ -233,7 +233,7 @@ define(
 
                 Resources = (new Resources());
                 window.Resources = Resources;
-                Resources.initialize(['sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components']).then((assets) => {
+                Resources.initialize(['sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx']).then((assets) => {
                     loaded('resources');
                 })
                 .catch((e) => { errorInGame(e); });

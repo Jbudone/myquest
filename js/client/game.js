@@ -5,16 +5,17 @@
 // the actual game loop are all done here.
 
 // TODO: Find a better way to replace modules for bots
-const rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',
+const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',
+    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',
     uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui';
 define(
     [
         'loggable', 'entity', 'movable', 'area', 'page', 'scriptmgr',
-        'client/camera', rendererPath, uiPath
+        'client/camera', fxmgrPath, rendererPath, uiPath
     ],
     (
         Loggable, Entity, Movable, Area, Page, ScriptMgr,
-        Camera, Renderer, UI
+        Camera, FXMgr, Renderer, UI
     ) => {
 
         window.Movable = Movable;
@@ -235,6 +236,9 @@ define(
                 The.player.page = The.area.curPage;
 
                 if (!The.area.curPage.movables[The.player.id]) throw Err("Player has not yet been added to page!");
+
+                this.Log("Initializing FX");
+                window.FX = new FXMgr();
 
                 this.Log("Initializing UI");
                 The.UI = new UI();
@@ -980,6 +984,9 @@ define(
                             } else if (entity === The.player) {
                                 styleType = MESSAGE_BAD;
                             }
+
+                            FX.event('attacked', target, { amount });
+                            FX.event('hurt', entity, { amount, health });
 
                             ui.postMessage(`${target.npc.name} attacked ${entity.npc.name} for ${amount} damage (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
 
