@@ -2,7 +2,15 @@
     "regions": {
         "world": {
             "gain": 1.0
-        }
+        },
+
+		"ui": {
+			"gain": 0.6
+		},
+
+		"bg": {
+			"gain": 0.8
+		}
     },
 
     "sfx": {
@@ -13,13 +21,25 @@
             },
             "playerHitB": {
                 "sound": "data/sounds/grunt.mp3"
-            }
+            },
+			"uiClick": {
+				"sound": "data/sounds/uiclick.mp3"
+			},
+			"bgMusic": {
+				"sound": "data/sounds/rivervale.mp4"
+			}
         },
 
         "banks": {
             "playerHit": {
                 "samples": ["playerHitA", "playerHitB"]
-            }
+            },
+			"uiClick": {
+				"samples": ["uiClick"]
+			},
+			"bgMusic": {
+				"samples": ["bgMusic"]
+			}
         }
     },
 
@@ -31,7 +51,17 @@
                 "timeoutOnSample": 1000,
                 "limitSamples": 1
             }
-        }
+        },
+
+		"click": {
+			"region": "ui",
+			"bank": "uiClick"
+		},
+
+		"login": {
+			"region": "bg",
+			"bank": "bgMusic"
+		}
     },
 
     "settings": {

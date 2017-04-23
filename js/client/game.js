@@ -239,6 +239,9 @@ define(
 
                 this.Log("Initializing FX");
                 window.FX = new FXMgr();
+                FX.initialize(Resources.fx).then(() => {
+                    FX.event('login');
+                });
 
                 this.Log("Initializing UI");
                 The.UI = new UI();

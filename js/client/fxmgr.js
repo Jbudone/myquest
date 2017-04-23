@@ -5,6 +5,7 @@ define(['loggable'], (Loggable) => {
         const SoundInstance = function() {
 
             this.onFinished = function(){};
+            this.gainNode = null;
         };
 
         const audioContext = new AudioContext();
@@ -13,23 +14,27 @@ define(['loggable'], (Loggable) => {
         // that buffers are immutable after being set for the first time, so essentially they're one-off nodes. Would be
         // worth it to look into other performance optimizations for audio
         //this.inactiveSources = [];
+        this.activeSources = [];
 
         this.loadSample = (sample) => {
 
-            const request = new XMLHttpRequest();
-            request.open('GET', sample.sound, true);
-            request.responseType = 'arraybuffer';
+            return new Promise((success, fail) => {
+                const request = new XMLHttpRequest();
+                request.open('GET', sample.sound, true);
+                request.responseType = 'arraybuffer';
 
-            // Decode asynchronously
-            request.onload = function() {
-                audioContext.decodeAudioData(request.response, (buffer) => {
-                    sample.buffer = buffer;
-                }, (e) => {
-                    throw Err(e);
-                });
-            }
-            request.send();
-
+                // Decode asynchronously
+                request.onload = function() {
+                    audioContext.decodeAudioData(request.response, (buffer) => {
+                        sample.buffer = buffer;
+                        success();
+                    }, (e) => {
+                        fail(e);
+                        throw Err(e);
+                    });
+                }
+                request.send();
+            });
         };
 
         this.playSample = (sample, gain) => {
@@ -50,28 +55,32 @@ define(['loggable'], (Loggable) => {
             source.onended = (evt) => {
                 //this.inactiveSources.push(source);
                 soundInstance.onFinished();
+                _.pull(this.activeSources, soundInstance);
             };
 
             source.buffer = sample.buffer;
 
             let rightMostNode = source;
 
-            {
-                if (sample.gain) gain *= sample.gain;
-            }
-
             // Gain Node
-            if (gain !== 1.0) {
+            {
+                soundInstance.regionGain = gain / FX.settings.volume;
+                soundInstance.sampleGain = sample.gain || 1.0;
+
+                if (sample.gain) gain *= sample.gain;
                 const gainNode = audioContext.createGain();
                 gainNode.gain.value = gain;
 
                 source.connect(gainNode);
                 rightMostNode = gainNode;
+
+                soundInstance.gainNode = gainNode;
             }
 
             rightMostNode.connect(audioContext.destination);
             source.start(0); 
 
+            this.activeSources.push(soundInstance);
             return soundInstance;
         };
 
@@ -82,6 +91,13 @@ define(['loggable'], (Loggable) => {
 
             const soundInstance = this.playSample(sample, gain);
             return soundInstance;
+        };
+
+        this.adjustVolume = (volume) => {
+            this.activeSources.forEach((soundInstance) => {
+                const gain = soundInstance.regionGain * soundInstance.sampleGain * volume;
+                soundInstance.gainNode.gain.value = gain;
+            });
         };
     };
 
@@ -101,8 +117,13 @@ define(['loggable'], (Loggable) => {
         this.transformEvent = (evt, ctx, args) => {
             // FIXME: Check ctx type, movable then use npc name
             // FIXME: There's got to be a better way to transform events when we get a type/trait system in place
-            let ctxName = ctx.npc.name,
-                refinedEvent = `${evt}.${ctxName}`;
+
+            let ctxName = "";
+            if (ctx instanceof Movable) {
+                ctxName = ctx.npc.name;
+            }
+
+            let refinedEvent = `${evt}.${ctxName}`;
             if (this.fxEvents[refinedEvent]) {
                 return refinedEvent;
             }
@@ -139,9 +160,23 @@ define(['loggable'], (Loggable) => {
         this.soundBanks = {};
 
         this.fetchEntityInRegion = (region, entity) => {
-            assert('id' in entity, "Entity does not have id!"); // FIXME: Different entities have different id's (eg. UI entity, movable, character, etc.)
-            const entID = entity.id;
-            let ent = region.entities[entID];
+
+            let entID = null, ent = null;
+
+            if (entity instanceof Movable) {
+                assert('id' in entity, "Entity does not have id!"); // FIXME: Different entities have different id's (eg. UI entity, movable, character, etc.)
+                entID = entity.id;
+                ent = region.entities[entID];
+            } else {
+                // Entity does not have an id, lets see if we can find it ourselves
+                // FIXME: Would be nice to create an id for entities somehow (hash from some values?)
+                ent = _.find(region.entities, (rEntity) => rEntity.entity === entity);
+
+                if (!ent) {
+                    entID = _.size(region.entities);
+                }
+            }
+
             if (!ent) {
                 ent = new FXEntity(entity, region);
                 region.entities[entID] = ent;
@@ -150,8 +185,20 @@ define(['loggable'], (Loggable) => {
             return ent;
         };
 
+        this.bgEvent = (evt, args) => {
+            const fx = this.fxEvents[evt];
+            const ent = this.fetchEntityInRegion(fx.region, this);
+            ent.pushFX(fx);
+        };
+
         this.event = (evt, ctx, args) => {
             this.Log(`Got event: ${evt}`);
+            if (!this.initialized) return;
+            if (!ctx) {
+                this.bgEvent(evt, args);
+                return;
+            }
+
             const transformedEvent = this.transformEvent(evt, ctx, args);
             if (transformedEvent) {
                 const fx = this.fxEvents[transformedEvent];
@@ -207,41 +254,57 @@ define(['loggable'], (Loggable) => {
         this.addSample = (sample) => {
             this.samples[sample.name] = sample;
 
-            SoundSys.loadSample(sample);
+            return new Promise((success, fail) => {
+                SoundSys.loadSample(sample).then(success, fail);
+            });
         };
 
         this.settings = {
             volume: 1.0
         };
 
-        this.initialize = (asset) => {
-
-            _.forEach(asset.regions, (region, name) => {
-                region.name = name;
-                this.addRegion(region);
-            });
-
-            const SFX = asset.sfx;
-            _.forEach(SFX.samples, (sample, name) => {
-                sample.name = name;
-                this.addSample(sample);
-            });
-
-            _.forEach(SFX.banks, (bank, name) => {
-                bank.name = name;
-                this.addBank(bank);
-            });
-
-            _.forEach(asset.events, (event, name) => {
-                this.addEvent(name, event);
-            });
-
-            _.forEach(asset.settings, (value, name) => {
-                this.settings[name] = value;
-            });
+        this.setVolume = (volume) => {
+            this.settings.volume = volume;
+            SoundSys.adjustVolume(volume);
         };
 
-        this.initialize(Resources.fx);
+        this.initialized = false;
+        this.initialize = (asset) => {
+
+            return new Promise((success, fail) => {
+
+                _.forEach(asset.regions, (region, name) => {
+                    region.name = name;
+                    this.addRegion(region);
+                });
+
+                const SFX = asset.sfx;
+
+                const loadingSamples = [];
+                _.forEach(SFX.samples, (sample, name) => {
+                    sample.name = name;
+                    loadingSamples.push(this.addSample(sample));
+                });
+
+                _.forEach(SFX.banks, (bank, name) => {
+                    bank.name = name;
+                    this.addBank(bank);
+                });
+
+                _.forEach(asset.events, (event, name) => {
+                    this.addEvent(name, event);
+                });
+
+                _.forEach(asset.settings, (value, name) => {
+                    this.settings[name] = value;
+                });
+
+                Promise.all(loadingSamples).then(() => {
+                    this.initialized = true;
+                    success();
+                });
+            });
+        };
     });
 
     return FXMgr;

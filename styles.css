@@ -567,6 +567,15 @@ input.error {
 }
 
 
+/* === UI Settings === */
+
+.settings-volume-img {
+	filter: invert(1);
+	width: 24px;
+	margin: 4px;
+}
+
+
 
 #inputForm.admin {
 	padding: 2px 2px;

@@ -396,7 +396,6 @@ Next Priority
 		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
 		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
 	- Sound
-	  	- FX.Event('Attacked', this, { .. })
 		- FXMgr:
 
 		  	Future: entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
@@ -407,9 +406,9 @@ Next Priority
 			Future: Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
 			Future: LocalStorage settings (volume)
 
-			Transform events: get name of entity (movable -> ctx.npc.name, ui -> ..)
 			Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely
-			Starting screen sound/music
+			Music change -> fade into other music; null -> fade out of music; if pushing a music when already playing that music (fading out) then fade back in to it
+			UI for settings (volume + mute)
 
 
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }

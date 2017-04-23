@@ -69,6 +69,8 @@ define(['loggable'], (Loggable) => {
                             slotContainer.addClass('hover');
                             uiSlot.addClass('hover');
                         }
+
+                        FX.event('click', $(this), {});
                     }).mouseleave(() => {
                         slotContainer.removeClass('hover');
                         uiSlot.removeClass('hover');

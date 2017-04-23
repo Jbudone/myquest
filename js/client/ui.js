@@ -6,6 +6,7 @@ define(
         'client/ui.effects',
         'client/ui.stats',
         'client/ui.charbars',
+        'client/ui.settings',
         'eventful', 'hookable', 'loggable'
     ],
     (
@@ -13,6 +14,7 @@ define(
         UI_Effects,
         UI_Stats,
         UI_CharBars,
+        UI_Settings,
         Eventful, Hookable, Loggable
     ) => {
 
@@ -345,6 +347,7 @@ define(
                 this.loadModule(UI_Effects);
                 this.loadModule(UI_Stats);
                 this.loadModule(UI_CharBars);
+                this.loadModule(UI_Settings);
             };
 
             this.loadModule = (module) => {
