@@ -405,10 +405,12 @@ Next Priority
 			Future: Sound groups (weapon -> combat -> world -> global); each group can have its own settings
 			Future: Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
 			Future: LocalStorage settings (volume)
+			Future: UI Settings (volume)
+			Future: Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely. Draw trigger areas in map to define areas, have map exporter expand it out slightly more for an outside/middle/inside area (for better fading)
 
-			Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely
-			Music change -> fade into other music; null -> fade out of music; if pushing a music when already playing that music (fading out) then fade back in to it
-			UI for settings (volume + mute)
+			Music fade:
+				- Cancelling current music (music -> null)
+				- Pushing Music FX when another instance of that same sample is already playing (if fading out then fade back in, cancel new push)
 
 
 	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }

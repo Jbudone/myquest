@@ -9,7 +9,8 @@
 		},
 
 		"bg": {
-			"gain": 0.8
+			"gain": 0.8,
+			"fadeBetweenSamples": true
 		}
     },
 

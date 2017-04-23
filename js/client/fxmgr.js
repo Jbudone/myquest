@@ -5,7 +5,22 @@ define(['loggable'], (Loggable) => {
         const SoundInstance = function() {
 
             this.onFinished = function(){};
+
             this.gainNode = null;
+            this.sourceNode = null;
+
+            this.stop = () => {
+                this.sourceNode.stop();
+                this.sourceNode.disconnect(0);
+                this.gainNode.disconnect(0);
+            };
+
+            this.fadeOut = () => {
+                this.gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + 2.0);
+            };
+            this.fadeIn = () => {
+                this.gainNode.gain.linearRampToValueAtTime(1.0, audioContext.currentTime + 2.0);
+            };
         };
 
         const audioContext = new AudioContext();
@@ -39,7 +54,7 @@ define(['loggable'], (Loggable) => {
 
         this.playSample = (sample, gain) => {
 
-            const soundInstance = new SoundInstance;
+            const soundInstance = new SoundInstance();
             const source = audioContext.createBufferSource();
 
             // TODO: See this.inactiveSources
@@ -81,6 +96,8 @@ define(['loggable'], (Loggable) => {
             source.start(0); 
 
             this.activeSources.push(soundInstance);
+
+            soundInstance.sourceNode = source;
             return soundInstance;
         };
 
@@ -143,6 +160,29 @@ define(['loggable'], (Loggable) => {
                 const gain   = this.region.gain * FX.settings.volume,
                     instance = SoundSys.playBank(fx.bank, gain);
                 this.activeFX.push(instance);
+
+                // Is only one sample allowed to play at a time in this region? Fade between previous sound instance and
+                // next
+                if (this.region.fadeBetweenSamples) {
+
+                    // We're fading between the previous sound and this sound
+                    // FIXME: Find the highest gain FX and kick out the other ones
+                    let activeFXCount = this.activeFX.length;
+                    while (this.activeFX.length > 2) {
+                        this.activeFX[0].stop();
+                        if (this.activeFX.length === activeFXCount) {
+                            // Hasn't had a chance to stop yet, pull it immediately!
+                            _.pull(this.activeFX, instance);
+                        }
+                    }
+
+                    if (this.activeFX.length === 2) {
+                        this.activeFX[0].fadeOut();
+                        this.activeFX[0].onFinished(); // FIXME: Seems fadeOut doesn't have a callback to the sample finishing
+                    }
+
+                    instance.fadeIn();
+                }
 
                 instance.onFinished = () => {
                     _.pull(this.activeFX, instance);
@@ -232,7 +272,8 @@ define(['loggable'], (Loggable) => {
             // FIXME: Pass flags on here (eg. dontPlayOnEntity)
             this.regions[region.name] = {
                 entities: {},
-                gain: region.gain || 1.0
+                gain: region.gain || 1.0,
+                fadeBetweenSamples: region.fadeBetweenSamples
             };
         };
 
