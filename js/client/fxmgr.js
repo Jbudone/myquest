@@ -19,7 +19,8 @@ define(['loggable'], (Loggable) => {
                 this.gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + 2.0);
             };
             this.fadeIn = () => {
-                this.gainNode.gain.linearRampToValueAtTime(1.0, audioContext.currentTime + 2.0);
+                const gain = this.gainNode.gain.value;
+                this.gainNode.gain.linearRampToValueAtTime(gain, audioContext.currentTime + 2.0);
             };
         };
 
@@ -52,7 +53,7 @@ define(['loggable'], (Loggable) => {
             });
         };
 
-        this.playSample = (sample, gain) => {
+        this.playSample = (sample, region) => {
 
             const soundInstance = new SoundInstance();
             const source = audioContext.createBufferSource();
@@ -79,10 +80,12 @@ define(['loggable'], (Loggable) => {
 
             // Gain Node
             {
-                soundInstance.regionGain = gain / FX.settings.volume;
+                soundInstance.regionGain = region.gain;
                 soundInstance.sampleGain = sample.gain || 1.0;
 
-                if (sample.gain) gain *= sample.gain;
+                let gain = FX.settings.volume;
+                if ('gain' in region) gain *= region.gain;
+                if ('gain' in sample) gain *= sample.gain;
                 const gainNode = audioContext.createGain();
                 gainNode.gain.value = gain;
 
@@ -101,12 +104,12 @@ define(['loggable'], (Loggable) => {
             return soundInstance;
         };
 
-        this.playBank = (bank, gain) => {
+        this.playBank = (bank, region) => {
             const numSamples  = bank.samples.length,
                 randSampleIdx = parseInt(Math.random() * numSamples, 10),
                 sample        = bank.samples[randSampleIdx];
 
-            const soundInstance = this.playSample(sample, gain);
+            const soundInstance = this.playSample(sample, region);
             return soundInstance;
         };
 
@@ -157,8 +160,7 @@ define(['loggable'], (Loggable) => {
             this.activeFX = [];
 
             this.playFX = (fx) => {
-                const gain   = this.region.gain * FX.settings.volume,
-                    instance = SoundSys.playBank(fx.bank, gain);
+                const instance = SoundSys.playBank(fx.bank, this.region);
                 this.activeFX.push(instance);
 
                 // Is only one sample allowed to play at a time in this region? Fade between previous sound instance and
