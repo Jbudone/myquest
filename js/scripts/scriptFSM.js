@@ -152,19 +152,19 @@ define(() => {
                             if (transition.conditions) {
                                 const conditions = transition.conditions;
                                 conditions.forEach((condition) => {
-                                    const { variable, op, expectedValue } = condition;
+                                    const { variable, op, value } = condition;
 
                                     // Matches condition?
-                                    let value;
+                                    let curValue;
                                     if (variable === "CHARACTER_LEVEL") {
-                                        value = character.charComponent('levelling').level;
+                                        curValue = character.charComponent('levelling').level;
                                     } else {
                                         throw Err(`Unknown variable ${variable}`);
                                     }
 
                                     let result;
                                     if (op === "GTEQ") {
-                                        result = value >= expectedValue;
+                                        result = curValue >= value;
                                     } else {
                                         throw Err(`Unknown op ${op}`);
                                     }
