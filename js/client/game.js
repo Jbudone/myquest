@@ -64,6 +64,7 @@ define(
                     this.Log(`Zoned to page: ${newPage.index}`, LOG_DEBUG);
                     this.zone(newPage);
                     ui.updatePages();
+                    The.renderer.updatePages();
                 });
 
                 // First time setting up event listeners
@@ -1134,15 +1135,14 @@ define(
                     ui.postMessage("What's supported right now?", MESSAGE_PROGRAM);
                     ui.postMessage("\t→ Zoning (pages/areas)", MESSAGE_PROGRAM);
                     ui.postMessage("\t→ NPCs & AI", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Combat (mostly working)", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Items", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Interaction (eg. clicking on king or TV)", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ Combat", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ Items, Buffs", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ Interaction", MESSAGE_PROGRAM);
                     ui.postMessage("What's on the TODO list?", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Error handling", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Bots", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Periodic saving/backups", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ New Maps", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ More NPCs", MESSAGE_PROGRAM);
+                    ui.postMessage("\t→ Quests", MESSAGE_PROGRAM);
                     ui.postMessage("\t→ XP/Leveling", MESSAGE_PROGRAM);
-                    ui.postMessage("\t→ Character Inventory", MESSAGE_PROGRAM);
                     ui.postMessage(" ", MESSAGE_PROGRAM);
                     ui.postMessage(" ", MESSAGE_PROGRAM);
                     ui.postMessage(" ", MESSAGE_PROGRAM);

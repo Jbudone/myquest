@@ -9,20 +9,27 @@ define(['loggable'], (Loggable) => {
         this.setLogGroup('Renderer');
         this.setLogPrefix('Renderer');
 
-        this.lastUpdateTime   = now();
+        this.initialized          = false;
+        this.lastUpdateTime       = now();
 
-        this.canvasEntities   = null;
-        this.canvasBackground = null;
-        this.ctxEntities      = null;
-        this.ctxBackground    = null;
+        this.canvasEntities       = null;
+        this.canvasBackground     = null;
+        this.ctxEntities          = null;
+        this.ctxBackground        = null;
 
-        this.camera           = null;
-        this.ui               = null;
-        this.area             = null;
-        this.tilesheet        = null;
-        this.tilesheets       = null;
+        // Each loaded page has their own dedicated canvas/ctx in this pool. They are rendered once to their canvas, and
+        // then whenever our pages change we render (copy) each canvas to the master background canvas. Whenever we move
+        // around, we only need to move the background via. CSS
+        this.canvasBackgroundPool = [];
+        this.pagesHaveChanged     = false;
 
-        this.projectiles      = [];
+        this.camera               = null;
+        this.ui                   = null;
+        this.area                 = null;
+        this.tilesheet            = null;
+        this.tilesheets           = null;
+
+        this.projectiles          = [];
 
         this.settings  = {
             lineWidth: 3,
@@ -57,6 +64,10 @@ define(['loggable'], (Loggable) => {
             _.each(sheetsToUse, (sheet) => {
                 this.tilesheets.push(sheet);
             });
+
+            if (this.initialized) {
+                this.updatePages();
+            }
         };
 
         this.initialize = (options) => {
@@ -71,19 +82,43 @@ define(['loggable'], (Loggable) => {
 
             this.canvasEntities.width    = canvasWidth;
             this.canvasEntities.height   = canvasHeight;
-            this.canvasBackground.width  = canvasWidth;
-            this.canvasBackground.height = canvasHeight;
+            this.canvasBackground.width  = canvasWidth * 3; // Needs to fit curPage and both adjacent pages
+            this.canvasBackground.height = canvasHeight * 3;
 
             this.ctxEntities.mozImageSmoothingEnabled      = this.settings.smoothing;
             this.ctxEntities.webkitImageSmoothingEnabled   = this.settings.smoothing;
-            this.ctxEntities.ImageSmoothingEnabled         = this.settings.smoothing;
+            this.ctxEntities.imageSmoothingEnabled         = this.settings.smoothing;
             this.ctxEntities.strokeStyle                   = this.settings.strokeStyle;
             this.ctxEntities.lineWidth                     = this.settings.lineWidth;
             this.ctxBackground.mozImageSmoothingEnabled    = this.settings.smoothing;
             this.ctxBackground.webkitImageSmoothingEnabled = this.settings.smoothing;
-            this.ctxBackground.ImageSmoothingEnabled       = this.settings.smoothing;
+            this.ctxBackground.imageSmoothingEnabled       = this.settings.smoothing;
             this.ctxBackground.strokeStyle                 = this.settings.strokeStyle;
             this.ctxBackground.lineWidth                   = this.settings.lineWidth;
+
+
+            // Setup each background canvas
+            // We use one per page
+            for (let i = 0; i < 9; ++i) {
+                let pageBg = {};
+                this.canvasBackgroundPool.push(pageBg);
+
+                pageBg.canvasEl = document.getElementById(`background-${i}`);
+                pageBg.canvasCtx = pageBg.canvasEl.getContext('2d');
+
+                const canvasCtx = pageBg.canvasCtx;
+                canvasCtx.mozImageSmoothingEnabled    = this.settings.smoothing;
+                canvasCtx.webkitImageSmoothingEnabled = this.settings.smoothing;
+                canvasCtx.imageSmoothingEnabled       = this.settings.smoothing;
+                canvasCtx.strokeStyle                 = this.settings.strokeStyle;
+                canvasCtx.lineWidth                   = this.settings.lineWidth;
+
+                pageBg.page = null; // Free to use, no page associated with it yet
+                pageBg.needsUpdate = false;
+            }
+
+            this.updatePages();
+            this.initialized = true;
         };
 
         this.step = (time) => {
@@ -116,6 +151,95 @@ define(['loggable'], (Loggable) => {
             throw Err(`Could not find tilesheet corresponding to gid ${gid}`);
         };
 
+        // Update pages currently loaded (curPage/neighbours)
+        this.updatePages = () => {
+
+            let allPages = [];
+            allPages.push(this.area.curPage);
+            allPages.push(this.area.curPage.neighbours.northwest);
+            allPages.push(this.area.curPage.neighbours.north);
+            allPages.push(this.area.curPage.neighbours.northeast);
+            allPages.push(this.area.curPage.neighbours.west);
+            allPages.push(this.area.curPage.neighbours.east);
+            allPages.push(this.area.curPage.neighbours.southwest);
+            allPages.push(this.area.curPage.neighbours.south);
+            allPages.push(this.area.curPage.neighbours.southeast);
+
+            // Find all pages loaded which aren't in our canvas pool
+            let missingPages = [];
+            for (let i = 0; i < allPages.length; ++i) {
+                let page = allPages[i];
+
+                if (!page) continue; // Empty neighbour
+
+                // Is this page currently loaded into the canvas pool?
+                let foundPage = false;
+                for (let j = 0; j < this.canvasBackgroundPool.length; ++j) {
+                    const pageBg = this.canvasBackgroundPool[j];
+
+                    if (pageBg.page === page) {
+                        foundPage = true;
+                        break;
+                    }
+                }
+
+                if (!foundPage) {
+                    missingPages.push(page);
+                }
+            }
+
+            // Add missing pages to pool
+            if (missingPages.length > 0) {
+
+                // Find items in the pool which are currently available (not in use)
+                let expiredPoolPages = [];
+                for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                    let pooledPage = this.canvasBackgroundPool[i];
+
+                    let foundPage = false;
+
+                    if (pooledPage.page) {
+                        for (let j = 0; j < allPages.length; ++j) {
+                            if (pooledPage.page === allPages[j]) {
+                                foundPage = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // I see you've expired, or are just empty
+                    if (!foundPage) {
+                        expiredPoolPages.push(pooledPage);
+                        pooledPage.page = null;
+                    }
+                }
+
+                assert(missingPages.length <= expiredPoolPages.length);
+
+                // Lets add the missing pages into these expired pages
+                for (let i = 0; i < missingPages.length; ++i) {
+                    expiredPoolPages[i].page = missingPages[i];
+                    expiredPoolPages[i].needsUpdate = true;
+                    expiredPoolPages[i].imageData = null;
+                }
+                
+                // Render each new page to the canvas
+                // TODO: Could probably async this
+                for (let i = 0; i < expiredPoolPages.length; ++i) {
+
+                    if (!expiredPoolPages[i].page) continue;
+                    let pageBg = expiredPoolPages[i];
+
+                    this.renderPageStatic(pageBg, pageBg.page, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
+                }
+            }
+
+            // TODO: Our pages may have changed, but this doesn't necessarily mean that we need to perform a redraw on
+            // our background. What if we've reached the edge of the map, so we haven't received any new pages but we
+            // have changed our curPage (where the center of the background is)
+            this.pagesHaveChanged = true;
+        };
+
         this.render = () => {
             if (this.paused) return;
 
@@ -124,53 +248,85 @@ define(['loggable'], (Loggable) => {
 
             let sheetData = this.tilesheets[0]; // TODO: fix this: necessary in some places
 
-            // Only redraw the background if the camera has moved
-            if (this.camera.updated) {
-                this.ctxBackground.clearRect(0, 0, this.canvasBackground.width, this.canvasBackground.height);
 
-                // Draw Current Page
-                //  startY:
-                //      require  pt + size < page
-                //      starts @ max(floor(ipt) - 1, 0)
-                this.renderPageStatic(this.area.curPage, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
+            // Update the background canvas with renders from each page canvas
+            // FIXME: offload background rendering in async operation; could do this w/ a double buffer canavs
+            if (this.camera.updated || this.pagesHaveChanged) {
 
+                const shiftedOffX = Env.pageWidth * Env.tileSize,
+                    shiftedOffY   = Env.pageHeight * Env.tileSize;
 
-                // Draw border
-                //  Camera width/height and offset (offset by -border)
-                //  Draw ALL neighbours using this algorithm
-                //  If no neighbour to left/top then leave offset as 0?
-                const neighbours = [];
-                for (const neighbourKey in this.area.curPage.neighbours) {
-                    const neighbour = this.area.curPage.neighbours[neighbourKey];
-                    if (!neighbour) continue;
+                if (this.pagesHaveChanged) {
+                    this.pagesHaveChanged = false;
+                    this.ctxBackground.clearRect(0, 0, this.canvasBackground.width, this.canvasBackground.height);
 
-                    const neighbourInfo = {};
-                    neighbourInfo.neighbour = neighbour;
-                    neighbourInfo.name      = neighbourKey;
-
-                    if (neighbourKey.indexOf('south') !== -1) {
-                        neighbourInfo.offsetY = Env.pageHeight * Env.tileSize;
-                    } else if (neighbourKey.indexOf('north') !== -1) {
-                        neighbourInfo.offsetY = -Env.pageHeight * Env.tileSize;
-                    } else {
-                        neighbourInfo.offsetY = 0;
+                    // Render current page to background
+                    let curPageBg = null;
+                    for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                        if (this.canvasBackgroundPool[i].page === this.area.curPage) {
+                            curPageBg = this.canvasBackgroundPool[i];
+                            break;
+                        }
                     }
 
-                    if (neighbourKey.indexOf('west') !== -1) {
-                        neighbourInfo.offsetX = -Env.pageWidth * Env.tileSize;
-                    } else if (neighbourKey.indexOf('east') !== -1) {
-                        neighbourInfo.offsetX = Env.pageWidth * Env.tileSize;
-                    } else {
-                        neighbourInfo.offsetX = 0;
+                    if (!curPageBg.imageData) {
+                        curPageBg.imageData = curPageBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
                     }
 
-                    neighbours.push(neighbourInfo);
+                    this.ctxBackground.putImageData(curPageBg.imageData, shiftedOffX * Env.tileScale, shiftedOffY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
 
-                    const offX = neighbourInfo.offsetX,
-                        offY   = neighbourInfo.offsetY;
 
-                    this.renderPageStatic(neighbour, 0, 0, Env.pageWidth, Env.pageHeight, offX, offY);
+                    // Draw neighbour pages
+                    const neighbours = [];
+                    for (const neighbourKey in this.area.curPage.neighbours) {
+                        const neighbour = this.area.curPage.neighbours[neighbourKey];
+                        if (!neighbour) continue;
+
+                        const neighbourInfo = {};
+                        neighbourInfo.neighbour = neighbour;
+                        neighbourInfo.name      = neighbourKey;
+
+                        if (neighbourKey.indexOf('south') !== -1) {
+                            neighbourInfo.offsetY = Env.pageHeight * Env.tileSize;
+                        } else if (neighbourKey.indexOf('north') !== -1) {
+                            neighbourInfo.offsetY = -Env.pageHeight * Env.tileSize;
+                        } else {
+                            neighbourInfo.offsetY = 0;
+                        }
+
+                        if (neighbourKey.indexOf('west') !== -1) {
+                            neighbourInfo.offsetX = -Env.pageWidth * Env.tileSize;
+                        } else if (neighbourKey.indexOf('east') !== -1) {
+                            neighbourInfo.offsetX = Env.pageWidth * Env.tileSize;
+                        } else {
+                            neighbourInfo.offsetX = 0;
+                        }
+
+                        neighbours.push(neighbourInfo);
+
+                        const offX = neighbourInfo.offsetX + shiftedOffX,
+                            offY   = neighbourInfo.offsetY + shiftedOffY;
+
+                        let neighbourBg = null;
+                        for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                            if (this.canvasBackgroundPool[i].page === neighbour) {
+                                neighbourBg = this.canvasBackgroundPool[i];
+                                break;
+                            }
+                        }
+
+                        assert(neighbourBg !== null);
+
+                        if (!neighbourBg.imageData) {
+                            neighbourBg.imageData = neighbourBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                        }
+
+                        this.ctxBackground.putImageData(neighbourBg.imageData, offX * Env.tileScale, offY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                    }
                 }
+
+                // FIXME: Just translate the canvas
+                $('#background').offset({ left: 140 + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: 8 + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
 
                 this.camera.updated = false;
             }
@@ -208,7 +364,7 @@ define(['loggable'], (Loggable) => {
 
                     for (const tileID in The.area.curPage.forcedNeighbours) {
                         let _x = tileID % The.area.areaWidth,
-                            _y   = Math.floor(tileID / The.area.areaWidth);
+                            _y = Math.floor(tileID / The.area.areaWidth);
                         _y = (_y - this.area.curPage.y) + this.camera.offsetY / Env.tileSize;
                         _x = (_x - this.area.curPage.x) - this.camera.offsetX / Env.tileSize;
 
@@ -287,14 +443,24 @@ define(['loggable'], (Loggable) => {
                 const page    = renderPage.page,
                     offX      = renderPage.offX,
                     offY      = renderPage.offY,
-                    drawLists = [page.sprites, page.items];
+                    items     = [];
+
+                // FIXME: This is disgusting! Copying items every frame, and pushing into an array unecessarily. Fix
+                // this!
+                for (let coord in page.items) {
+                    items[parseInt(coord)] = page.items[coord];
+                }
+
+                const drawLists = [page.sprites, items];
 
                 drawLists.forEach((drawList) => {
 
                     // Draw entity in this list
-                    for (const coord in drawList) {
-                        const entityObj = drawList[coord],
-                            entity      = (entityObj ? entityObj.sprite - 1 : -1),
+                    for(let coord = 0; coord < drawList.length; ++coord) {
+                        const entityObj = drawList[coord];
+                        if (!entityObj) continue;
+
+                        const entity    = (entityObj ? entityObj.sprite - 1 : -1),
                             sheetData   = entityObj.sheet || this.sheetFromGID(entity),
                             tilesPerRow = sheetData.tilesPerRow,
                             floating    = sheetData.data.floating,
@@ -341,14 +507,23 @@ define(['loggable'], (Loggable) => {
                     offX   = renderPage.offX,
                     offY   = renderPage.offY;
 
-                for (const id in page.movables) {
-                    const movable    = page.movables[id],
-                        movableSheet = movable.sprite.sheet.image,
+                // Sort movables based off position (top -> bottom; left -> right). We draw bottom-right most movables
+                // last, so that they show up above anything else
+                const sortedMovables = Object.values(page.movables)
+                    .sort((mov1, mov2) => {
+                        const pos1 = (mov1.position.tile.y % Env.pageHeight) * Env.pageWidth + (mov1.position.tile.x % Env.pageWidth),
+                              pos2 = (mov2.position.tile.y % Env.pageHeight) * Env.pageWidth + (mov2.position.tile.x % Env.pageWidth);
+
+                          return(pos1 - pos2);
+                    });
+
+                sortedMovables.forEach((movable) => {
+                    const movableSheet = movable.sprite.sheet.image,
                         scale        = Env.tileScale,
                         offsetY      = The.camera.globalOffsetY,
                         offsetX      = The.camera.globalOffsetX,
-                        movableOffX  = movable.sprite.tileSize / 4, // TODO: fix sprite centering with sheet offset
-                        movableOffY  = movable.sprite.tileSize / 2;
+                        movableOffX  = movable.sprite.sprite_w / 4, // TODO: fix sprite centering with sheet offset
+                        movableOffY  = movable.sprite.sprite_h / 2;
 
                     // Specific state/animation may require a separate sheet
                     if (movable.sprite.state.sheet) {
@@ -361,9 +536,9 @@ define(['loggable'], (Loggable) => {
                     this.ctxEntities.drawImage(
                         movableSheet,
                         movable.sprite.state.x, movable.sprite.state.y,
-                        movable.sprite.tileSize, movable.sprite.tileSize,
+                        movable.sprite.sprite_w, movable.sprite.sprite_h,
                         scale * (globalX - offsetX - movableOffX), scale * (globalY + offsetY - movableOffY),
-                        scale * movable.sprite.tileSize, scale * movable.sprite.tileSize
+                        scale * movable.sprite.sprite_w, scale * movable.sprite.sprite_h
                     );
 
                     // Draw debug pathfinding/position highlights
@@ -386,7 +561,7 @@ define(['loggable'], (Loggable) => {
                             );
                         }
                     }
-                }
+                });
             });
 
             // Draw Projectiles
@@ -464,7 +639,9 @@ define(['loggable'], (Loggable) => {
         // Render Page Static
         // Used to render the background and static sprites of a page. We separate this since it only needs to be called
         // when the camera has moved
-        this.renderPageStatic = function(page, startX, startY, endX, endY, offX, offY){
+        this.renderPageStatic = function(pageBg, page, startX, startY, endX, endY, offX, offY){
+
+            pageBg.canvasCtx.clearRect(0, 0, pageBg.canvasEl.width, pageBg.canvasEl.height);
 
             // TODO: for the most bizarre reason, settings variables within these functions SetVarsA, SetVarsB
             // and DrawingImage, somehow speeds up the rendering process significantly. Figure out why
@@ -475,18 +652,14 @@ define(['loggable'], (Loggable) => {
                 pageWidth   = null,
                 pageHeight  = null,
                 tilesPerRow = null,
-                sheet       = null,
-                offsetY     = null,
-                offsetX     = null;
+                sheet       = null;
             (function SetVarsA(){
                 scale       = Env.tileScale,
                 tileSize    = Env.tileSize,
                 pageWidth   = Env.pageWidth,
-                pageHeight  = Env.pageHeight,
+                pageHeight  = Env.pageHeight;
                 //tilesPerRow = renderer.tilesheet.tilesPerRow,
                 //sheet       = renderer.tilesheet.image,
-                offsetY     = The.camera.offsetY+offY,
-                offsetX     = The.camera.offsetX-offX;
             }());
             for(var iy=startY; iy<endY; ++iy) {
                 for(var ix=startX; ix<endX; ++ix) {
@@ -519,8 +692,8 @@ define(['loggable'], (Loggable) => {
                             // tx = coord % Env.pageWidth,
                             ty=Math.max(-1,parseInt((tile-sheetData.gid.first)/tilesPerRow));
                             tx=Math.max(-1,(tile-sheetData.gid.first)%tilesPerRow);
-                            py        = (iy*Env.tileSize+offsetY)*scale;
-                            px        = (ix*Env.tileSize-offsetX)*scale;
+                            py        = (iy*Env.tileSize)*scale;
+                            px        = (ix*Env.tileSize)*scale;
                             // for (var i=0; i<renderer.tilesheets.length; ++i) {
                             //  var tilesheet = renderer.tilesheets[i];
                             //  if (tile >= tilesheet.gid.first && tile < tilesheet.gid.last) {
@@ -532,11 +705,8 @@ define(['loggable'], (Loggable) => {
                             //      ty = parseInt(tile/tilesPerRow);
                             //      tx = tile%tilesPerRow;
 
-                            // Chromium doesn't seem to be enabling image smoothing?
-                            // Need to add an extra margin relative to the scale of the tilesheet(?) to make up for the
-                            // lack of smoothing, otherwise artifact edges appear
-                            let AAEdgeLineMargin = 1.0 / scale;
-                            renderer.ctxBackground.drawImage(sheet, tileSize*tx + AAEdgeLineMargin, tileSize*ty + AAEdgeLineMargin, tileSize, tileSize, px, py, scale*Env.tileSize + AAEdgeLineMargin, scale*Env.tileSize + AAEdgeLineMargin);
+                            //renderer.ctxBackground.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+                            pageBg.canvasCtx.drawImage(sheet, tileSize*tx, tileSize*ty, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
                             // break;
                             //  }
                             // }
@@ -561,9 +731,11 @@ define(['loggable'], (Loggable) => {
             }
 
 
-            for (var coord in page.sprites) {
-                var spriteObj=page.sprites[coord],
-                    sprite=(spriteObj?spriteObj.sprite-1:-1),
+            for (let coord = 0; coord < page.sprites.length; ++coord) {
+                let spriteObj=page.sprites[coord];
+                if(!spriteObj) continue;
+
+                let sprite=(spriteObj?spriteObj.sprite-1:-1),
                     sheetData = spriteObj.sheet || renderer.sheetFromGID(sprite),
                     sheet = sheetData.image,
                     floating    = sheetData.data.floating,
@@ -575,12 +747,12 @@ define(['loggable'], (Loggable) => {
                     sy=Math.max(-1,parseInt((sprite-sheetData.gid.first)/tilesPerRow)),
                     sx=Math.max(-1,(sprite-sheetData.gid.first)%tilesPerRow),
                     tileSize = sheetData.tileSize.width, // TODO: width/height
-                    py=(iy*Env.tileSize+this.camera.offsetY+offY)*scale,
-                    px=(ix*Env.tileSize-this.camera.offsetX+offX)*scale;
+                    py=(iy*Env.tileSize)*scale,
+                    px=(ix*Env.tileSize)*scale;
 
                 if(!spriteObj.sheet) spriteObj.sheet = sheetData;
                 if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static')) {
-                    this.ctxBackground.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+                    pageBg.canvasCtx.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
                 }
             }
         };

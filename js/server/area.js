@@ -53,6 +53,7 @@ define(
 
                 this.sheets = [];
                 this.area.properties.tilesets.forEach((tileset) => {
+                    assert(tileset.image, `No image found for tileset. Did you forget to embed the tileset into the map?`);
                     const sheet = Resources.findSheetFromFile(tileset.image);
                     if (!_.isObject(sheet)) return;
                     sheet.exportedGid = {

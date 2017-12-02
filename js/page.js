@@ -22,7 +22,7 @@ define(
             this.baseTile = null; // TODO: Base tile
             this.tiles = []; // Specific tiles to render ontop of base
 
-            this.sprites       = {};
+            this.sprites       = new Array();
             this.movables      = {};
             this.items         = {};
             this.interactables = {};
