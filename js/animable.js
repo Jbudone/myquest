@@ -20,8 +20,10 @@ define(['sprite'], (Sprite) => {
             if (this.animation != this.animations[spriteID]) {
                 this.animation = this.animations[spriteID];
                 this.repeating = repeat;
-                this.state.y   = this.animation.row * this.tileSize;
                 this.state.x   = 0;
+                this.state.y   = this.animation.y;
+                this.state.w   = this.animation.w;
+                this.state.h   = this.animation.h;
                 // if (this.animation.sheet) this.state.sheet = this.animation.sheet;
                 // else delete this.state.sheet;
             }
@@ -48,12 +50,12 @@ define(['sprite'], (Sprite) => {
         this.idle = (onAnimation) => {
             if (onAnimation) {
                 const animation = this.animations[onAnimation];
-                this.state.y = animation.row * this.tileSize;
                 this.state.x = 0;
+                this.state.y = animation.y;
                 this.animation = null;
             } else if (this.animation) {
-                this.state.y = this.animation.row * this.tileSize;
                 this.state.x = 0;
+                this.state.y = this.animation.y;
                 this.animation = null;
             }
         };
@@ -64,13 +66,13 @@ define(['sprite'], (Sprite) => {
                 if (time - this.lastStep >= this.speed) {
                     // update animation
                     ++this.spriteStep;
-                    if (this.spriteStep >= this.animation.length) {
+                    if (this.spriteStep >= this.animation.l) {
                         this.spriteStep = 0;
                         if (!this.repeating) {
                             this.animation = null;
                         }
                     }
-                    this.state.x = this.spriteStep * this.tileSize;
+                    this.state.x = this.spriteStep * this.state.w;
 
                     this.lastStep = time;
                 }

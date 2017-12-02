@@ -11,7 +11,9 @@ define(() => {
         this.tileSize = this.sheet.tileSize.width;
         this.offset_x = this.sheet.offset.x;
         this.offset_y = this.sheet.offset.y;
-        this.state    = { y: (this.tileSize * 4), x: (this.tileSize * 0) };
+        this.sprite_w = this.sheet.spriteSize.w;
+        this.sprite_h = this.sheet.spriteSize.h;
+        this.state    = { y: 0, x: 0, w: this.sprite_w, h: this.sprite_h };
         this.draw     = function(ctx) {};
 
     };

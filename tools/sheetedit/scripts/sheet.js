@@ -14,7 +14,8 @@ var Sheet = function(canvas){
 			modifyAnimation: new Function(),
 			removeObject: new Function(),
 			removeAnimation: new Function(),
-			prepareSheet: new Function()
+			prepareSheet: new Function(),
+            size: new Function()
 	},  sheetData = {
 			image: null,
 			tilesize: 16,
@@ -47,7 +48,7 @@ var Sheet = function(canvas){
 				if (hover) {
 					ctx.save();
 					ctx.globalAlpha = settings.hoverAlpha;
-					ctx.strokeRect(sheetData.tilesize*hover.x - (settings.lineWidth/2), sheetData.tilesize*hover.y - (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2), sheetData.tilesize + (settings.lineWidth/2));
+					ctx.strokeRect(hover.x - (settings.lineWidth/2), hover.y - (settings.lineWidth/2), hover.w + (settings.lineWidth/2), hover.h + (settings.lineWidth/2));
 					ctx.restore();
 				}
 
@@ -83,7 +84,7 @@ var Sheet = function(canvas){
 								ctx.save();
 								ctx.fillStyle = selections[selectionType].highlight.color;
 								ctx.globalAlpha = selections[selectionType].highlight.opacity;
-								ctx.fillRect(sheetData.tilesize*tile.x, sheetData.tilesize*tile.y, sheetData.tilesize, sheetData.tilesize);
+								ctx.fillRect(tile.x, tile.y, tile.w, tile.h);
 								ctx.restore();
 							}
 						}
@@ -94,7 +95,7 @@ var Sheet = function(canvas){
 						ctx.save();
 						ctx.fillStyle = color;
 						ctx.globalAlpha = alpha;
-						ctx.fillRect(sheetData.tilesize*tile.x, sheetData.tilesize*tile.y, sheetData.tilesize, sheetData.tilesize);
+						ctx.fillRect(tile.x, tile.y, tile.w, tile.h);
 						ctx.restore();
 					}
 
@@ -166,7 +167,7 @@ var Sheet = function(canvas){
 		tilesheet = new Image();
 		var sheetDataSetup = function(){
 
-
+            const tileSize = parseInt(sheetData.tilesize);
             if (sheet.data.objects) {
 
                 selections.objects = {
@@ -178,7 +179,7 @@ var Sheet = function(canvas){
                 for (var t in sheet.data.objects) {
                     var tx = parseInt(t % sheetData.columns),
                         ty = parseInt(t / sheetData.columns),
-                        tile = new Tile( ty, tx );
+                        tile = new Tile( tx * tileSize, ty * tileSize, tileSize, tileSize );
 
                     selections.objects.selection.tiles.push( tile );
                 }
@@ -198,13 +199,12 @@ var Sheet = function(canvas){
                         var t = sheet.data[tileType][i],
                             tx = parseInt(t % sheetData.columns),
                             ty = parseInt(t / sheetData.columns),
-                            tile = new Tile( ty, tx );
+                            tile = new Tile( tx * tileSize, ty * tileSize, tileSize, tileSize );
 
                         selections[tileType].selection.tiles.push( tile );
                     }
                 }
             }
-
 
 			if (sheet.data.hasOwnProperty("avatar")) {
 				selections.avatar = {
@@ -215,12 +215,12 @@ var Sheet = function(canvas){
 
 				var tx = parseInt(sheet.data.avatar % sheetData.columns),
 					ty = parseInt(sheet.data.avatar / sheetData.columns),
-					tile = new Tile( ty, tx );
+                    tile = new Tile( tx * tileSize, ty * tileSize, tileSize, tileSize );
 
 				selections.avatar.selection.tiles = [ tile ];
 				selections.avatar.selection.addTile = function(tile) {
 					this.tiles = [ tile ];
-					sheet.data.avatar = tile.x + tile.y * sheetData.columns;
+					sheet.data.avatar = tx + ty * sheetData.columns;
 				};
 			}
 
@@ -238,9 +238,12 @@ var Sheet = function(canvas){
 				}
 
 				for (var animationName in sheet.data.animations) {
-					var animation = sheet.data.animations[animationName],
-						row = parseInt(animation.row),
-						length = parseInt(animation.length),
+                    const animation = sheet.data.animations[animationName],
+                        x = parseInt(animation.x),
+                        y = parseInt(animation.y),
+                        w = parseInt(animation.w),
+                        h = parseInt(animation.h),
+                        l = parseInt(animation.l),
 						tileSet = {
 							name: animationName,
 							tiles: []
@@ -248,11 +251,11 @@ var Sheet = function(canvas){
 
 					selections.animations.tileSets.push( tileSet );
 
-					for (var i=0; i<length; ++i) {
-						var tile = new Tile( row, i );
-						tile.tilesSet = tileSet;
-						tileSet.tiles.push( tile );
-					}
+                    for (let i = 0; i < l; ++i) {
+                        const tile = new Tile(x + i * w, y, w, h);
+                        tile.tileSet = tileSet;
+                        tileSet.tiles.push( tile );
+                    }
 				}
 
 				selections.animations.setAnimationTiles = function(){
@@ -336,8 +339,11 @@ var Sheet = function(canvas){
 				if (!tileSet) {
 					// animation not added to sheet yet
 					var animation = sheetData.data.animations[highlightAnimation],
-						row = parseInt(animation.row),
-						length = parseInt(animation.length),
+                        x = parseInt(animation.x),
+                        y = parseInt(animation.y),
+                        w = parseInt(animation.w),
+                        h = parseInt(animation.h),
+                        l = parseInt(animation.l),
 						tileSet = {
 							name: highlightAnimation,
 							tiles: []
@@ -345,8 +351,8 @@ var Sheet = function(canvas){
 
 					selections.animations.tileSets.push( tileSet );
 
-					for (var i=0; i<length; ++i) {
-						var tile = new Tile( row, i );
+					for (var i=0; i<l; ++i) {
+						var tile = new Tile( x + w * i, y, w, h );
 						tile.tilesSet = tileSet;
 						tileSet.tiles.push( tile );
 					}
@@ -359,8 +365,8 @@ var Sheet = function(canvas){
 				interface.modifyAnimation = function(data){
 					highlightedAnimation.tiles = [];
 
-					for (var i=0; i<data.length; ++i) {
-						var tile = new Tile( data.row, i );
+					for (var i=0; i<data.l; ++i) {
+						var tile = new Tile( data.x + i * data.w, data.y, data.w, data.h );
 						tile.tilesSet = highlightedAnimation;
 						highlightedAnimation.tiles.push( tile );
 					}
@@ -387,9 +393,9 @@ var Sheet = function(canvas){
 		var tileSet = null;
 		for (var i=0; i<selections.objects.selection.tiles.length; ++i) {
 			var _tile = selections.objects.selection.tiles[i],
-				tx    = _tile.x,
-				ty    = _tile.y;
-			if (parseInt(coord) == (ty*sheetData.rows + tx)) {
+				tx    = _tile.x / _tile.w,
+				ty    = _tile.y / _tile.h;
+			if (parseInt(coord) == (ty*sheetData.columns + tx)) {
 				selections.objects.selection.tiles.splice(i, 1);
 				break;
 			}
@@ -413,7 +419,7 @@ var Sheet = function(canvas){
             for (var tileType in assetDetails.tileTypes) {
                 preparedSheetData[tileType] = [];
             }
-            preparedSheetData.objects = [];
+            preparedSheetData.objects = {};
 		} else if (sheetType == 'spritesheet') {
 			preparedSheetData = {
 				animations: [],
@@ -422,6 +428,13 @@ var Sheet = function(canvas){
 
 		}
 	};
+
+    interface.size = function(){
+        return {
+            width: tilesheet.width,
+            height: tilesheet.height
+        };
+    };
 
 
 	// ========================================================== //
@@ -433,11 +446,15 @@ var Sheet = function(canvas){
 	ctx.strokeStyle = settings.lineColour;
 	ctx.lineWidth = settings.lineWidth;
 
-	var Tile = function(y,x) {
+    // Tile has a real x, y coordinate, and a width/height
+    // Since some sprites could have different sizes, and all be squeezed into the same tilesheet,
+    // we need to be able to specify different widths/heights for tiles per tilesheet
+	const Tile = function(x, y, w, h) {
 		if (y < 0 || x < 0) throw new RangeError("Bad tile: ("+y+","+x+")");
-		if (y >= sheetData.rows || x >= sheetData.columns) throw new RangeError("Bad tile: ("+y+","+x+")");
-		this.y = y;
 		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
 	};
 
 	// Selection 
@@ -447,8 +464,13 @@ var Sheet = function(canvas){
 		this.tiles = [];
 		this.addTile = function(tile, dontRemove) {
 			for (var i = 0; i<this.tiles.length; ++i) {
-				if (this.tiles[i].y == tile.y &&
-					this.tiles[i].x == tile.x) {
+                if
+                (
+                    this.tiles[i].x == tile.x &&
+                    this.tiles[i].y == tile.y &&
+                    this.tiles[i].w == tile.w &&
+                    this.tiles[i].h == tile.h
+                ) {
 
 					// Already added
 					if (!dontRemove) {
@@ -465,12 +487,19 @@ var Sheet = function(canvas){
 
 	canvas.addEventListener('mousemove', function(evt) {
 		if (ready) {
-			var y  = evt.pageY - this.offsetTop,
-				x  = evt.pageX - this.offsetLeft,
-				ty = Math.floor(y/sheetData.tilesize),
-				tx = Math.floor(x/sheetData.tilesize);
+            const tsW  = tilesheet.width,
+                  tsH  = tilesheet.height,
+                  cvsW = $(canvas).width(),
+                  cvsH = $(canvas).height(),
+                  rW   = tsW / cvsW,
+                  rH   = tsH / cvsH,
+                  y    = rH * (evt.pageY - this.offsetTop),
+                  x    = rW * (evt.pageX - this.offsetLeft),
+                  ts   = parseInt(sheetData.tilesize),
+                  ty   = ts * Math.floor(y / ts),
+                  tx   = ts * Math.floor(x / ts);
 
-			hover = new Tile(ty, tx);
+			hover = new Tile(tx, ty, ts, ts);
 		}
 
 		return false;

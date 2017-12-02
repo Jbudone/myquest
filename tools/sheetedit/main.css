@@ -62,6 +62,12 @@
 	padding-bottom: 4px;
 }
 
+.animation_preview_area {
+    width: 100px;
+    height: 80px;
+    margin: auto auto;
+}
+
 .animation_settings .form-control {
 	border-radius: 0px;
 	width: 90%;

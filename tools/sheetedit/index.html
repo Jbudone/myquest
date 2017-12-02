@@ -91,18 +91,29 @@
 							<input type="number" id="spritesheet_sprite_offset_x" min="-256" max="256" value="0" />
 							<span class="form-label">Sprite Offset X </span>
 						</div>
+						<div class="settings_component">
+							<input type="number" id="spritesheet_sprite_size_w" min="1" max="256" value="16" />
+							<span class="form-label">Sprite Size (width)</span>
+							<br/>
+							<input type="number" id="spritesheet_sprite_size_h" min="1" max="256" value="16" />
+							<span class="form-label">Sprite Size (height)</span>
+						</div>
 						<hr/>
 
 						<div class="animation_list">
 							<div class="animation_settings">
+
+								<div class="animation_preview_area">
+									<canvas id="animation_preview"></canvas>
+								</div>
+
 								<input type="text" id="animation_id" class="form-control" placeholder="Animation id" />
 								<br/>
-								<input type="number" id="animation_row" min="0" max="256" value="0" />
-								<span class="form-label">Row</span>
-								<br/>
-								<input type="number" id="animation_length" min="0" max="256" value="0" />
-								<span class="form-label">Length</span>
-								<br/>
+								<input type="number" id="animation_x" min="0" max="256" value="0" /> <span class="form-label">X Offset</span> <br/>
+								<input type="number" id="animation_y" min="0" max="256" value="0" /> <span class="form-label">Y Offset</span> <br/>
+								<input type="number" id="animation_w" min="0" max="256" value="0" /> <span class="form-label">Sprite Width</span> <br/>
+								<input type="number" id="animation_h" min="0" max="256" value="0" /> <span class="form-label">Sprite Height</span> <br/>
+								<input type="number" id="animation_l" min="0" max="256" value="0" /> <span class="form-label">Animation Length</span> <br/>
 								<br/>
 								<br/>
 								<input type="checkbox" id="animation_flipX" />
@@ -196,13 +207,24 @@
 				> sprite preview (for offset, animation, etc.)
 				> tilesize: x/y
 				> write JSON in prettify'd format; and unprettified for .min
+				> Animations: sheet editor shows transparent grid when modifying the width/height and x/y offset for the animation, and allows mouse selection for adding/removing sprites in the animation; animation width/height and x/y offset inherited from base image (base image fetches its tile width/height and x/y offset from avg values from animation set)
+					Animation: { name, x, y, w, h, l, flipX }
+				> Animation preview (works with sprite width/height)
+					- Begin with Avatar preview (when no animation selected)
+					- flipX
+				> Materials? (differing spritesheets w/ same sprites; how to share animation sets between them)
+
+				> Create Animation object (new Animation(x, y, ..))
+				> Compress tilesheets: if tilesheet has same w/h for all tiles, then keep w/h in tilesheet and use tx/ty for tiles
+				> Load asset into memory (decompress), modify stuff in memory, then save all changes
+				> In-game width/height for sprite
 
 
 
-				> BUG: mouse hover on large tiles
 				> BUG: new spritesheet -> new animation
 				> BUG: new spritesheet -> *drop image* -> new animation
 					- FIX: draw border around the canvas to indicate that the user must drop an image next; then draw border around spritesheet name to indicate user must do that next; then draw border around save to indicate user must do that next
+				> BUG: click a tilesheet w/ objects; click another tilesheet w/ no objects (see they remain); click tilesheet w/ objects again (see they stack)
 
 
 				> don't allow saving unless all required fields are filled
