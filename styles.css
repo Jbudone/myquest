@@ -350,6 +350,7 @@ h3 {
     width: 40px;
     height: 32px;
 	border: thin solid #a25223;
+	background: #b1856b;
 }
 
 .ui-inventory-slot-container.hover {
@@ -484,6 +485,7 @@ input.error {
 	background-color: #203;
     padding: 4px 6px;
     border-radius: 6px;
+	z-index: 1;
 }
 
 .buff-tooltip-header {
