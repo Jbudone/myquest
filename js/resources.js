@@ -1,4 +1,4 @@
-define(['loggable'], function(Loggable){
+define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 
 	// TODO: Cleanup resource loading to utilize Promises (Promise.all? Promise.join?)
@@ -26,6 +26,7 @@ define(['loggable'], function(Loggable){
             components: {},
             rules: {},
             fx: {},
+            cache: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
@@ -258,6 +259,7 @@ define(['loggable'], function(Loggable){
 			else if (assetID == 'scripts') return initializeScripts(asset);
 			else if (assetID == 'world') return initializeWorld(asset);
 			else if (assetID == 'components') return initializeComponents(asset);
+			else if (assetID == 'cache') return initializeCache(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
 
@@ -287,15 +289,11 @@ define(['loggable'], function(Loggable){
 					}
 				}
 
-				if (!Env.isServer && !Env.isBot) {
-					sheet.image.src = location.origin + location.pathname + sheet.file;
-				}
 				return sheet;
 			};
 			var gid = 0;
-			for (var i=0; i<res.tilesheets.list.length; ++i) {
-				var _sheet = res.tilesheets.list[i],
-					sheet  = makeSheet( _sheet );
+            _.each(res.tilesheets.list, (_sheet) => {
+				var sheet  = makeSheet( _sheet );
 
 
 				// sheet.gid.first = gid;
@@ -330,8 +328,14 @@ define(['loggable'], function(Loggable){
 					}
 				}
 
+                ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
+                        sheet.image = bitmapImage;
+                }, (err) => {
+                    throw Err(err);
+                });
+
 				this.sheets[_sheet.id] = sheet;
-			}
+			});
 
 			if (Env.isServer || Env.isBot) {
 
@@ -350,9 +354,8 @@ define(['loggable'], function(Loggable){
 
 			} else {
 
-				for (var i=0; i<res.spritesheets.list.length; ++i) {
-					var _sheet = res.spritesheets.list[i],
-						sheet  = makeSheet( _sheet );
+                _.each(res.spritesheets.list, (_sheet) => {
+                    var sheet  = makeSheet( _sheet );
 
                     sheet.spriteSize = {
 						w: parseInt(_sheet.sprite_size.w),
@@ -470,11 +473,15 @@ define(['loggable'], function(Loggable){
 
 					}.bind(env));
 
-					sheet.image.onload = prepareImage;
-					if (sheet.image.complete) prepareImage(); // In case its already loaded
+                    ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
+                        sheet.image = bitmapImage;
+                        prepareImage();
+                    }, (err) => {
+                        throw Err(err);
+                    });
 
-					this.sprites[_sheet.id] = sheet;
-				}
+                    this.sprites[_sheet.id] = sheet;
+				});
 
 			}
 
@@ -654,6 +661,12 @@ define(['loggable'], function(Loggable){
 
 			var res = JSON.parse(asset);
             componentsAssets = res;
+        }.bind(_interface)),
+
+        initializeCache = (function(asset){
+
+			var res = JSON.parse(asset);
+            this.cache = res;
         }.bind(_interface)),
 
         loadComponents = (function(){

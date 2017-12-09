@@ -1,4 +1,5 @@
 {
+    "cache": "cache.json",
 	"sheets": "sheets.json",
 	"avatars": "avatars.new.json",
 	"npcs": "npcs.new.json",

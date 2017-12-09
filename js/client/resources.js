@@ -1,8 +1,12 @@
-define(function(Resources){
+define(['resourceProcessor'], function(ResourceProcessor){
 	var Resources={
 		_init: function(){
 
 		},
+
+        process: function(res){
+            return ResourceProcessor.unpack(res);
+        },
 
 		read: function(file){
 
@@ -12,7 +16,12 @@ define(function(Resources){
 						if (err) {
 							failed(err);
 						} else {
-							loaded(data);
+                            data = Resources.process(data);
+                            if (data) {
+                                loaded(data);
+                            } else {
+                                failed();
+                            }
 						}
 					});
 				});
@@ -22,7 +31,13 @@ define(function(Resources){
 						cache: false,
 						dataType: 'text'
 					}).done(function(res){
-						succeeded(res);
+
+                        res = Resources.process(res);
+                        if (res) {
+                            succeeded(res);
+                        } else {
+                            failed();
+                        }
 					}).error(function(err){
 						failed(err);
 					});
