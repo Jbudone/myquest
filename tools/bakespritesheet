@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# TODO
+#  - Args
+#  - Blender shit
+#  		- Specifying animation
+#  		- Render settings (fast/quality)
+#  - Gimp shit (imagemagik?)
+#  		- Filters to pixelize; toon
+#  - Speedier runs
+#  - Cache and shit
+#  - Clear render directories if already full
+#  - Previews
+#  - Add shit to sheets json?
+
+#  - Filter shots before baking
+#  - Fix process locking up (limit threads doesn't seem to be enough; need to disable openmp on imagemagick?)
+#  - Find a clever way to handle framerate: should start on first frame and end on last frame, but how do we accomplish this?
+#  - Might be worth using % framerate? In case we have anims w/ small and large framecounts
+
+
+#blender wolf.sculpted.hairy.textured.blend --background --python /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/tools/blender.batchrender.py
+
+# TODO
+# ImageMagick
+#   - Go through each folder
+#   - Alpha
+#   - Cropping input
+#   - Tilesize input
+#convert \( shots/attack/camera.back/*.png -resize 256x256 +append \) \( shots/attack/camera.front/*.png -crop '500x500+250+0' -resize 256x256 +append \) -append convertsprites.png
+
+
+frame_ratio=1
+while getopts "f:a:o:c:x" opt; do
+	case $opt in
+        f) frame_ratio="$OPTARG" ;;
+		*) echo "Unknown option $opt" ;;
+	esac
+done
+
+
+
+MAGICK_THREAD_LIMIT=1
+
+subFolders=( $( find shots -type d ) )
+tmpFolder=$( mktemp -d )
+for (( i=0; i<${#subFolders[@]}; i++ )); do
+	folder=${subFolders[i]}
+	count=`ls -1 $folder/*.png 2>/dev/null | wc -l`
+
+    allImages=( $( find $folder/*.png 2>/dev/null ) )
+    images=()
+    n=0
+    for f in "${allImages[@]}"; do
+        if [[ $n == 0 ]]; then
+            images=("${images[@]}" "$f")
+        fi
+        n=$(( (n + 1) % frame_ratio ))
+    done
+
+	if [ $count -gt 0 ]; then
+		output="$tmpFolder/$i.png"
+		echo "Folder ($folder) Output to: $output"
+		#convert -debug cache "$folder/*.png" -resize 256x256 +append "$output"
+        convert $( echo ${images[@]} ) -resize 256x256 +append "$output"
+	fi
+done
+
+convert $tmpFolder/*.png -append convertsprites.png
+
+rm -r $tmpFolder
