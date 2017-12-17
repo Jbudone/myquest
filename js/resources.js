@@ -1,4 +1,4 @@
-define(['loggable'], function(Loggable){
+define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 
 	// TODO: Cleanup resource loading to utilize Promises (Promise.all? Promise.join?)
@@ -26,6 +26,7 @@ define(['loggable'], function(Loggable){
             components: {},
             rules: {},
             fx: {},
+            cache: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
@@ -258,6 +259,7 @@ define(['loggable'], function(Loggable){
 			else if (assetID == 'scripts') return initializeScripts(asset);
 			else if (assetID == 'world') return initializeWorld(asset);
 			else if (assetID == 'components') return initializeComponents(asset);
+			else if (assetID == 'cache') return initializeCache(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
 
@@ -287,15 +289,11 @@ define(['loggable'], function(Loggable){
 					}
 				}
 
-				if (!Env.isServer && !Env.isBot) {
-					sheet.image.src = location.origin + location.pathname + sheet.file;
-				}
 				return sheet;
 			};
 			var gid = 0;
-			for (var i=0; i<res.tilesheets.list.length; ++i) {
-				var _sheet = res.tilesheets.list[i],
-					sheet  = makeSheet( _sheet );
+            _.each(res.tilesheets.list, (_sheet) => {
+				var sheet  = makeSheet( _sheet );
 
 
 				// sheet.gid.first = gid;
@@ -330,8 +328,14 @@ define(['loggable'], function(Loggable){
 					}
 				}
 
+                ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
+                        sheet.image = bitmapImage;
+                }, (err) => {
+                    throw Err(err);
+                });
+
 				this.sheets[_sheet.id] = sheet;
-			}
+			});
 
 			if (Env.isServer || Env.isBot) {
 
@@ -339,15 +343,24 @@ define(['loggable'], function(Loggable){
 					var _sheet = res.spritesheets.list[i],
 						sheet  = makeSheet( _sheet );
 
+                    sheet.spriteSize = {
+						w: parseInt(_sheet.sprite_size.w),
+						h: parseInt(_sheet.sprite_size.h)
+                    };
+
 					sheet.data.animations = {};
 					this.sprites[_sheet.id] = sheet;
 				}
 
 			} else {
 
-				for (var i=0; i<res.spritesheets.list.length; ++i) {
-					var _sheet = res.spritesheets.list[i],
-						sheet  = makeSheet( _sheet );
+                _.each(res.spritesheets.list, (_sheet) => {
+                    var sheet  = makeSheet( _sheet );
+
+                    sheet.spriteSize = {
+						w: parseInt(_sheet.sprite_size.w),
+						h: parseInt(_sheet.sprite_size.h)
+                    };
 
 					sheet.data.animations = {};
 
@@ -369,38 +382,44 @@ define(['loggable'], function(Loggable){
 						// Figure out the dimensions of our spritesheet
 						var canvas  = document.createElement('canvas'),
 							ctx     = canvas.getContext('2d'),
-							allRows = {},
-							rows    = 0,
-							cols    = 0,
-							tWidth  = sheet.tileSize.width,
-							tHeight = sheet.tileSize.height;
+                            totalHeight = 0,
+                            totalWidth = 0,
+                            magicNumber = 999999999,
+                            spriteW = parseInt(_sheet.sprite_size.w),
+                            spriteH = parseInt(_sheet.sprite_size.h);
 						for (var key in animations){
 							var ani   = animations[key],
-								row   = parseInt(ani.row),
-								len   = parseInt(ani.length),
+                                x   = parseInt(ani.x),
+                                y   = parseInt(ani.y),
+                                w   = parseInt(ani.w),
+                                h   = parseInt(ani.h),
+                                l   = parseInt(ani.l),
+                                sxy = parseInt(ani.y) * magicNumber + parseInt(ani.x),
+                                height = h,
+                                width = spriteW * l,
 								flipX = (ani.hasOwnProperty('flipX') && ani.flipX == "true");
-							if (!allRows[row]) {
-								allRows[row] = { flipX: (ani.flipX?FLIPX:NOFLIPX) };
-								++rows;
-							} else if (!(allRows[row].flipX & (flipX?FLIPX:NOFLIPX))) {
-								allRows[row].flipX |= (flipX?FLIPX:NOFLIPX);
-								++rows;
-							}
 
-							if (len > cols) {
-								cols = len;
+                            ani.x = x;
+                            ani.y = y;
+                            ani.w = w;
+                            ani.h = h;
+                            ani.l = l;
+
+                            totalHeight += spriteH;
+                            if (width > totalWidth) {
+                                totalWidth = width;
 							}
 						}
 
-						canvas.height = tHeight * rows;
-						canvas.width  = tWidth  * cols;
+						canvas.height = totalHeight;
+						canvas.width  = totalWidth;
 
 						// Draw animations to sheet
-						var iRow = 0;
+                        var iRow = 0,
+                            curY = 0;
 						for(var key in animations){
-							var ani = animations[key],
-								row   = parseInt(ani.row),
-								len   = parseInt(ani.length);
+							var ani = animations[key];
+                            var { x, y, w, h, l } = ani;
 							if (ani.hasOwnProperty('flipX')) {
 
 
@@ -408,8 +427,8 @@ define(['loggable'], function(Loggable){
 									// For Chrome
 									ctx.save();
 									ctx.scale(-1,1);
-									for(var i=len-1, j=0; i>=0; --i, ++j) {
-										ctx.drawImage(sheet.image, i*tWidth - sheet.offset.x, row*tHeight - sheet.offset.y, tWidth, tHeight, -i*tWidth, iRow*tHeight, -tWidth, tHeight);
+									for(var i=l-1, j=0; i>=0; --i, ++j) {
+                                        ctx.drawImage(sheet.image, i*w + x - sheet.offset.x, y - sheet.offset.y, w, h, -i*spriteW, curY, -spriteW, spriteH);
 									}
 									ctx.restore();
 								} catch(e) {
@@ -419,7 +438,7 @@ define(['loggable'], function(Loggable){
 									ctx.save();
 									ctx.scale(-1,1);
 									for(var i=len-1, j=0; i>=0; --i, ++j) {
-										ctx.drawImage(sheet.image, j*tWidth, row*tHeight, tWidth, tHeight, -(j+1)*tWidth, iRow*tHeight, tWidth, tHeight);
+										ctx.drawImage(sheet.image, x + j*w - sheet.offset.x, y - sheet.offset.y, w, h, -(j+1)*spriteW, curY, spriteW, spriteH);
 									}
 									ctx.restore();
 									// for(var i=ani.length-1, j=0; i>=0; --i, ++j) {
@@ -429,25 +448,40 @@ define(['loggable'], function(Loggable){
 								}
 
 							} else {
-								ctx.drawImage(sheet.image, -sheet.offset.x, row*tHeight - sheet.offset.y, tWidth*len, tHeight, 0, iRow*tHeight, tWidth*len, tHeight);
+								ctx.drawImage(sheet.image, x - sheet.offset.x, y - sheet.offset.y, l*w, h, 0, curY, spriteW*l, spriteH);
 							}
 
 							ani.row = (iRow++);
-							ani.length = len;
+							ani.length = ani.l;
 							delete ani.flipX;
-							sheet.data.animations[key] = ani;
+                            sheet.data.animations[key] = {
+                                x: 0,
+                                y: curY,
+                                w: spriteW,
+                                h: spriteH,
+                                l
+                            };
+
+                            curY += spriteH;
 						}
+
+                        // NOTE: To debug canvas just uncomment this
+                        //document.body.appendChild(canvas);
 
 						sheet.image = new Image();
 						sheet.image.src = canvas.toDataURL("image/png");
 
 					}.bind(env));
 
-					sheet.image.onload = prepareImage;
-					if (sheet.image.complete) prepareImage(); // In case its already loaded
+                    ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
+                        sheet.image = bitmapImage;
+                        prepareImage();
+                    }, (err) => {
+                        throw Err(err);
+                    });
 
-					this.sprites[_sheet.id] = sheet;
-				}
+                    this.sprites[_sheet.id] = sheet;
+				});
 
 			}
 
@@ -627,6 +661,12 @@ define(['loggable'], function(Loggable){
 
 			var res = JSON.parse(asset);
             componentsAssets = res;
+        }.bind(_interface)),
+
+        initializeCache = (function(asset){
+
+			var res = JSON.parse(asset);
+            this.cache = res;
         }.bind(_interface)),
 
         loadComponents = (function(){

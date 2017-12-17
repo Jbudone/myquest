@@ -69,7 +69,7 @@ define(
                             pageY    = Math.floor(movable.position.tile.y / Env.pageHeight) * Env.pageHeight,
                             left     = Env.tileScale * (
                                             localX + // game left
-                                            movable.sprite.tileSize / 4 + // centered UI
+                                            movable.sprite.sprite_w / 4 + // centered UI
                                             -1 * movable.sprite.offset_x + // offset sprite
                                             -1 * _UI.camera.offsetX + // camera offset
                                             (pageX - The.area.curPage.x) * Env.tileSize // page offset
@@ -78,9 +78,10 @@ define(
                                             localY + // game top
                                             -1 * movable.sprite.offset_y + // offset sprite
                                             _UI.camera.offsetY + // camera offset
-                                            (pageY - The.area.curPage.y) * Env.tileSize // page offset
-                                        ) + movable.sprite.offset_y + // offset sprite
-                                        -1 * movable.sprite.tileSize + // sprite size
+                                            (pageY - The.area.curPage.y) * Env.tileSize + // page offset
+                                            -1 * movable.sprite.sprite_h / 2 + // sprite size
+                                            movable.sprite.offset_y // offset sprite
+                                        ) +
                                         -1 * height; // floating above head
 
                         if (Math.abs(left - this.position.left) > 5 ||

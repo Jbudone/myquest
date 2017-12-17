@@ -102,12 +102,12 @@ var Editor = function(container, sheet){
         return false;
     };
 
-    for (var tileType in assetDetails.tileTypes) {
+    _.forEach(assetDetails.tileTypes, (v, tileType) => {
         view_tilesheet.components['set'+tileType][0].onclick = function(){
             sheet.setMode(tileType);
             return false;
         };
-    }
+    });
 
 
 	// ------------ Loading/Unloading ------------ //
@@ -116,7 +116,7 @@ var Editor = function(container, sheet){
 
 		this.data = data;
 		if (!data.data) data.data = {};
-        if (!data.data.objects) data.data.objects = [];
+        if (!data.data.objects) data.data.objects = {};
 
         for (var tileType in assetDetails.tileTypes) {
             if (!(tileType in data.data)) data.data[tileType] = [];
@@ -151,7 +151,10 @@ var Editor = function(container, sheet){
 				var objects = modified.selection.tiles;
 				for (var i=0; i<objects.length; ++i) {
 					var object = objects[i],
-						_object = object.y * parseInt(view_tilesheet.data.columns) + object.x;
+                        ts = parseInt(view_tilesheet.data.tilesize),
+                        ty = object.y / ts,
+                        tx = object.x / ts,
+						_object = ty * parseInt(view_tilesheet.data.columns) + tx;
 					if (!view_tilesheet.data.data.objects[_object]) {
 						// This is a new object
 						++idNum;
@@ -166,10 +169,12 @@ var Editor = function(container, sheet){
                     tiles = modified.selection.tiles;
 				for (var i=0; i<tiles.length; ++i) {
 					let tile = tiles[i],
-						_tile = tile.y * parseInt(view_tilesheet.data.columns) + tile.x;
-					_tiles.push(_tile);
+                        tx = tile.x / tile.w,
+                        ty = tile.y / tile.h,
+                        coord = ty * parseInt(view_tilesheet.data.columns) + tx;
+					_tiles.push(coord);
 				}
-				view_tilesheet.data.data[tileType] = _tiles;
+				view_tilesheet.data.data[modified.type] = _tiles;
             }
 			view_tilesheet.modified();
 		};
@@ -270,13 +275,21 @@ var Editor = function(container, sheet){
 			y: $('#spritesheet_sprite_offset_y'),
 			x: $('#spritesheet_sprite_offset_x')
 		},
+		sprite_size: {
+			w: $('#spritesheet_sprite_size_w'),
+			h: $('#spritesheet_sprite_size_h')
+		},
 		animations: {
 			container: $('.animation_list'),
 			settings: {
 				container: $('.animation_settings'),
+                preview: $('#animation_preview'),
 				id: $('#animation_id'),
-				row: $('#animation_row'),
-				length: $('#animation_length'),
+                x: $('#animation_x'),
+                y: $('#animation_y'),
+                w: $('#animation_w'),
+                h: $('#animation_h'),
+                l: $('#animation_l'),
 				flipX: $('#animation_flipX')
 			}, list: []
 		},
@@ -346,6 +359,24 @@ var Editor = function(container, sheet){
 		view_spritesheet.modified();
 	};
 
+	view_spritesheet.components.sprite_size.w[0].oninput = null;
+	view_spritesheet.components.sprite_size.w[0].oninput = function(){
+		var width = parseInt(this.value);
+		view_spritesheet.data.sprite_size.w = width;
+		sheet.adjustSheet( view_spritesheet.data );
+		interface.onModified();
+		view_spritesheet.modified();
+	};
+
+	view_spritesheet.components.sprite_size.h[0].oninput = null;
+	view_spritesheet.components.sprite_size.h[0].oninput = function(){
+		var height = parseInt(this.value);
+		view_spritesheet.data.sprite_size.h = height;
+		sheet.adjustSheet( view_spritesheet.data );
+		interface.onModified();
+		view_spritesheet.modified();
+	};
+
 	view_spritesheet.components.setAvatar[0].onclick = null;
 	view_spritesheet.components.setAvatar[0].onclick = function(){
 		sheet.setMode('avatar');
@@ -375,6 +406,8 @@ var Editor = function(container, sheet){
 		view_spritesheet.components.sheet_offset.y.val( parseInt(data.sheet_offset.y) );
 		view_spritesheet.components.sprite_offset.x.val( parseInt(data.sprite_offset.x) );
 		view_spritesheet.components.sprite_offset.y.val( parseInt(data.sprite_offset.y) );
+		view_spritesheet.components.sprite_size.w.val( parseInt(data.sprite_size.w) );
+		view_spritesheet.components.sprite_size.h.val( parseInt(data.sprite_size.h) );
 
 		$('.animation', view_spritesheet.components.animations.container).remove();
 
@@ -384,8 +417,12 @@ var Editor = function(container, sheet){
 		view_spritesheet.components.setAnimation[0].onclick = function(){
 			var animationName = 'New Animation',
 				animation = {
-					row: 0,
-					length: 0
+                    x: 0,
+                    y: 0,
+                    w: data.tilesize,
+                    h: data.tilesize,
+                    l: 1,
+                    flipX: false
 				};
 
 			data.data.animations[animationName] = animation;
@@ -403,13 +440,30 @@ var Editor = function(container, sheet){
 					var name = $(el).data('animationName'),
 						animation  = $(el).data('animation');
 
-					view_spritesheet.components.animations.settings.id.val( name );
-					view_spritesheet.components.animations.settings.row.val( animation.row );
-					view_spritesheet.components.animations.settings.length.val( animation.length );
-					view_spritesheet.components.animations.settings.flipX.prop('checked', !!animation.flipX );
+                    const settingsComponents = view_spritesheet.components.animations.settings;
+                    _.forEach(
+                        {
+                            'x': animation.x,
+                            'y': animation.y,
+                            'w': animation.w,
+                            'h': animation.h,
+                            'l': animation.l
+                        },
+                    (prop, name) => {
+                        const component = settingsComponents[name];
+                        component.val( prop );
+                        component[0].oninput = null;
+                        component[0].oninput = function(){
+                            animation[name] = parseInt(this.value);
+                            sheet.modifyAnimation(animation);
+                            interface.onModified();
+                            view_spritesheet.modified();
+                        };
+                    });
 
-					view_spritesheet.components.animations.settings.id[0].oninput = null;
-					view_spritesheet.components.animations.settings.id[0].oninput = function(){
+                    settingsComponents.id.val( name );
+					settingsComponents.id[0].oninput = null;
+					settingsComponents.id[0].oninput = function(){
 						var newID = this.value;
 						delete data.data.animations[ name ];
 						name = newID;
@@ -422,24 +476,9 @@ var Editor = function(container, sheet){
 						view_spritesheet.modified();
 					};
 
-					view_spritesheet.components.animations.settings.row[0].oninput = null;
-					view_spritesheet.components.animations.settings.row[0].oninput = function(){
-						animation.row = parseInt(this.value);
-						sheet.modifyAnimation(animation);
-						interface.onModified();
-						view_spritesheet.modified();
-					};
-
-					view_spritesheet.components.animations.settings.length[0].oninput = null;
-					view_spritesheet.components.animations.settings.length[0].oninput = function(){
-						animation.length = parseInt(this.value);
-						sheet.modifyAnimation(animation);
-						interface.onModified();
-						view_spritesheet.modified();
-					};
-
-					view_spritesheet.components.animations.settings.flipX[0].onclick = null;
-					view_spritesheet.components.animations.settings.flipX[0].onclick = function(){
+                    settingsComponents.flipX.prop('checked', !!animation.flipX);
+					settingsComponents.flipX[0].onclick = null;
+					settingsComponents.flipX[0].onclick = function(){
 						var flipX = this.checked;
 						if (flipX) {
 							animation.flipX = true;
@@ -451,6 +490,7 @@ var Editor = function(container, sheet){
 					};
 
 					sheet.setMode('animation', name);
+                    setAnimationPreview(data, animation);
 
 					return false;
 				}, clearAnimation = function(el){
@@ -499,6 +539,7 @@ var Editor = function(container, sheet){
 				return animationEl;
 		};
 
+
 		_.each(data.data.animations, function(animation, animationName){
 			var animationEl = addAnimation(animationName, animation);
 		});
@@ -523,13 +564,23 @@ var Editor = function(container, sheet){
 				// 	_floats.push( _float );
 				// }
 				// view_tilesheet.data.data.floating = _floats;
-			}
+            } else if (modified.type == 'avatar') {
+                const tile = modified.selection.tiles[0],
+                    tilesize = parseInt(view_spritesheet.data.tilesize),
+                    tx = tile.x / tilesize,
+                    ty = tile.y / tilesize,
+                    tw = sheet.size().width / tilesize;
+                view_spritesheet.data.data.avatar = ty * tw + tx;
+            }
+
 			view_spritesheet.modified();
 		};
 		sheet.onSheetChanged = function(src){
 			data.image = src;
 			view_spritesheet.modified();
 		};
+
+        setAnimationPreview(data);
 	};
 
 	view_spritesheet.unload = function(){
@@ -541,6 +592,51 @@ var Editor = function(container, sheet){
 	view_spritesheet.fetchData = function(){
 		return this.data;
 	};
+
+    var animPreview = {
+        drawTimeout: null
+    };
+
+    var setAnimationPreview = function(data, anim){
+        let canvas = $('#animation_preview')[0],
+            ctx = canvas.getContext('2d');
+
+        clearTimeout(animPreview.drawTimeout);
+        animPreview.drawTimeout = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let idx = 0;
+
+        var redraw = () => {
+
+            let x = parseInt(anim.x, 10),
+                y = parseInt(anim.y, 10),
+                w = parseInt(anim.w, 10),
+                h = parseInt(anim.h, 10),
+                l = parseInt(anim.l, 10);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tilesheet, x + w * idx, y, w, h, 0, 0, data.sprite_size.w, data.sprite_size.h);
+
+            ++idx;
+            if (idx >= anim.l) {
+                idx = 0;
+            }
+
+            animPreview.drawTimeout = setTimeout(redraw, 100);
+        };
+
+        let tilesheet = new Image();
+        tilesheet.onload = function(){
+            if (animPreview.drawTimeout !== null) return;
+            if (!anim) return;
+
+            redraw();
+            console.log(data);
+        };
+
+        tilesheet.src = data.image;
+    };
 
 
 

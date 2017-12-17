@@ -37,17 +37,18 @@
     "uglifyjs": "^2.4.10"
   },
   "dependencies": {
+    "bluebird": "*",
     "chalk": "~1.0.0",
+    "hiredis": "*",
     "jquery": "*",
     "jsdom": "*",
-    "bluebird": "*",
+    "l1-path-finder": "*",
     "mongodb": "*",
     "redis": "*",
-    "hiredis": "*",
-    "ws": "*",
     "requirejs": "*",
+    "sharp": "^0.18.4",
     "underscore": "*",
-    "l1-path-finder": "*"
+    "ws": "*"
   },
   "presets": []
 }

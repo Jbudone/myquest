@@ -1,4 +1,5 @@
 *.swp
+*.swo
 js/scripts/ready/
 
 js/SCRIPT.INJECTION.min.js
@@ -12,3 +13,12 @@ build
 *.bak
 .tern-project
 reports
+
+*.log
+
+*.png
+*.jpg
+*.bmp
+
+*.mp4
+*.mp3

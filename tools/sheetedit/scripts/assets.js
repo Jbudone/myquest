@@ -181,6 +181,10 @@ var AssetsManager = function(assets, container, files){
 					x: 0,
 					y: 0
 				},
+                sprite_size: {
+                    w: 16,
+                    h: 16
+                },
 				data: {
 					animations: {},
 					avatar: 0

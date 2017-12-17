@@ -52,6 +52,7 @@ Store NPC history in local db, if we run into that same NPC or area again, recog
 
 RvR style areas for different factions (you can work your way into factions); taking over keeps/etc. gives a global stat gain/buff to everyone in that faction
 
+Consider some items (core components) drop on a per-player basis? This prevents players farming areas for cash, and forces players to craft or work for their gear/utilities
 
 Quests
  - Romeo & Juliet
@@ -241,7 +242,6 @@ WORKING ON (was previously working on)
 	- Try converting AOE triggers into circles added to a trigger list in each page; then just listen to EVT_MOVE_NEW_TILE on the page and check the position against the point/radius
 	- Get rid of .before on hooks, and just have a 'hookX-pre', 'hookX-post' instead for those specific cases
 	- Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
-	- BUG: Reload in king room on Chromium and see wrong sprite for king
 	- BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
 	- Respawning/Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker); Also should pause renderer
 	- Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
@@ -274,6 +274,17 @@ WORKING ON (was previously working on)
 	- Projectiles: Add shooting bone/offset from archer's sprite
 	- Projectiles: Find a better way to determine if the attacker is firing a projectile, and the projectile type
 	- Projectiles: Better time-to-die calculation for projectile (per projectile number?)
+	- Map Exporter: If tileset was not embedded in the map (eg. we imported or saved an external tileset) server/area.js cannot read external tileset
+	- Sprite state (anim) should be maintained on the server. This is sent to clients when they zone in, and prevents from seeing sprites which are attacking when really they're in the middle of attacking
+	- Pack/Compress/Encrypt resources (in case any are purchased)
+	- Look into tossing pathfinding / other stuff onto another thread (child process); child processes can access parents, can this help with executing event callbacks?
+	- Can we netSerialize once on changes, cache the results, and send those cached results to everyone on changes? Or should netSerialize only be done on initial load
+	  	- would RMI a netSerialize w/ flags indicating what members have changed
+    - Rendering background: could probably render each page background to a hidden texture/image/canvas, then when redrawing the background just render each prerendered page to one canvas; moving around the map only involves moving the background canvas. Zoning into another page could involve asynchronously rendering to a buffer background, and then switching the two background canvases when its ready
+	  	- Cleanup
+		- Better bg offset
+	  	- Async render (for new neighbours and buffer background)
+	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	
 
 
@@ -392,58 +403,105 @@ WORKING ON (was previously working on)
 
 
 
+========
+  Been a while?
+========
+
+	== Been a while? ==
+	
+	A few reminders if you're just coming back after a while
+
+	- Running game:
+	   - ./grunt && ./grunt watch   # to watch the directory and transpile to the working directory
+	   - node dist/server.js --test # run the server w/ test environment
+    
+	- Debugging:
+	   - node --inspect dist/server.js --test  # open chrome://inspect to find the remote target and inspect it
+		 									   # NOTE: If server hits a debugger statement, will pause there even if you don't have the inspector open yet
+	
+	- Admin:
+	   - /admin 42
+
+	- Troubleshooting:
+	   - Client slow w/ web developer tools open
+		 	- Disable breakpoints
+			- Disable verbose logging
+
+	- Mapping
+	   - New map
+		    - Orthogonal/CSV; 100x100 map; 16x16 tiles   # NOTE: Larger maps seem to be a problem, so trying out smaller maps for now
+			- Tilesheets: Map -> New Tileset -> tilesheet   16x16
+			  									npcs (tools/sheetedit/avatars.png)  32x32
+			- Tile Layers: base, sprites
+			- Object Layers: zoning, spawns, interactables
+			- Add map
+			  	- add map to world.json
+				- run tools/export-world.json
+
 
 
 Next Priority
-	- Soak testing
-	  	Server side AI/bots: Explorers/Adventurers with AI that will force them to explore the game and try things that could crash stuff
-		Server/Client(ish) bots: Runs on the server but treated as a player (however, receives responses from server and has its own internal testing suite which could test values which it expects.. could have pre-setup scripts to test certain things)
-		Client bots:  ...not sure this is worth pursuing?    ..would also need to request individual values from server to see if its in sync
-	- Sound
-		- FXMgr:
+	== Design
+	 - Level rewards (gain xp, statIncrease)
+		- { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
+	 - Level XP loss calculation
+	 - Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+	   	Skill in weapon? (warrior skill)
 
-		  	Future: entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
-			Future: Improve sound buffer loader: promise/load all, then set FX as ready when everything is loaded
-			Future: Utilize WebStorage to store/load sounds (need some way to determine if sounds have changed on the server)
-			Future: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample? limit to X number of sounds on an entity? etc.)
-			Future: Sound groups (weapon -> combat -> world -> global); each group can have its own settings
-			Future: Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
-			Future: LocalStorage settings (volume)
-			Future: UI Settings (volume)
-			Future: Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely. Draw trigger areas in map to define areas, have map exporter expand it out slightly more for an outside/middle/inside area (for better fading)
-
-			Music fade:
-				- Cancelling current music (music -> null)
-				- Pushing Music FX when another instance of that same sample is already playing (if fading out then fade back in, cancel new push)
+		str -- strengthen base damage                                   <-|  Str/Dex should be equivalent in terms of effectiveness
+		dex -- larger damage range? (potential to hit for more damage)  <-|
+		wep dmg -- base damage
+		wep spd -- attack speed
+		speed -- improve attack speed
+		skill -- improve effectiveness of str/dex/speed towards particular weapon type
 
 
-	- Levelling/Experience: Level rewards    { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
-	- Combat: smarter target selection
-	- Bug system (auto bug reports on client/server crash; setup in html format merged w/ client/server side-by-side, dump all variables (recursively), and auto send html file to me if online)
-	  	- Object Dump()
-		- Client read source in errorParse
-		- ErrorReport tool
-		  	- Server/Client side-by-side
-			- Logging colours
-			- Header show error (should only be one)
-			- Report list: "Report 05/02/2017 10:01 PM -- Client Report:  ASSERT: Cannot divide by 0"
-			- Syntax highlighting on source
-			- Select source line, loads code region (NOTE: may need reports to include git details, so we can load file from certain timeframe)
-			- Interactive JSON for client/server dumps (highlight dump region a different bg colour depending on client/server)
-			- Get rid of source parse from game errorReporter, integrate entirely into tool w/ git support
-			- Setup grid for error stack (Chrome 57)
-			- Log: if JSON then prettify log
-			- Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
-	- Admin commands from client -- to open server REPL
-	  	- Request login to server
-		- Commands
-		   - Set health/stats (cur)
-		   - Drop items around you
-		   - Put items in inventory
-		   - Add buff
-		- Enable admin on login
-		- Twitter plugin for autocomplete
-	- Easier server debugging
+		Weapon Damage = Dmg * Str ^ X * [0.8,1.2]
+			Dex: influences % of getting a higher score in the [0.8,1.2] crit range
+				0.8 + (1.2 - 0.8) * (Dex / MaxDex) ^ Y
+			X: Influenced by skill
+			Dex: also influenced by skill
+
+			E(Str=X, Dex=0) = E(Str=X-1, Dex=1) = ... = E(Str=0, Dex=X)
+
+			Check the derivative of Str == derivative of Dex  (ie. rate of change is equal for both variables; and set peaks equal)
+			
+
+	 - Combat: smarter target selection
+	 - Combat: attack/speed formula (level/stats/randomness)
+
+
+	   Levelling
+	   	- Level 1: 2 minutes to level (6 kills?)
+	   Stats + Resists + Hinderances (eating/blindness/stun/confusion)
+	   Items
+	   Enemies / Toughness
+	    Determine time-to-kill for each pair of levels (your level vs. enemy level), with expected health at the end (high/low health within 1/2 standard deviation)
+		Draw out bell curve to determine direction (change between levels), and your expected damage + enemy expected damage at level
+	   	- Level 1: 15 seconds to kill something at the same level; should finish with 60-70% health
+		  		   Should be able to attack level 2, finish with 30-40% health  (30 seconds)
+				   Attacking level 3, finish with -20-10% health (die in most cases)  (50 seconds)
+		- Level 2: 10 seconds to kill a level 1; finish with 80-90% health; 10 seconds
+		  		   25 seconds to kill a level 2; finish with 60-70% health; 
+
+		 - Time to level up
+		   	Level 1
+			  - level 1s: 4x
+			  - Level 2s: 2.5x
+			  - Level 3s: 2x
+		 - Time to kill
+		   	Level 1
+			  - Level 1: 5s
+			  - Level 2: 9s
+		 - HP after fight
+
+
+
+
+	   Quests
+	   Exploration
+
+
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
@@ -451,12 +509,6 @@ Next Priority
 	- NOTE: User logs in, server loads player from db and sends to player (no netSerialize since no character exists yet). NEED To netInitialize?
 	- NOTE: User dies, respawns, after setting self to alive we call hook('respawning').post()  which triggers deathmgr to add death sickness (since we're now alive). Which means we'll send buff to user. The trick is to unload the buffmgr so the user doesn't handle the EVT_BUFF_PRIVATE evt
 
-
-	== Design
-	 - Level rewards (gain xp)
-	 - Level XP loss calculation
-	 - Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
-	 - Combat: attack/speed formula (level/stats/randomness)
 
 
 
@@ -495,6 +547,7 @@ Future
 		- Chasing (pathfinding): We can probably get away with only sending the target that we're chasing after rather than continuously sending updates paths (since our path continuously changes); or perhaps continue to use the same path and continue expanding on it assuming its a simple update (extending the end of the path rather than changing the path mid-way), then this is likely a deterministic operation that clients can be in sync with. We'd simply need to periodically send position updates of the movable if its been a while? Or path progress if its been a while?
 		  - Write a module to compress EVT messages into arrays: { evt: EVT_GAIN_XP, data: { entityId: 54, killedId: 32, XP: 10 } }  ==>  [EVT_GAIN_XP,54,32,10]  then based off the event format table, reconvert it back to its object format
 		  - Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
+		  - Look into canvas perf: https://www.html5rocks.com/en/tutorials/canvas/performance
 	- Fault tolerance
 	  	- On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
 		- Could add preprocessors in "parent" functions which act as a safety check, eg. #CHECK( ExpectObjectFormat(data.args.container.s, { numbers: ForEach(IsNumber), evt: IsValidEvent }) )  on retail converts to:
@@ -502,9 +555,46 @@ Future
 			This sucks but would save us from any crashing
 		- https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
 		- Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
+		- Look into webassembly, or C++ based modules for the server to run perf-intensive code
 	- Debugging/Testing
 	  	- Agent bots which follow player around, have sight to attack nearby enemies, use precomputed waypoints to catch up to player (if died)
 	- Tracking variables during stack unwinding/crashes: could have a preprocessor go through scripts and recognize all variable assignments in scripts, then append global['STACK.FUNC.var']=var
+	- Look into WebAssembly components for high performance operations (eg. pathfinding)
+	- FXMgr:
+		entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
+		Improve sound buffer loader: promise/load all, then set FX as ready when everything is loaded
+		Utilize WebStorage to store/load sounds (need some way to determine if sounds have changed on the server)
+		Conditions (new sound stops previous instance of sample? limit to X number of instances of sample? limit to X number of sounds on an entity? etc.)
+		Sound groups (weapon -> combat -> world -> global); each group can have its own settings
+		Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
+		UI Settings (volume)
+		Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely. Draw trigger areas in map to define areas, have map exporter expand it out slightly more for an outside/middle/inside area (for better fading)
+		Music fade: Cancelling current music (music -> null), Pushing Music FX when another instance of that same sample is already playing (if fading out then fade back in, cancel new push)
+	- Bug system
+	  	- Object Dump()
+		- ErrorReport tool
+		  	- Server/Client side-by-side
+			- Logging colours
+			- Header show error (should only be one)
+			- Report list: "Report 05/02/2017 10:01 PM -- Client Report:  ASSERT: Cannot divide by 0"
+			- Syntax highlighting on source
+			- Select source line, loads code region (NOTE: may need reports to include git details, so we can load file from certain timeframe)
+			- Interactive JSON for client/server dumps (highlight dump region a different bg colour depending on client/server)
+			- Get rid of source parse from game errorReporter, integrate entirely into tool w/ git support
+			- Setup grid for error stack (Chrome 57)
+			- Log: if JSON then prettify log
+			- Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
+	- Admin commands from client -- to open server REPL
+	  	- Request login to server
+		- Commands
+		   - Set health/stats (cur)
+		   - Drop items around you
+		   - Put items in inventory
+		   - Add buff
+		   - Godmode
+		- Enable admin on login
+		- Twitter plugin for autocomplete
+
 
 
 

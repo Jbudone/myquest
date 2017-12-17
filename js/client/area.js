@@ -24,14 +24,17 @@ define(
                     // this.sheet     = Resources.findSheetFromFile(area.tileset);
                     this.sheets = [];
 
+
+                    // The area's tilesets have a GID range which may be different than our local tileset's GID range
+                    // Find the matching local tileset and its GID offset
                     _.forEach(area.tilesets, (tileset) => {
                         const sheet = Resources.findSheetFromFile(tileset.image);
                         if (!_.isObject(sheet)) return;
 
-                        sheet.gid = {
-                            first: tileset.gid.first,
-                            last: tileset.gid.last
-                        };
+                        const gidOffset = tileset.gid.first - sheet.gid.first;
+                        assert((tileset.gid.last - tileset.gid.first) === (sheet.gid.last - sheet.gid.first), "Tilesets have mismatching range");
+
+                        sheet.gidOffset = gidOffset;
                         this.sheets.push(sheet);
                     });
 
@@ -76,10 +79,26 @@ define(
                     page.y             = evtPage.y;
                     page.x             = evtPage.x;
                     page.tiles         = evtPage.tiles;
-                    page.sprites       = evtPage.sprites;
+
+                    _.forEach(evtPage.sprites, (sprite, spriteId) => {
+                        page.sprites[spriteId] = sprite;
+                    });
+
                     page.collidables   = evtPage.collidables;
                     page.items         = evtPage.items;
                     page.interactables = evtPage.interactables;
+
+                    for (let i = 0; i < page.sprites.length; ++i) {
+                        const sprite = page.sprites[i];
+                        if (!sprite) continue;
+
+                        const gid = sprite.sprite;
+
+                        const tileset = _.find(this.sheets, (sheet) => inRange(gid - sheet.gidOffset, sheet.gid.first, sheet.gid.last));
+                        assert(tileset, "No tileset found in the area sheets which match this gid");
+                        assert(_.isFinite(tileset.gidOffset), "Tileset does not have an offset to match our local tileset range");
+                        sprite.sprite -= tileset.gidOffset;
+                    }
 
                     if (Env.game.useJPS) {
                         page.jumpPoints       = evtPage.jumpPoints;

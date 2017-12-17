@@ -16,7 +16,7 @@
                 }
             ],
             "options": {
-                "duration": 30000
+                "duration": 300000
             }
         },
         "effects": {
