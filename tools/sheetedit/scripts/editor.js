@@ -54,6 +54,8 @@ var Editor = function(container, sheet){
     }
 
 
+	view_tilesheet.components.tilesize.input[0].min = 1;
+	view_tilesheet.components.tilesize.input[0].max = 1000;
 	view_tilesheet.components.tilesize.input[0].oninput = null;
 	view_tilesheet.components.tilesize.input[0].oninput = function(){
 		var newTilesize = parseInt(this.value);
@@ -298,6 +300,8 @@ var Editor = function(container, sheet){
 	};
 
 
+	view_spritesheet.components.tilesize.input[0].min = 1;
+	view_spritesheet.components.tilesize.input[0].max = 1000;
 	view_spritesheet.components.tilesize.input[0].oninput = null;
 	view_spritesheet.components.tilesize.input[0].oninput = function(){
 		var newTilesize = parseInt(this.value);

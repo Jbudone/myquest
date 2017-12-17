@@ -46,6 +46,8 @@ fs.readFile('data/cache.json', function(err, bufferData){
             
         img.raw().toBuffer((err, imgData, info) => {
 
+            console.log(info);
+
             fs.open(cacheFile, 'w', (err, fd) => {
                 // => [Error: EISDIR: illegal operation on a directory, open <directory>]
                 if (err) {
