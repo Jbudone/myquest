@@ -14,10 +14,14 @@ define(() => {
             // Cache = xBytes + yBytes + width + height + data
         },
 
-        readImage: (file) => {
+        readImage: (name) => {
             return new Promise((succeeded, failed) => {
-                let strippedName = file.match(/[a-zA-Z0-9_\.]+$/); // FIXME: This is gross, shouldn't need to do this. Just use the name in the map/sheets/etc. files instead
-                cacheFile = Resources.cache[strippedName[0]];
+                //let strippedName = file.match(/[a-zA-Z0-9_\.]+$/); // FIXME: This is gross, shouldn't need to do this. Just use the name in the map/sheets/etc. files instead
+                //cacheFile = Resources.cache[strippedName[0]];
+                console.log(Resources.cache);
+                const cacheNode = Resources.cache.cacheList.find((el) => el.name === name);
+                assert(cacheNode, `Could not find cache for ${name}`);
+                const cacheFile = cacheNode.cache;
 
                 if (!cacheFile) {
                     failed(`Could not find cache for ${file} (${strippedName})`);
