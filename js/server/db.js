@@ -75,8 +75,10 @@ define(['loggable'], function(Loggable){
 
 		this.registerUser = function(username, password, email, overrideSpawn){
 
-            let spawnArea = 'main';
-            let spawnPosition = { x: 53, y: 60 };
+            //let spawnArea = 'main';
+            //let spawnPosition = { x: 53, y: 60 };
+            let spawnArea = 'mainmap';
+            let spawnPosition = { x: 774, y: 333 };
 
             // FIXME: Only allow this on test, and need to double check valid spawn
             if (overrideSpawn) {
@@ -253,7 +255,6 @@ define(['loggable'], function(Loggable){
                         }
 
 						var player = _.defaults(playerAttributes, {
-							// Default player values
 							id: id,
 							usernameUpper: usernameUpper,
 							username: username,
