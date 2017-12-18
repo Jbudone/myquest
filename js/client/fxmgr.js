@@ -41,13 +41,17 @@ define(['loggable'], (Loggable) => {
 
                 // Decode asynchronously
                 request.onload = function() {
-                    audioContext.decodeAudioData(request.response, (buffer) => {
-                        sample.buffer = buffer;
-                        success();
-                    }, (e) => {
-                        fail(e);
-                        throw Err(e);
-                    });
+                    if (request.status === 404) {
+                        assert(!Env.assertion.requiresResources, `Could not find resource: {sample.name}`);
+                    } else {
+                        audioContext.decodeAudioData(request.response, (buffer) => {
+                            sample.buffer = buffer;
+                            success();
+                        }, (e) => {
+                            fail(e);
+                            throw Err(e);
+                        });
+                    }
                 }
                 request.send();
             });

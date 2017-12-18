@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# TODO
+#  - Args
+#  - Blender shit
+#  		- Specifying animation
+#  		- Render settings (fast/quality)
+#  - Gimp shit (imagemagik?)
+#  		- Filters to pixelize; toon
+#  - Speedier runs
+#  - Cache and shit
+#  - Clear render directories if already full
+#  - Previews
+#  - Add shit to sheets json?
+
+#  - Filter shots before baking
+#  - Fix process locking up (limit threads doesn't seem to be enough; need to disable openmp on imagemagick?)
+#  - Find a clever way to handle framerate: should start on first frame and end on last frame, but how do we accomplish this?
+#  - Might be worth using % framerate? In case we have anims w/ small and large framecounts
+
+
+#blender wolf.sculpted.hairy.textured.blend --background --python /home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest/tools/blender.batchrender.py
+
+# TODO
+# ImageMagick
+#   - Go through each folder
+#   - Alpha
+#   - Cropping input
+#   - Tilesize input
+#   - Auto find/trim whitespace from all images, and resize accordingly (no need for extra whitespace)
+#convert \( shots/attack/camera.back/*.png -resize 256x256 +append \) \( shots/attack/camera.front/*.png -crop '500x500+250+0' -resize 256x256 +append \) -append convertsprites.png
+
+
+# 1) Imagemagick auto trim all images
+# 2) Find largest image, use that for resize
+
+
+frame_ratio=1
+while getopts "f:a:o:cx" opt; do
+	case $opt in
+        f) frame_ratio="$OPTARG" ;;
+		*) echo "Unknown option $opt" ;;
+	esac
+done
+
+
+MAGICK_THREAD_LIMIT=1
+
+
+# Trim images
+images=( $( find shots/ -iname '*.png' ) )
+maxWidth=0
+maxHeight=0
+#allImageWidths=()
+#allImageHeights=()
+for f in "${images[@]}"; do
+    # FIXME: Option to trim
+    #echo "Trimming $f"
+    #convert -trim "$f" "$f.trim"
+    #mv "$f.trim" "$f"
+    size=( $( identify -format "%w %h" "$f" ) )
+
+    if [[ ${size[0]} > $maxWidth ]]; then
+        maxWidth=${size[0]}
+    fi
+
+    if [[ ${size[1]} > $maxHeight ]]; then
+        maxHeight=${size[1]}
+    fi
+
+    #allImageWidths=( "${allImageWidths[@]}" "${size[1]}" )
+    #allImageHeights=( "${allImageHeights[@]}" "${size[2]}" )
+done
+
+echo "Trimmed and max size is: $maxWidth,$maxHeight"
+
+maxSize=256
+
+if [[ $maxWidth -lt $maxSize ]]; then
+    if [[ $maxHeight -lt $maxSize ]]; then
+        # Don't bother upscaling if its not necessary
+        echo "MaxSize is too big? $maxSize"
+        echo "$maxWidth"
+        echo "$maxHeight"
+        maxSize=$maxWidth
+        if [[ $maxSize < $maxHeight ]]; then
+            maxSize=$maxHeight
+        fi
+    fi
+fi
+
+# Scale width/height down to maxSize, but retain ratio
+newWidth=$maxWidth
+newHeight=$maxHeight
+if [[ $maxWidth -gt $maxSize || $maxHeight -gt $maxSize ]]; then
+    sizeRatio=$( echo "$maxWidth / $maxHeight" | bc -l )
+    if [[ $maxWidth -gt $maxHeight ]]; then
+        #downScale=$( echo "$maxSize / $maxWidth" | bc -l )
+        newWidth=$maxSize
+        newHeight=$( echo "$newWidth / $sizeRatio" | bc -l )
+        newHeight=$( echo "($newHeight + 0.5) / 1" | bc )
+    else
+        #downScale=$( echo "$maxSize / $maxHeight" | bc -l )
+        newHeight=$maxSize
+        newWidth=$( echo "$newHeight * $sizeRatio" | bc -l )
+        newWidth=$( echo "($newWidth + 0.5) / 1" | bc )
+    fi
+fi
+#if [[ $maxWidth > $maxSize ]]; then
+#    downScale=$( echo "$maxSize / $maxWidth" | bc -l )
+#    newWidth=$( echo "$maxWidth * $downScale"
+#fi
+#
+#if [[ $maxHeight > $maxSize ]]; then
+#
+#fi
+
+echo "New sizes: $newWidth,$newHeight"
+
+
+subFolders=( $( find shots -type d ) )
+tmpFolder=$( mktemp -d )
+for (( i=0; i<${#subFolders[@]}; i++ )); do
+	folder=${subFolders[i]}
+	count=`ls -1 $folder/*.png 2>/dev/null | wc -l`
+
+    allImages=( $( find $folder/*.png 2>/dev/null ) )
+    images=()
+    n=0
+    for f in "${allImages[@]}"; do
+        if [[ $n == 0 ]]; then
+            images=("${images[@]}" "$f")
+        fi
+        n=$(( (n + 1) % frame_ratio ))
+    done
+
+	if [ $count -gt 0 ]; then
+		output="$tmpFolder/$i.png"
+		echo "Folder ($folder) Output to: $output"
+		#convert -debug cache "$folder/*.png" -resize 256x256 +append "$output"
+        #convert $( echo ${images[@]} ) +dither -colors 8 -gravity center -resize "$( echo $newWidth )x$( echo $newHeight )" -background none -extent "$( echo $newWidth )x$( echo $newHeight )" +append "$output"
+        convert $( echo ${images[@]} ) -posterize 4 -gravity center -resize "$( echo $newWidth )x$( echo $newHeight )" -background none -extent "$( echo $newWidth )x$( echo $newHeight )" +append "$output"
+	fi
+done
+
+convert $tmpFolder/*.png -append convertsprites.png
+
+rm -r $tmpFolder

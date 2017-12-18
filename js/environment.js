@@ -41,6 +41,7 @@ define(function(){
 
 		this.assertion = {
 			eventListeningDuplicates: true,
+            requiresResources: false // Testing between computers
 		};
 
 		this.game = {

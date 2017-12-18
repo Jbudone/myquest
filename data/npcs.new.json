@@ -130,7 +130,7 @@
 	{
 		"id":"snake",
 		"name":"snake",
-		"sheet":"snake",
+		"sheet":"rhino",
 		"spawn":4500,
 		"killable":true,
     "XP":10,

@@ -12,6 +12,10 @@ http://www.realm667.com/index.php/en/beastiary-mainmenu-136-69621/heretic-hexen-
 http://www.spriters-resource.com/pc_computer/heretic/
 http://www.spriters-resource.com/pc_computer/heroes3/
 
+Purchaseable Sprites
+------------------
+Trees: https://www.assetstore.unity3d.com/en/#!/content/60844
+
 NO inventory, use a belt/pack for storing immediate items (scrolls/potions) limited space. Use Messagebox for purchasing items from shops (link texts). Store quest items internally, show a box of what items you have already (unable to drop/interact/sell those items). Pickup armour from ground to put it on; deletes your current armour in favour of this one. Allow for armour/weapon buffs (timed/perma for item): particle system which you can walk into to get effects, quest givers provide this, certain monsters, etc.
 
 HTML elements overlay for UI
@@ -1026,3 +1030,38 @@ MAP EDITING
 ==== Sprites
 
 	* Sprites will be drawn out as 16x16; to get larger objects you need to specify the sheets as smaller tiles and draw each sprite as multiple tiles
+
+
+
+
+BLENDER
+==========
+
+==== Modelling
+
+    * Image as background: https://blender.stackexchange.com/questions/118/how-do-i-set-a-background-image-while-i-am-editing
+	* Be sure to line up images so that it can mirror well
+	* Add a plane at a good starting point (center of face); center the plane along the axis, edge cut (ctrl+r) along that axis and delete the other sides face, then add a mirror modifier (test that the plane was perfectly centered by trying to move the center vert)
+	* Enable clipping on the mirror modifier (verts going passed the axis will snap to the axis)
+	*
+
+==== Contour Lines (edge highlighting)
+
+	* https://www.youtube.com/watch?v=s13yr-kN_CI
+
+
+EXTERNAL ASSETS
+=================
+
+==== Unity
+
+    * .unitypackage is just a .tar.gz
+    * Each folder contains 1 or 0 assets; each asset's true name is in the contents of pathname (including its original path). I suspect the folders without an asset (but still contain a pathname) are just folders
+
+==== Blender
+
+    * Multiple animations: if from Unity then its probably multiple .fbx files. Just import each animation to a separate layer
+    * Lighting: Add a sun, and hemisphere light surrounding mesh on every angle (XYZ|+-1); can move to each layer for multiple layer/anims: m + shift click each layer
+    * Dependencies: File -> External Data -> Find/Report Missing Files
+    * Rendering: blender/cycles may depend on how it was already setup
+    * Edge rendering: Render -> Post Processing -> Edge / Threshold 10
