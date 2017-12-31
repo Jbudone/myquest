@@ -233,5 +233,42 @@
             ]
         }
     ]
+	},
+  {
+		"id":"rhino",
+		"name":"rhino",
+		"sheet":"rhino",
+		"spawn":2500,
+		"killable":true,
+    "XP":10,
+		"speed":10,
+		"damage":3,
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		},
+    "stats":
+    {
+      "health":70,
+      "str":4,
+      "con":4
+		},
+    "loot": [
+        {
+          "chance":1.0,
+          "items": [
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            }
+          ]
+        }
+    ]
 	}
 ] }
