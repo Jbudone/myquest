@@ -205,7 +205,11 @@ var exportAreas = function(){
 							// 		elements out of range in that layer
 							for(var i=0; i<json.layers.length; ++i) {
 								var layer = json.layers[i];
-								if (!layers.hasOwnProperty(layer.name)) throw new Error("Unexpected layer ("+ layer.name +")");
+                                if (!layers.hasOwnProperty(layer.name)) {
+                                    console.error("Unexpected layer ("+ layer.name +")");
+                                    continue;
+                                }
+
 								layers[layer.name] = {
 									data: layer,
 									width: layer.width,
