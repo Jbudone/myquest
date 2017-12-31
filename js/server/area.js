@@ -49,7 +49,10 @@ define(
                     interactables  = this.area.data.interactables,
                     areaPageHeight = this.area.properties.pageHeight,
                     areaPageWidth  = this.area.properties.pageWidth,
-                    pages          = this.pages;
+                    pages          = this.pages,
+                    maxSheetGid    = this.area.properties.tilesets.reduce((maxGid, sheet) => Math.max(sheet.gid.last, maxGid), 0),
+                    tileGidOffsets = new Array(maxSheetGid);
+
 
                 this.sheets = [];
                 this.area.properties.tilesets.forEach((tileset) => {
@@ -61,6 +64,9 @@ define(
                         last: tileset.gid.last
                     };
                     this.sheets.push(sheet);
+
+                    const sheetOffset = sheet.gid.first - tileset.gid.first;
+                    tileGidOffsets.fill(sheetOffset, tileset.gid.first, tileset.gid.last);
                 });
 
                 this.pagesPerRow = Math.ceil(areaWidth / pageWidth);
@@ -101,6 +107,9 @@ define(
                         // NOTE: area starts at 0 since the cell.tiles is spliced each time, so those spliced tiles are
                         //      removed from the array
                         const areaCell = areaY[areaXCoord];
+
+                        // Offset tiles to sheet gid (in resources, rather than the localized sheets in area)
+                        areaCell.tiles = areaCell.tiles.map((tile) => tile + tileGidOffsets[tile]);
                         for (let y = 0; y < areaPageHeight; ++y) {
                             for (let pageX = Math.floor(areaXCoord / pageWidth); pageX * pageWidth < areaXCoord + areaPageWidth; ++pageX) {
 
@@ -138,6 +147,7 @@ define(
                                         areaCell.tiles.splice(0, count),
                                         page.tiles
                                     );
+
                                 page.tiles = tiles;
                             }
                         }
@@ -168,7 +178,7 @@ define(
                                 inRange(sprite, s.exportedGid.first, s.exportedGid.last)
                             );
 
-                            if (sheet === null) {
+                            if (sheet === undefined) {
                                 throw Err(`Unexpected sprite (${sprite}) doesn't match any spritesheet gid range`);
                             }
 
