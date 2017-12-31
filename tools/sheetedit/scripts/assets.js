@@ -217,22 +217,25 @@ var AssetsManager = function(assets, container, files){
 					};
 
                     let imgPromise = new Promise(function(success, fail){
-						this.asset.columns= Math.ceil((this.img.width - parseInt(this.asset.sheet_offset.x)) / parseInt(this.asset.tilesize));
-						this.asset.rows = Math.ceil((this.img.height - parseInt(this.asset.sheet_offset.y)) / parseInt(this.asset.tilesize));
 
-                        let totalItems = this.asset.rows * this.asset.columns - 1;
-                        this.asset.gid = {
-                            first: gid,
-                            last: gid + totalItems
+                        env.img.onload = () => {
+                            this.asset.columns= Math.ceil((this.img.width - parseInt(this.asset.sheet_offset.x)) / parseInt(this.asset.tilesize));
+                            this.asset.rows = Math.ceil((this.img.height - parseInt(this.asset.sheet_offset.y)) / parseInt(this.asset.tilesize));
+
+                            let totalItems = this.asset.rows * this.asset.columns - 1;
+                            this.asset.gid = {
+                                first: gid,
+                                last: gid + totalItems
+                            };
+                            gid += totalItems + 1;
+
+                            success();
                         };
-                        gid += totalItems + 1;
 
-                        success();
+                        env.img.src = env.asset.image;
 					}.bind(env));
 
                     waitingOn.push(imgPromise);
-                    env.img.onload = imgPromise;
-					env.img.src = env.asset.image;
 				}
 
                 Promise.all(waitingOn).then(finished);
