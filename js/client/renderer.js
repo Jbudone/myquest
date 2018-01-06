@@ -325,8 +325,11 @@ define(['loggable'], (Loggable) => {
                     }
                 }
 
-                // FIXME: Just translate the canvas
-                $('#background').offset({ left: 140 + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: 8 + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
+                // Translate the background canvas so that the center of the background covers the center of the
+                // entities canvas. Entities are being positioned via. CSS, so lets just steal its offset, and then
+                // offset to the position within the background
+                entitiesOffset = $('#entities').offset();
+                $('#background').offset({ left: entitiesOffset.left + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: entitiesOffset.top + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
 
                 this.camera.updated = false;
             }
