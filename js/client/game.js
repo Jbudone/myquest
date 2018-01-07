@@ -1054,6 +1054,7 @@ define(
 
                         // Zoning into one of the new pages
                         The.area.addPages(pages, true);
+                        The.renderer.updatePages();
                     };
 
                     // Used when a new area is loaded. Scripts need to be reloaded and the player event listeners need to

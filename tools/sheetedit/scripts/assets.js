@@ -203,9 +203,10 @@ var AssetsManager = function(assets, container, files){
 		var confirmDimensions = function(){
 
 			return new Promise(function(finished){
-				var toConfirm = 0;
+
+                let gid = 0;
+                const waitingOn = [];
 				for (var i=0; i<assets.tilesheets.list.length; ++i) {
-					++toConfirm;
 
 					var env = {
 						asset: assets.tilesheets.list[i],
@@ -215,17 +216,29 @@ var AssetsManager = function(assets, container, files){
 						tileSize: asset.tileSize
 					};
 
-					env.img.onload = function(){
-						this.asset.columns= Math.ceil((this.img.width - parseInt(this.asset.sheet_offset.x)) / parseInt(this.asset.tilesize));
-						this.asset.rows = Math.ceil((this.img.height - parseInt(this.asset.sheet_offset.y)) / parseInt(this.asset.tilesize));
+                    let imgPromise = new Promise(function(success, fail){
 
+                        env.img.onload = () => {
+                            this.asset.columns= Math.ceil((this.img.width - parseInt(this.asset.sheet_offset.x)) / parseInt(this.asset.tilesize));
+                            this.asset.rows = Math.ceil((this.img.height - parseInt(this.asset.sheet_offset.y)) / parseInt(this.asset.tilesize));
 
-						if (--toConfirm == 0) {
-							finished();
-						}
-					}.bind(env);
-					env.img.src = env.asset.image;
+                            let totalItems = this.asset.rows * this.asset.columns - 1;
+                            this.asset.gid = {
+                                first: gid,
+                                last: gid + totalItems
+                            };
+                            gid += totalItems + 1;
+
+                            success();
+                        };
+
+                        env.img.src = env.asset.image;
+					}.bind(env));
+
+                    waitingOn.push(imgPromise);
 				}
+
+                Promise.all(waitingOn).then(finished);
 			});
 		};
 

@@ -285,7 +285,21 @@ WORKING ON (was previously working on)
 		- Better bg offset
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
-	
+	    - CacheBuilder
+		  	- Async
+			- Encrypt w/ cryptojs or something (although cryptojs doesn't seem to be maintained anymore)
+			- Compress
+			- Structure images/sounds/data/etc.
+			- Cache hash (raw files changed?)
+			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
+		- Client
+		  	- Works for headless (server/bot)
+			- Async
+			- Decrypt
+			- Uncompress
+			- Structure images/sounds/data/etc.
+			- Webstorage; check for changes
+		- Update git w/ cachefiles
 
 
 	- Browser Debugging Snippets
@@ -442,6 +456,11 @@ WORKING ON (was previously working on)
 
 Next Priority
 	== Design
+	- Stats/Resists, Experience, Loot; Exploring (npcs levels and where they're located in world)
+	  	- Lower level creatures wandering around outside of camps; camps contain bigger creatures; bosses & special camps have long spawn times
+		- 
+
+
 	 - Level rewards (gain xp, statIncrease)
 		- { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
 	 - Level XP loss calculation
@@ -450,10 +469,15 @@ Next Priority
 
 		str -- strengthen base damage                                   <-|  Str/Dex should be equivalent in terms of effectiveness
 		dex -- larger damage range? (potential to hit for more damage)  <-|
+			- able to crit
 		wep dmg -- base damage
 		wep spd -- attack speed
 		speed -- improve attack speed
 		skill -- improve effectiveness of str/dex/speed towards particular weapon type
+
+		enemy AC, con
+
+
 
 
 		Weapon Damage = Dmg * Str ^ X * [0.8,1.2]

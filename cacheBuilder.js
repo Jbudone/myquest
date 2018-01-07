@@ -14,15 +14,14 @@ const util          = require('util'),
     chalk           = require('chalk'),
     prettyjson      = require('prettyjson'),
     assert          = require('assert'),    // TODO: Disable in production
-    filepath        = require('path');
+    filepath        = require('path'),
+    crypto          = require('crypto');
 
 const sharp = require('sharp');
 
+// TODO:
+//  - Avoid reading raw asset twice (once for hash, once for cache)
 
-
-// TODO
-//  - Read cache list/resource
-//  - FOr each cache item -- load raw asset, cache, write to cache
 
 fs.readFile('data/cache.json', function(err, bufferData){
 
@@ -30,76 +29,138 @@ fs.readFile('data/cache.json', function(err, bufferData){
         return;
     }
 
-    const data = JSON.parse(bufferData);
+    const data   = JSON.parse(bufferData);
 
-    _.each(data, (cacheName, rawAssetName) => {
-        console.log(rawAssetName);
+    let updatedCache = false;
 
-        // Load raw asset
-        // FIXME: Should have a name for the asset, and file location
-        file = `sprites/${rawAssetName}`;
+    const waitingOn = [];
 
-        const cacheFile = 'cache/' + cacheName;
+    _.each(data.cacheList, (cacheNode) => {
 
-        // If its an image then we need to load it through an image, rather than the actual image data
-        const img = sharp(file);
-            
-        img.raw().toBuffer((err, imgData, info) => {
 
-            console.log(info);
+        let imgPromise = new Promise((success, fail) => {
 
-            fs.open(cacheFile, 'w', (err, fd) => {
-                // => [Error: EISDIR: illegal operation on a directory, open <directory>]
-                if (err) {
-                    console.error("Could not open cache file");
-                    return;
+            // Load raw asset
+            // We want to check its hash in case it hasn't changed since the last time
+            const file     = `sprites/${cacheNode.asset}`,
+                hash       = crypto.createHash('md5'),
+                rawAssetFd = fs.createReadStream(file);
+
+            rawAssetFd.on('end', () => {
+
+                // Finished piping raw asset into the hasher
+                hash.end();
+                const rawAssetHash = hash.read().toString('hex'),
+                    cacheFile      = 'cache/' + cacheNode.cache;
+
+                // Has the raw asset changed?
+                if (rawAssetHash === cacheNode.assetHash) {
+                    // Asset hashes match (raw asset hasn't changed)
+                    // Does the cache file still exist? It may have been intentinoally deleted for recache
+                    if (fs.existsSync(cacheFile)) {
+                        //console.log(`Asset ${cacheNode.asset} hasn't changed since the last cache. Skipping`);
+                        success();
+                        return;
+                    }
                 }
 
-                let wBytes = 0,
-                    hBytes = 0,
-                    wBuff = info.width,
-                    hBuff = info.height,
-                    arr = [];
+                console.log(`Updating cache: ${cacheNode.name}`);
+                rawAssetFd.destroy();
+                hash.destroy();
+                        
+                // If its an image then we need to load it through an image, rather than the actual image data
+                // TODO: It sucks that we need to read this asset twice; can we avoid that?
+                sharp(file).raw().toBuffer((err, imgData, info) => {
 
-                arr.push(0);
-                arr.push(0);
-                while (wBuff > 0) {
-                    ++wBytes;
-                    arr.push(wBuff % (1 << 8));
-                    wBuff = wBuff >> 8;
-                }
-                arr[0] = wBytes;
+                    //console.log(imgData.toString('hex'));
+                    fs.open(cacheFile, 'w', (err, fd) => {
+                        // => [Error: EISDIR: illegal operation on a directory, open <directory>]
+                        if (err) {
+                            console.error("Could not open cache file");
+                            return;
+                        }
 
-                while (hBuff > 0) {
-                    ++hBytes;
-                    arr.push(hBuff % (1 << 8));
-                    hBuff = hBuff >> 8;
-                }
-                arr[1] = hBytes;
+                        let wBytes = 0,
+                            hBytes = 0,
+                            wBuff = info.width,
+                            hBuff = info.height,
+                            arr = [];
 
-                const arrBuff = new Uint8ClampedArray(arr.length);
-                for (let i = 0; i < arr.length; ++i) {
-                    arrBuff[i] = arr[i];
-                }
+                        arr.push(0);
+                        arr.push(0);
+                        while (wBuff > 0) {
+                            ++wBytes;
+                            arr.push(wBuff % (1 << 8));
+                            wBuff = wBuff >> 8;
+                        }
+                        arr[0] = wBytes;
 
-                let buf = Buffer.from(arrBuff);
-                let cursor = fs.writeSync(fd, buf);
-                //fs.writeSync(fd, wBytes);
-                //fs.writeSync(fd, hBytes);
-                //fs.writeSync(fd, metadata.width);
-                //fs.writeSync(fd, metadata.height);
+                        while (hBuff > 0) {
+                            ++hBytes;
+                            arr.push(hBuff % (1 << 8));
+                            hBuff = hBuff >> 8;
+                        }
+                        arr[1] = hBytes;
 
-                let imgBuf = new Buffer(imgData.length);
-                const key = "fuckingassetlicenses".split('').map((c) => c.charCodeAt(0));
-                for (let i = 0; i < imgBuf.length; ++i) {
-                    imgBuf[i] = imgData[i] ^ key[i % key.length];
-                }
+                        const arrBuff = new Uint8ClampedArray(arr.length);
+                        for (let i = 0; i < arr.length; ++i) {
+                            arrBuff[i] = arr[i];
+                        }
 
-                fs.writeSync(fd, imgBuf, 0, 'binary');
-                fs.closeSync(fd);
+                        let buf = Buffer.from(arrBuff);
+                        let cursor = fs.write(fd, buf, () => {
+                            let imgBuf = new Buffer(imgData.length);
+                            let notAZero = 0;
+                            const key = "fuckingassetlicenses".split('').map((c) => c.charCodeAt(0));
+                            for (let i = 0; i < imgBuf.length; ++i) {
+                                imgBuf[i] = imgData[i] ^ key[i % key.length];
+                                if (imgBuf[i] != 0) ++notAZero;
+                            }
+                            fs.write(fd, imgBuf, 0, 'binary', () => {
+                                fs.close(fd, () => {
+                                    console.log(`Wrote ${cacheFile}: ${info.width}x${info.height} (${wBytes}x${hBytes});  ${imgData.length} -- ${notAZero}`);
+                                    cacheNode.assetHash = rawAssetHash;
 
-                console.log(`Wrote ${cacheFile}: ${info.width} / ${info.height} (${wBytes} / ${hBytes});  ${imgData.length}`);
+                                    updatedCache = true;
+                                    success();
+                                });
+                            });
+                        });
+                    });
+                });
+
+
             });
+
+            rawAssetFd.pipe(hash);
+
+
         });
+
+        waitingOn.push(imgPromise);
+    });
+
+
+    Promise.all(waitingOn).then(() => {
+
+        if (!updatedCache) {
+            console.log("Nothing to update");
+            return;
+        }
+
+        const prettyCache = JSON.stringify(data);
+        console.log(prettyCache);
+
+        // This was the last cache, write and close the cache file
+        fs.writeFile('data/cache.json', prettyCache, function(err, bufferData){
+
+            if (err) {
+                console.error(err);
+                return;
+            }
+
+            console.log("Successfully updated cache file");
+        });
+
     });
 });

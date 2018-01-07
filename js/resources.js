@@ -328,11 +328,13 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 					}
 				}
 
-                ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
+                if (!Env.isServer) {
+                    ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                         sheet.image = bitmapImage;
-                }, (err) => {
-                    throw Err(err);
-                });
+                    }, (err) => {
+                        throw Err(err);
+                    });
+                }
 
 				this.sheets[_sheet.id] = sheet;
 			});
@@ -473,12 +475,14 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 					}.bind(env));
 
-                    ResourceProcessor.readImage(sheet.file).then((bitmapImage) => {
-                        sheet.image = bitmapImage;
-                        prepareImage();
-                    }, (err) => {
-                        throw Err(err);
-                    });
+                    if (!Env.isServer) {
+                        ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
+                            sheet.image = bitmapImage;
+                            prepareImage();
+                        }, (err) => {
+                            throw Err(err);
+                        });
+                    }
 
                     this.sprites[_sheet.id] = sheet;
 				});
