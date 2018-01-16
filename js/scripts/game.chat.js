@@ -25,16 +25,16 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
                 }
             },
-            server: (evt, data, self) => {
+            server: (evt, data, self, player) => {
 
                 let success = false;
                 if (_.isObject(data) && data.password === "42") {
                     success = true;
                     self.admin = true;
-                    self.setupAdmin();
+                    self.setupAdmin(player);
                 }
 
-                self.player.respond(evt.id, success, {
+                player.respond(evt.id, success, {
 
                 });
             }
@@ -86,9 +86,8 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     error: "Token should be a valid number"
                 }
             ],
-            server: (evt, data, self) => {
+            server: (evt, data, self, player) => {
 
-                const player = self.player;
                 let success = false;
                 if (_.isObject(data) && _.isFinite(data.XP)) {
                     success = true;
@@ -118,9 +117,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             command: CMD_ADMIN_SUICIDE,
             requiresAdmin: true,
             args: [],
-            server: (evt, data, self) => {
-
-                const player = self.player;
+            server: (evt, data, self, player) => {
 
                 let success = true;
                 // FIXME: Check if we can die (currently alive)
@@ -152,9 +149,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     error: "BuffRes not valid"
                 }
             ],
-            server: (evt, data, self) => {
-
-                const player = self.player;
+            server: (evt, data, self, player) => {
 
                 let success = false;
                 if
@@ -188,7 +183,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
     const Chatter = function() {
 
-        const _self = this;
+        const _self = this; // Static reference to Chatter object
 
         this.name  = "chatter";
         this.keys  = [];
@@ -237,14 +232,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     });
                     player.timeSinceLastMessage = now();
 
-                    _self.player = player;
                     Commands.forEach((cmd) => {
                         if (cmd.server && !cmd.requiresAdmin) {
 
                             // Register this command
                             player.registerHandler(cmd.command, 'chat');
                             player.handler(cmd.command).set((evt, data) => {
-                                cmd.server(evt, data, _self);
+                                cmd.server(evt, data, _self, player);
                             });
                         }
                     });
@@ -257,9 +251,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             },
 
             setupAdmin: () => {
-                const player = _self.player;
 
-                console.log("Setting player as admin");
                 Commands.forEach((cmd) => {
                     if (cmd.server && cmd.requiresAdmin) {
                         console.log("Registering command " + cmd.typedCommand);
@@ -267,7 +259,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         // Register this command
                         player.registerHandler(cmd.command, 'admin');
                         player.handler(cmd.command).set((evt, data) => {
-                            cmd.server(evt, data, _self);
+                            cmd.server(evt, data, _self, player);
                         });
                     }
                 });
