@@ -533,7 +533,14 @@ Next Priority
 	   Quests
 	   Exploration
 
-
+    - Map
+        - Finish tidying area
+        - Town
+        - Figure out regions + npc placement; quests/story, etc.
+    - Npcs
+        - Stats, Items, Quests, XP, Sounds, Graphics
+    - Improve 3d -> spritesheet pipeline & final appearance (color ramp texture OR final product?)
+    - People / Dialog / Quests / Story
 
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
@@ -1070,6 +1077,8 @@ EXTERNAL ASSETS
 
     * Multiple animations: if from Unity then its probably multiple .fbx files. Just import each animation to a separate layer
     * Lighting: Add a sun, and hemisphere light surrounding mesh on every angle (XYZ|+-1); can move to each layer for multiple layer/anims: m + shift click each layer
+    * Shadeless: Mesh -> Material -> Shading -> [X] Shadeless;  this makes the mesh insensitive to any lighting
     * Dependencies: File -> External Data -> Find/Report Missing Files
     * Rendering: blender/cycles may depend on how it was already setup
     * Edge rendering: Render -> Post Processing -> Edge / Threshold 10
+    * Transparent Background: Render -> Shading -> Alpha -> Transparent

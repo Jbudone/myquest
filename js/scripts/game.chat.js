@@ -230,7 +230,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
     const Chatter = function() {
 
-        const _self = this;
+        const _self = this; // Static reference to Chatter object
 
         this.name  = "chatter";
         this.keys  = [];
@@ -299,7 +299,6 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
             setupAdmin: (player) => {
 
-                console.log("Setting player as admin");
                 Commands.forEach((cmd) => {
                     if (cmd.server && cmd.requiresAdmin) {
                         console.log("Registering command " + cmd.typedCommand);
@@ -307,7 +306,6 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         // Register this command
                         player.registerHandler(cmd.command, 'admin');
                         player.handler(cmd.command).set((evt, data) => {
-                            // FIXME: _self is not accurate! Probably broken for other thinsg too
                             cmd.server(evt, data, _self, player);
                         });
                     }
