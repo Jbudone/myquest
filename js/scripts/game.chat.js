@@ -25,16 +25,16 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
                 }
             },
-            server: (evt, data, self) => {
+            server: (evt, data, self, player) => {
 
                 let success = false;
                 if (_.isObject(data) && data.password === "42") {
                     success = true;
                     self.admin = true;
-                    self.setupAdmin();
+                    self.setupAdmin(player);
                 }
 
-                self.player.respond(evt.id, success, {
+                player.respond(evt.id, success, {
 
                 });
             }
@@ -86,9 +86,8 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     error: "Token should be a valid number"
                 }
             ],
-            server: (evt, data, self) => {
+            server: (evt, data, self, player) => {
 
-                const player = self.player;
                 let success = false;
                 if (_.isObject(data) && _.isFinite(data.XP)) {
                     success = true;
@@ -118,9 +117,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             command: CMD_ADMIN_SUICIDE,
             requiresAdmin: true,
             args: [],
-            server: (evt, data, self) => {
-
-                const player = self.player;
+            server: (evt, data, self, player) => {
 
                 let success = true;
                 // FIXME: Check if we can die (currently alive)
@@ -152,9 +149,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     error: "BuffRes not valid"
                 }
             ],
-            server: (evt, data, self) => {
-
-                const player = self.player;
+            server: (evt, data, self, player) => {
 
                 let success = false;
                 if
@@ -181,6 +176,53 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 },
                 failed: () => {
                     UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'teleport',
+            command: CMD_TELEPORT,
+            requiresAdmin: true,
+            args: [
+                {
+                    name: 'x',
+                    sanitize: (p) => parseInt(p),
+                    test: (p) => _.isFinite(p),
+                    error: "coordinate X is not a number"
+                },
+                {
+                    name: 'y',
+                    sanitize: (p) => parseInt(p),
+                    test: (p) => _.isFinite(p),
+                    error: "coordinate Y is not a number"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isFinite(data.x) &&
+                    _.isFinite(data.y)
+                )
+                {
+
+                    this.Log(`User wants to teleport: (${data.x}, ${data.y})`);
+                    success = player.movable.teleport(data.x, data.y);
+                }
+
+                player.respond(evt.id, success, { });
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self) => {
+                    UI.postMessage("Success in teleporting! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in teleport! ", MESSAGE_BAD);
                 }
             }
         }
@@ -237,14 +279,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     });
                     player.timeSinceLastMessage = now();
 
-                    _self.player = player;
                     Commands.forEach((cmd) => {
                         if (cmd.server && !cmd.requiresAdmin) {
 
                             // Register this command
                             player.registerHandler(cmd.command, 'chat');
                             player.handler(cmd.command).set((evt, data) => {
-                                cmd.server(evt, data, _self);
+                                cmd.server(evt, data, _self, player);
                             });
                         }
                     });
@@ -256,8 +297,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 });
             },
 
-            setupAdmin: () => {
-                const player = _self.player;
+            setupAdmin: (player) => {
 
                 console.log("Setting player as admin");
                 Commands.forEach((cmd) => {
@@ -267,7 +307,8 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                         // Register this command
                         player.registerHandler(cmd.command, 'admin');
                         player.handler(cmd.command).set((evt, data) => {
-                            cmd.server(evt, data, _self);
+                            // FIXME: _self is not accurate! Probably broken for other thinsg too
+                            cmd.server(evt, data, _self, player);
                         });
                     }
                 });

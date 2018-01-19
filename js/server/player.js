@@ -84,6 +84,18 @@ define(
                     if (npage) this.pages[npage.index] = npage;
                 }
 
+                this.movable.addEventListener(EVT_TELEPORT, this, (entity, pageId, tile) => {
+
+                    // Let player know that they've successfully teleported, and allow them to prepare for EVT_ZONE
+                    // information that will come next
+                    const teleport =
+                        {
+                            teleport: true,
+                            page: pageId,
+                            tile: tile
+                        };
+                    this.client.send(JSON.stringify(teleport));
+                });
 
                 this.movable.addEventListener(EVT_ZONE, this, (player, oldPage, page) => {
                     this.Log(`Zoned player from (${this.movable.page.index}) to (${page.index})`, LOG_DEBUG);

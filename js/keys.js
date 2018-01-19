@@ -87,6 +87,7 @@ define(function(){
 	addKey('EVT_PREPARING_WALK');
 	addKey('EVT_PATH_PARTIAL_PROGRESS');
 	addKey('EVT_CANCELLED_PATH');
+	addKey('EVT_TELEPORT');
 
 	addKey('EVT_LOGIN');
 	addKey('EVT_REQUEST_MAP');
@@ -152,6 +153,7 @@ define(function(){
     addKey('CMD_ADMIN_GIVE_BUFF');
     addKey('CMD_ADMIN_CRASH');
     addKey('CMD_CRASH');
+    addKey('CMD_TELEPORT');
 
 	addKey('HOOK_INTO_MAP');
 
