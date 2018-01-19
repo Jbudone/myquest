@@ -63,6 +63,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
                             else if (evtType == EVT_ATTACKED) this.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount, event.data.health );
+                            else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
                             else {
                                 const dynamicHandler = this.handler(evtType);
                                 if (dynamicHandler) {
@@ -75,6 +76,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         }
                     } else if (evt.zone) {
                         this.onZone( evt.page, evt.pages, evt.pageList );
+                    } else if (evt.teleport) {
+                        this.onTeleported( evt.page, evt.tile );
                     } else if (evt.zoneArea) {
                         this.onLoadedArea( evt.area, evt.pages, evt.player );
                     } else if (evt.respawn) {
@@ -182,6 +185,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityPathCancelled  = function(){};
         this.onEntityHurt           = function(){};
         this.onFinishedMoving       = function(){}; // TODO: is this one necessary?
+        this.onEntityTeleport       = function(){};
+        this.onTeleported           = function(){};
 
         this.shouldQueueMessage     = function(){ return false; };
 

@@ -964,6 +964,53 @@ define(
                         }
                     };
 
+                    // We've just teleported somewhere
+                    server.onTeleported = (pageId, tile) => {
+
+                        // Will our teleport result in us zoning? If so then we should anticipate this by fading out
+                        // until we've received our new zone pages
+                        const localCoords = The.area.localFromGlobalCoordinates(tile.x, tile.y);
+                        if (!localCoords.page || localCoords.page !== The.area.curPage) {
+                            The.UI.fadeToBlack();
+                            The.UI.pause();
+                            The.renderer.pause();
+                        }
+
+                        const globalPos = {
+                            x: tile.x * Env.tileSize,
+                            y: tile.y * Env.tileSize
+                        };
+                        The.player.updatePosition(globalPos.x, globalPos.y);
+                    };
+
+                    // An entity that was either in our view, or is now in our view, has just teleported
+                    server.onEntityTeleport = (pageId, data) => {
+
+                        const entity = The.area.movables[data.entityId];
+
+                        // If the entity is us, then ignore this message. We've already handled this from onTeleported
+                        if (entity === The.player)
+                        {
+                            return;
+                        }
+                        
+                        // TODO: When we ensure that we aren't receiving wasted teleports, we can simply get rid of
+                        // oldPage and newPage (wasted bandwidth)
+                        const oldPage = The.area.pages[data.oldPage],
+                            newPage = The.area.pages[data.newPage],
+                            tile = data.tile;
+                        assert(oldPage || newPage, "Received teleport event for an entity between two pages that we don't have");
+
+                        const globalPos = {
+                            x: tile.x * Env.tileSize,
+                            y: tile.y * Env.tileSize
+                        };
+                        entity.updatePosition(globalPos.x, globalPos.y);
+                        entity.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+
+                        The.area.checkEntityZoned(entity);
+                    };
+
                     // Entity Hurt
                     // Entity took some damage from something
                     server.onEntityHurt = (page, hurtEntity, targetEntity, amount, health) => {
@@ -1054,7 +1101,20 @@ define(
 
                         // Zoning into one of the new pages
                         The.area.addPages(pages, true);
+
+                        if (The.area.curPage.index !== page) {
+                            The.area.zone(The.area.pages[page]);
+
+                            // FIXME: Also need to zone entity across pages in some way. Is this the best way?
+                            The.area.checkEntityZoned(The.player);
+                        }
+
+                        The.UI.updatePages();
                         The.renderer.updatePages();
+
+                        The.UI.fadeIn();
+                        The.UI.resume();
+                        The.renderer.resume();
                     };
 
                     // Used when a new area is loaded. Scripts need to be reloaded and the player event listeners need to

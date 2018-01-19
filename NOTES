@@ -285,11 +285,13 @@ WORKING ON (was previously working on)
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
-		  	- Async
-			- Encrypt w/ cryptojs or something (although cryptojs doesn't seem to be maintained anymore)
+		    - png -> webp
+		  	- --recache option
 			- Compress
+			  	- xor image directly
+				  	- cannot directly include sharp in browser (uses a .node binary file; so cannot bundle)
+					- this will decompress image, xor it, and compress it. If we use a lossy compression then this WILL lose data from the xor. Need png or other lossless format
 			- Structure images/sounds/data/etc.
-			- Cache hash (raw files changed?)
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
@@ -311,6 +313,13 @@ WORKING ON (was previously working on)
         - Fix UI
         - Fix avatar offset
         - Fix king (1 tile missing?)
+    - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
+	- Consider crypto for cache. Not necessary, but kind of nice security..although it CANNOT be too slow, otherwise its not worth it
+	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
+    - game.chat player zones out, loses admin commands (locally only?)
+	- /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
+	- ctrl+c kill not working; or resulting in bug in errorReport
+	- /teleport to another area
 
 
 	- Browser Debugging Snippets

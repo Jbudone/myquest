@@ -178,6 +178,53 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
                 }
             }
+        },
+        {
+            typedCommand: 'teleport',
+            command: CMD_TELEPORT,
+            requiresAdmin: true,
+            args: [
+                {
+                    name: 'x',
+                    sanitize: (p) => parseInt(p),
+                    test: (p) => _.isFinite(p),
+                    error: "coordinate X is not a number"
+                },
+                {
+                    name: 'y',
+                    sanitize: (p) => parseInt(p),
+                    test: (p) => _.isFinite(p),
+                    error: "coordinate Y is not a number"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isFinite(data.x) &&
+                    _.isFinite(data.y)
+                )
+                {
+
+                    this.Log(`User wants to teleport: (${data.x}, ${data.y})`);
+                    success = player.movable.teleport(data.x, data.y);
+                }
+
+                player.respond(evt.id, success, { });
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self) => {
+                    UI.postMessage("Success in teleporting! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in teleport! ", MESSAGE_BAD);
+                }
+            }
         }
     ];
 
@@ -250,7 +297,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 });
             },
 
-            setupAdmin: () => {
+            setupAdmin: (player) => {
 
                 Commands.forEach((cmd) => {
                     if (cmd.server && cmd.requiresAdmin) {
