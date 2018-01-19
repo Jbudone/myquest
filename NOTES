@@ -282,7 +282,6 @@ WORKING ON (was previously working on)
 	  	- would RMI a netSerialize w/ flags indicating what members have changed
     - Rendering background: could probably render each page background to a hidden texture/image/canvas, then when redrawing the background just render each prerendered page to one canvas; moving around the map only involves moving the background canvas. Zoning into another page could involve asynchronously rendering to a buffer background, and then switching the two background canvases when its ready
 	  	- Cleanup
-		- Better bg offset
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
@@ -294,12 +293,24 @@ WORKING ON (was previously working on)
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
-			- Async
+			- Async (WebWorkers?)
 			- Decrypt
 			- Uncompress
 			- Structure images/sounds/data/etc.
 			- Webstorage; check for changes
 		- Update git w/ cachefiles
+        - All PGP -- look into PGP for best solution + architecture for this
+        - Look into filestreams and if fs.read/write or streams/pipes are better
+        - Images -> WebP
+        - Option for non-encrypted assets (in cache)
+        - Compress (Brotli? Gzip?) + browser to auto ungzip; okay to use XHR request for automating this?
+        - Pack some sheets together; reference by cache file + offset + width/height
+    - BUG: Map Exporter: Adding avatar to base/sprite layer doesn't result in gid error (it should!); should confirm gid's so it doesn't result in a confusing error when starting up server
+    - Bake Spritesheet: Add / Modify sheets.json (option)
+    - Avatars no scale: scale all avatars up + adjust anims/sheet data/etc.  (NOTE: Browserquest spritesheets have various sized sheets, use those)
+        - Fix UI
+        - Fix avatar offset
+        - Fix king (1 tile missing?)
 
 
 	- Browser Debugging Snippets
@@ -532,6 +543,9 @@ Next Priority
     - Npcs
         - Stats, Items, Quests, XP, Sounds, Graphics
     - Improve 3d -> spritesheet pipeline & final appearance (color ramp texture OR final product?)
+        - Get all new assets working + ported & test  (admin command for /teleport and /map to load into map/position near sprites)
+        - Look into camera offset stuff
+        - Merge blender/imagemagick scripts into 1 bash script
     - People / Dialog / Quests / Story
 
 
