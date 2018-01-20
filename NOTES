@@ -1097,3 +1097,9 @@ EXTERNAL ASSETS
     * Rendering: blender/cycles may depend on how it was already setup
     * Edge rendering: Render -> Post Processing -> Edge / Threshold 10
     * Transparent Background: Render -> Shading -> Alpha -> Transparent
+    * Adding Normals: Mesh -> Texture -> Add Texture ->
+        - Image Sampling: [X] Normal Map  (Tangent Space)
+        - Mapping: UV
+        - Influence: [ ] Diffuse; [X] Geometry (Normal)
+        - Place before image texture
+    * Compositing: Go to compositing view; [X] Use NodesA ; Render Result (bottom of composite render window) Channels Color/Alpha
