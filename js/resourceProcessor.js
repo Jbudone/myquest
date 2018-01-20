@@ -16,62 +16,90 @@ define(() => {
 
         readImage: (name) => {
             return new Promise((succeeded, failed) => {
-                //let strippedName = file.match(/[a-zA-Z0-9_\.]+$/); // FIXME: This is gross, shouldn't need to do this. Just use the name in the map/sheets/etc. files instead
-                //cacheFile = Resources.cache[strippedName[0]];
-                console.log(Resources.cache);
                 const cacheNode = Resources.cache.cacheList.find((el) => el.name === name);
                 assert(cacheNode, `Could not find cache for ${name}`);
-                const cacheFile = cacheNode.cache;
 
-                if (!cacheFile) {
-                    failed(`Could not find cache for ${file} (${strippedName})`);
-                }
+                if (cacheNode.cached) {
 
+                    const cacheFile = cacheNode.cache;
 
-
-
-                const oReq = new XMLHttpRequest();
-                oReq.open("GET", `cache/${cacheFile}`, true);
-                oReq.responseType = "arraybuffer";
-                oReq.onload = function (oEvent) {
-                    // Note: not oReq.responseText
-                    if (oReq.response) {
-                        var byteArray = new Uint8ClampedArray(oReq.response);
-
-                        const res = ResourceProcessor.unpack(byteArray);
-                        if (res) {
-
-                            let xBytes = byteArray[0],
-                                yBytes = byteArray[1],
-                                width  = _.reduceRight(byteArray.slice(2, 2 + xBytes), (sum, c) => 256 * sum + c, 0),
-                                height = _.reduceRight(byteArray.slice(2 + xBytes, 2 + xBytes + yBytes), (sum, c) => 256 * sum + c, 0);
-                                //data   = byteArray.slice(xBytes + yBytes + 2);
-
-
-                            let dataLen = byteArray.length - xBytes - yBytes - 2,
-                                offset = xBytes + yBytes + 2;
-                            var data = new Uint8ClampedArray(dataLen);
-                            const key = "fuckingassetlicenses".split('').map((c) => c.charCodeAt(0));
-                            for (let i = 0; i < dataLen; ++i) {
-                                data[i] = byteArray[offset + i] ^ key[i % key.length];
-                            }
-
-
-                            // Create bitmap image out of imagedata
-                            let imageData = new ImageData(data, width, height);
-                            createImageBitmap(imageData).then((bitmapImage) => {
-                                succeeded(bitmapImage);
-                            });
-                            
-                        } else {
-                            failed(`Could not unpack cache ${cacheFile}`);
-                        }
+                    if (!cacheFile) {
+                        failed(`Could not find cache for ${file} (${strippedName})`);
                     }
-                };
-
-                oReq.send(null);
 
 
+                    // TODO: Should offload this stuff into webworkers
+                    const oReq = new XMLHttpRequest();
+                    oReq.open("GET", `cache/${cacheFile}`, true);
+                    oReq.responseType = "arraybuffer";
+                    oReq.onload = (oEvent) => {
+
+                        if (oReq.response) {
+                            if (cacheNode.encrypted) {
+
+                                const encrypted = new Uint8Array(oReq.response),
+                                    options     = {
+                                        message: openpgp.message.read(encrypted), // parse encrypted bytes
+                                        password: 'secret stuff',                 // decrypt with password
+                                        format: 'binary'                          // output as Uint8Array
+                                    };
+
+                                openpgp.decrypt(options).then((plaintext) => {
+
+                                    const blob = new Blob([plaintext.data]),
+                                        url    = URL.createObjectURL(blob),
+                                        img    = new Image();
+
+                                    img.onload = function() {
+                                        URL.revokeObjectURL(this.src); // free memory held by Object URL
+
+                                        createImageBitmap(this).then((bitmapImage) => {
+                                            succeeded(bitmapImage);
+                                        }, (err) => {
+                                            console.error(err);
+                                        });
+                                    };
+
+                                    img.src = url;
+                                });
+                            } else {
+
+                                const byteArray = new Uint8ClampedArray(oReq.response),
+                                    blob        = new Blob([byteArray]),
+                                    url         = URL.createObjectURL(blob),
+                                    img         = new Image();
+
+                                img.onload = function() {
+                                    URL.revokeObjectURL(this.src); // free memory held by Object URL
+
+                                    createImageBitmap(this).then((bitmapImage) => {
+                                        succeeded(bitmapImage);
+                                    }, (err) => {
+                                        console.error(err);
+                                    });
+                                };
+
+                                img.src = url;
+                            }
+                        }
+                    };
+
+                    oReq.send(null);
+
+                } else {
+
+                    const img = new Image();
+                    img.onload = function() {
+                        createImageBitmap(this).then((bitmapImage) => {
+                            succeeded(bitmapImage);
+                        }, (err) => {
+                            console.error(err);
+                        });
+                    };
+
+                    const url = cacheNode.asset;
+                    img.src = url;
+                }
             });
         }
     };

@@ -286,21 +286,16 @@ WORKING ON (was previously working on)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
 		    - png -> webp
-		  	- --recache option
-			- Compress
-			  	- xor image directly
-				  	- cannot directly include sharp in browser (uses a .node binary file; so cannot bundle)
-					- this will decompress image, xor it, and compress it. If we use a lossy compression then this WILL lose data from the xor. Need png or other lossless format
+			- Compress: pre-compress assets/cache (brotli?) and allow native browser decompress -- use different compression for different types of assets
 			- Structure images/sounds/data/etc.
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
-			- Async
-			- Decrypt
-			- Uncompress
+			- Decompress
 			- Structure images/sounds/data/etc.
 			- Webstorage; check for changes
 		- Update git w/ cachefiles
+		- Asset: use name of asset; cache translates asset => raw file (cached or raw)
     - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
 	- Consider crypto for cache. Not necessary, but kind of nice security..although it CANNOT be too slow, otherwise its not worth it
 	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
