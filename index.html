@@ -135,13 +135,13 @@ requirejs.config({
 		//"underscore": "lib/underscore-min",
 		"lodash": "lib/lodash.min",
 		"bluebird": "lib/bluebird.min",
-        "crypto-js": "/node_modules/crypto-js/crypto-js"
+        "openpgp": "/node_modules/openpgp/dist/openpgp.min"
 	}
 });
 
 
 // Load the main app module to start the app
-require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM){
+require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM,openpgp){
 
 	// TODO: why aren't The or Env global?
     window['$']=$;
@@ -150,6 +150,7 @@ require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilitie
 	window['Env']=(new Env());
 	window['Ext']=Ext;
 	window['Stack']=Stack;
+	window['openpgp']=openpgp;
 	window['Promise']=Promise;
     window['global']=window; // Shared global variable between client/server
 

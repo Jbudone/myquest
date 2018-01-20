@@ -1,3 +1,7 @@
+// TODO:
+//  - Avoid reading raw asset twice (once for hash, once for cache)
+
+
 const requirejs = require('requirejs');
 requirejs.config({
     nodeRequire: require,
@@ -15,132 +19,174 @@ const util          = require('util'),
     prettyjson      = require('prettyjson'),
     assert          = require('assert'),    // TODO: Disable in production
     filepath        = require('path'),
-    crypto          = require('crypto');
+    crypto          = require('crypto'),
+    openpgp         = require('openpgp'),
+    exec            = require('child_process').exec;
 
-const sharp = require('sharp');
+const Settings = {
+    recache: false
+}
 
-// TODO:
-//  - Avoid reading raw asset twice (once for hash, once for cache)
+// Process Server arguments
+process.argv.forEach((val) => {
 
+    if (val === "--recache") {
+        console.log("Recaching all cache");
+        Settings.recache = true;
+    }
+});
 
-fs.readFile('data/cache.json', function(err, bufferData){
+// Prepare openpgp stuff
+openpgp.initWorker({ path: 'node_modules/openpgp/dist/openpgp.worker.js' }) // set the relative web worker path
+openpgp.config.aead_protect = true // activate fast AES-GCM mode (not yet OpenPGP standard)
+
+fs.readFile('data/cache.json', (err, bufferData) => {
 
     if (err) {
+        console.error(`Error reading cache.json: ${err}`);
         return;
     }
 
-    const data   = JSON.parse(bufferData);
+    const data    = JSON.parse(bufferData),
+        waitingOn = [];
 
     let updatedCache = false;
-
-    const waitingOn = [];
-
     _.each(data.cacheList, (cacheNode) => {
 
+        // Are we doing any preprocessing on this asset?
+        if (cacheNode.rawAsset === cacheNode.asset) {
+            return;
+        }
 
-        let imgPromise = new Promise((success, fail) => {
+        // Do we want to cache this asset into a binary format? (eg. packing, encrypting)
+        if (cacheNode.options.cached) {
 
-            // Load raw asset
-            // We want to check its hash in case it hasn't changed since the last time
-            const file     = `sprites/${cacheNode.asset}`,
-                hash       = crypto.createHash('md5'),
-                rawAssetFd = fs.createReadStream(file);
+            let readRawAssetPromise = new Promise((success, fail) => {
 
-            rawAssetFd.on('end', () => {
+                // Load raw asset
+                // We want to check its hash in case it hasn't changed since the last time
+                const file     = cacheNode.rawAsset,
+                    hash       = crypto.createHash('md5'),
+                    rawAssetFd = fs.createReadStream(file);
 
-                // Finished piping raw asset into the hasher
-                hash.end();
-                const rawAssetHash = hash.read().toString('hex'),
-                    cacheFile      = 'cache/' + cacheNode.cache;
+                rawAssetFd.on('end', () => {
 
-                // Has the raw asset changed?
-                if (rawAssetHash === cacheNode.assetHash) {
-                    // Asset hashes match (raw asset hasn't changed)
-                    // Does the cache file still exist? It may have been intentinoally deleted for recache
-                    if (fs.existsSync(cacheFile)) {
-                        //console.log(`Asset ${cacheNode.asset} hasn't changed since the last cache. Skipping`);
-                        success();
-                        return;
-                    }
-                }
+                    // Finished piping raw asset into the hasher
+                    hash.end();
 
-                console.log(`Updating cache: ${cacheNode.name}`);
-                rawAssetFd.destroy();
-                hash.destroy();
-                        
-                // If its an image then we need to load it through an image, rather than the actual image data
-                // TODO: It sucks that we need to read this asset twice; can we avoid that?
-                sharp(file).raw().toBuffer((err, imgData, info) => {
+                    const rawAssetHash = hash.read().toString('hex'),
+                        cacheFile      = cacheNode.asset;
 
-                    //console.log(imgData.toString('hex'));
-                    fs.open(cacheFile, 'w', (err, fd) => {
-                        // => [Error: EISDIR: illegal operation on a directory, open <directory>]
-                        if (err) {
-                            console.error("Could not open cache file");
+                    rawAssetFd.destroy();
+                    hash.destroy();
+
+                    // Has the raw asset changed?
+                    if (!Settings.recache && rawAssetHash === cacheNode.rawAssetHash) {
+                        // Asset hashes match (raw asset hasn't changed)
+                        // Does the cache file still exist? It may have been intentinoally deleted for recache
+                        if (fs.existsSync(cacheFile)) {
+                            //console.log(`Asset ${cacheNode.rawAsset} hasn't changed since the last cache. Skipping`);
+                            success();
                             return;
                         }
+                    }
 
-                        let wBytes = 0,
-                            hBytes = 0,
-                            wBuff = info.width,
-                            hBuff = info.height,
-                            arr = [];
+                    const buffer = new Uint8Array();
+                    console.log(`Updating cache: ${cacheNode.name}`);
+                    fs.readFile(file, (err, buffer) => {
 
-                        arr.push(0);
-                        arr.push(0);
-                        while (wBuff > 0) {
-                            ++wBytes;
-                            arr.push(wBuff % (1 << 8));
-                            wBuff = wBuff >> 8;
-                        }
-                        arr[0] = wBytes;
+                        // Prepare our write buffer (eg. encrypted file if necessary)
+                        const readyToWritePromise = new Promise((bufferFetchSuccess, bufferFetchFail) => {
 
-                        while (hBuff > 0) {
-                            ++hBytes;
-                            arr.push(hBuff % (1 << 8));
-                            hBuff = hBuff >> 8;
-                        }
-                        arr[1] = hBytes;
+                            // Are we encrypting this file?
+                            if (cacheNode.options.encrypted) {
+                                const options = {
+                                    data: buffer,
+                                    passwords: ['secret stuff'],
+                                    armor: false
+                                };
 
-                        const arrBuff = new Uint8ClampedArray(arr.length);
-                        for (let i = 0; i < arr.length; ++i) {
-                            arrBuff[i] = arr[i];
-                        }
-
-                        let buf = Buffer.from(arrBuff);
-                        let cursor = fs.write(fd, buf, () => {
-                            let imgBuf = new Buffer(imgData.length);
-                            let notAZero = 0;
-                            const key = "fuckingassetlicenses".split('').map((c) => c.charCodeAt(0));
-                            for (let i = 0; i < imgBuf.length; ++i) {
-                                imgBuf[i] = imgData[i] ^ key[i % key.length];
-                                if (imgBuf[i] != 0) ++notAZero;
+                                openpgp.encrypt(options).then((ciphertext) => {
+                                    const encrypted = ciphertext.message.packets.write(); // get raw encrypted packets as Uint8Array
+                                    bufferFetchSuccess(encrypted);
+                                }, bufferFetchFail);
+                            } else {
+                                bufferFetchSuccess(buffer);
                             }
-                            fs.write(fd, imgBuf, 0, 'binary', () => {
-                                fs.close(fd, () => {
-                                    console.log(`Wrote ${cacheFile}: ${info.width}x${info.height} (${wBytes}x${hBytes});  ${imgData.length} -- ${notAZero}`);
-                                    cacheNode.assetHash = rawAssetHash;
+                        });
 
-                                    updatedCache = true;
-                                    success();
-                                });
+                        // Write our cached file
+                        readyToWritePromise.then((writeBuffer) => {
+
+                            fs.writeFile(cacheFile, writeBuffer, {
+                                encoding: 'binary',
+                                flag: 'w'
+                            }, (err) => {
+                                console.log(`Wrote/Encrypted ${cacheFile}`);
+                                cacheNode.rawAssetHash = rawAssetHash;
+
+                                updatedCache = true;
+                                success();
                             });
+                        }, (err) => {
+                            console.error(`Error preparing write buffer for ${cacheFile}`);
+                            fail(err);
                         });
                     });
                 });
 
+                rawAssetFd.pipe(hash);
+            });
+
+            waitingOn.push(readRawAssetPromise);
+
+        } else {
+
+            let processRawAssetPromise = new Promise((success, fail) => {
+
+                // Preprocessing raw asset -> asset, without any internal reformatting (eg. packing, encrypting)
+                if (!cacheNode.options.preprocess) {
+                    console.log(`Copying raw asset ${cacheNode.rawAsset} -> ${cacheNode.asset}`);
+                    fs.copyFile(cacheNode.rawAsset, cacheNode.asset, (err) => {
+
+                        if (err) {
+                            console.error(`Error copying file asset ${cacheNode.name}`);
+                            fail();
+                            return;
+                        }
+
+                        success();
+                    });
+                } else {
+
+                    // Preprocess raw asset
+                    if (cacheNode.options.preprocess === "convert") {
+
+                        exec(`convert ${cacheNode.rawAsset} ${cacheNode.asset}`, (err, stdout, stderr) => {
+
+                            if (err) {
+                                // node couldn't execute the command
+                                console.error(`Error converting asset ${cacheNode.name}`);
+                                fail();
+                                return;
+                            }
+
+                            success();
+                        });
+                    } else {
+                        console.error(`Unknown preprocess option (${cacheNode.options.preprocess}) for asset ${cacheNode.name}`);
+                        fail();
+                    }
+                }
 
             });
 
-            rawAssetFd.pipe(hash);
-
-
-        });
-
-        waitingOn.push(imgPromise);
+            waitingOn.push(processRawAssetPromise);
+        }
     });
 
 
+    // Update our cache list file
     Promise.all(waitingOn).then(() => {
 
         if (!updatedCache) {
@@ -148,10 +194,8 @@ fs.readFile('data/cache.json', function(err, bufferData){
             return;
         }
 
-        const prettyCache = JSON.stringify(data);
-        console.log(prettyCache);
-
         // This was the last cache, write and close the cache file
+        const prettyCache = JSON.stringify(data); // TODO Prettify cache json?
         fs.writeFile('data/cache.json', prettyCache, function(err, bufferData){
 
             if (err) {

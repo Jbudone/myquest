@@ -285,22 +285,42 @@ WORKING ON (was previously working on)
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
-		    - png -> webp
-		  	- --recache option
-			- Compress
-			  	- xor image directly
-				  	- cannot directly include sharp in browser (uses a .node binary file; so cannot bundle)
-					- this will decompress image, xor it, and compress it. If we use a lossy compression then this WILL lose data from the xor. Need png or other lossless format
+			- Compress: pre-compress assets/cache (brotli?) and allow native browser decompress -- use different compression for different types of assets
 			- Structure images/sounds/data/etc.
+{"name":"tiles","asset":"sprites/tilesheet.png","assetHash":"5411feee99c3eb34f8f304fc4117e86c","cache":"tilesheet.cache","cached":true,"encrypted":true}
+
+			  need: cached? encrypted? packed (image/sound) w/ coordinates (x/y? time? data json)? compressed (manually -- png -> webp)
+			  {
+			    name: nameOfAsset
+			    rawAsset: rawFile,
+				rawAssetHash: rawAssetHash,
+				asset: cachedFile, (including png -> webp)
+				assetHash: cachedFileHash,
+				type: [image|sound|data],
+				options: {
+				  cached: true, [must be loaded in binary for client; NOTE: png -> webp does not mean cached since we can directly open file]
+				  encrypted: true,
+				  packed: {
+				    [offset/bounds specific to type]
+				  },
+				  preprocess: "convert"
+				}
+		      }
+				2) pack
+				3) add images/icons
+				4) sounds + pack sounds 
+				5) assetHash
+		    - Check for changes to cache options (stringify cache options -> hash -> compare to previous cacheOptionsHash)
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
 			- Async (WebWorkers?)
 			- Decrypt
-			- Uncompress
+			- Decompress
 			- Structure images/sounds/data/etc.
 			- Webstorage; check for changes
 		- Update git w/ cachefiles
+		- Asset: use name of asset; cache translates asset => raw file (cached or raw)
         - All PGP -- look into PGP for best solution + architecture for this
         - Look into filestreams and if fs.read/write or streams/pipes are better
         - Images -> WebP
