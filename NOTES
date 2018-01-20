@@ -285,7 +285,6 @@ WORKING ON (was previously working on)
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
-		    - png -> webp
 			- Compress: pre-compress assets/cache (brotli?) and allow native browser decompress -- use different compression for different types of assets
 			- Structure images/sounds/data/etc.
 {"name":"tiles","asset":"sprites/tilesheet.png","assetHash":"5411feee99c3eb34f8f304fc4117e86c","cache":"tilesheet.cache","cached":true,"encrypted":true}
@@ -304,11 +303,14 @@ WORKING ON (was previously working on)
 				  packed: {
 				    [offset/bounds specific to type]
 				  },
-				  preprocess: {
-				    convert: ["towebp"]
-				  }
+				  preprocess: "convert"
 				}
 		      }
+				2) pack
+				3) add images/icons
+				4) sounds + pack sounds 
+				5) assetHash
+		    - Check for changes to cache options (stringify cache options -> hash -> compare to previous cacheOptionsHash)
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
