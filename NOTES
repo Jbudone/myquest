@@ -288,6 +288,27 @@ WORKING ON (was previously working on)
 		    - png -> webp
 			- Compress: pre-compress assets/cache (brotli?) and allow native browser decompress -- use different compression for different types of assets
 			- Structure images/sounds/data/etc.
+{"name":"tiles","asset":"sprites/tilesheet.png","assetHash":"5411feee99c3eb34f8f304fc4117e86c","cache":"tilesheet.cache","cached":true,"encrypted":true}
+
+			  need: cached? encrypted? packed (image/sound) w/ coordinates (x/y? time? data json)? compressed (manually -- png -> webp)
+			  {
+			    name: nameOfAsset
+			    rawAsset: rawFile,
+				rawAssetHash: rawAssetHash,
+				asset: cachedFile, (including png -> webp)
+				assetHash: cachedFileHash,
+				type: [image|sound|data],
+				options: {
+				  cached: true, [must be loaded in binary for client; NOTE: png -> webp does not mean cached since we can directly open file]
+				  encrypted: true,
+				  packed: {
+				    [offset/bounds specific to type]
+				  },
+				  preprocess: {
+				    convert: ["towebp"]
+				  }
+				}
+		      }
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)

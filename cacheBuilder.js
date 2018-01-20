@@ -53,7 +53,7 @@ fs.readFile('data/cache.json', (err, bufferData) => {
     _.each(data.cacheList, (cacheNode) => {
 
         // Do we want to process this resource in some way?
-        if (!cacheNode.cached) {
+        if (!cacheNode.options.cached) {
             return;
         }
 
@@ -61,7 +61,7 @@ fs.readFile('data/cache.json', (err, bufferData) => {
 
             // Load raw asset
             // We want to check its hash in case it hasn't changed since the last time
-            const file     = cacheNode.asset,
+            const file     = cacheNode.rawAsset,
                 hash       = crypto.createHash('md5'),
                 rawAssetFd = fs.createReadStream(file);
 
@@ -71,17 +71,17 @@ fs.readFile('data/cache.json', (err, bufferData) => {
                 hash.end();
 
                 const rawAssetHash = hash.read().toString('hex'),
-                    cacheFile      = 'cache/' + cacheNode.cache;
+                    cacheFile      = cacheNode.asset;
 
                 rawAssetFd.destroy();
                 hash.destroy();
 
                 // Has the raw asset changed?
-                if (!Settings.recache && rawAssetHash === cacheNode.assetHash) {
+                if (!Settings.recache && rawAssetHash === cacheNode.rawAssetHash) {
                     // Asset hashes match (raw asset hasn't changed)
                     // Does the cache file still exist? It may have been intentinoally deleted for recache
                     if (fs.existsSync(cacheFile)) {
-                        //console.log(`Asset ${cacheNode.asset} hasn't changed since the last cache. Skipping`);
+                        //console.log(`Asset ${cacheNode.rawAsset} hasn't changed since the last cache. Skipping`);
                         success();
                         return;
                     }
@@ -95,7 +95,7 @@ fs.readFile('data/cache.json', (err, bufferData) => {
                     const readyToWritePromise = new Promise((bufferFetchSuccess, bufferFetchFail) => {
 
                         // Are we encrypting this file?
-                        if (cacheNode.encrypted) {
+                        if (cacheNode.options.encrypted) {
                             const options = {
                                 data: buffer,
                                 passwords: ['secret stuff'],
@@ -119,7 +119,7 @@ fs.readFile('data/cache.json', (err, bufferData) => {
                             flag: 'w'
                         }, (err) => {
                             console.log(`Wrote/Encrypted ${cacheFile}`);
-                            cacheNode.assetHash = rawAssetHash;
+                            cacheNode.rawAssetHash = rawAssetHash;
 
                             updatedCache = true;
                             success();

@@ -19,23 +19,24 @@ define(() => {
                 const cacheNode = Resources.cache.cacheList.find((el) => el.name === name);
                 assert(cacheNode, `Could not find cache for ${name}`);
 
-                if (cacheNode.cached) {
+                // Has the file been cached? If so then we must send an XHR request in order to open the file in a
+                // binary format, and process/read it accordingly
+                if (cacheNode.options.cached) {
 
-                    const cacheFile = cacheNode.cache;
+                    const assetFile = cacheNode.asset;
 
-                    if (!cacheFile) {
-                        failed(`Could not find cache for ${file} (${strippedName})`);
+                    if (!assetFile) {
+                        failed(`Could not find cache for ${file} (${assetFile})`);
                     }
-
 
                     // TODO: Should offload this stuff into webworkers
                     const oReq = new XMLHttpRequest();
-                    oReq.open("GET", `cache/${cacheFile}`, true);
+                    oReq.open("GET", assetFile, true);
                     oReq.responseType = "arraybuffer";
                     oReq.onload = (oEvent) => {
 
                         if (oReq.response) {
-                            if (cacheNode.encrypted) {
+                            if (cacheNode.options.encrypted) {
 
                                 const encrypted = new Uint8Array(oReq.response),
                                     options     = {
