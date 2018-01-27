@@ -594,3 +594,41 @@ input.error {
 	font-size: 18px;
 	font-family: monospace;
 }
+
+
+/* === UI Entity Menu === */
+
+#entity-menu {
+	position: absolute;
+	background-color: #000;
+    min-width: 300px;
+    min-height: 140px;
+    opacity: 0.8;
+    border-radius: 4px;
+    padding: 6px 10px;
+    z-index: 99999;
+}
+
+#entity-menu-normal {
+	width: 100%;
+}
+
+.entity-menu-option {
+	display: block;
+	text-decoration: none;
+}
+
+.entity-menu-option-label {
+}
+
+.entity-menu-option-label:hover {
+	font-weight: bold;
+}
+
+.entity-menu-option-label {
+	color: #EEE;
+}
+
+#entity-menu-admin .entity-menu-option-label {
+	color: #FF8;
+}
