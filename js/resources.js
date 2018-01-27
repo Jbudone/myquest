@@ -35,6 +35,9 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 			loadItemScripts: function(){},
 
+            fetchImage: function(){},
+            fetchSound: function(){},
+
 		}, initialize = (function(loadingResources){
 
 			return new Promise(function(loaded, failed){
@@ -693,6 +696,57 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                         }
                     }.bind(this));
                 }.bind(this));
+            }.bind(this));
+        }.bind(_interface));
+
+        _interface.fetchImage = (function(imageRes){
+
+            return new Promise(function(succeeded, failed){
+
+                const imgEl = $('<img/>');
+
+                // Find image from imageRes
+                // Set image to imgEl
+                // Set background position + width/height for image
+                const img = new Image();
+                img.onload = function() {
+                    succeeded(this);
+                };
+
+                const cacheNode = this.cache.cacheList.find((el) => el.name === imageRes);
+                assert(cacheNode, `Could not find cache for ${imageRes}`);
+                const url = cacheNode.asset;
+                img.src = url;
+
+                // FIXME: Cache asset, then just return that cached image; we only need 1 instance of each image, but
+                // jquery should clone image to multiple elements
+                // FIXME: If we pack images, then need to cache the packed image, find this particular image and create
+                // a copy of an image out of that, then cache that
+            }.bind(this));
+        }.bind(_interface));
+
+        _interface.fetchSound = (function(soundRes){
+
+            return new Promise(function(success, fail){
+
+                const cacheNode = this.cache.cacheList.find((el) => el.name === soundRes);
+                assert(cacheNode, `Could not find cache for ${soundRes}`);
+                const src = cacheNode.asset;
+
+                const request = new XMLHttpRequest();
+                request.open('GET', src, true);
+                request.responseType = 'arraybuffer';
+
+                // Decode asynchronously
+                request.onload = function() {
+                    if (request.status === 404) {
+                        assert(!Env.assertion.requiresResources, `Could not find resource: {soundRes}`);
+                        fail(null);
+                    } else {
+                        success(request.response);
+                    }
+                }
+                request.send();
             }.bind(this));
         }.bind(_interface));
 

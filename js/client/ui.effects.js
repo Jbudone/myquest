@@ -19,12 +19,15 @@ define(['loggable'], (Loggable) => {
 
                 const effectEl = $('<div/>')
                     .addClass('ui-effects-buff')
-                    .append(
-                        $('<img/>')
-                        .addClass('ui-effects-buff-icon')
-                        .attr('src', 'data/icons/' + effects.icon)
-                    )
                     .appendTo(uiEffects);
+
+                // Fetch image (created into dom from resourcemgr); append
+                const fetchImagePromise = Resources.fetchImage(effects.icon);
+                fetchImagePromise.then((img) => {
+                    const imgEl = $(img).clone();
+                    imgEl.addClass('ui-effects-buff-icon')
+                        .appendTo(effectEl);
+                });
 
                 const effect = {
                     ui: effectEl,
@@ -41,11 +44,6 @@ define(['loggable'], (Loggable) => {
                         .append(
                             $('<div/>')
                             .addClass('buff-tooltip-header')
-                            .append(
-                                $('<img/>')
-                                .addClass('buff-tooltip-icon')
-                                .attr('src', 'data/icons/' + effects.icon)
-                            )
                             .append(
                                 $('<a/>')
                                 .addClass('buff-tooltip-title')
@@ -65,6 +63,16 @@ define(['loggable'], (Loggable) => {
                         .insertAfter(effectEl);
 
                     effect.tooltip = tooltipEl;
+
+                    fetchImagePromise.then((img) => {
+                        const tooltipHeaderEl = $('.buff-tooltip-header', tooltipEl),
+                            imgEl             = $(img).clone();
+
+                        imgEl.addClass('buff-tooltip-icon')
+                            .appendTo(tooltipHeaderEl);
+                    });
+
+
 
                     let hoveringEffect = false,
                         hoveringTooltip = false;

@@ -20,7 +20,7 @@
             }
         },
         "effects": {
-            "icon": "deathsickness.png",
+            "icon": "deathsickness",
             "tooltip": {
                 "name": "Death Sickness",
                 "description": "Lol! Looks like you've died. wutanub"
@@ -48,7 +48,7 @@
             }
         },
         "effects": {
-            "icon": "deathsickness.png",
+            "icon": "deathsickness",
             "tooltip": {
                 "name": "Kingly Debuff",
                 "description": "Debuffed by the King -- looks like you f'd up"
@@ -76,7 +76,7 @@
             }
         },
         "effects": {
-            "icon": "deathsickness.png",
+            "icon": "deathsickness",
             "tooltip": {
                 "name": "Kingly Buff",
                 "description": "Buffed by the king -- making friends in high places"
