@@ -43,7 +43,7 @@ define(['resourceProcessor'], function(ResourceProcessor){
 					});
 				});
 			}
-		}
+        }
 	};
 
 	return Resources;
