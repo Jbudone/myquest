@@ -239,6 +239,56 @@ define(
 
 
                     $('#canvas').append( this.ui );
+                },
+
+
+                // Entity Menu (Context Menu)
+                // A single component that shows up when you right click an entity
+                EntityMenuUI: function() {
+
+                    const entityMenuUI = $('#entity-menu'),
+                        menuListUI = $('#entity-menu-normal', entityMenuUI),
+                        adminMenuListUI = $('#entity-menu-admin', entityMenuUI);
+
+                    let lastClickedEntity = null;
+
+                    const self = this;
+
+                    this.addOption = function(label, callback, admin) {
+
+                        const menuList = admin ? adminMenuListUI : menuListUI;
+                        menuList
+                            .append( $('<a/>')
+                                    .attr('href', '#')
+                                    .addClass('entity-menu-option')
+                                    .append( $('<span/>')
+                                            .addClass('entity-menu-option-label')
+                                            .text(label) )
+                                    .click(() => {
+                                        callback(lastClickedEntity);
+                                        self.hide();
+                                        return false;
+                                    }) );
+                    };
+
+                    adminMenuListUI.addClass('hidden');
+                    this.enableAdmin = function() {
+                        adminMenuListUI.removeClass('hidden');
+                    };
+
+                    this.display = function(entity, mouse) {
+
+                        const leftPos = mouse.globalX,
+                            topPos = mouse.globalY + $('#entity-menu').height();
+                        entityMenuUI.removeClass('hidden')
+                                        .offset({ left: leftPos, top: topPos });
+
+                        lastClickedEntity = entity;
+                    };
+
+                    this.hide = function() {
+                        entityMenuUI.addClass('hidden')
+                    };
                 }
             };
 
@@ -296,7 +346,7 @@ define(
                     tileX   = parseInt(x / Env.tileSize, 10),
                     tileY   = parseInt(y / Env.tileSize, 10);
 
-                return { x: tileX, y: tileY, canvasX: x, canvasY: y };
+                return { x: tileX, y: tileY, canvasX: x, canvasY: y, globalX: mouse.clientX, globalY: mouse.clientY };
             };
 
             this.initialize = (canvas) => {
@@ -313,7 +363,15 @@ define(
 
                 this.canvas.addEventListener('mousedown', (evt) => {
                     lastMouseEvt = evt;
-                    this.onMouseDown( this.positionFromMouse(evt) );
+
+                    _UI.entityMenu.hide();
+                    this.onMouseDown( this.positionFromMouse(evt), evt.button );
+                    return false;
+                });
+
+                // Prevent browser context-menu on anything inside the canvas
+                $('#canvas *').on('contextmenu', (e) => {
+                    e.preventDefault();
                 });
 
                 this.registerHook('input');
@@ -696,7 +754,11 @@ define(
 
                 $('#input').addClass('admin');
                 $('#inputForm').addClass('admin');
+
+                this.entityMenu.enableAdmin();
             };
+
+            this.entityMenu = new this.components.EntityMenuUI();
         };
 
         return UI;

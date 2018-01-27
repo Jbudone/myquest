@@ -3,7 +3,7 @@ define(
         'eventful', 'dynamic', 'loggable', 'movable'
     ],
     (
-        Eventful, Dynamic, Loggable, Movable, Inventory
+        Eventful, Dynamic, Loggable, Movable
     ) => {
 
         const Player = function(client) {
@@ -613,6 +613,51 @@ define(
             this.step = (time) => {
                 this.handlePendingEvents();
             };
+
+            // FIXME: Abstract this to admin commands
+            this.registerHandler(CMD_DAMAGE_ENTITY);
+            this.handler(CMD_DAMAGE_ENTITY).set((evt, data) => {
+                console.log("PLAYER REQUEST TO DAMAGE ENTITY");
+                console.log(evt);
+                console.log(data);
+
+                const character = this.movable.character,
+                    area        = this.movable.page.area,
+                    target      = area.movables[data.id];
+                let err         = null;
+
+                if (!target) err = "No target currently";
+                else if (!_.isObject(target)) err = "Target not found";
+                else if (!_.isObject(target.character)) err = "Target does not have a character reference"; // FIXME: Unecessary once we fix the issue below
+                //else if (!(target.character instanceof Character)) err = "Target does not have a character reference";
+                // FIXME: No reference to Character before scripts have been initialized
+
+                if (!err) {
+                    if (!target.character.isAttackable()) err = "Character is not attackable";
+                }
+
+                if (err) {
+                    this.Log("Disallowing user attack", LOG_ERROR);
+                    player.respond(evt.id, false, {
+                        reason: err
+                    });
+                    return;
+                }
+
+                // FIXME: Avoid saying that the damage came from this player (currently damage must come from a source
+                // on both server/client)
+                target.character.hurt(data.amount, character);
+
+                // Broadcast attack
+                target.page.broadcast(EVT_ATTACKED, {
+                    entity: { page: this.movable.page.index, id: this.movable.id },
+                    target: { page: target.page.index, id: data.id },
+                    amount: data.amount,
+                    health: target.character.health
+                });
+
+                this.respond(evt.id, true);
+            });
         };
 
         return Player;

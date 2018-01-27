@@ -250,6 +250,32 @@ define(
                 if (!Env.isBot) {
                     // TODO: Should find a better way to do this
                     ui.initialize(document.getElementById('entities'));
+
+                    ui.entityMenu.addOption('Examine', (entity) => {
+                        ui.postMessage(`Here's a few stats on: ${entity.spriteID} ${entity.id}`);
+                        ui.postMessage(`     Health: ${entity.npc.stats.health}`);
+                        ui.postMessage(`     Strength: ${entity.npc.stats.str}`);
+                        ui.postMessage(`     Constitution: ${entity.npc.stats.con}`);
+                    });
+
+                    ui.entityMenu.addOption('Admin Examine', (entity) => {
+                        ui.postMessage(`Here's a few ADMIN stats on: ${entity.spriteID} ${entity.id}`);
+                        ui.postMessage(`     Health: ${entity.npc.stats.health}`);
+                        ui.postMessage(`     Strength: ${entity.npc.stats.str}`);
+                        ui.postMessage(`     Constitution: ${entity.npc.stats.con}`);
+                    }, true);
+
+                    ui.entityMenu.addOption('Damage Entity', (entity) => {
+                        server.makeRequest(CMD_DAMAGE_ENTITY, {
+                            id: entity.id,
+                            amount: 2000
+                        }).then((data) => {
+                            ui.postMessage("Damage Entity Command: Success");
+                        }, (data) => {
+                            ui.postMessage("Damage Entity Command: Failed");
+                        })
+                        .catch(errorInGame);
+                    }, true);
                 }
                 ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
                 ui.camera = The.camera;
@@ -1015,10 +1041,10 @@ define(
                     // Entity took some damage from something
                     server.onEntityHurt = (page, hurtEntity, targetEntity, amount, health) => {
 
-                        this.Log(`Entity ${hurtEntity.id} hurt by ${targetEntity.id}`, LOG_DEBUG);
-
                         assert(!_.isNaN(hurtEntity.id), `Expected valid entity id: ${hurtEntity.id}`);
                         assert(!_.isNaN(targetEntity.id), `Expected valid entity id: ${targetEntity.id}`);
+
+                        this.Log(`Entity ${hurtEntity.id} hurt by ${targetEntity.id}`, LOG_DEBUG);
 
                         // Get the entity and target
                         // NOTE: We could receive this event if the target or instigator are not in our line of sight.
@@ -1345,25 +1371,29 @@ define(
                 ui.onMouseMove = onMouseMove;
 
 
-                ui.onMouseDown = (mouse) => {
+                ui.onMouseDown = (mouse, buttonCode) => {
 
                     onMouseMove(mouse);
 
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {
-                        The.user.clickedEntity(ui.hoveringEntity);
+                        if (buttonCode == 2) {
+                            The.user.rightClickedEntity(ui.hoveringEntity, mouse);
+                        } else {
+                            The.user.clickedEntity(ui.hoveringEntity, mouse);
+                        }
                         return;
                     }
 
                     // Pickup item we're currently hovering
                     if (ui.hoveringItem) {
-                        The.user.clickedItem(ui.hoveringItem);
+                        The.user.clickedItem(ui.hoveringItem, mouse);
                         return;
                     }
 
                     // Pickup item we're currently hovering
                     if (ui.hoveringInteractable) {
-                        The.user.clickedInteractable(ui.hoveringInteractable);
+                        The.user.clickedInteractable(ui.hoveringInteractable, null, mouse);
                         return;
                     }
 
@@ -1374,8 +1404,12 @@ define(
                         walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
                         toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
 
-                    The.user.clickedTile(toTile);
+                    The.user.clickedTile(toTile, mouse);
                 };
+
+                The.user.hook('rightClickedEntity', The.user).after((entity, mouse) => {
+                    ui.entityMenu.display(entity, mouse);
+                });
 
                 // ------------------------------------------------------------------------------------------------- //
                 // ------------------------------------------------------------------------------------------------- //
