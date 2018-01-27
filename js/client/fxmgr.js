@@ -35,25 +35,20 @@ define(['loggable'], (Loggable) => {
         this.loadSample = (sample) => {
 
             return new Promise((success, fail) => {
-                const request = new XMLHttpRequest();
-                request.open('GET', sample.sound, true);
-                request.responseType = 'arraybuffer';
+                const fetchSoundPromise = Resources.fetchSound(sample.sound);
+                fetchSoundPromise.then((response) => {
 
-                // Decode asynchronously
-                request.onload = function() {
-                    if (request.status === 404) {
-                        assert(!Env.assertion.requiresResources, `Could not find resource: {sample.name}`);
-                    } else {
-                        audioContext.decodeAudioData(request.response, (buffer) => {
-                            sample.buffer = buffer;
-                            success();
-                        }, (e) => {
-                            fail(e);
-                            throw Err(e);
-                        });
-                    }
-                }
-                request.send();
+                    audioContext.decodeAudioData(response, (buffer) => {
+                        sample.buffer = buffer;
+                        success();
+                    }, (e) => {
+                        fail(e);
+                        throw Err(e);
+                    });
+                }, (err) => {
+                    fail(err);
+                    throw Err(err);
+                });
             });
         };
 
