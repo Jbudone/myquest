@@ -364,6 +364,13 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 });
 
                 _self.timeSinceLastMessage = now();
+
+                if (localStorage.getItem('autoadmin') === "true") {
+                    setTimeout(() => {
+                        const command = _self.transformMessage(`/admin 42`);
+                        _self.handleCommand(command);
+                    }, 2000);
+                }
             },
 
             transformMessage: (msg) => {
