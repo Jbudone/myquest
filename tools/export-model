@@ -1,0 +1,168 @@
+#!/bin/bash
+
+# Export Models
+#
+# Interfaces to the blender python export script, and imagemagick spritesheet baking script
+#
+# 
+# TODO
+#  - Args
+#  - Blender shiz
+#      blender Basilisk.josh.blend --verbose 0 --background --python ../../tools/blender.batchrender.py --json sprite.json
+#  - Bakesheet shiz
+#      ../../tools/bakespritesheet --frame-ratio 2 --size 256 --no-trim --folder shots.3 --output testjosh.png --speed superslow
+#  - Store cache/hash in sprite.export.json for blender file (to auto re-render if changed), render folder (to auto re-trim), sprite file to auto-redo everything)
+#  - Easy post-process preview; anim-preview; bounds-preview
+#  - Cleanup
+#  - Abstract pipeline/cache so that we can run entire preprocessor over all sprite.json's (even 2D ones where we just manipulate spritesheets) and update cache
+
+
+VERBOSE=false
+RENDER=false
+RENDER_DIR=""
+BLENDER_FILE=""
+SPRITE_SHEET=""
+ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest"
+
+BAKE=false
+
+FRAME_RATIO=1
+MAX_SIZE=128
+DO_TRIM=true
+INPUT_DIR="shots/"
+OUTPUT="convertsprites.png"
+SPEED="slow"
+
+UPDATE_SPRITESHEETS_RESOURCE=true
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -r | --render ) RENDER=true; shift ;;
+        -f | --folder ) RENDER_DIR="$2"; shift; shift ;;
+        -b | --blender-file ) BLENDER_FILE="$2"; shift; shift ;;
+        -s | --sprite-sheet ) SPRITE_SHEET="$2"; shift; shift ;;
+
+        --bake ) BAKE=true; shift ;;
+
+        -r | --frame-ratio ) FRAME_RATIO="$2"; shift; shift ;;
+        -s | --size ) MAX_SIZE="$2"; shift; shift ;;
+        -t | --no-trim ) DO_TRIM=false; shift ;;
+        -o | --output ) OUTPUT="$2"; shift; shift ;;
+        -u | --speed ) SPEED="$2"; shift; shift ;;
+        -v | --verbose ) VERBOSE=true; shift ;;
+        -- ) shift; break ;;
+        * ) echo "Unknown option $1" ; exit ;;
+    esac
+done
+
+
+BLENDER_SCRIPT="$ROOT_FOLDER/tools/blender.batchrender.py"
+MESH_FOLDER="$( dirname "$BLENDER_FILE" )"
+if [ "$RENDER_DIR" == "" ]; then
+    RENDER_DIR="$MESH_FOLDER/shots"
+fi
+
+SPRITE_JSON=$( cat "$SPRITE_SHEET" | jq '.' )
+
+EXPORT_RESULTS_FILE="$MESH_FOLDER/sprite.export.json"
+
+# Render Model shots?
+if [ $RENDER = true ]; then
+    
+    echo "Rendering to $RENDER_DIR"
+
+    #blender Basilisk.josh.blend --verbose 0 --background --python ../../tools/blender.batchrender.py --json sprite.json
+    blender "$BLENDER_FILE" --verbose 0 --background --python "$BLENDER_SCRIPT" --json "$SPRITE_SHEET" --output "$RENDER_DIR" --resultsOutput "$EXPORT_RESULTS_FILE"
+fi
+
+# Bake the Renders?
+if [ $BAKE = true ]; then
+
+    echo "Baking Spritesheet"
+
+    BAKE_SCRIPT="$ROOT_FOLDER/tools/bakespritesheet"
+    
+    #../../tools/bakespritesheet --frame-ratio 2 --size 256 --no-trim --folder shots.3 --output testjosh.png --speed superslow
+    echo "Render Dir: $RENDER_DIR"
+
+    postProcessing=$( echo "$SPRITE_JSON" | jq --raw-output 'if has("postProcessing") then .postProcessing else "" end' )
+    renderRegionSize=$( echo "$SPRITE_JSON" | jq --raw-output 'if has("renderRegionSize") then .renderRegionSize else 256 end' )
+    output=$( echo "$SPRITE_JSON" | jq --raw-output '.output' )
+
+    extraOptions=""
+    if [ $DO_TRIM = false ]; then
+        extraOptions="$extraOptions --no-trim"
+    fi
+
+    "$BAKE_SCRIPT" --frame-ratio 2 --size "$renderRegionSize" --folder "$RENDER_DIR" --output "$output" --speed superslow --post-processing "$postProcessing" $extraOptions --export-results-file "$EXPORT_RESULTS_FILE"
+fi
+
+if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
+
+    SHEETS_JSON_FILE="$ROOT_FOLDER/data/sheets.json"
+    SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
+
+    SPRITE_NAME=$( echo $SPRITE_JSON | jq --raw-output '.spriteName' )
+    SPRITE_IMAGE=$( echo $SPRITE_JSON | jq --raw-output '.output' )
+    SPRITE_WIDTH=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.width' )    # Game width
+    SPRITE_HEIGHT=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.height' )  # Game height
+
+    SHEET_SPRITE_JSON="{}"
+
+
+
+    EXPORTED_JSON=$( cat $EXPORT_RESULTS_FILE | jq --raw-output '.' )
+    spriteWidth=$( echo $EXPORTED_JSON | jq '.sprite.width' )         # Rendered shots width
+    spriteHeight=$( echo $EXPORTED_JSON | jq '.sprite.height' )       # Rendered shots height
+    spriteAnimsLength=$( echo $EXPORTED_JSON | jq '.anims | length' )
+
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { id: \"$SPRITE_NAME\" }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { image: \"/$SPRITE_IMAGE\" }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sheet_offset: { x: 0, y: 0 } }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_offset: { x: 0, y: 0 } }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_size: { w: $SPRITE_WIDTH, h: $SPRITE_HEIGHT } }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { tilesize: 64 }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { columns: 0 }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { rows: 0 }" )
+
+    SHEET_SPRITE_ANIMATIONS="{}"
+
+    for (( i=0; i<$spriteAnimsLength; i++ )); do
+        spriteAnim=$( echo $EXPORTED_JSON | jq ".anims[$i]" )
+
+        spriteAnimName_anim=$( echo $spriteAnim | jq --raw-output '.anim' )
+        spriteAnimName_camera=$( echo $spriteAnim | jq --raw-output '.camera' )
+        spriteAnimName="$spriteAnimName_anim"_"$spriteAnimName_camera"
+
+        spriteAnimX=$( echo $spriteAnim | jq '.x' )
+        spriteAnimY=$( echo $spriteAnim | jq '.y' )
+        spriteAnimL=$( echo $spriteAnim | jq '.count' )
+
+        sheetAnim="{}"
+        sheetAnim=$( echo $sheetAnim | jq ". + { x: $spriteAnimX }" )
+        sheetAnim=$( echo $sheetAnim | jq ". + { y: $spriteAnimY }" )
+        sheetAnim=$( echo $sheetAnim | jq ". + { l: $spriteAnimL }" )
+        sheetAnim=$( echo $sheetAnim | jq ". + { w: $spriteWidth }" )
+        sheetAnim=$( echo $sheetAnim | jq ". + { h: $spriteHeight }" )
+
+        SHEET_SPRITE_ANIMATIONS=$( echo $SHEET_SPRITE_ANIMATIONS | jq ". + { $spriteAnimName: $sheetAnim }" )
+    done
+
+    SHEET_SPRITE_DATA=$( echo "{ \"avatar\": 0 }" | jq ". += { animations: $SHEET_SPRITE_ANIMATIONS }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { data: $SHEET_SPRITE_DATA }" )
+
+    spriteAlreadyAdded=$( echo $SHEET_JSON | jq ".spritesheets.list[] | select(.id == \"$SPRITE_NAME\") | ." )
+    if [ -z "$spriteAlreadyAdded" ]; then
+        # Add sprite
+        SHEET_JSON=$( echo $SHEET_JSON | jq ".spritesheets.list += [ $SHEET_SPRITE_JSON ]" )
+        echo "Adding Sprite"
+    else
+        # Update sprite
+        SHEET_JSON=$( echo $SHEET_JSON | jq "(.spritesheets.list[] | select(.id == \"$SPRITE_NAME\") | .) |= . + $SHEET_SPRITE_JSON" )
+        echo "Updating Sprite"
+    fi
+    echo $SHEET_SPRITE_JSON | jq '.'
+    #echo $SHEET_JSON | jq '.'
+    echo $SHEET_JSON | jq '.' > "$SHEETS_JSON_FILE" 
+fi
+

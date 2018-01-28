@@ -36,6 +36,8 @@ parser.add_argument('--quick', nargs='*')
 parser.add_argument('--bounds', nargs='*', help="check for bounds of mesh / camera position")
 parser.add_argument('--json', nargs=1, help="sprite json file")
 parser.add_argument('--testmesh', nargs='*', help="test detected mesh")
+parser.add_argument('--output', nargs=1)
+parser.add_argument('--resultsOutput', nargs=1)
 args = parser.parse_args()
 
 # Read sprite json file
@@ -60,6 +62,11 @@ scene = bpy.data.scenes["Scene"]
 obj_camera = bpy.data.objects["Camera"]
 cwd = os.getcwd()
 parentDir = cwd + "/"
+
+if args.output:
+    parentDir = args.output[0]
+
+print("Parent Dir: " + parentDir)
 
 # Render Sets
 # This is what is rendered into individual animations
@@ -244,7 +251,7 @@ def testCameraPosition(camera, vec, deg, offset):
     rad = radians(deg)
     cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(vec, rad, offset)
     camera.location = cameraPos
-    look_at(camera, center)
+    look_at(camera, lookAtPoint)
     bpy.ops.mesh.primitive_cylinder_add(radius = cylinderRadius, depth = 3.0, location = center)
     bpy.context.object.rotation_euler = camera.rotation_euler
 
@@ -309,7 +316,7 @@ def renderPossibleRotations(camera, offset):
         # Forward Camera
         cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(possibleVecs[i], 0.0, offset)
         camera.location = cameraPos
-        look_at(camera, center)
+        look_at(camera, lookAtPoint)
 
         # Render
         forwardFilename = "forward_" + possibleVecs[i][2]
@@ -320,7 +327,7 @@ def renderPossibleRotations(camera, offset):
         # Top Camera
         cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(possibleVecs[i], radians(90.0), offset)
         camera.location = cameraPos
-        look_at(camera, center)
+        look_at(camera, lookAtPoint)
 
         # Render
         topFilename = "top_" + possibleVecs[i][2]
@@ -386,6 +393,10 @@ cameraClipStart = 0.1
 if 'cameraClipStart' in data:
     cameraClipStart = data['cameraClipStart']
 
+lookAtPoint = center
+if 'lookAt' in data:
+    lookAtPoint = Vector(data['lookAt'])
+
 # FIXME: Wtf why can't we just edit camera's clip_end?
 bpy.data.cameras["Camera"].clip_end = cameraClipEnd
 bpy.data.cameras["Camera"].clip_start = cameraClipStart
@@ -442,7 +453,7 @@ if args.bounds != None:
         for j in range(len(cameraPositions)):
             cameraPosition = cameraPositions[j]
             camera.location = cameraPosition[0]
-            look_at(camera, center)
+            look_at(camera, lookAtPoint)
             filename = "bounds_" + str(i) + "." + str(j) + ".png"
             filenames.append(renderDir + filename)
             filenamesStr += renderDir + filename + " "
@@ -523,6 +534,8 @@ def setRenderOptions(renderSettings):
 
 setRenderOptions(quickRenderSettings)
 
+renderResults = {"render":{ "folders": [] }}
+
 camera = obj_camera
 for i in range(len(renderSets)):
     renderSet = renderSets[i]
@@ -531,17 +544,27 @@ for i in range(len(renderSets)):
     scene.frame_start = renderSet.firstFrame
     scene.frame_end = renderSet.lastFrame
     scene.frame_step = frameStep
-    
+
     for j in range(len(cameraPositions)):
         cameraPosition = cameraPositions[j]
         camera.location = cameraPosition[0]
-        look_at(camera, center)
+        look_at(camera, lookAtPoint)
         bpy.context.scene.camera = camera
+        print(str(camera.location))
 
         outputDir = animDir + cameraPosition[4] + "/"
         print("  Output dir: " + outputDir)
         scene.render.filepath = outputDir
         render(True, True, True)
+
+        renderResults['render']['folders'].append({ "folder": "/" + renderSet.anim + "/" + cameraPosition[4] + "/", "anim": renderSet.anim, "camera": cameraPosition[4] })
                 
+
 print("Done!")
 setRenderOptions(defaultRenderSettings)
+
+renderResultsFile = args.resultsOutput
+if renderResultsFile:
+    with open(renderResultsFile[0], 'w') as outfile:
+        json.dump(renderResults, outfile)
+
