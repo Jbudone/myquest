@@ -632,3 +632,65 @@ input.error {
 #entity-menu-admin .entity-menu-option-label {
 	color: #FF8;
 }
+
+/* === UI Toolbelt === */
+
+#ui-toolbelt {
+	width: 40px;
+	height: 40px;
+}
+
+#toolbelt-btn {
+	width: 100%;
+	height: 100%;
+}
+
+#toolbelt-link {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+#toolbelt-img {
+	filter: invert(1);
+	width: 24px;
+	margin: 4px;
+}
+
+
+#toolbelt {
+	position:absolute;
+	width:200px;
+	height: 200px;
+	/* background-color: #000; */
+}
+
+@keyframes toolbeltGrow {
+	0% { height: 0%; }
+	100% { height: 100%; }
+}
+
+#toolbelt-container {
+	background-color: #000;
+	width: 100%;
+	position: absolute;
+	bottom: 0px;
+}
+
+#toolbelt-container.display {
+    animation-name: toolbeltGrow;
+    animation-duration: 0.2s;
+
+	height: 100%;
+}
+
+.toolbelt-option {
+    display: block;
+    text-decoration: none;
+    margin: 2px 12px;
+    color: #FAFAFA;
+}
+
+.toolbelt-option:hover {
+	font-weight: bold;
+}

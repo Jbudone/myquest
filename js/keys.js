@@ -155,6 +155,7 @@ define(function(){
     addKey('CMD_CRASH');
     addKey('CMD_TELEPORT');
     addKey('CMD_DAMAGE_ENTITY');
+    addKey('CMD_HEAL');
 
 	addKey('HOOK_INTO_MAP');
 

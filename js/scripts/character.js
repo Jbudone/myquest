@@ -618,6 +618,22 @@ define(
                         interact(evt, data);
                     });
 
+
+                    player.registerHandler(CMD_HEAL);
+                    player.handler(CMD_HEAL).set((evt, data) => {
+
+                        const newHealth = _character.stats.health.curMax;
+                        _character.health = newHealth;
+
+                        // FIXME: There should be a better (more abstract) broadcast than regenerate
+                        _character.entity.page.broadcast(EVT_REGENERATE, {
+                            entityId: _character.entity.id,
+                            health: newHealth
+                        });
+
+                        player.respond(evt.id, true);
+                    });
+
                     this.restore(player._character);
                 }
             };
