@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Update Avatars
+#
+# Redraws avatars.png with all avatars from sheets json, and updates avatars json file
+#
+# TODO:
+#   - Integratge into export-models
+#   - Integrate into tools/sheetedit
+#   - Look into a way to allow modifying avatar image order / sizes, without breaking .tmx maps
+#   - Avatars depends on all animations widths being the same; should fix that
+
+
+ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest"
+
+AVATARS_JSON_FILE="$ROOT_FOLDER/data/avatars.new.json"
+AVATARS_JSON=$( cat $AVATARS_JSON_FILE | jq '.' )
+
+SHEETS_JSON_FILE="$ROOT_FOLDER/data/sheets.json"
+SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
+
+sheetSprites=$( echo $SHEET_JSON | jq '.spritesheets.list' )
+sheetSpritesLen=$( echo $sheetSprites | jq '. | length' )
+
+avatarFile=$( echo $AVATARS_JSON | jq --raw-output '.image.file' )
+avatarSize=$( echo $AVATARS_JSON | jq --raw-output '.image.size | tonumber' )
+avatarColumns=$( echo $AVATARS_JSON | jq --raw-output '.image.columns | tonumber' )
+
+avatarWidth=$avatarSize
+avatarHeight=$avatarSize
+
+# Fetch all sprites and order according to our existing avatars order
+sheetIdListJson=$( echo $SHEET_JSON | jq '[.spritesheets.list[].id]' ) # All sprites in sheets.json
+avatarsSpriteIdList=$( echo $AVATARS_JSON | jq --raw-output '.avatars' )  # All existing sprites in avatars list (ordered)
+remainingSpriteIdList=$( echo $sheetIdListJson | jq --raw-output "[foreach .[] as \$item (0; 0; if ( $avatarsSpriteIdList | contains([\$item])) then empty else \$item end)]" )  # Sprites in sheets.json that haven't been added to avatars list yet
+spriteIdListRaw=$( echo $avatarsSpriteIdList | jq --raw-output ". += $remainingSpriteIdList" ) # Ordered sprites list (retaining the same order as avatars list), we're just pushing new sprites onto the list
+spritesLen=$( echo $spriteIdListRaw | jq --raw-output '. | length' )
+spriteIdList=( $( echo $spriteIdListRaw | jq --raw-output '.[]' ) )
+
+# Load avatar details for each sprite
+spritesList=()
+for (( i=0; i<$spritesLen; i++ )); do
+    spriteId=${spriteIdList[i]}
+    sprite=$( echo $sheetSprites | jq ".[$i]" )
+
+    spriteName=$( echo $sprite | jq --raw-output '.id' )
+    spriteImage="$ROOT_FOLDER$( echo $sprite | jq --raw-output '.image' )"
+
+    px=$( echo $sprite | jq '.data.avatar.x | tonumber' )
+    py=$( echo $sprite | jq '.data.avatar.y | tonumber' )
+    pw=$( echo $sprite | jq '.data.avatar.w | tonumber' )
+    ph=$( echo $sprite | jq '.data.avatar.h | tonumber' )
+
+    spritesList=( ${spritesList[@]} $spriteName $spriteImage $px $py $pw $ph )
+done
+
+# Create each avatar image
+tmpFolder=$( mktemp -d )
+resizedImages=()
+for (( i=0; i<${#spritesList[@]}; i=i+6 )); do
+    
+    spriteName=${spritesList[i]}
+    spriteImage=${spritesList[i+1]}
+    spriteWidth=${spritesList[i+4]}
+    spriteHeight=${spritesList[i+5]}
+
+    echo "Avatar $spriteName: $spriteImage  $spriteWidth"x"$spriteHeight"
+    resizedImage="$tmpFolder/$spriteName.png"
+    convert "$spriteImage" +repage -crop "$spriteWidth"x"$spriteHeight"+0+0 +repage -trim -background none -filter box -resize "$avatarWidth"x"$avatarHeight" -gravity center -extent "$avatarWidth"x"$avatarHeight" "$resizedImage"
+    resizedImages=( ${resizedImages[@]} $resizedImage )
+done
+
+# Render each row of avatars image
+row=0
+rowImages=()
+for (( i=0; i<${#resizedImages[@]}; i=i+5 )); do
+
+    output="$tmpFolder/avatars-$row.png"
+    convert "${resizedImages[@]:i:avatarColumns}" +append "$output"
+    row=row+1
+    rowImages=( ${rowImages[@]} $output )
+done
+
+convert "${rowImages[@]}" -append "$ROOT_FOLDER$avatarFile"
+
+# Output json
+#{"image":{"file":"avatars.png","size":"32","columns":"5"},"avatars":["firefox","goblin","deathknight","spider","snake","rhino","raptor"]}
+outputJson="{}"
+avatarsImgJson="{}"
+avatarsImgJson=$( echo $avatarsImgJson | jq ". + { file: \"$avatarFile\" }" )
+avatarsImgJson=$( echo $avatarsImgJson | jq ". + { size: $avatarSize }" )
+avatarsImgJson=$( echo $avatarsImgJson | jq ". + { columns: $avatarColumns }" )
+outputJson=$( echo $outputJson | jq ". + { image: $avatarsImgJson }" )
+outputJson=$( echo $outputJson | jq ". + { avatars: $spriteIdListRaw }" )
+
+echo $outputJson | jq '.'
+echo $outputJson | jq '.' > "$AVATARS_JSON_FILE"

@@ -19,6 +19,7 @@
 #  - Might be worth using % framerate? In case we have anims w/ small and large framecounts
 #  - Post processing overwrites raw shots; don't do that!
 #  - Trim to a separate folder (so we only have to do it once)
+#  - Need to +repage to destroy old sizing information
 
 # Trim/Resize
 # Resizing needs to be the same across all images -- ie. they need to be

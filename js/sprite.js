@@ -8,7 +8,6 @@ define(() => {
         this.sheet    = Resources.sprites[spriteID];
         this.spriteID = spriteID;
 
-        this.tileSize = this.sheet.tileSize.width;
         this.offset_x = this.sheet.offset.x;
         this.offset_y = this.sheet.offset.y;
         this.sprite_w = this.sheet.spriteSize.w;

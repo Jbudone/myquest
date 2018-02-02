@@ -14,7 +14,10 @@
 #  - Store cache/hash in sprite.export.json for blender file (to auto re-render if changed), render folder (to auto re-trim), sprite file to auto-redo everything)
 #  - Easy post-process preview; anim-preview; bounds-preview
 #  - Cleanup
-#  - Abstract pipeline/cache so that we can run entire preprocessor over all sprite.json's (even 2D ones where we just manipulate spritesheets) and update cache
+#  - Abstract pipeline/cache so that we can run entire preprocessor over all sprite.json's (even 2D ones where we just manipulate spritesheets) and update cache; Add all sprites.json files to git; Add sprite.json for all sprites
+#  - Adding to avatars.png
+#       - Need a separate script for avatars.png redraw  (so we can trigger it here AND in tools/sheetedit)
+#  - Consider allowing differing width/height between anims (we have the tech for that, is it beneficial to render that way? more detail in certain shots?) -- would still have to scale to the rendered size though
 
 
 VERBOSE=false
