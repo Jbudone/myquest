@@ -13,6 +13,8 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
         var componentsAssets = null;
 
+        var onAssetChangedCb = null;
+
 		var _interface = {
 
 			sprites: {},
@@ -38,6 +40,9 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
             fetchImage: function(){},
             fetchSound: function(){},
 
+            watch: function(){},
+            onAssetChanged: function(){},
+
 		}, initialize = (function(loadingResources){
 
 			return new Promise(function(loaded, failed){
@@ -51,13 +56,15 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 
 					_.each(loadingResources, (function(resourceID){
-						if (!resources[resourceID]) {
+                        const resource = resources[resourceID];
+						if (!resource) {
 							this.Log("Resource ("+resourceID+") not found", LOG_ERROR);
 							failed();
 						}
 
-						this.Log("Loading resource: " + resourceID + "("+resources[resourceID]+")");
-						this.read('data/' + resources[resourceID]).then((function(data){
+						this.Log("Loading resource: " + resourceID + "("+resource.file+")");
+                        const file = 'data/' + resource.file;
+						this.read(file).then((function(data){
 							assets[resourceID] = data;
 
 							if (--loading == 0) {
@@ -81,6 +88,13 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                                 }
 
 							}
+
+                            if (Env.isServer && resource.options.reloadable) {
+                                this.watchFile(file, (data) => {
+                                    reloadAsset(resourceID, data);
+                                });
+                            }
+
 						}.bind(this)), function(){
 							this.Log("Error loading resources", LOG_ERROR);
 						})
@@ -248,6 +262,16 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                 return true;
             }
 		}.bind(_interface)),
+
+        reloadAsset = (function(resourceID, asset) {
+
+            if (resourceID == 'npcs') {
+                initializeNPCs(asset);
+                onAssetChangedCb(resourceID, this.npcs);
+            }
+			else return new Error("Unknown asset: "+ resourceID);
+
+        }.bind(_interface)),
 
 		initializeAsset = (function(assetID, asset){
 			if (assetID == 'sheets') return initializeSheets(asset);
@@ -499,7 +523,14 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			var res = JSON.parse(asset).npcs;
 			for (var i=0; i<res.length; ++i) {
 				var npc = res[i];
-				this.npcs[npc.id]=npc;
+
+                // NOTE: We may be reloading npcs. Since other things are already referencing npcs, we need to perform a
+                // deep copy so we don't leak the old npc
+                if (this.npcs[npc.id]) {
+                    _.extendWith(this.npcs[npc.id], npc);
+                } else {
+                    this.npcs[npc.id] = npc;
+                }
 			}
 		}.bind(_interface)),
 
@@ -749,6 +780,14 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                 request.send();
             }.bind(this));
         }.bind(_interface));
+
+        _interface.watch = (function(file, cb){
+            this.watchFile(file, cb);
+        }.bind(this));
+
+        _interface.onAssetChanged = (function(cb){
+            onAssetChangedCb = cb;
+        });
 
 		_interface.initialize = initialize;
 		_interface.findSheetFromFile = findSheetFromFile;

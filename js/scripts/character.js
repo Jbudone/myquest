@@ -72,9 +72,9 @@ define(
 
             // Setup stats from npc
             this.stats = {};
-
-            {
+            this.loadStats = () => {
                 let addStat = (statName, stat) => {
+
                     this.stats[statName] = {
                         cur: stat,
                         curMax: stat,
@@ -87,6 +87,8 @@ define(
                     addStat(statName, stat);
                 }
             }
+
+            this.loadStats();
 
             Object.defineProperties(this, {
                 health: {
@@ -374,15 +376,15 @@ define(
                         }
                     }
 
-                    // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
-                    if (this.inventory) {
-                        _character.inventory = this.inventory.serialize();
-                    }
-
                     if (forOwner) {
                         _character.stats = _.cloneDeep(this.stats);
                         console.log(this.stats);
                         console.log(_character.inventory);
+
+                        // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
+                        if (this.inventory) {
+                            _character.inventory = this.inventory.serialize();
+                        }
                     }
 
                     return _character;
