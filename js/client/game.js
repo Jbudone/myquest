@@ -508,6 +508,13 @@ define(
                         The.area.removeEntity(entity);
                     };
 
+                    server.onEntityNetserialize = (page, entityId, netSerialize) => {
+                        const entity = The.area.pages[page].movables[entityId];
+                        if (!entity) throw Err(`Entity not found in area: ${entityId}`);
+
+                        entity.character.netUpdate(netSerialize);
+                    };
+
                     // Path Cancelled
                     server.onEntityPathCancelled = (page, event) => {
 

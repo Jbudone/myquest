@@ -41,8 +41,8 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
             needsUpdate: true,
 
-            nextTick: 1000,
-            tickTime: 1000,
+            nextTick: 2000,
+            tickTime: 2000,
 
             step(delta) {
                 // FIXME: Sleep/Wake step (change on characters componentsToUpdate list) when health changes
@@ -55,14 +55,56 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
                         this.nextTick = this.tickTime;
 
-                        let newHealth = character.health + character.stats.health.curMax * 0.01 * character.stats.con.cur;
+                        // Regen Formula
+                        // Roughly we want constitution and your (current) maximum health to determine how much health
+                        // you gain per tick. Both variables act as factors to improve your regen rate.
+                        //
+                        // Play with values here:
+                        //
+                        //   var formula = (X, Y, con, level, health) => Math.pow(health, X) + Math.pow(con, Y)
+                        //   
+                        //   var reportList = [
+                        //     { con: 1, health: 10, level: 1 },
+                        //     { con: 2, health: 20, level: 2 },
+                        //     { con: 8, health: 20, level: 10 },
+                        //     { con: 3, health: 100, level: 8 },
+                        //     { con: 8, health: 100, level: 8 }
+                        //   ]
+                        //
+                        //   var report = (X, Y) => {
+                        //     for (var i=0; i<reportList.length; ++i) {
+                        //       let { con, health, level } = reportList[i], tickRate = formula(X, Y, con, level, health);
+                        //       console.log(`${con} con, ${health} hp, lvl ${level} ===> ${tickRate}     ${health / tickRate}s to regen`);
+                        //     }
+                        //   };
+                        //
+                        //
+                        //
+                        //
+                        // Regen without level
+                        //
+                        // regen/tick = (health ^ X) + (con ^ Y)
+                        // X = 0.2, Y = 0.8
+                        // 1 con, 10 hp, lvl 1 ===> 2.6     3.9s to regen
+                        // 2 con, 20 hp, lvl 2 ===> 3.6     5.6s to regen
+                        // 8 con, 20 hp, lvl 10 ===> 7.1    2.8s to regen
+                        // 3 con, 100 hp, lvl 8 ===> 5.0    20.3s to regen
+                        // 8 con, 100 hp, lvl 8 ===> 7.8    12.8s to regen
+                        //
+                        // TODO: (regen formula including level?)
+                        // I would love to include level in the regen, but this feels awkward if NPCs don't have a
+                        // level. Come back later to determine if we should include level in the regen, but maybe only
+                        // for players? Or perhaps we'll give NPCs levels later on?
+                        let newHealth = character.health + Math.pow(character.stats.health.curMax, 0.5) * 0.04 * character.stats.con.cur;
                         newHealth = parseInt(newHealth, 10);
                         if (newHealth > character.stats.health.curMax) {
                             newHealth = character.stats.health.curMax;
                         }
 
                         this.Log(`Regen character health from ${character.health} to ${newHealth}`);
+                        character.setNetSerializeEnabled(false);
                         character.health = newHealth;
+                        character.setNetSerializeEnabled(true);
 
                         // TODO: We don't need to broadcast every character's regen tick immediately; could toss this onto
                         // a low priority buffer (gets sent out either with the next broadcast, or within some X time)

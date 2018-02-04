@@ -45,6 +45,57 @@ define(
             // }  in script.js is that serialize() returns a value, and we'd need a way to merge the two returned values
 
 
+            // We send an initial netSerialize of the character's state to players, and then send updates/changes every
+            // frame. Each item that changes (raw data type) serializes a pair (propKey, newValue), where propKey is the
+            // key of the property that changed (synced key between server/client). We append all of these pairs in the
+            // array and flush the entire array during the movables update
+            let netUpdateArr = []; // Things that have changed since we last sent out an update
+
+            let netIndices = [];
+
+            // Are we currently serializing netVars? NOTE: We may want to turn this on/off if we plan to modify a
+            // variable and broadcast it through some other event
+            let netSerializeEnabled = false;
+            this.setNetSerializeEnabled = (enabled) => {
+                netSerializeEnabled = enabled;
+            };
+
+            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize) => {
+
+                if (!obj.props) {
+                    Object.defineProperty(obj, 'props', {
+                        enumerable: false,
+                        value: {}
+                    });
+                }
+
+                if (shouldNetSerialize) {
+                    if (netIndices[propKey]) throw Err(`Added duplicated property: ${propKey}`);
+                    netIndices[propKey] = {
+                        obj, propName
+                    };
+                }
+
+                obj.props[propName] = initialValue;
+                Object.defineProperty(obj, propName, {
+
+                    "get": function() {
+                        return obj.props[propName];
+                    },
+
+                    "set": function(value) {
+                        obj.props[propName] = value;
+
+                        if (shouldNetSerialize && netSerializeEnabled) {
+                            netUpdateArr.push(propKey);
+                            netUpdateArr.push(value);
+                        }
+                    },
+                });
+            };
+
+
+
 
             // FIXME: Scripts have a components property, should rename that to scriptComponents so that we can rename
             // this to components
@@ -75,11 +126,15 @@ define(
             this.loadStats = () => {
                 let addStat = (statName, stat) => {
 
-                    this.stats[statName] = {
-                        cur: stat,
-                        curMax: stat,
-                        max: stat
-                    };
+                    const statIndexPrefix = 'N_' + statName.toUpperCase(),
+                        statIndexCur      = `${statIndexPrefix}_CUR`,
+                        statIndexMax      = `${statIndexPrefix}_MAX`,
+                        statIndexCurMax   = `${statIndexPrefix}_CURMAX`;
+
+                    this.addProperty(statName, N_NULL, this.stats, {}, false);
+                    this.addProperty('cur', global[statIndexCur], this.stats[statName], stat, true);
+                    this.addProperty('max', global[statIndexMax], this.stats[statName], stat, true);
+                    this.addProperty('curMax', global[statIndexCurMax], this.stats[statName], stat, true);
                 };
 
                 for (const statName in entity.npc.stats) {
@@ -271,6 +326,17 @@ define(
                             this.charComponents[i].step(delta);
                         }
                     }
+
+                    if (netUpdateArr.length) {
+                        // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateArr
+                        this.entity.page.broadcast(EVT_NETSERIALIZE, {
+                            serialize: netUpdateArr,
+                            entityId: _character.entity.id,
+                            page: _character.entity.page.index
+                        });
+
+                        netUpdateArr = [];
+                    }
                 });
             };
 
@@ -387,6 +453,7 @@ define(
                         }
                     }
 
+                    netSerializeEnabled = true;
                     return _character;
                 },
 
@@ -620,6 +687,15 @@ define(
                         interact(evt, data);
                     });
 
+                    player.registerHandler(CMD_RAND_HEALTH);
+                    player.handler(CMD_RAND_HEALTH).set((evt, data) => {
+
+                        const newHealth = parseInt(_character.stats.health.curMax * Math.random());
+                        _character.health = newHealth;
+
+                        player.respond(evt.id, true);
+                    });
+
 
                     player.registerHandler(CMD_HEAL);
                     player.handler(CMD_HEAL).set((evt, data) => {
@@ -756,6 +832,18 @@ define(
 
                     this.initialized = true;
 
+                },
+
+                netUpdate: (netUpdateArr) => {
+
+                    assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
+                    for (let i = 0; i < netUpdateArr.length; i += 2) {
+                        const propKey = netUpdateArr[i],
+                            propValue = netUpdateArr[i+1];
+
+                        assert(netIndices[propKey], `netUpdate received w/ propKey ${propKey} not included in indices list`);
+                        netIndices[propKey] = propValue;
+                    }
                 },
 
                 setToUser: () => {

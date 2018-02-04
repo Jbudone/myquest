@@ -48,7 +48,6 @@ define(['loggable'], (Loggable) => {
             });
 
             this.addOption("Full Heal", () => {
-                //The.UI.postMessage("LOL OPTIONED");
                 The.scripting.server.request(CMD_HEAL, {}
                 ).then((data) => {
                     The.UI.postMessage("Heal Command: Success");
@@ -58,6 +57,18 @@ define(['loggable'], (Loggable) => {
                 .catch(errorInGame);
 
                 The.UI.postMessage("FULLY HEAL REQUEST");
+            });
+
+            this.addOption("Set Random Health", () => {
+                The.scripting.server.request(CMD_RAND_HEALTH, {}
+                ).then((data) => {
+                    The.UI.postMessage("Random Health Command: Success");
+                }, (data) => {
+                    The.UI.postMessage("Random Health Command: Failed");
+                })
+                .catch(errorInGame);
+
+                The.UI.postMessage("SET RANDOM HEALTH REQUEST");
             });
         };
 
