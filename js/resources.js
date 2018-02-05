@@ -273,14 +273,21 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 						x: parseInt(_sheet.sheet_offset.x),
 						y: parseInt(_sheet.sheet_offset.y),
 					},
-					tileSize: {
-						width: parseInt(_sheet.tilesize),
-						height: parseInt(_sheet.tilesize),
-					},
 					image: ((Env.isServer||Env.isBot)? null : (new Image())),
-					tilesPerRow: parseInt(_sheet.columns),
 					data: { }
 				};
+
+                // Tilesheet specific
+                // TODO: Should separate tilesheets/spritesheets by type: ("tilesheet"|"spritesheet")
+                if (_sheet.tilesize)
+                {
+                    sheet.tileSize = {
+						width: parseInt(_sheet.tilesize),
+						height: parseInt(_sheet.tilesize),
+                    };
+
+                    sheet.tilesPerRow = parseInt(_sheet.columns);
+                }
 
 				if (_sheet.hasOwnProperty('gid')) {
 					sheet.gid = {
