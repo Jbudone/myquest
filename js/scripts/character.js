@@ -69,13 +69,6 @@ define(
                     });
                 }
 
-                if (shouldNetSerialize) {
-                    if (netIndices[propKey]) throw Err(`Added duplicated property: ${propKey}`);
-                    netIndices[propKey] = {
-                        obj, propName
-                    };
-                }
-
                 obj.props[propName] = initialValue;
                 Object.defineProperty(obj, propName, {
 
@@ -92,6 +85,14 @@ define(
                         }
                     },
                 });
+
+                if (shouldNetSerialize) {
+                    if (netIndices[propKey]) throw Err(`Added duplicated property: ${propKey}`);
+                    netIndices[propKey] = {
+                        obj,
+                        propName
+                    };
+                }
             };
 
 
@@ -126,6 +127,14 @@ define(
             this.loadStats = () => {
                 let addStat = (statName, stat) => {
 
+                    if (this.stats[statName]) {
+                        // We're reloading this stat
+                        this.stats[statName].max = stat;
+                        this.stats[statName].curMax = stat;
+                        this.stats[statName].cur = stat;
+                        return;
+                    }
+
                     const statIndexPrefix = 'N_' + statName.toUpperCase(),
                         statIndexCur      = `${statIndexPrefix}_CUR`,
                         statIndexMax      = `${statIndexPrefix}_MAX`,
@@ -141,7 +150,21 @@ define(
                     const stat = entity.npc.stats[statName];
                     addStat(statName, stat);
                 }
-            }
+            };
+
+            this.serializeStats = () => {
+
+                const stats = {};
+                for (const statName in this.stats.props) {
+                    stats[statName] = {
+                        cur: this.stats[statName].cur,
+                        max: this.stats[statName].max,
+                        curMax: this.stats[statName].curMax
+                    };
+                }
+
+                return stats;
+            };
 
             this.loadStats();
 
@@ -375,7 +398,7 @@ define(
                 }
 
                 _character.inventory = this.inventory.serialize();
-                _character.stats = _.cloneDeep(this.stats);
+                _character.stats = this.serializeStats();
 
                 return _character;
             };
@@ -440,17 +463,13 @@ define(
                             netSerializedComponent.name = component.name; // FIXME: THere's got to be a better way
                             _character.components.push(netSerializedComponent);
                         }
-                    }
 
-                    if (forOwner) {
-                        _character.stats = _.cloneDeep(this.stats);
+                        debugger;
+                        _character.stats = this.serializeStats();
                         console.log(this.stats);
                         console.log(_character.inventory);
 
-                        // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
-                        if (this.inventory) {
-                            _character.inventory = this.inventory.serialize();
-                        }
+                        _character.inventory = this.inventory.serialize();
                     }
 
                     netSerializeEnabled = true;
@@ -839,10 +858,12 @@ define(
                     assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
                     for (let i = 0; i < netUpdateArr.length; i += 2) {
                         const propKey = netUpdateArr[i],
-                            propValue = netUpdateArr[i+1];
+                            propValue = netUpdateArr[i+1],
+                            netIndex  = netIndices[propKey],
+                            propName  = netIndex.propName;
 
-                        assert(netIndices[propKey], `netUpdate received w/ propKey ${propKey} not included in indices list`);
-                        netIndices[propKey] = propValue;
+                        assert(netIndex, `netUpdate received w/ propKey ${propKey} not included in indices list`);
+                        netIndex.obj[propName] = propValue;
                     }
                 },
 
