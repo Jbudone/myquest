@@ -244,9 +244,9 @@ WORKING ON (was previously working on)
 	- Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
 	- BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
 	- Respawning/Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker); Also should pause renderer
-	- Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
 	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login. Currently using .initialization to prevent multiple reloads
 	- FIXME: Find a better name for charComponents on character. We can't use components since character is a script and depends on components (see scripts/game.js using components)
+	- Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
 	- Cleanup component serialization/restoring, currently its an array on character but object in db/netSerialize, and we have to find the component name by npc index. Overall gross and needs some cleanup
 	- FIXME: Cleanup server login control flow to create your character before sending you character info, that way we can netSerialize your character rather than send your serialized db state -- afterwards would be nice to remove netInitialize and use netRestore instead
 	- Look into async/defer scripts: https://bitsofco.de/async-vs-defer/
@@ -340,6 +340,11 @@ WORKING ON (was previously working on)
 	- /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
 	- ctrl+c kill not working; or resulting in bug in errorReport
 	- /teleport to another area
+    - Map Editor: Switch spawns from object layer to normal layer (easier for placement)
+    - Before crash, pop open debugger (also w/ test)
+    - FIXME: sheetedit get rid of tilesize and avatar setup/manipulation
+    - Clean resources (.new files, unused files, sprites, folder structure)
+    - netUpdate: Would need to reload character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
 
 
 	- Browser Debugging Snippets
