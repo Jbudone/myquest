@@ -285,48 +285,23 @@ WORKING ON (was previously working on)
 	  	- Async render (for new neighbours and buffer background)
 	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
 	    - CacheBuilder
-			- Compress: pre-compress assets/cache (brotli?) and allow native browser decompress -- use different compression for different types of assets
-			- Structure images/sounds/data/etc.
-{"name":"tiles","asset":"sprites/tilesheet.png","assetHash":"5411feee99c3eb34f8f304fc4117e86c","cache":"tilesheet.cache","cached":true,"encrypted":true}
-
 			  need: cached? encrypted? packed (image/sound) w/ coordinates (x/y? time? data json)? compressed (manually -- png -> webp)
-			  {
-			    name: nameOfAsset
-			    rawAsset: rawFile,
-				rawAssetHash: rawAssetHash,
-				asset: cachedFile, (including png -> webp)
-				assetHash: cachedFileHash,
-				type: [image|sound|data],
-				options: {
-				  cached: true, [must be loaded in binary for client; NOTE: png -> webp does not mean cached since we can directly open file]
-				  encrypted: true,
-				  packed: {
-				    [offset/bounds specific to type]
-				  },
-				  preprocess: "convert"
-				}
-		      }
-				2) pack
-				3) add images/icons
-				4) sounds + pack sounds 
 				5) assetHash
+			- Cache data files (data/json files)
 		    - Check for changes to cache options (stringify cache options -> hash -> compare to previous cacheOptionsHash)
 			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
 		- Client
 		  	- Works for headless (server/bot)
 			- Async (WebWorkers?)
-			- Decrypt
 			- Decompress
-			- Structure images/sounds/data/etc.
-			- Webstorage; check for changes
+			- Webstorage?
 		- Update git w/ cachefiles
-		- Asset: use name of asset; cache translates asset => raw file (cached or raw)
         - All PGP -- look into PGP for best solution + architecture for this
         - Look into filestreams and if fs.read/write or streams/pipes are better
-        - Images -> WebP
-        - Option for non-encrypted assets (in cache)
         - Compress (Brotli? Gzip?) + browser to auto ungzip; okay to use XHR request for automating this?
-        - Pack some sheets together; reference by cache file + offset + width/height
+        - Pack some sheets together; Pack sounds; reference by cache file + offset + width/height
+		  	- How can we handle this w/ static elements whose img src changes (eg. mute/unmute image changing on element). If we create copy of image initially + cache, then we have to make a copy of the image every time we want to change our element image. This copy is probably super inefficient since we're copying a new image every time?  Is the only option to have multiple images for each img src, and only switch out the visible image? Could be bad if we plan on having many dynamic icons popping up (eg. buffs over entities heads where we could have utilized an image element pool)
+			- Look into http2 changes which may make packing images pointless
     - BUG: Map Exporter: Adding avatar to base/sprite layer doesn't result in gid error (it should!); should confirm gid's so it doesn't result in a confusing error when starting up server
     - Bake Spritesheet: Add / Modify sheets.json (option)
     - Avatars no scale: scale all avatars up + adjust anims/sheet data/etc.  (NOTE: Browserquest spritesheets have various sized sheets, use those)
@@ -334,9 +309,8 @@ WORKING ON (was previously working on)
         - Fix avatar offset
         - Fix king (1 tile missing?)
     - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
-	- Consider crypto for cache. Not necessary, but kind of nice security..although it CANNOT be too slow, otherwise its not worth it
 	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
-    - game.chat player zones out, loses admin commands (locally only?)
+    - game.chat player zones out (or respawns), loses admin commands (locally only?)
 	- /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
 	- ctrl+c kill not working; or resulting in bug in errorReport
 	- /teleport to another area
@@ -344,7 +318,40 @@ WORKING ON (was previously working on)
     - Before crash, pop open debugger (also w/ test)
     - FIXME: sheetedit get rid of tilesize and avatar setup/manipulation
     - Clean resources (.new files, unused files, sprites, folder structure)
-    - netUpdate: Would need to reload character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
+	- Right click on entity; admin features enabled
+		- Improve appearance
+	  	- modify NPC stats (for this entity or ALL entities of this type)
+	- Server watch for json changes and autoreload those parts? (Specifically npc.json)
+	- Admin toolbelt
+	  	- Improve appearance + animation (hover buggy)
+		- Abstract where we add options (shouldn't be done within the toolbelt ui)
+		- Add admin commands on admin
+		- Command: Character template
+		- Command: Reset AI -- specfically remove yourself from enemy neuralnet
+    - game.chat commands: history of commands
+	- BUG: Regen from 10 -> 20 (doesn't increase?)
+	- BUG: Command to damage entity isn't immediately updating client UI healthbar
+	- Admin Commands: Abstract out of player
+	- Admin: Command Damage Entity: Should come from null source (currently we don't allow null source for either server/client)
+	- Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
+	- BUG: Reloading files (npcs): sometimes doesn't trigger; sometimes triggers multiple times for 1 change
+	- BUG: UI.unload -- removeEventListener requires cb to remove; maybe jquery to add/remove/manage events?
+	- Reloading npcs: need to update players w/ changes? -- need to netRestore changed characters OR trigger an event (similar to regen) w/ reloaded shiz
+	- netSerialize/Restore overhaul
+		- Temporarily turn off netSerialize for damage events
+		- Character components
+		- Owner only (separate netSerializeArr) -- only create this for players
+		- Initial character (ignore part of netRestore) -- send cursor pos (length of netSerializeArray), and only restore starting from that offset
+		- Specific getter/setter on stat types: owner only? cb?
+		- Client CB on change
+		- Early out for setter that doesn't actually change the value
+		- Move all necessary variables over to new system (NOTE: shouldn't do this for non-netVars since its unecessary overhead)
+		- Consider removing EVT_REGEN (can just use this system now)
+		- Only create netSerializeArr for server
+		- Initial netSerializeEnabled: shouldn't be in netSerialize (should be at end of initialize & after restoring from db)
+		- netSerialize only sends stats to owner; either send stats (only need to send if different from default) OR only netSerialize health for non-owners
+		- Look into character.stats usage elsewhere (to fix): db, buffs.statbuff, client/game, ui.stats
+        - LOOK INTO: Reloading character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
 
 
 	- Browser Debugging Snippets
