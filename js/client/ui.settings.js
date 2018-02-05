@@ -49,13 +49,41 @@ define(['loggable'], (Loggable) => {
                         FX.setVolume(this.settings.muted ? 0.0 : 1.0);
                         saveSettings();
 
-                        volumeImgEl.attr('src', `data/icons/${this.settings.muted ? "muted" : "unmuted"}.png`);
+                        if (this.settings.muted) {
+                            volumeMutedImgEl.removeClass('hidden');
+                            volumeUnmutedImgEl.addClass('hidden');
+                        } else {
+                            volumeUnmutedImgEl.removeClass('hidden');
+                            volumeMutedImgEl.addClass('hidden');
+                        }
+
                         return false;
-                    }),
-                volumeImgEl = $('<img/>')
-                    .attr('src', `data/icons/${this.settings.muted ? "muted" : "unmuted"}.png`)
-                    .addClass('settings-volume-img')
-                    .appendTo(volumeLinkEl);
+                    });
+
+            let volumeMutedImgEl, volumeUnmutedImgEl;
+
+            Resources.fetchImage('muted').then((img) => {
+                volumeMutedImgEl = $(img).clone()
+                                        .addClass('settings-volume-img')
+                                        .addClass('volume-muted')
+                                        .addClass('hidden')
+                                        .appendTo(volumeLinkEl);
+
+                if (this.settings.muted) {
+                    volumeMutedImgEl.removeClass('hidden');
+                }
+            });
+
+            Resources.fetchImage('unmuted').then((img) => {
+                volumeUnmutedImgEl = $(img).clone()
+                                            .addClass('settings-volume-img')
+                                            .addClass('volume-unmuted')
+                                            .appendTo(volumeLinkEl);
+
+                if (this.settings.muted) {
+                    volumeUnmutedImgEl.addClass('hidden');
+                }
+            });
         };
 
         this.step = () => { };

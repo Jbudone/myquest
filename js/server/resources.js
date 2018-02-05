@@ -1,5 +1,7 @@
 define(['fs'], function(fs){
 
+    const chokidar = require('chokidar');
+
 	var Resources={
 		fs: null,
 		_init: function(){
@@ -14,7 +16,13 @@ define(['fs'], function(fs){
 					}
 				});
 			});
-		},
+        }, watchFile: function(file, cb){
+
+            const watcher = chokidar.watch(file, { persistent: true });
+            watcher.on('change', (path, stats) => {
+                this.read(file).then(cb);
+            });
+        },
 	};
 
 	return Resources;

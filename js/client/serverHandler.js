@@ -60,6 +60,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                             if (evtType == EVT_ADDED_ENTITY) this.onEntityAdded( page, event.entity );
                             else if (evtType == EVT_REMOVED_ENTITY) this.onEntityRemoved( page, event.entity );
+                            else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
                             else if (evtType == EVT_ATTACKED) this.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount, event.data.health );
@@ -181,6 +182,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onZone                 = function(){};
         this.onEntityAdded          = function(){};
         this.onEntityRemoved        = function(){};
+        this.onEntityNetserialize   = function(){};
         this.onEntityPathProgress   = function(){};
         this.onEntityPathCancelled  = function(){};
         this.onEntityHurt           = function(){};

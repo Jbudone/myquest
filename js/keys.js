@@ -36,6 +36,7 @@ define(function(){
     // NOTE: keys from groups will not be added to keyStrings since those values are shared
     var addKeyGroup = function(group, items, options) {
 
+        keyStrings[group] = {};
         for (var i = 0; i < items.length; ++i) {
             let item = `${group}_${items[i]}`,
                 val = i;
@@ -46,6 +47,7 @@ define(function(){
 
             keys[item] = val;
             _global[item] = val;
+            keyStrings[group][val] = key;
         }
     };
 
@@ -123,6 +125,7 @@ define(function(){
 	addKey('EVT_INTERACT');
     addKey('EVT_ACTIVATE');
     addKey('EVT_DEACTIVATE');
+    addKey('EVT_NETSERIALIZE');
 
 
 	/// %%%%%%%%%%%%%%%%%%%%%
@@ -154,6 +157,9 @@ define(function(){
     addKey('CMD_ADMIN_CRASH');
     addKey('CMD_CRASH');
     addKey('CMD_TELEPORT');
+    addKey('CMD_DAMAGE_ENTITY');
+    addKey('CMD_HEAL');
+    addKey('CMD_RAND_HEALTH');
 
 	addKey('HOOK_INTO_MAP');
 
@@ -196,6 +202,14 @@ define(function(){
     addKey('EVT_BUFF_REMOVED_PRIVATE');
 
     addKey('EFFECT_BUFF');
+
+    addKeyGroup('N', [
+        'NULL',
+        'HEALTH_CUR', 'HEALTH_MAX', 'HEALTH_CURMAX',
+        'STR_CUR', 'STR_MAX', 'STR_CURMAX',
+        'CON_CUR', 'CON_MAX', 'CON_CURMAX',
+        'DEX_CUR', 'DEX_MAX', 'DEX_CURMAX'
+    ]);
 
 	return keys;
 });

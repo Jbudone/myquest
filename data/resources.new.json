@@ -1,16 +1,58 @@
 {
-    "cache": "cache.json",
-	"sheets": "sheets.json",
-	"avatars": "avatars.new.json",
-	"npcs": "npcs.new.json",
-	"world": "world.json",
-	"items": "items.new.json",
-	"buffs": "buffs.json",
-	"interactables": "interactables.new.json",
-    "quests": "quests.json",
-    "interactions": "interactions.json",
-	"scripts": "scripts.json",
-    "components": "components.json",
-    "rules": "rules.json",
-    "fx": "fx.json"
+    "cache": {
+        "file": "cache.json",
+        "options": {}
+    },
+	"sheets": {
+        "file": "sheets.json",
+        "options": {}
+    },
+	"avatars": {
+        "file": "avatars.new.json",
+        "options": {}
+    },
+	"npcs": {
+        "file": "npcs.new.json",
+        "options": { "reloadable": true }
+    },
+	"world": {
+        "file": "world.json",
+        "options": {}
+    },
+	"items": {
+        "file": "items.new.json",
+        "options": {}
+    },
+	"buffs": {
+        "file": "buffs.json",
+        "options": {}
+    },
+	"interactables": {
+        "file": "interactables.new.json",
+        "options": {}
+    },
+    "quests": {
+        "file": "quests.json",
+        "options": {}
+    },
+    "interactions": {
+        "file": "interactions.json",
+        "options": {}
+    },
+	"scripts": {
+        "file": "scripts.json",
+        "options": {}
+    },
+    "components": {
+        "file": "components.json",
+        "options": {}
+    },
+    "rules": {
+        "file": "rules.json",
+        "options": {}
+    },
+    "fx": {
+        "file": "fx.json",
+        "options": {}
+    }
 }

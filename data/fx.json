@@ -17,17 +17,18 @@
     "sfx": {
         "samples": {
             "playerHitA": {
-                "sound": "data/sounds/grunt.mp3",
+                "sound": "grunt",
                 "gain": 0.5
             },
             "playerHitB": {
-                "sound": "data/sounds/grunt.mp3"
+                "sound": "grunt"
             },
 			"uiClick": {
-				"sound": "data/sounds/uiclick.mp3"
+				"sound": "uiclick"
 			},
 			"bgMusic": {
-				"sound": "data/sounds/rivervale.mp4"
+				"sound": "rivervale",
+				"gain": 0.0
 			}
         },
 

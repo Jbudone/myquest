@@ -282,6 +282,20 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                     });
                                 });
 
+                                Resources.onAssetChanged((resourceID, asset) => {
+
+                                    Log(`I smell a change in an asset: ${resourceID}`);
+                                    if (resourceID === 'npcs') {
+                                        Log(`Reloading all npc's stats..`);
+                                        _.each(The.world.areas, (area) => {
+                                            _.each(area.movables, (movable) => {
+                                                if (movable.playerID) return;
+                                                movable.character.loadStats();
+                                            });
+                                        });
+                                    }
+                                });
+
                                 loaded('resources');
                             })
                             .catch((e) => {

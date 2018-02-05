@@ -45,6 +45,58 @@ define(
             // }  in script.js is that serialize() returns a value, and we'd need a way to merge the two returned values
 
 
+            // We send an initial netSerialize of the character's state to players, and then send updates/changes every
+            // frame. Each item that changes (raw data type) serializes a pair (propKey, newValue), where propKey is the
+            // key of the property that changed (synced key between server/client). We append all of these pairs in the
+            // array and flush the entire array during the movables update
+            let netUpdateArr = []; // Things that have changed since we last sent out an update
+
+            let netIndices = [];
+
+            // Are we currently serializing netVars? NOTE: We may want to turn this on/off if we plan to modify a
+            // variable and broadcast it through some other event
+            let netSerializeEnabled = false;
+            this.setNetSerializeEnabled = (enabled) => {
+                netSerializeEnabled = enabled;
+            };
+
+            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize) => {
+
+                if (!obj.props) {
+                    Object.defineProperty(obj, 'props', {
+                        enumerable: false,
+                        value: {}
+                    });
+                }
+
+                obj.props[propName] = initialValue;
+                Object.defineProperty(obj, propName, {
+
+                    "get": function() {
+                        return obj.props[propName];
+                    },
+
+                    "set": function(value) {
+                        obj.props[propName] = value;
+
+                        if (shouldNetSerialize && netSerializeEnabled) {
+                            netUpdateArr.push(propKey);
+                            netUpdateArr.push(value);
+                        }
+                    },
+                });
+
+                if (shouldNetSerialize) {
+                    if (netIndices[propKey]) throw Err(`Added duplicated property: ${propKey}`);
+                    netIndices[propKey] = {
+                        obj,
+                        propName
+                    };
+                }
+            };
+
+
+
 
             // FIXME: Scripts have a components property, should rename that to scriptComponents so that we can rename
             // this to components
@@ -72,21 +124,49 @@ define(
 
             // Setup stats from npc
             this.stats = {};
-
-            {
+            this.loadStats = () => {
                 let addStat = (statName, stat) => {
-                    this.stats[statName] = {
-                        cur: stat,
-                        curMax: stat,
-                        max: stat
-                    };
+
+                    if (this.stats[statName]) {
+                        // We're reloading this stat
+                        this.stats[statName].max = stat;
+                        this.stats[statName].curMax = stat;
+                        this.stats[statName].cur = stat;
+                        return;
+                    }
+
+                    const statIndexPrefix = 'N_' + statName.toUpperCase(),
+                        statIndexCur      = `${statIndexPrefix}_CUR`,
+                        statIndexMax      = `${statIndexPrefix}_MAX`,
+                        statIndexCurMax   = `${statIndexPrefix}_CURMAX`;
+
+                    this.addProperty(statName, N_NULL, this.stats, {}, false);
+                    this.addProperty('cur', global[statIndexCur], this.stats[statName], stat, true);
+                    this.addProperty('max', global[statIndexMax], this.stats[statName], stat, true);
+                    this.addProperty('curMax', global[statIndexCurMax], this.stats[statName], stat, true);
                 };
 
                 for (const statName in entity.npc.stats) {
                     const stat = entity.npc.stats[statName];
                     addStat(statName, stat);
                 }
-            }
+            };
+
+            this.serializeStats = () => {
+
+                const stats = {};
+                for (const statName in this.stats.props) {
+                    stats[statName] = {
+                        cur: this.stats[statName].cur,
+                        max: this.stats[statName].max,
+                        curMax: this.stats[statName].curMax
+                    };
+                }
+
+                return stats;
+            };
+
+            this.loadStats();
 
             Object.defineProperties(this, {
                 health: {
@@ -269,6 +349,17 @@ define(
                             this.charComponents[i].step(delta);
                         }
                     }
+
+                    if (netUpdateArr.length) {
+                        // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateArr
+                        this.entity.page.broadcast(EVT_NETSERIALIZE, {
+                            serialize: netUpdateArr,
+                            entityId: _character.entity.id,
+                            page: _character.entity.page.index
+                        });
+
+                        netUpdateArr = [];
+                    }
                 });
             };
 
@@ -307,7 +398,7 @@ define(
                 }
 
                 _character.inventory = this.inventory.serialize();
-                _character.stats = _.cloneDeep(this.stats);
+                _character.stats = this.serializeStats();
 
                 return _character;
             };
@@ -372,19 +463,16 @@ define(
                             netSerializedComponent.name = component.name; // FIXME: THere's got to be a better way
                             _character.components.push(netSerializedComponent);
                         }
-                    }
 
-                    // Serialize inventory if we have one (NOTE: NPCs don't have an inventory)
-                    if (this.inventory) {
+                        debugger;
+                        _character.stats = this.serializeStats();
+                        console.log(this.stats);
+                        console.log(_character.inventory);
+
                         _character.inventory = this.inventory.serialize();
                     }
 
-                    if (forOwner) {
-                        _character.stats = _.cloneDeep(this.stats);
-                        console.log(this.stats);
-                        console.log(_character.inventory);
-                    }
-
+                    netSerializeEnabled = true;
                     return _character;
                 },
 
@@ -618,6 +706,31 @@ define(
                         interact(evt, data);
                     });
 
+                    player.registerHandler(CMD_RAND_HEALTH);
+                    player.handler(CMD_RAND_HEALTH).set((evt, data) => {
+
+                        const newHealth = parseInt(_character.stats.health.curMax * Math.random());
+                        _character.health = newHealth;
+
+                        player.respond(evt.id, true);
+                    });
+
+
+                    player.registerHandler(CMD_HEAL);
+                    player.handler(CMD_HEAL).set((evt, data) => {
+
+                        const newHealth = _character.stats.health.curMax;
+                        _character.health = newHealth;
+
+                        // FIXME: There should be a better (more abstract) broadcast than regenerate
+                        _character.entity.page.broadcast(EVT_REGENERATE, {
+                            entityId: _character.entity.id,
+                            health: newHealth
+                        });
+
+                        player.respond(evt.id, true);
+                    });
+
                     this.restore(player._character);
                 }
             };
@@ -738,6 +851,20 @@ define(
 
                     this.initialized = true;
 
+                },
+
+                netUpdate: (netUpdateArr) => {
+
+                    assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
+                    for (let i = 0; i < netUpdateArr.length; i += 2) {
+                        const propKey = netUpdateArr[i],
+                            propValue = netUpdateArr[i+1],
+                            netIndex  = netIndices[propKey],
+                            propName  = netIndex.propName;
+
+                        assert(netIndex, `netUpdate received w/ propKey ${propKey} not included in indices list`);
+                        netIndex.obj[propName] = propValue;
+                    }
                 },
 
                 setToUser: () => {
