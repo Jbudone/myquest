@@ -84,7 +84,7 @@ define(
                     if (npage) this.pages[npage.index] = npage;
                 }
 
-                this.movable.addEventListener(EVT_ADMIN_TELEPORT, this, (entity, pageId, tile) => {
+                this.movable.addEventListener(EVT_TELEPORT, this, (entity, pageId, tile) => {
 
                     // Let player know that they've successfully teleported, and allow them to prepare for EVT_ZONE
                     // information that will come next
@@ -637,8 +637,8 @@ define(
                 }
 
                 if (err) {
-                    this.Log("Disallowing user attack", LOG_ERROR);
-                    player.respond(evt.id, false, {
+                    this.Log(`Disallowing user attack: ${err}`, LOG_ERROR);
+                    this.respond(evt.id, false, {
                         reason: err
                     });
                     return;
@@ -646,15 +646,15 @@ define(
 
                 // FIXME: Avoid saying that the damage came from this player (currently damage must come from a source
                 // on both server/client)
-                target.character.hurt(data.amount, character);
+                target.character.hurt(data.amount, null);
 
                 // Broadcast attack
-                target.page.broadcast(EVT_ATTACKED, {
-                    entity: { page: this.movable.page.index, id: this.movable.id },
-                    target: { page: target.page.index, id: data.id },
-                    amount: data.amount,
-                    health: target.character.health
-                });
+                //target.page.broadcast(EVT_ATTACKED, {
+                //    entity: { page: this.movable.page.index, id: this.movable.id },
+                //    target: { page: target.page.index, id: data.id },
+                //    amount: data.amount,
+                //    health: target.character.health
+                //});
 
                 this.respond(evt.id, true);
             });
