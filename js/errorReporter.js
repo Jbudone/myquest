@@ -197,9 +197,9 @@ define(() => {
                     console.log("");
                 }
 
-                console.log("");
 
             }
+            console.log("");
 
             /*
             console.error(e.stack);
