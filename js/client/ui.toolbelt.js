@@ -10,38 +10,14 @@ define(['loggable'], (Loggable) => {
 
             const toolbeltBtnEl = $('<div/>')
                     .attr('id', 'toolbelt-btn')
-                    .appendTo(uiToolbelt),
+                    .prependTo(uiToolbelt),
                 toolbeltLinkEl = $('<a/>')
                     .attr('href', '#')
                     .attr('id', 'toolbelt-link')
                     .appendTo(toolbeltBtnEl)
-                    .hover(() => {
-
-                        toolbeltEl.removeClass('hidden');
-                        toolbeltContainerEl.addClass('display');
-
-                        const left = toolbeltBtnEl.offset().left,
-                            top = toolbeltBtnEl.offset().top - 200; //$(toolbeltEl).height();
-                        toolbeltEl.offset({ left: left, top: top });
-                    }, () => {
-                        toolbeltEl.addClass('hidden');
-                        toolbeltContainerEl.removeClass('display');
-                    })
                     .click(() => { return false; });
 
-            const toolbeltEl = $('#toolbelt')
-                    .addClass('hidden')
-                    .hover((e) => {
-                        toolbeltEl.removeClass('hidden');
-                        toolbeltContainerEl.addClass('display');
-                        e.stopPropagation();
-                    }, (e) => {
-                        toolbeltEl.addClass('hidden');
-                        toolbeltContainerEl.removeClass('display');
-                        e.stopPropagation();
-                    });
-
-            Resources.fetchImage('muted').then((img) => {
+            Resources.fetchImage('toolbelt').then((img) => {
                 toolbeltImgEl = $(img).clone()
                                     .attr('id', 'toolbelt-img')
                                     .appendTo(toolbeltLinkEl);
