@@ -33,7 +33,7 @@ define(['loggable'], (Loggable) => {
             charStats = The.player.character.stats;
 
             // How many slots do we have? Check and add a canvas for each slot
-            for (const statName in charStats) {
+            for (const statName in charStats.props) {
                 const stat = charStats[statName];
                 const uiStat = $('<div/>')
                     .addClass('ui-stats-stat')
@@ -93,7 +93,7 @@ define(['loggable'], (Loggable) => {
 
         this.reloadStats = () => {
 
-            assert(charStats !== The.player.character.stats, "We're reloading the UI Stats without even having a new character");
+            assert(charStats !== The.player.character.stats.props, "We're reloading the UI Stats without even having a new character");
 
             charStats = The.player.character.stats;
 
