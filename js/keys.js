@@ -155,11 +155,11 @@ define(function(){
     addKey('CMD_ADMIN_SUICIDE');
     addKey('CMD_ADMIN_GIVE_BUFF');
     addKey('CMD_ADMIN_CRASH');
+    addKey('CMD_ADMIN_HEAL');
+    addKey('CMD_ADMIN_RAND_HEALTH');
+    addKey('CMD_ADMIN_DAMAGE_ENTITY');
+    addKey('CMD_ADMIN_TELEPORT');
     addKey('CMD_CRASH');
-    addKey('CMD_TELEPORT');
-    addKey('CMD_DAMAGE_ENTITY');
-    addKey('CMD_HEAL');
-    addKey('CMD_RAND_HEALTH');
 
 	addKey('HOOK_INTO_MAP');
 

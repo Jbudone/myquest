@@ -459,6 +459,19 @@ input.error {
 
 #character-bar {
 	display: flex;
+	justify-content: space-between;
+}
+
+.character-bar-start {
+	display: flex;
+}
+
+.character-bar-center {
+	display: flex;
+}
+
+.character-bar-end {
+	display: flex;
 }
 
 /* === UI Effects === */
@@ -521,6 +534,7 @@ input.error {
 #ui-stats {
 	display: flex;
     flex-direction: column;
+	margin: 0px 20px;
 }
 
 .ui-stats-stat {
@@ -679,6 +693,7 @@ input.error {
 	width: 200px;
 	position: absolute;
 	top: 0px;
+	right: -40px;
 	height: 0px;
 	overflow: hidden;
 	opacity: 0;

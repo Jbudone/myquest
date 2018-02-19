@@ -84,7 +84,7 @@ define(
                     if (npage) this.pages[npage.index] = npage;
                 }
 
-                this.movable.addEventListener(EVT_TELEPORT, this, (entity, pageId, tile) => {
+                this.movable.addEventListener(EVT_ADMIN_TELEPORT, this, (entity, pageId, tile) => {
 
                     // Let player know that they've successfully teleported, and allow them to prepare for EVT_ZONE
                     // information that will come next
@@ -615,8 +615,8 @@ define(
             };
 
             // FIXME: Abstract this to admin commands
-            this.registerHandler(CMD_DAMAGE_ENTITY);
-            this.handler(CMD_DAMAGE_ENTITY).set((evt, data) => {
+            this.registerHandler(CMD_ADMIN_DAMAGE_ENTITY);
+            this.handler(CMD_ADMIN_DAMAGE_ENTITY).set((evt, data) => {
                 console.log("PLAYER REQUEST TO DAMAGE ENTITY");
                 console.log(evt);
                 console.log(data);

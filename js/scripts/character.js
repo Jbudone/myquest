@@ -706,8 +706,8 @@ define(
                         interact(evt, data);
                     });
 
-                    player.registerHandler(CMD_RAND_HEALTH);
-                    player.handler(CMD_RAND_HEALTH).set((evt, data) => {
+                    player.registerHandler(CMD_ADMIN_RAND_HEALTH);
+                    player.handler(CMD_ADMIN_RAND_HEALTH).set((evt, data) => {
 
                         const newHealth = parseInt(_character.stats.health.curMax * Math.random());
                         _character.health = newHealth;
@@ -716,8 +716,8 @@ define(
                     });
 
 
-                    player.registerHandler(CMD_HEAL);
-                    player.handler(CMD_HEAL).set((evt, data) => {
+                    player.registerHandler(CMD_ADMIN_HEAL);
+                    player.handler(CMD_ADMIN_HEAL).set((evt, data) => {
 
                         const newHealth = _character.stats.health.curMax;
                         _character.health = newHealth;

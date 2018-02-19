@@ -181,7 +181,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
         },
         {
             typedCommand: 'teleport',
-            command: CMD_TELEPORT,
+            command: CMD_ADMIN_TELEPORT,
             requiresAdmin: true,
             args: [
                 {

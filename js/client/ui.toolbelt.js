@@ -24,7 +24,7 @@ define(['loggable'], (Loggable) => {
             });
 
             this.addOption("Full Heal", () => {
-                The.scripting.server.request(CMD_HEAL, {}
+                The.scripting.server.request(CMD_ADMIN_HEAL, {}
                 ).then((data) => {
                     The.UI.postMessage("Heal Command: Success");
                 }, (data) => {
@@ -36,7 +36,7 @@ define(['loggable'], (Loggable) => {
             });
 
             this.addOption("Set Random Health", () => {
-                The.scripting.server.request(CMD_RAND_HEALTH, {}
+                The.scripting.server.request(CMD_ADMIN_RAND_HEALTH, {}
                 ).then((data) => {
                     The.UI.postMessage("Random Health Command: Success");
                 }, (data) => {
@@ -45,6 +45,17 @@ define(['loggable'], (Loggable) => {
                 .catch(errorInGame);
 
                 The.UI.postMessage("SET RANDOM HEALTH REQUEST");
+            });
+
+            this.addOption("Buff Me", () => {
+                The.scripting.server.request(CMD_ADMIN_GIVE_BUFF, {
+                    buffres: "DeathSickness"
+                }).then((data) => {
+                    The.UI.postMessage("Give Buff Command: Success");
+                }, (data) => {
+                    The.UI.postMessage("Give Buff Command: Failed");
+                })
+                .catch(errorInGame);
             });
         };
 

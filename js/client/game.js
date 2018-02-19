@@ -266,9 +266,9 @@ define(
                     }, true);
 
                     ui.entityMenu.addOption('Damage Entity', (entity) => {
-                        server.makeRequest(CMD_DAMAGE_ENTITY, {
+                        server.makeRequest(CMD_ADMIN_DAMAGE_ENTITY, {
                             id: entity.id,
-                            amount: 2000
+                            amount: 20
                         }).then((data) => {
                             ui.postMessage("Damage Entity Command: Success");
                         }, (data) => {
