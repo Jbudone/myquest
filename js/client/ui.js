@@ -513,7 +513,7 @@ define(
                         this.hideMovable(entity);
                     }
                 },
-                hurt = () => {
+                healthChanged = () => {
                     if (!movableDetails.attached) return; // event leftover from before entity was cleared
                     movableDetails.ui.update();
                 };
@@ -522,7 +522,7 @@ define(
                     entity,
                     attached: true,
                     ui: new this.components.MovableUI(entity),
-                    interface: { remove, hurt }
+                    interface: { remove, healthChanged }
                 };
                 const movableDetails = this.movables[entity.id];
                 entity.ui = movableDetails.interface;
@@ -537,11 +537,6 @@ define(
                 });
 
                 this.listenTo(entity, EVT_MOVING_TO_NEW_TILE, (entity) => {
-                    if (!movableDetails.attached) return; // event leftover from before entity was cleared
-                    movableDetails.ui.update();
-                });
-
-                this.listenTo(entity, EVT_ATTACKED, (entity) => {
                     if (!movableDetails.attached) return; // event leftover from before entity was cleared
                     movableDetails.ui.update();
                 });

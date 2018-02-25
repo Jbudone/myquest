@@ -60,7 +60,7 @@ define(
                 netSerializeEnabled = enabled;
             };
 
-            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize) => {
+            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback) => {
 
                 if (!obj.props) {
                     Object.defineProperty(obj, 'props', {
@@ -76,14 +76,35 @@ define(
                         return obj.props[propName];
                     },
 
-                    "set": function(value) {
-                        obj.props[propName] = value;
+                    "set": (shouldNetSerialize ? 
+                              (callback ?                         
+                                function(value) {
+                                    const oldVal = obj.props[propName];
+                                    obj.props[propName] = value;
+                                    callback(oldVal, value);
 
-                        if (shouldNetSerialize && netSerializeEnabled) {
-                            netUpdateArr.push(propKey);
-                            netUpdateArr.push(value);
-                        }
-                    },
+                                    if (netSerializeEnabled) {
+                                        netUpdateArr.push(propKey);
+                                        netUpdateArr.push(value);
+                                    }
+                                } :
+                                function(value) {
+                                    obj.props[propName] = value;
+
+                                    if (netSerializeEnabled) {
+                                        netUpdateArr.push(propKey);
+                                        netUpdateArr.push(value);
+                                    }
+                                }) :
+                              (callback ?
+                                function(value) {
+                                    const oldVal = obj.props[propName];
+                                    obj.props[propName] = value;
+                                    callback(oldVal, value);
+                                } :
+                                function(value) {
+                                    obj.props[propName] = value;
+                                }))
                 });
 
                 if (shouldNetSerialize) {
@@ -121,11 +142,24 @@ define(
             this.isPlayer = (entity.playerID ? true : false);
             this.delta = 0;
 
+            this.registerHook('healthChanged');
+            this.onHealthChanged = (oldVal, newVal) => {
+                if (!this.doHook('healthChanged').pre()) return;
+
+                if (!Env.isServer) {
+                    if (this.entity.ui) {
+                        this.entity.ui.healthChanged();
+                    }
+                }
+
+                this.doHook('healthChanged').post();
+            };
+
 
             // Setup stats from npc
             this.stats = {};
             this.loadStats = () => {
-                let addStat = (statName, stat) => {
+                let addStat = (statName, stat, cbCur, cbMax, cbCurMax) => {
 
                     if (this.stats[statName]) {
                         // We're reloading this stat
@@ -141,14 +175,19 @@ define(
                         statIndexCurMax   = `${statIndexPrefix}_CURMAX`;
 
                     this.addProperty(statName, N_NULL, this.stats, {}, false);
-                    this.addProperty('cur', global[statIndexCur], this.stats[statName], stat, true);
-                    this.addProperty('max', global[statIndexMax], this.stats[statName], stat, true);
-                    this.addProperty('curMax', global[statIndexCurMax], this.stats[statName], stat, true);
+                    this.addProperty('cur', global[statIndexCur], this.stats[statName], stat, true, cbCur);
+                    this.addProperty('max', global[statIndexMax], this.stats[statName], stat, true, cbMax);
+                    this.addProperty('curMax', global[statIndexCurMax], this.stats[statName], stat, true, cbCurMax);
                 };
 
                 for (const statName in entity.npc.stats) {
                     const stat = entity.npc.stats[statName];
-                    addStat(statName, stat);
+
+                    if (!Env.isServer && statName == 'health') {
+                        addStat(statName, stat, this.onHealthChanged, null, null);
+                    } else {
+                        addStat(statName, stat);
+                    }
                 }
             };
 
@@ -189,35 +228,36 @@ define(
                 };
             }
 
-            // Get hurt by some amount, and possibly by somebody
-            this.registerHook('hurt');
-            this.hurt = (amount, from, health) => {
-                if (!this.doHook('hurt').pre()) return;
+            // Get damaged by some amount, and possibly by somebody
+            this.registerHook('damaged');
+            this.damage = (amount, from, damageData) => {
+                assert(Env.isServer, "Damage is handled on server; client should simply react to EVT_DAMAGED, and update from netUpdate health");
+
+                if (!this.doHook('damaged').pre()) return;
 
                 // Server side only needs to provide the amount of damage
                 // NOTE: health is provided for client side in case of any inconsistencies
-                if (_.isUndefined(health)) {
-                    this.health -= amount;
-                } else {
-                    assert(!Env.isServer, "Unexpected setting health on server");
-                    this.health = health;
-                }
+                this.health -= amount;
 
                 this.Log(`Just a scratch.. ${this.health} / ${this.stats.health.curMax}   (${amount} dmg)`, LOG_DEBUG);
-                this.triggerEvent(EVT_ATTACKED, from, amount);
 
-                if (!Env.isServer) {
-                    if (this.entity.ui) {
-                        this.entity.ui.hurt();
-                    }
+                this.triggerEvent(EVT_DAMAGED, from, amount);
+
+                if (from) {
+                    damageData.attackerEntity = { page: from.entity.page.index, id: from.entity.id };
                 }
+
+                damageData.damagedEntity = { page: this.entity.page.index, id: this.entity.id };
+                damageData.amount = amount;
+
+                this.entity.page.broadcast(EVT_DAMAGED, damageData);
 
                 if (this.health <= 0) {
                     this.die(from);
-                    return; // do not post hurt since we've died
+                    return; // do not post damaged since we've died
                 }
 
-                this.doHook('hurt').post();
+                this.doHook('damaged').post();
             };
 
             this.registerHook('die');
@@ -231,6 +271,18 @@ define(
                 this.respawnTime = this.entity.npc.spawn;
                 this.brain.die();
                 this.triggerEvent(EVT_DIED);
+
+                if (Env.isServer) {
+                    const deathData = {
+                        entity: { page: this.entity.page.index, id: this.entity.id }
+                    };
+
+                    if (advocate) {
+                        deathData.advocate = advocate.id;
+                    }
+
+                    this.entity.page.broadcast(EVT_DIED, deathData);
+                }
 
                 this.doHook('die').post({
                     advocate: advocate
@@ -831,8 +883,6 @@ define(
                 // We should fix the server login flow to create your character before sending your character to you,
                 // which allows the server to netSerialize your character
                 netInitialize: (_character) => {
-
-                    this.health = _character.health;
 
                     this.inventory = new Inventory(this, _character.inventory);
 

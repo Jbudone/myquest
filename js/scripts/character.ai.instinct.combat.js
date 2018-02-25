@@ -539,19 +539,26 @@ define(
                     }
 
                     // TODO: upstream to listen to character
-                    _script.listenTo(_character, EVT_ATTACKED).after((_character, enemy, amount) => {
+                    _script.listenTo(_character, EVT_DAMAGED).after((_character, enemy, amount) => {
+
+                        if (!enemy) {
+                            this.Log("Where did that damage come from?!");
+                            return;
+                        }
 
                         if (this.distractedTime && this.distractedTime > Date.now()) {
                             this.Log("Nope! I'm just going to ignore it..");
                             return;
                         }
 
-                        this.attackedBy(enemy, amount);
+                        if (enemy) {
+                            this.attackedBy(enemy, amount);
 
-                        if (_character.isPlayer) {
-                            this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
-                        } else {
-                            this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
+                            if (_character.isPlayer) {
+                                this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
+                            } else {
+                                this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
+                            }
                         }
                     });
 
@@ -674,7 +681,12 @@ define(
                     this.setStrategy('strategy.player.basic_melee');
 
                     // TODO: upstream from characer
-                    _script.listenTo(_character, EVT_ATTACKED).after((_character, enemy, amount) => {
+                    _script.listenTo(_character, EVT_DAMAGED).after((_character, enemy, amount) => {
+
+                        if (!enemy) {
+                            this.Log("Where did that damage come from?!");
+                            return;
+                        }
 
                         if (this.distractedTime && this.distractedTime > Date.now()) {
                             this.Log("Nope! I'm just going to ignore it..");

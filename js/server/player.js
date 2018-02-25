@@ -405,15 +405,6 @@ define(
                 this.movable.unload();
             };
 
-            this.attackTarget = (targetID) => {
-                this.Log(`Player requesting to attack entity [${targetID}]..`, LOG_DEBUG);
-                const target = this.movable.page.movables[targetID];
-                if (target && target.playerID) {
-                    return; // NO player killing!
-                }
-                this.movable.triggerEvent(EVT_AGGRO, this.movable.page.area.movables[targetID]);
-            };
-
             this.wantToDisconnect = () => {
                 this.queuedDisconnect = true;
                 this.timeToDisconnect = Env.game.disconnecting.waitTimeToDisconnect;
@@ -617,9 +608,6 @@ define(
             // FIXME: Abstract this to admin commands
             this.registerHandler(CMD_ADMIN_DAMAGE_ENTITY);
             this.handler(CMD_ADMIN_DAMAGE_ENTITY).set((evt, data) => {
-                console.log("PLAYER REQUEST TO DAMAGE ENTITY");
-                console.log(evt);
-                console.log(data);
 
                 const character = this.movable.character,
                     area        = this.movable.page.area,
@@ -644,17 +632,7 @@ define(
                     return;
                 }
 
-                // FIXME: Avoid saying that the damage came from this player (currently damage must come from a source
-                // on both server/client)
-                target.character.hurt(data.amount, null);
-
-                // Broadcast attack
-                //target.page.broadcast(EVT_ATTACKED, {
-                //    entity: { page: this.movable.page.index, id: this.movable.id },
-                //    target: { page: target.page.index, id: data.id },
-                //    amount: data.amount,
-                //    health: target.character.health
-                //});
+                target.character.damage(data.amount, null, {});
 
                 this.respond(evt.id, true);
             });

@@ -38,16 +38,7 @@ define(
                     const DAMAGE = 10;
                     this.Log(` I TOTALLY SCRATCHED YOU FOR ${DAMAGE}`, LOG_DEBUG);
 
-                    target.hurt(DAMAGE, character);
-
-                    // Broadcast attack
-                    // TODO: Where to get _character? This.Log? Is this already fetched from Ability? It should be..
-                    character.entity.page.broadcast(EVT_ATTACKED, {
-                        entity: { page: target.entity.page.index, id: target.entity.id },
-                        target: { page: character.entity.page.index, id: character.entity.id },
-                        amount: DAMAGE,
-                        health: target.health
-                    });
+                    target.damage(DAMAGE, character, {});
 
                     return true;
                 }

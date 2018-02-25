@@ -511,9 +511,6 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         } else if (action.evtType === EVT_DISCONNECTED) {
 
                                             you.wantToDisconnect();
-                                        } else if (action.evtType === EVT_ATTACKED) {
-
-                                            you.attackTarget(action.data.id);
                                         } else if (action.evtType === EVT_DISTRACTED) {
                                             // TODO: need to confirm same as current target?
                                             // you.player.brain.setTarget(null);

@@ -1044,48 +1044,19 @@ define(
                         The.area.checkEntityZoned(entity);
                     };
 
-                    // Entity Hurt
-                    // Entity took some damage from something
-                    server.onEntityHurt = (page, hurtEntity, targetEntity, amount, health) => {
+                    server.onEntityDied = (page, data) => {
 
-                        assert(!_.isNaN(hurtEntity.id), `Expected valid entity id: ${hurtEntity.id}`);
-                        assert(!_.isNaN(targetEntity.id), `Expected valid entity id: ${targetEntity.id}`);
+                        const entity = data.entity,
+                            advocate = data.advocate;
 
-                        this.Log(`Entity ${hurtEntity.id} hurt by ${targetEntity.id}`, LOG_DEBUG);
+                        assert(!_.isNaN(entity.id), `Expected valid entity id: ${entity.id}`);
 
-                        // Get the entity and target
-                        // NOTE: We could receive this event if the target or instigator are not in our line of sight.
-                        const entity = The.area.movables[hurtEntity.id],
-                            target   = The.area.movables[targetEntity.id];
+                        this.Log(`Entity ${entity.id} died`, LOG_DEBUG);
 
-                        // TODO: We should still damage the target if he's in our line of sight but the instigator isn't
-                        if (entity && target) {
+                        const deadEntity = The.area.movables[entity.id];
 
-                            // TODO: We should abstract this to the UI
-                            let styleType = MESSAGE_INFO;
-                            if (target === The.player) {
-                                styleType = MESSAGE_GOOD;
-                            } else if (entity === The.player) {
-                                styleType = MESSAGE_BAD;
-                            }
+                        deadEntity.character.die(advocate);
 
-                            FX.event('attacked', target, { amount });
-                            FX.event('hurt', entity, { amount, health });
-
-                            ui.postMessage(`${target.npc.name} attacked ${entity.npc.name} for ${amount} damage (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
-
-                            const direction = target.directionOfTarget(entity);
-                            target.sprite.dirAnimate('atk', direction);
-
-                            entity.character.hurt(amount, target.character, health);
-
-                            // Is this a ranged attack? Spawn a projectile
-                            // FIXME: Find a better way to fetch ranged flag and projectile id
-                            if (target.npc.attackInfo.ability === "range") {
-                                const projectileSprite = 1960;
-                                The.renderer.addProjectile(target, entity, projectileSprite);
-                            }
-                        }
                     };
 
                     // TODO: We should abstract this to UI
@@ -1094,6 +1065,65 @@ define(
                         ui.pause();
                         renderer.pause();
                     });
+
+                    // Entity Damaged
+                    // Entity took some damage
+                    // NOTE: Health change is handled in netUpdate (health netvar), onEntityDamaged is used for handling
+                    // effects/animations/messages/etc. to react to the damage (includes damage amount and damage
+                    // source)
+                    server.onEntityDamaged = (page, data) => {
+
+                        const attackerEntity = data.attackerEntity,
+                            damagedEntity    = data.damagedEntity,
+                            amount           = data.amount;
+
+                        assert(!attackerEntity || !_.isNaN(attackerEntity.id), `Expected valid entity id: ${attackerEntity ? attackerEntity.id : 0}`);
+                        assert(!_.isNaN(damagedEntity.id), `Expected valid entity id: ${damagedEntity.id}`);
+
+                        this.Log(`Entity ${damagedEntity.id} damaged by ${attackerEntity ? attackerEntity.id : "null source"}`, LOG_DEBUG);
+
+                        const entity = The.area.movables[damagedEntity.id];
+                        let attacker = null;
+
+                        // This damage could come from a null source
+                        if (attackerEntity) {
+
+                            // NOTE: We could receive this event if the target or instigator are not in our line of sight.
+                            attacker = The.area.movables[attackerEntity.id];
+                            if (attacker) {
+                                FX.event('attacked', attacker, { amount });
+
+                                const direction = attacker.directionOfTarget(entity);
+                                attacker.sprite.dirAnimate('atk', direction);
+
+                                // Is this a ranged attack? Spawn a projectile
+                                // FIXME: Find a better way to fetch ranged flag and projectile id
+                                if (attacker.npc.attackInfo.ability === "range") {
+                                    const projectileSprite = 1960;
+                                    The.renderer.addProjectile(attacker, entity, projectileSprite);
+                                }
+                            }
+                        }
+
+
+                        // TODO: We should abstract this to the UI
+                        let styleType = MESSAGE_INFO;
+                        if (attacker === The.player) {
+                            styleType = MESSAGE_GOOD;
+                        } else if (entity === The.player) {
+                            styleType = MESSAGE_BAD;
+                        }
+
+                        const health = entity.health;
+
+                        FX.event('damaged', entity, { amount, health });
+
+                        if (attackerEntity) {
+                            ui.postMessage(`${attacker.npc.name} attacked ${entity.npc.name} for ${amount} damage (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
+                        } else {
+                            ui.postMessage(`${entity.npc.name} damaged for ${amount} by a null source (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
+                        }
+                    };
 
                     // Page Zoning
                     // This occurs when we enter another page

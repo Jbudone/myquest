@@ -63,7 +63,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
-                            else if (evtType == EVT_ATTACKED) this.onEntityHurt( page, event.data.entity, event.data.target, event.data.amount, event.data.health );
+                            else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
+                            else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
                             else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
                             else {
                                 const dynamicHandler = this.handler(evtType);
@@ -185,7 +186,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityNetserialize   = function(){};
         this.onEntityPathProgress   = function(){};
         this.onEntityPathCancelled  = function(){};
-        this.onEntityHurt           = function(){};
+        this.onEntityDamaged        = function(){};
+        this.onEntityDied           = function(){};
         this.onFinishedMoving       = function(){}; // TODO: is this one necessary?
         this.onEntityTeleport       = function(){};
         this.onTeleported           = function(){};
@@ -206,12 +208,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.requestArea = () => {
             this.Log("Requesting current area from server");
             const event = new Event((++this.requestsId), EVT_REQUEST_MAP, null, null);
-            return this.request(event);
-        };
-
-        this.attackEntity = (entity) => {
-            this.Log(`Sending attack request [${entity.id}]..`, LOG_DEBUG);
-            const event = new Event((++this.requestsId), EVT_ATTACKED, { id:entity.id });
             return this.request(event);
         };
 

@@ -266,18 +266,10 @@ define(['SCRIPTINJECT', 'scripts/character', 'scripts/character.ai.ability', 'lo
                 // TODO: Abstract damage
                 const DAMAGE = 20;
 
-                target.hurt(DAMAGE, character);
-                this.Log(" I SHOT YOU FOR " + DAMAGE);
-
-                // Broadcast attack
-                // TODO: Where to get _character? This.Log? Is this already fetched from Ability? It should be..
-                character.entity.page.broadcast(EVT_ATTACKED, {
-                    entity: { page: target.entity.page.index, id: target.entity.id },
-                    target: { page: character.entity.page.index, id: character.entity.id },
-                    amount: DAMAGE,
-                    health: target.health,
+                target.damage(DAMAGE, character, {
                     projectile: true // FIXME: Abstract the projectile type
                 });
+                this.Log(" I SHOT YOU FOR " + DAMAGE);
 
                 return true;
             }

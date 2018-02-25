@@ -100,13 +100,11 @@ define(function(){
 	addKey('EVT_DISCONNECTED');
 	addKey('EVT_ZONE_OUT');
 
-	addKey('EVT_ATTACKED');
+	addKey('EVT_DAMAGED');
 	addKey('EVT_REROUTING');
 	addKey('EVT_DIED');
 	addKey('EVT_NEW_TARGET');
-	addKey('EVT_ATTACKED_ENTITY');
 	addKey('EVT_REMOVED_TARGET');
-	addKey('EVT_AGGRO');
 	addKey('EVT_NEW_CHARACTER');
 	addKey('EVT_DISTRACTED');
 	addKey('EVT_TARGET_ZONED_OUT');
