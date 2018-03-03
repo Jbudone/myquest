@@ -19,6 +19,14 @@ requirejs.config({
 // the investigation
 let shutdownGame = null,
     shuttingDown = false;
+
+const waitForInspector = () => {
+
+    const inspector = require('inspector');
+    inspector.open(9229, "127.0.0.1", true); // port, host, block
+    debugger;
+};
+
 const errorInGame = (e) => {
 
     if (shuttingDown) {
@@ -58,6 +66,7 @@ const errorInGame = (e) => {
         shutdownGame(e);
     }
 
+    waitForInspector();
     process.exit(e);
 };
 
@@ -377,6 +386,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 Log("Closing Redis connection");
                                 redis.disconnect();
+
+                                Log("Waiting for inspector");
+                                waitForInspector();
 
                                 Log("Closing server. Goodbye, World!");
                                 process.exit();
