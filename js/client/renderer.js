@@ -231,8 +231,11 @@ define(['loggable'], (Loggable) => {
                 // TODO: Could probably async this
                 for (let i = 0; i < expiredPoolPages.length; ++i) {
 
-                    if (!expiredPoolPages[i].page) continue;
-                    let pageBg = expiredPoolPages[i];
+                    const pageBg = expiredPoolPages[i];
+                    if (!expiredPoolPages[i].page) {
+                        pageBg.canvasCtx.clearRect(0, 0, pageBg.canvasEl.width, pageBg.canvasEl.height);
+                        continue;
+                    }
 
                     this.renderPageStatic(pageBg, pageBg.page, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
                 }
@@ -356,17 +359,17 @@ define(['loggable'], (Loggable) => {
                         // Pooled bg canvases in grid
                         // NOTE: Some of these may be null (either we've zoned locally before zoning remotely, so we don't have those pages, OR we've reach the edge of the map)
                         const orderedPages = [
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['northwest']),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['north']),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['northeast']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['northwest']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['north']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['northeast']),
 
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['west']),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['east']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['west']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['east']),
 
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['southwest']),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['south']),
-                            this.canvasBackgroundPool.find((el) => el.page === this.area.curPage.neighbours['southeast'])
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['southwest']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['south']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['southeast'])
                         ];
 
 
@@ -396,8 +399,8 @@ define(['loggable'], (Loggable) => {
                 // Translate the background canvas so that the center of the background covers the center of the
                 // entities canvas. Entities are being positioned via. CSS, so lets just steal its offset, and then
                 // offset to the position within the background
-                entitiesOffset = $('#entities').offset();
                 if (Env.renderer.pooledPagesCopyImageData) {
+                    const entitiesOffset = $('#entities').offset();
                     $('#background').offset({ left: entitiesOffset.left + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: entitiesOffset.top + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
                 } else {
                     let curPageBg = null;
@@ -606,8 +609,8 @@ define(['loggable'], (Loggable) => {
                         scale        = Env.tileScale,
                         offsetY      = The.camera.globalOffsetY,
                         offsetX      = The.camera.globalOffsetX,
-                        movableOffX  = movable.sprite.sprite_w / 8, // TODO: fix sprite centering with sheet offset
-                        movableOffY  = movable.sprite.sprite_h / 4;
+                        movableOffX  = movable.sprite.sprite_w / 2,
+                        movableOffY  = movable.sprite.sprite_h / 2;
 
                     // Specific state/animation may require a separate sheet
                     if (movable.sprite.state.sheet) {
@@ -621,7 +624,7 @@ define(['loggable'], (Loggable) => {
                         movableSheet,
                         movable.sprite.state.x, movable.sprite.state.y,
                         movable.sprite.sprite_w, movable.sprite.sprite_h,
-                        scale * (globalX - offsetX - movableOffX), scale * (globalY + offsetY - movableOffY),
+                        scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
                         movable.sprite.sprite_w, movable.sprite.sprite_h
                     );
 
