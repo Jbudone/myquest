@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" nextobjectid="30">
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextobjectid="31">
  <tileset firstgid="1" name="tilesheet" tilewidth="16" tileheight="16" tilecount="1960" columns="20">
-  <image source="../tilesheet.png" width="320" height="1568"/>
+     <image source="../sprites/tilesheet.png" width="320" height="1568"/>
  </tileset>
  <tileset firstgid="1961" name="npcs" tilewidth="32" tileheight="32" tilecount="10" columns="5">
-  <image source="../tools/sheetedit/avatars.png" width="160" height="64"/>
+     <image source="../sprites/avatars.png" width="160" height="64"/>
  </tileset>
  <layer name="base" width="100" height="100">
   <data encoding="csv">
@@ -254,6 +254,7 @@
   <object id="26" gid="1962" x="1287" y="1159" width="32" height="32"/>
   <object id="27" gid="1962" x="1330" y="1160" width="32" height="32"/>
   <object id="29" gid="1965" x="678.5" y="1102.5" width="32" height="32"/>
+  <object id="30" gid="1967" x="680.5" y="1019" width="32" height="32"/>
  </objectgroup>
  <objectgroup name="interactables">
   <object id="28" name="window" x="848" y="848" width="16" height="32"/>

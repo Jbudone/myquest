@@ -5,7 +5,7 @@
 		"sheet":"firefox",
 		"spawn":150,
 		"speed":10,
-		"damage":5,
+		"damage":2,
 		"AI":true,
 		"strategy":"strategy.player.basic_melee",
     "components":["regeneration","levelling","buffmgr","deathmgr","questmgr","interactionmgr"],
@@ -13,13 +13,14 @@
 		{
 			"ability":"melee",
 			"range":1,
-			"attackTime":1000,
+			"attackTime":1200,
 			"chaseDistance":20
 		},
     "stats":
     {
-      "health":1500,
+      "health":20,
       "str":4,
+      "dex":4,
       "con":4
     }
 	},
@@ -46,6 +47,7 @@
     {
       "health":50,
       "str":4,
+      "dex":4,
       "con":4
 		}
 	},
@@ -63,8 +65,8 @@
     "components":["regeneration"],
 		"attackInfo":
 		{
-			"ability":"melee",
-			"range":1,
+			"ability":"range",
+			"range":4,
 			"attackTime":1000,
 			"chaseDistance":20
 		},
@@ -72,6 +74,7 @@
     {
       "health":70,
       "str":4,
+      "dex":4,
       "con":4
 		}
 	},
@@ -79,25 +82,26 @@
 		"id":"goblin",
 		"name":"goblin",
 		"sheet":"goblin",
-		"spawn":5500,
+		"spawn":12000,
 		"killable":true,
     "XP":10,
 		"speed":30,
-		"damage":3,
+		"damage":2,
 		"AI":true,
 		"strategy":"strategy.basic_melee",
     "components":["regeneration"],
 		"attackInfo":
 		{
-			"ability":"range",
-			"range":2,
-			"attackTime":100,
-			"chaseDistance":150
+			"ability":"melee",
+			"range":1,
+			"attackTime":800,
+			"chaseDistance":12
 		},
     "stats":
     {
-      "health":8000,
+      "health":20,
       "str":4,
+      "dex":4,
       "con":4
 		}
 	},
@@ -124,6 +128,7 @@
     {
       "health":80,
       "str":4,
+      "dex":4,
       "con":4
 		}
 	},
@@ -150,6 +155,7 @@
     {
       "health":30,
       "str":4,
+      "dex":4,
       "con":4
 		},
     "loot": [
@@ -257,6 +263,45 @@
     {
       "health":70,
       "str":4,
+      "dex":4,
+      "con":4
+		},
+    "loot": [
+        {
+          "chance":1.0,
+          "items": [
+            {
+              "chance": 1.0,
+              "item": "itm_potion"
+            }
+          ]
+        }
+    ]
+	},
+    {
+		"id":"raptor",
+		"name":"raptor",
+		"sheet":"raptor",
+		"spawn":2500,
+		"killable":true,
+    "XP":10,
+		"speed":10,
+		"damage":3,
+		"AI":true,
+		"strategy":"strategy.basic_melee",
+    "components":["regeneration"],
+		"attackInfo":
+		{
+			"ability":"melee",
+			"range":1,
+			"attackTime":1000,
+			"chaseDistance":20
+		},
+    "stats":
+    {
+      "health":70,
+      "str":4,
+      "dex":4,
       "con":4
 		},
     "loot": [

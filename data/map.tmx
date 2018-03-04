@@ -32,7 +32,7 @@
   <image source="../sprites/tilesheet2.png" width="256" height="15360"/>
  </tileset>
  <tileset firstgid="17321" name="npcs" tilewidth="16" tileheight="16">
-  <image source="../tools/sheetedit/avatars.png" trans="ff00ff" width="80" height="16"/>
+     <image source="../sprites/avatars.png" trans="ff00ff" width="80" height="16"/>
  </tileset>
  <tileset firstgid="17326" name="items" tilewidth="24" tileheight="24">
   <image source="../sprites/fft_a2.png" width="384" height="960"/>
