@@ -29,36 +29,43 @@ const waitForInspector = () => {
 
 const errorInGame = (e) => {
 
+    const isAnError = e !== "SIGINT";
     if (shuttingDown) {
+
+        // We may have already started shutting down, but could be waiting for the inspector. We may want to kill the
+        // process without any debugging (ctrl-c)
+        if (!isAnError) {
+            process.exit(e);
+        }
+
         return;
     }
 
     shuttingDown = true;
 
+    if (isAnError) {
+        console.error("Error in game");
+        if (global['DumpLog']) DumpLog();
 
-    console.error("Error in game");
-
-
-    if (global['DumpLog']) DumpLog();
-
-    if (console.trace) console.trace();
+        if (console.trace) console.trace();
 
 
-    // Error Reporting
-    // Report as much as possible
-    if (global.ErrorReporter && e) {
+        // Error Reporting
+        // Report as much as possible
+        if (global.ErrorReporter && e) {
 
-        global.ErrorReporter.printStack(e);
+            global.ErrorReporter.printStack(e);
 
-        // FIXME: There should be an array or object of items we intend to dump
-        const dump = {
-            'world': The.world
-        };
+            // FIXME: There should be an array or object of items we intend to dump
+            const dump = {
+                'world': The.world
+            };
 
-        global.ErrorReporter.report(e, dump);
-    } else {
-        console.error("No error reporter yet!");
-        console.log(e);
+            global.ErrorReporter.report(e, dump);
+        } else {
+            console.error("No error reporter yet!");
+            console.log(e);
+        }
     }
 
     // Just in case the above promises take too long
@@ -66,7 +73,10 @@ const errorInGame = (e) => {
         shutdownGame(e);
     }
 
-    waitForInspector();
+    if (e) {
+        waitForInspector();
+    }
+
     process.exit(e);
 };
 
@@ -373,7 +383,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             // TODO: Cleanup the shutdown routine by gracefully unloading each module, saving the state
                             // of (reliable) things (eg. players, areas), disconnecting from Mongo and Redis, and closing
                             // the process
-                            shutdownGame = () => {
+                            shutdownGame = (e) => {
 
                                 Log("Stopping Game, saving state");
 
@@ -387,8 +397,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 Log("Closing Redis connection");
                                 redis.disconnect();
 
-                                Log("Waiting for inspector");
-                                waitForInspector();
+                                // NOTE: SIGINT gives e == "SIGINT"
+                                if (e && !_.isString(e)) {
+                                    Log(chalk.red.bold("Waiting for inspector.."));
+                                    waitForInspector();
+                                } else {
+                                    Log("No error in shutdown; skipping debugger");
+                                }
 
                                 Log("Closing server. Goodbye, World!");
                                 process.exit();
