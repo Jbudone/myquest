@@ -550,25 +550,27 @@ define(['loggable'], (Loggable) => {
                         const entityObj = drawList[coord];
                         if (!entityObj) continue;
 
-                        const entity    = (entityObj ? entityObj.sprite - 1 : -1),
-                            sheetData   = entityObj.sheet || this.sheetFromGID(entity),
-                            tilesPerRow = sheetData.tilesPerRow,
-                            floating    = sheetData.data.floating,
-                            iy          = Math.floor(coord / Env.pageWidth),
-                            ix          = coord % Env.pageWidth,
-                            sy          = Math.max(-1, Math.floor((entity - sheetData.gid.first) / tilesPerRow)),
-                            sx          = Math.max(-1, (entity - sheetData.gid.first) % tilesPerRow),
-                            tileSize    = sheetData.tileSize.width,
-                            py          = (iy * Env.tileSize + this.camera.offsetY + offY) * Env.tileScale,
-                            px          = (ix * Env.tileSize - this.camera.offsetX + offX) * Env.tileScale;
+                        const entity     = (entityObj ? entityObj.sprite - 1 : -1),
+                            sheetData    = entityObj.sheet || this.sheetFromGID(entity),
+                            entIdInSheet = entity - sheetData.gid.first,
+                            tilesPerRow  = sheetData.tilesPerRow,
+                            floating     = sheetData.data.floating,
+                            iy           = Math.floor(coord / Env.pageWidth),
+                            ix           = coord % Env.pageWidth,
+                            sy           = Math.max(-1, Math.floor(entIdInSheet / tilesPerRow)),
+                            sx           = Math.max(-1, entIdInSheet % tilesPerRow),
+                            tileSize     = sheetData.tileSize.width,
+                            py           = (iy * Env.tileSize + this.camera.offsetY + offY) * Env.tileScale,
+                            px           = (ix * Env.tileSize - this.camera.offsetX + offX) * Env.tileScale;
+
 
                         if (!entityObj.sheet) entityObj.sheet = sheetData;
                         if (sy !== -1 && sx !== -1 && entity !== -1 && !entityObj.hasOwnProperty('static')) {
                             if (floating !== undefined &&
-                                floating.indexOf(entity) >= 0) {
+                                floating.indexOf(entIdInSheet) >= 0) {
 
                                 floatingSprites.push({
-                                    entity,
+                                    entIdInSheet,
                                     sheet: sheetData,
 
                                     sx, sy, px, py
