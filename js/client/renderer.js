@@ -192,32 +192,35 @@ define(['loggable'], (Loggable) => {
                 }
             }
 
-            // Add missing pages to pool
-            if (missingPages.length > 0) {
+            // Find items in the pool which are currently available (not in use)
+            // Need to cleanup memory (avoid memory leak) of page, and clear
+            // canvas in case we reach the edge of the map
+            let expiredPoolPages = [];
+            for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                let pooledPage = this.canvasBackgroundPool[i];
 
-                // Find items in the pool which are currently available (not in use)
-                let expiredPoolPages = [];
-                for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
-                    let pooledPage = this.canvasBackgroundPool[i];
+                let foundPage = false;
 
-                    let foundPage = false;
-
-                    if (pooledPage.page) {
-                        for (let j = 0; j < allPages.length; ++j) {
-                            if (pooledPage.page === allPages[j]) {
-                                foundPage = true;
-                                break;
-                            }
+                if (pooledPage.page) {
+                    for (let j = 0; j < allPages.length; ++j) {
+                        if (pooledPage.page === allPages[j]) {
+                            foundPage = true;
+                            break;
                         }
-                    }
-
-                    // I see you've expired, or are just empty
-                    if (!foundPage) {
-                        expiredPoolPages.push(pooledPage);
-                        pooledPage.page = null;
                     }
                 }
 
+                // I see you've expired, or are just empty
+                if (!foundPage) {
+                    expiredPoolPages.push(pooledPage);
+                    pooledPage.page = null;
+                    pooledPage.canvasCtx.clearRect(0, 0, pooledPage.canvasEl.width, pooledPage.canvasEl.height);
+                }
+            }
+
+
+            // Add missing pages to pool
+            if (missingPages.length > 0) {
                 assert(missingPages.length <= expiredPoolPages.length);
 
                 // Lets add the missing pages into these expired pages
