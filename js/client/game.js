@@ -286,10 +286,11 @@ define(
                 renderer     = The.renderer;
                 if (!Env.isBot) {
                     // TODO: Should find a better way to do this
-                    renderer.canvasEntities    = document.getElementById('entities');
-                    renderer.canvasBackground  = document.getElementById('background');
-                    renderer.ctxEntities       = renderer.canvasEntities.getContext('2d');
-                    renderer.ctxBackground     = renderer.canvasBackground.getContext('2d');
+                    renderer.canvasEntities       = document.getElementById('entities');
+                    renderer.canvasBackground     = document.getElementById('background');
+                    renderer.ctxEntities          = renderer.canvasEntities.getContext('2d');
+                    renderer.ctxBackground        = renderer.canvasBackground.getContext('2d');
+                    renderer.backgroundsContainer = document.getElementById('backgrounds');
                 }
                 renderer.camera = The.camera;
                 renderer.ui     = ui;

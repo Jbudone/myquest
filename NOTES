@@ -352,6 +352,14 @@ WORKING ON (was previously working on)
 		- netSerialize only sends stats to owner; either send stats (only need to send if different from default) OR only netSerialize health for non-owners
 		- Look into character.stats usage elsewhere (to fix): db, buffs.statbuff, client/game, ui.stats
         - LOOK INTO: Reloading character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
+    - People say that getImageData/putImageData is *incredibly* slow, and can't be GPU accelerated(?). This also doesn't work now w/ canvas acceleration. May need to look into WebGL solution
+        - Reaching the edge (clear pages?)
+        - Teleport? Zone? Death?
+    - BUG: Raptor offset/size?
+    - BUG: Firefox sometimes doesn't start (timeout)
+    - BUG: Hitch zoning between pages (particularly in Firefox) -- could continue temp pooled page rendering trick + webworker rendering new pages
+    - Zoning remotely before locally: we should document this, and perform an audit to confirm its good and scales well
+    - Renderer: pooledPagesCopyImageData -- consider getting rid of this option
 
 
 	- Browser Debugging Snippets
@@ -492,6 +500,9 @@ WORKING ON (was previously working on)
 	   - Client slow w/ web developer tools open
 		 	- Disable breakpoints
 			- Disable verbose logging
+
+       - Sprites not updating
+            - node cacheBuilder.js  (also, add sprite to cache)
 
 	- Mapping
 	   - New map

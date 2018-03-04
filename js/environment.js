@@ -37,11 +37,16 @@ define(function(){
 
 		this.renderer = {
 			drawBorders: true, // Draws page/entity borders (useful for debugging)
+
+            // Use bg pooled pages by copying their image data into a single bg canvas
+            // If this is false then have all active pooled pages as visible, and simply move them around in place of the bg canvas (ie. multiple canvases for bg)
+            pooledPagesCopyImageData: false
 		};
 
 		this.assertion = {
 			eventListeningDuplicates: true,
-            requiresResources: false // Testing between computers
+            requiresResources: false, // Testing between computers
+            checkGetImageDataZeroBug: true // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
 		};
 
 		this.game = {
@@ -115,7 +120,7 @@ define(function(){
             'Buff': (logDefault),
             'Interactable': (logDefault),
             'Redis': (logDefault),
-            'Pathfinding': (logDefault),
+            'Pathfinding': (logNormal),
             'Ability': (logDefault),
             'Default': (logDefault),
         };

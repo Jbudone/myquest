@@ -217,6 +217,14 @@ h3 {
 	overflow: hidden;
 }
 
+#backgrounds {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    position: absolute;
+    left: -960px;
+    top: -512px;
+}
+
 #messages {
 	background: #F5F5F5;
 	padding: 24px 10px 10px 10px;

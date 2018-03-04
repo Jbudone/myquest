@@ -16,6 +16,7 @@ define(['loggable'], (Loggable) => {
         this.canvasBackground     = null;
         this.ctxEntities          = null;
         this.ctxBackground        = null;
+        this.backgroundsContainer = null;
 
         // Each loaded page has their own dedicated canvas/ctx in this pool. They are rendered once to their canvas, and
         // then whenever our pages change we render (copy) each canvas to the master background canvas. Whenever we move
@@ -152,6 +153,9 @@ define(['loggable'], (Loggable) => {
         };
 
         // Update pages currently loaded (curPage/neighbours)
+        // NOTE: This function can hit twice when zoning: once when we locally
+        // recognize ourselves as zoning, and again when the server tells us
+        // that we've zoned
         this.updatePages = () => {
 
             let allPages = [];
@@ -227,8 +231,11 @@ define(['loggable'], (Loggable) => {
                 // TODO: Could probably async this
                 for (let i = 0; i < expiredPoolPages.length; ++i) {
 
-                    if (!expiredPoolPages[i].page) continue;
-                    let pageBg = expiredPoolPages[i];
+                    const pageBg = expiredPoolPages[i];
+                    if (!expiredPoolPages[i].page) {
+                        pageBg.canvasCtx.clearRect(0, 0, pageBg.canvasEl.width, pageBg.canvasEl.height);
+                        continue;
+                    }
 
                     this.renderPageStatic(pageBg, pageBg.page, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
                 }
@@ -260,6 +267,8 @@ define(['loggable'], (Loggable) => {
                     this.pagesHaveChanged = false;
                     this.ctxBackground.clearRect(0, 0, this.canvasBackground.width, this.canvasBackground.height);
 
+
+
                     // Render current page to background
                     let curPageBg = null;
                     for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
@@ -269,11 +278,15 @@ define(['loggable'], (Loggable) => {
                         }
                     }
 
-                    if (!curPageBg.imageData) {
-                        curPageBg.imageData = curPageBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
-                    }
+                    if (Env.renderer.pooledPagesCopyImageData) {
+                        if (!curPageBg.imageData) {
+                            curPageBg.imageData = curPageBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                        }
 
-                    this.ctxBackground.putImageData(curPageBg.imageData, shiftedOffX * Env.tileScale, shiftedOffY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                        this.ctxBackground.putImageData(curPageBg.imageData, shiftedOffX * Env.tileScale, shiftedOffY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                    } else {
+                        curPageBg.canvasEl.style.display = '';
+                    }
 
 
                     // Draw neighbour pages
@@ -317,19 +330,90 @@ define(['loggable'], (Loggable) => {
 
                         assert(neighbourBg !== null);
 
-                        if (!neighbourBg.imageData) {
-                            neighbourBg.imageData = neighbourBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                        if (Env.renderer.pooledPagesCopyImageData) {
+                            if (!neighbourBg.imageData) {
+                                neighbourBg.imageData = neighbourBg.canvasCtx.getImageData(0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+
+                                if (Env.assertion.checkGetImageDataZeroBug) {
+
+                                    let allZeroes = true;
+                                    for (let i = 0; i < neighbourBg.imageData.data.length; ++i) {
+                                        if (neighbourBg.imageData.data[i] !== 0) {
+                                            allZeroes = false;
+                                            break;
+                                        }
+                                    }
+
+                                    assert(!allZeroes, "GetImageData from canvas ctx for pooled page returning all zeroes. If you're on Chromium it could be an issue w/ #disable-accelerated-2d-canvas in chrome://flags");
+                                }
+                            }
+
+                            this.ctxBackground.putImageData(neighbourBg.imageData, offX * Env.tileScale, offY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
                         }
 
-                        this.ctxBackground.putImageData(neighbourBg.imageData, offX * Env.tileScale, offY * Env.tileScale, 0, 0, Env.pageRealWidth * Env.tileScale, Env.pageRealHeight * Env.tileScale);
+                        assert(this.canvasBackgroundPool.find((el) => el.page && (el.page !== neighbour && el.page.index === neighbour.index)) === undefined, `Memory leak -- we're holding onto an old copy of a neighbour page in our background pool: ${neighbour.index}`);
+                    }
+
+                    if (!Env.renderer.pooledPagesCopyImageData) {
+
+                        // Pooled bg canvases in grid
+                        // NOTE: Some of these may be null (either we've zoned locally before zoning remotely, so we don't have those pages, OR we've reach the edge of the map)
+                        const orderedPages = [
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['northwest']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['north']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['northeast']),
+
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['west']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['east']),
+
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['southwest']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['south']),
+                            this.canvasBackgroundPool.find((el) => el.page && el.page === this.area.curPage.neighbours['southeast'])
+                        ];
+
+
+                        const unusedPages = [],
+                            backgroundsChildren = $(this.backgroundsContainer).children();
+                        this.canvasBackgroundPool.forEach((el) => { if (orderedPages.indexOf(el) === -1) unusedPages.push(el); });
+
+                        let nullPageCount = 0,
+                            matchingI     = true; // Are the grid pages already in order? (this could be because we've already hit updatePages for this zone)
+                        for (let i = 0; i < orderedPages.length; ++i) {
+                            if (!orderedPages[i]) orderedPages[i] = unusedPages[nullPageCount++];
+                            if (orderedPages[i] !== backgroundsChildren[i]) matchingI = false;
+                        }
+
+
+                        // Are the grid pages already in order?
+                        if (!matchingI) {
+                            this.backgroundsContainer.style.display = 'none';
+                            for (let i = orderedPages.length - 1; i >= 0; --i) {
+                                this.backgroundsContainer.insertAdjacentElement('afterbegin', orderedPages[i].canvasEl);
+                            }
+                            this.backgroundsContainer.style.display = 'grid';
+                        }
                     }
                 }
 
                 // Translate the background canvas so that the center of the background covers the center of the
                 // entities canvas. Entities are being positioned via. CSS, so lets just steal its offset, and then
                 // offset to the position within the background
-                entitiesOffset = $('#entities').offset();
-                $('#background').offset({ left: entitiesOffset.left + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: entitiesOffset.top + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
+                if (Env.renderer.pooledPagesCopyImageData) {
+                    const entitiesOffset = $('#entities').offset();
+                    $('#background').offset({ left: entitiesOffset.left + (-The.camera.offsetX - shiftedOffX) * Env.tileScale, top: entitiesOffset.top + (The.camera.offsetY - shiftedOffY) * Env.tileScale });
+                } else {
+                    let curPageBg = null;
+                    for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                        if (this.canvasBackgroundPool[i].page === this.area.curPage) {
+                            curPageBg = this.canvasBackgroundPool[i];
+                            break;
+                        }
+                    }
+
+                    this.backgroundsContainer.style.left = -1 * (Env.pageRealWidth + The.camera.offsetX) * Env.tileScale;
+                    this.backgroundsContainer.style.top = -1 * (Env.pageRealHeight - The.camera.offsetY) * Env.tileScale;
+                }
 
                 this.camera.updated = false;
             }
@@ -525,7 +609,7 @@ define(['loggable'], (Loggable) => {
                         scale        = Env.tileScale,
                         offsetY      = The.camera.globalOffsetY,
                         offsetX      = The.camera.globalOffsetX,
-                        movableOffX  = movable.sprite.sprite_w / 4, // TODO: fix sprite centering with sheet offset
+                        movableOffX  = movable.sprite.sprite_w / 2,
                         movableOffY  = movable.sprite.sprite_h / 2;
 
                     // Specific state/animation may require a separate sheet
@@ -540,8 +624,8 @@ define(['loggable'], (Loggable) => {
                         movableSheet,
                         movable.sprite.state.x, movable.sprite.state.y,
                         movable.sprite.sprite_w, movable.sprite.sprite_h,
-                        scale * (globalX - offsetX - movableOffX), scale * (globalY + offsetY - movableOffY),
-                        scale * movable.sprite.sprite_w, scale * movable.sprite.sprite_h
+                        scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
+                        movable.sprite.sprite_w, movable.sprite.sprite_h
                     );
 
                     // Draw debug pathfinding/position highlights

@@ -22,8 +22,25 @@ define(['eventful'], (Eventful) => {
 
         // FIXME: fix the camera so that it doesn't need this
         this.centerCamera = () => {
-            const localY = The.player.position.global.y % Env.pageRealHeight,
-                localX   = The.player.position.global.x % Env.pageRealWidth;
+            let localY = The.player.position.global.y % Env.pageRealHeight,
+                localX = The.player.position.global.x % Env.pageRealWidth;
+
+            // NOTE: We may have remotely zoned into another page, but locally
+            // we're still catching up (eg. we've zoned to another page from
+            // the server, but our local player is still walking to that page,
+            // so our curPage is not what we think our curPage is). Determine
+            // our expected curPage from the player's position, and if its
+            // different from the actual curPage then offset to our expected
+            // curPage
+            const pageX = Math.floor(The.player.position.global.x / Env.pageRealWidth),
+                pageY   = Math.floor(The.player.position.global.y / Env.pageRealHeight),
+                pageId  = The.area.pageIndex(pageX, pageY);
+
+            if (pageId !== The.area.curPage.index) {
+                localX += (The.area.pages[pageId].x - The.area.curPage.x) * Env.tileSize;
+                localY += (The.area.pages[pageId].y - The.area.curPage.y) * Env.tileSize;
+            }
+
             this.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;
             this.offsetX = localX - Env.pageWidth * Env.tileSize / 2;
             this.globalOffsetX = The.area.curPage.x * Env.tileSize + this.offsetX;
