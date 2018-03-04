@@ -225,10 +225,6 @@ define(['loggable'], (Loggable) => {
                     expiredPoolPages[i].page = missingPages[i];
                     expiredPoolPages[i].needsUpdate = true;
                     expiredPoolPages[i].imageData = null;
-                    expiredPoolPages[i].offsetX = 0;
-                    expiredPoolPages[i].offsetY = 0;
-                    expiredPoolPages[i].posX = 0;
-                    expiredPoolPages[i].posY = 0;
                 }
                 
                 // Render each new page to the canvas
@@ -330,8 +326,6 @@ define(['loggable'], (Loggable) => {
                         }
 
                         assert(neighbourBg !== null);
-                        neighbourBg.offsetX = neighbourInfo.offsetX;
-                        neighbourBg.offsetY = neighbourInfo.offsetY;
 
                         if (Env.renderer.pooledPagesCopyImageData) {
                             if (!neighbourBg.imageData) {
@@ -623,14 +617,12 @@ define(['loggable'], (Loggable) => {
                     const globalX = movable.position.global.x,
                         globalY   = movable.position.global.y;
 
-                    // FIXME: Should try to better match spritesheet sprite size?
-                    const noScale = 1.0; // scale
                     this.ctxEntities.drawImage(
                         movableSheet,
                         movable.sprite.state.x, movable.sprite.state.y,
                         movable.sprite.sprite_w, movable.sprite.sprite_h,
                         scale * (globalX - offsetX - movableOffX), scale * (globalY + offsetY - movableOffY),
-                        noScale * movable.sprite.sprite_w, noScale * movable.sprite.sprite_h
+                        movable.sprite.sprite_w, movable.sprite.sprite_h
                     );
 
                     // Draw debug pathfinding/position highlights
