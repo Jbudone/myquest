@@ -563,7 +563,7 @@ define(['loggable'], (Loggable) => {
                             px          = (ix * Env.tileSize - this.camera.offsetX + offX) * Env.tileScale;
 
                         if (!entityObj.sheet) entityObj.sheet = sheetData;
-                        if (sy !== -1 && sx !== -1 && entity && !entityObj.hasOwnProperty('static')) {
+                        if (sy !== -1 && sx !== -1 && entity !== -1 && !entityObj.hasOwnProperty('static')) {
                             if (floating !== undefined &&
                                 floating.indexOf(entity) >= 0) {
 
@@ -841,7 +841,7 @@ define(['loggable'], (Loggable) => {
                     px=(ix*Env.tileSize)*scale;
 
                 if(!spriteObj.sheet) spriteObj.sheet = sheetData;
-                if (sy!=-1 && sx!=-1 && sprite && spriteObj.hasOwnProperty('static')) {
+                if (sy!=-1 && sx!=-1 && sprite !== -1 && spriteObj.hasOwnProperty('static')) {
                     pageBg.canvasCtx.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
                 }
             }
