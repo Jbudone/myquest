@@ -374,6 +374,8 @@ define(
 
                         Profiler.profileEnd('renderStep');
                     };
+
+                    ui.fadeIn();
                     render();
 
 

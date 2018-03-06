@@ -215,6 +215,7 @@ h3 {
 	height: 512px;
 	position: relative;
 	overflow: hidden;
+    opacity: 0.0;
 }
 
 #backgrounds {
