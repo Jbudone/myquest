@@ -22,9 +22,49 @@ let shutdownGame = null,
 
 const waitForInspector = () => {
 
-    const inspector = require('inspector');
-    inspector.open(9229, "127.0.0.1", true); // port, host, block
-    debugger;
+    const prompt = () => {
+
+        const fd = fs.openSync('/dev/tty', 'rs');
+
+        const wasRaw = process.stdin.isRaw;
+        if (!wasRaw) { process.stdin.setRawMode(true); }
+
+        let char = null;
+        while (true) {
+            const buf = new Buffer(3);
+            const read = fs.readSync(fd, buf, 0, 3);
+
+            // if it is not a control character seq, assume only one character is read
+            char = buf[read-1];
+
+            // catch a ^C and return null
+            if (char == 3){
+                process.stdout.write('^C\n');
+
+                char = null;
+                break;
+            }
+
+            if (read > 1) { // received a control sequence
+                continue; // any other 3 character sequence is ignored
+            }
+
+            break;
+        }
+
+        fs.closeSync(fd);
+        process.stdin.setRawMode(wasRaw);
+        return char;
+    };
+
+    Log(chalk.red.bold("Hit any key to open the inspector"));
+    const n = prompt();
+    if (n !== null) {
+        const inspector = require('inspector');
+        Log(chalk.red.bold("Waiting for inspector.."));
+        inspector.open(9229, "127.0.0.1", true); // port, host, block
+        debugger;
+    }
 };
 
 const errorInGame = (e) => {
@@ -399,7 +439,6 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 // NOTE: SIGINT gives e == "SIGINT"
                                 if (e && !_.isString(e)) {
-                                    Log(chalk.red.bold("Waiting for inspector.."));
                                     waitForInspector();
                                 } else {
                                     Log("No error in shutdown; skipping debugger");
