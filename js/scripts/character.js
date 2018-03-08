@@ -49,9 +49,18 @@ define(
             // frame. Each item that changes (raw data type) serializes a pair (propKey, newValue), where propKey is the
             // key of the property that changed (synced key between server/client). We append all of these pairs in the
             // array and flush the entire array during the movables update
-            let netUpdateArr = []; // Things that have changed since we last sent out an update
+            const netIndices = [];
+            if (Env.isServer) {
+                this.netUpdateArr = []; // Things that have changed since we last sent out an update
+            } else {
 
-            let netIndices = [];
+                // The server may send a netSerialize of the character's state while there's items already in the
+                // netUpdateArr, so when the player receives the first netUpdate for this character, they'll already
+                // have its state ahead of the netUpdate state. This could be a problem w/ callbacks. The netSerialize
+                // will send a cursor for the netUpdateArr length, so we can skip ahead to this position when we receive
+                // the first netUpdate
+                this.netUpdateCursor = 0;
+            }
 
             // Are we currently serializing netVars? NOTE: We may want to turn this on/off if we plan to modify a
             // variable and broadcast it through some other event
@@ -69,6 +78,39 @@ define(
                     });
                 }
 
+                let propSet_Net_CB = (value) => {
+                                    const oldVal = obj.props[propName];
+                                    if (value === oldVal) return;
+
+                                    obj.props[propName] = value;
+                                    callback(oldVal, value);
+
+                                    if (netSerializeEnabled) {
+                                        this.netUpdateArr.push(propKey);
+                                        this.netUpdateArr.push(value);
+                                    }
+                                },
+                    propSet_Net = (value) => {
+                                    const oldVal = obj.props[propName];
+                                    if (value === oldVal) return;
+
+                                    obj.props[propName] = value;
+                                    if (netSerializeEnabled) {
+                                        this.netUpdateArr.push(propKey);
+                                        this.netUpdateArr.push(value);
+                                    }
+                                },
+                    propSet_CB = (value) => {
+                                    const oldVal = obj.props[propName];
+                                    if (value === oldVal) return;
+
+                                    obj.props[propName] = value;
+                                    callback(oldVal, value);
+                                },
+                    propSet = (value) => {
+                                    obj.props[propName] = value;
+                                };
+
                 obj.props[propName] = initialValue;
                 Object.defineProperty(obj, propName, {
 
@@ -77,34 +119,8 @@ define(
                     },
 
                     "set": (shouldNetSerialize ? 
-                              (callback ?                         
-                                function(value) {
-                                    const oldVal = obj.props[propName];
-                                    obj.props[propName] = value;
-                                    callback(oldVal, value);
-
-                                    if (netSerializeEnabled) {
-                                        netUpdateArr.push(propKey);
-                                        netUpdateArr.push(value);
-                                    }
-                                } :
-                                function(value) {
-                                    obj.props[propName] = value;
-
-                                    if (netSerializeEnabled) {
-                                        netUpdateArr.push(propKey);
-                                        netUpdateArr.push(value);
-                                    }
-                                }) :
-                              (callback ?
-                                function(value) {
-                                    const oldVal = obj.props[propName];
-                                    obj.props[propName] = value;
-                                    callback(oldVal, value);
-                                } :
-                                function(value) {
-                                    obj.props[propName] = value;
-                                }))
+                              (callback ? propSet_Net_CB : propSet_Net) :
+                              (callback ? propSet_CB : propSet))
                 });
 
                 if (shouldNetSerialize) {
@@ -147,6 +163,9 @@ define(
                 if (!this.doHook('healthChanged').pre()) return;
 
                 if (!Env.isServer) {
+                    if (The.player.name == "jbud" && this.entity.npc.name == "rhino") {
+                        console.log("HERE");
+                    }
                     if (this.entity.ui) {
                         this.entity.ui.healthChanged();
                     }
@@ -402,15 +421,17 @@ define(
                         }
                     }
 
-                    if (netUpdateArr.length) {
-                        // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateArr
-                        this.entity.page.broadcast(EVT_NETSERIALIZE, {
-                            serialize: netUpdateArr,
-                            entityId: _character.entity.id,
-                            page: _character.entity.page.index
-                        });
+                    if (Env.isServer) {
+                        if (this.netUpdateArr.length) {
+                            // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateArr
+                            this.entity.page.broadcast(EVT_NETSERIALIZE, {
+                                serialize: this.netUpdateArr,
+                                entityId: _character.entity.id,
+                                page: _character.entity.page.index
+                            });
 
-                        netUpdateArr = [];
+                            this.netUpdateArr = [];
+                        }
                     }
                 });
             };
@@ -498,6 +519,7 @@ define(
                 // Restore character from earlier state (load from DB)
                 restore: (_character) => {
                     this.commonRestore(_character);
+                    netSerializeEnabled = true;
                 },
 
                 // NetSerialize character (serialized to users)
@@ -516,15 +538,18 @@ define(
                             _character.components.push(netSerializedComponent);
                         }
 
-                        debugger;
                         _character.stats = this.serializeStats();
-                        console.log(this.stats);
-                        console.log(_character.inventory);
-
                         _character.inventory = this.inventory.serialize();
                     }
 
-                    netSerializeEnabled = true;
+                    // We may netSerialize while there's still netVars in the netUpdate buffer waiting to be sent out.
+                    // This means that the person receiving this netSerialize will initialize the character with data
+                    // that's ahead of the netUpdateArr time. When they receive the netUpdate they can skip ahead to
+                    // this cursor position
+                    if (this.netUpdateArr.length) {
+                        _character.netUpdateCursor = this.netUpdateArr.length;
+                    }
+
                     return _character;
                 },
 
@@ -875,6 +900,10 @@ define(
                         }
                     }
 
+                    if (_character.netUpdateCursor) {
+                        this.netUpdateCursor = _character.netUpdateCursor;
+                    }
+
                     this.initialized = true;
                 },
 
@@ -906,7 +935,7 @@ define(
                 netUpdate: (netUpdateArr) => {
 
                     assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
-                    for (let i = 0; i < netUpdateArr.length; i += 2) {
+                    for (let i = this.netUpdateCursor; i < netUpdateArr.length; i += 2) {
                         const propKey = netUpdateArr[i],
                             propValue = netUpdateArr[i+1],
                             netIndex  = netIndices[propKey],
@@ -915,6 +944,8 @@ define(
                         assert(netIndex, `netUpdate received w/ propKey ${propKey} not included in indices list`);
                         netIndex.obj[propName] = propValue;
                     }
+
+                    this.netUpdateCursor = 0;
                 },
 
                 setToUser: () => {
