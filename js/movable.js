@@ -622,11 +622,19 @@ define(
                 let x = this.position.global.x,
                     y = this.position.global.y;
                 for (let j = 0; j < path.walks.length; ++j) {
-                    let walk = path.walks[j];
-                         if (walk.direction === NORTH) y -= walk.distance - walk.walked;
-                    else if (walk.direction === SOUTH) y += walk.distance - walk.walked;
-                    else if (walk.direction === WEST) x -= walk.distance - walk.walked;
-                    else if (walk.direction === EAST) x += walk.distance - walk.walked;
+                    let walk = path.walks[j],
+                        remainingWalk = walk.distance - walk.walked;
+
+                    // If we've already done this walk this we don't need to process this
+                    // NOTE: Its crucial that we skip this processing if we've already completed this walk, in case
+                    // we're currently standing at a bad position (!onX && !onY), but are in the middle of a (later)
+                    // walk in the path that takes us to a tile center
+                    if (remainingWalk === 0) continue;
+
+                         if (walk.direction === NORTH) y -= remainingWalk;
+                    else if (walk.direction === SOUTH) y += remainingWalk;
+                    else if (walk.direction === WEST)  x -= remainingWalk;
+                    else if (walk.direction === EAST)  x += remainingWalk;
                     else throw Err(`Bad direction: ${walk.direction}`);
 
                     let onX = x % Env.tileSize === 0,
