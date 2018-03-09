@@ -63,7 +63,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 						}
 
 						this.Log("Loading resource: " + resourceID + "("+resource.file+")");
-                        const file = 'data/' + resource.file;
+                        const file = 'resources/data/' + resource.file;
 						this.read(file).then((function(data){
 							assets[resourceID] = data;
 

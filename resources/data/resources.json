@@ -1,0 +1,58 @@
+{
+    "cache": {
+        "file": "cache.json",
+        "options": {}
+    },
+	"sheets": {
+        "file": "sheets.json",
+        "options": {}
+    },
+	"avatars": {
+        "file": "avatars.json",
+        "options": {}
+    },
+	"npcs": {
+        "file": "npcs.json",
+        "options": { "reloadable": true }
+    },
+	"world": {
+        "file": "world.json",
+        "options": {}
+    },
+	"items": {
+        "file": "items.json",
+        "options": {}
+    },
+	"buffs": {
+        "file": "buffs.json",
+        "options": {}
+    },
+	"interactables": {
+        "file": "interactables.json",
+        "options": {}
+    },
+    "quests": {
+        "file": "quests.json",
+        "options": {}
+    },
+    "interactions": {
+        "file": "interactions.json",
+        "options": {}
+    },
+	"scripts": {
+        "file": "scripts.json",
+        "options": {}
+    },
+    "components": {
+        "file": "components.json",
+        "options": {}
+    },
+    "rules": {
+        "file": "rules.json",
+        "options": {}
+    },
+    "fx": {
+        "file": "fx.json",
+        "options": {}
+    }
+}

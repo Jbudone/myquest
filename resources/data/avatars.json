@@ -1,0 +1,17 @@
+{
+  "image": {
+    "file": "/sprites/avatars.png",
+    "size": 32,
+    "columns": 5
+  },
+  "avatars": [
+    "firefox",
+    "goblin",
+    "deathknight",
+    "spider",
+    "snake",
+    "rhino",
+    "raptor",
+    "basilisk"
+  ]
+}

@@ -9,7 +9,7 @@ var _ = require('underscore'),
 var Count = function(obj){ var n=0; for(var l in obj){ ++n; } return n; };
 
 var AreaHashes = {},
-	areaHashFile = '../data/areahashes.json';
+	areaHashFile = '../resources/data/areahashes.json';
 
 var kUSE_JPS = false;
 
@@ -32,7 +32,7 @@ fs.readFile(areaHashFile, function(err, data){
 
 var exportAreas = function(){
 
-	fs.readFile('../data/world.json', function(err, data){
+	fs.readFile('../resources/data/world.json', function(err, data){
 		if (err) {
 			console.log(err);
 			return;
@@ -48,7 +48,7 @@ var exportAreas = function(){
 			var filesToLoad = 2;
 
 			// Fetch Avatars
-			fs.readFileAsync('../data/avatars.new.json').then(JSON.parse).then(function(data){
+			fs.readFileAsync('../resources/data/avatars.json').then(JSON.parse).then(function(data){
 				if (data && data.avatars) {
 					avatars = data.avatars;
 				}
@@ -66,7 +66,7 @@ var exportAreas = function(){
 			});
 
 			// Fetch Tilesheets
-			fs.readFileAsync('../data/sheets.new.json').then(JSON.parse).then(function(data){
+			fs.readFileAsync('../resources/data/sheets.json').then(JSON.parse).then(function(data){
 				if (data && data.tilesheets) {
 					var list = data.tilesheets.list;
 					for (var i=0; i<list.length; ++i) {
@@ -91,7 +91,7 @@ var exportAreas = function(){
 
 			_.each(world.areas, function(areaFile, areaName){
 				var areaID = areaName,
-					filename = '../data/' + world.areas[areaID];
+					filename = '../resources/maps/' + world.areas[areaID];
 
 				exec("md5sum "+filename+".tmx | awk '{printf \"%s\", $1}'", function(err, stdout, stderr){
 

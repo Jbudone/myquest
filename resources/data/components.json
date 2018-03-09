@@ -1,0 +1,8 @@
+{
+    "regeneration": "character.component.regeneration",
+    "levelling": "character.component.levelling",
+    "buffmgr": "character.component.buffmgr",
+    "deathmgr": "character.component.deathmgr",
+    "questmgr": "character.component.questmgr",
+    "interactionmgr": "character.component.interactionmgr"
+}

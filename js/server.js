@@ -155,6 +155,10 @@ GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('
 
 GLOBAL.fs = fs;
 
+GLOBAL.DEBUGGER = () => {
+    waitForInspector();
+};
+
 // Promise.longStackTraces();
 
 requirejs(['keys', 'environment'], (Keys, Environment) => {
@@ -325,7 +329,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 // Load Areas
                                 _.each(json.areas, (areaFile, areaID) => {
                                     loading(`area ${areaID}`);
-                                    fs.readFile(`data/${areaFile}`, (e, areaRawData) => {
+                                    fs.readFile(`resources/maps/${areaFile}`, (e, areaRawData) => {
 
                                         if (e) errorInGame(e);
 

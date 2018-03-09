@@ -80,8 +80,8 @@ define(function(){
 				websocket: 'ws://127.0.0.1:1338/',
 				websocketTest: 'ws://127.0.0.1:1339/',
 				http: (typeof location != "undefined" ? location.origin : 'http://myquest.local'), // NOTE: server doesn't need this
-                resources: 'data/resources.new.json',
-                resourcesTest: 'data/resources.test.json'
+                resources: 'resources/data/resources.json',
+                resourcesTest: 'resources/data/resources.json'
 			},
 
 			server: {
@@ -95,7 +95,7 @@ define(function(){
 		var logImportant = LOG_CRITICAL | LOG_ERROR | LOG_WARNING,
             logNormal = LOG_INFO | logImportant,
 			logVerbose = logNormal | LOG_DEBUG,
-			logDefault = logVerbose;
+			logDefault = logNormal;
 		this.logmask = {
             'AI': (logDefault),
             'Movable': (logDefault),
@@ -108,7 +108,7 @@ define(function(){
             'ScriptMgr': (logDefault | LOG_INFO),
             'Script': (logDefault),
             'User': (logDefault),
-            'Game': (logVerbose),
+            'Game': (logDefault),
             'Character': (logDefault),
             'Component': (logVerbose),
             'Inventory': (logDefault),
@@ -120,7 +120,7 @@ define(function(){
             'Buff': (logDefault),
             'Interactable': (logDefault),
             'Redis': (logDefault),
-            'Pathfinding': (logNormal),
+            'Pathfinding': (logDefault),
             'Ability': (logDefault),
             'Default': (logDefault),
         };

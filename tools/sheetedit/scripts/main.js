@@ -50,8 +50,8 @@ $(document).ready(function(){
 		sheet     = null,
 		resources = null;
 
-	var dataDir = '../../data/';
-	$.getJSON(dataDir + 'resources.new.json', function(data){
+	var dataDir = '../../data/data/';
+	$.getJSON(dataDir + 'resources.json', function(data){
 
 		// Data is the list of resources
 		resources = data;
@@ -69,7 +69,7 @@ $(document).ready(function(){
 		
 		// Load sheets
 		++loading;
-		$.getJSON(dataDir + resources.sheets, function(data){
+		$.getJSON(dataDir + resources.sheets.file, function(data){
 			if (data) {
 				assets.sheets = data;
 				--loading;
@@ -81,7 +81,7 @@ $(document).ready(function(){
 		
 		// Load avatars
 		++loading;
-		$.getJSON(dataDir + resources.avatars, function(data){
+		$.getJSON(dataDir + resources.avatars.file, function(data){
 			if (data) {
 				assets.avatars = data;
 				--loading;
@@ -95,8 +95,8 @@ $(document).ready(function(){
 
 				var files = {
 					
-					sheets: dataDir + resources.sheets,
-					avatars: dataDir + resources.avatars,
+					sheets: dataDir + resources.sheets.file,
+					avatars: dataDir + resources.avatars.file,
 				};
 				assetsMgr = new AssetsManager( assets, $('#assets'), files );
 

@@ -102,7 +102,7 @@ fi
 
 if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
 
-    SHEETS_JSON_FILE="$ROOT_FOLDER/data/sheets.json"
+    SHEETS_JSON_FILE="$ROOT_FOLDER/resources/data/sheets.json"
     SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
 
     SPRITE_NAME=$( echo $SPRITE_JSON | jq --raw-output '.spriteName' )

@@ -1,0 +1,87 @@
+{"buffs": [
+	{
+		"id": "DeathSickness",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "health",
+                    "amount": 0.75
+                },
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "con",
+                    "amount": 0.25
+                }
+            ],
+            "options": {
+                "duration": 300000
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Death Sickness",
+                "description": "Lol! Looks like you've died. wutanub"
+            }
+        }
+	},
+	{
+		"id": "KingBadBuff",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "health",
+                    "amount": 0.5
+                },
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "con",
+                    "amount": 0.15
+                }
+            ],
+            "options": {
+                "duration": 10000
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Kingly Debuff",
+                "description": "Debuffed by the King -- looks like you f'd up"
+            }
+        }
+	},
+    {
+		"id": "KingGoodBuff",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "health",
+                    "amount": 1.75
+                },
+                {
+                    "type": "MAX_MULTIPLIER",
+                    "stat": "con",
+                    "amount": 1.25
+                }
+            ],
+            "options": {
+                "duration": 10000
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Kingly Buff",
+                "description": "Buffed by the king -- making friends in high places"
+            }
+        }
+	}
+    
+]}

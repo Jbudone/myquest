@@ -1,0 +1,33 @@
+{
+	"game": {
+		"script": "game.js",
+		"server": {
+			"components": {
+				"chat": "game.chat.js"
+			}
+		},
+		"client": {
+			"components": {
+				"chat": "game.chat.js",
+				"zoning": "game.zoning.js"
+			}
+		}
+	},
+
+	"ai": {
+		"instincts": {
+			"combat": {
+				"script": "character.ai.instinct.combat",
+				"components": {
+					"melee": "character.ai.combat.melee",
+					"range": "character.ai.combat.range",
+					"sight": "character.ai.combat.sight",
+					"strategy.basic_melee": "character.ai.combat.strategy.basic_melee",
+					"strategy.player.basic_melee": "character.ai.combat.strategy.player.basic_melee"
+				}
+			},
+			"movement": "character.ai.instinct.movement",
+			"boredom": "character.ai.instinct.bored"
+		}
+	}
+}

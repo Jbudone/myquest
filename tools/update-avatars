@@ -13,10 +13,10 @@
 
 ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest"
 
-AVATARS_JSON_FILE="$ROOT_FOLDER/data/avatars.new.json"
+AVATARS_JSON_FILE="$ROOT_FOLDER/resources/data/avatars.json"
 AVATARS_JSON=$( cat $AVATARS_JSON_FILE | jq '.' )
 
-SHEETS_JSON_FILE="$ROOT_FOLDER/data/sheets.json"
+SHEETS_JSON_FILE="$ROOT_FOLDER/resources/data/sheets.json"
 SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
 
 sheetSprites=$( echo $SHEET_JSON | jq '.spritesheets.list' )

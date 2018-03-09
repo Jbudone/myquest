@@ -1,0 +1,72 @@
+{
+    "regions": {
+        "world": {
+            "gain": 1.0
+        },
+
+		"ui": {
+			"gain": 0.6
+		},
+
+		"bg": {
+			"gain": 0.8,
+			"fadeBetweenSamples": true
+		}
+    },
+
+    "sfx": {
+        "samples": {
+            "playerHitA": {
+                "sound": "grunt",
+                "gain": 0.5
+            },
+            "playerHitB": {
+                "sound": "grunt"
+            },
+			"uiClick": {
+				"sound": "uiclick"
+			},
+			"bgMusic": {
+				"sound": "rivervale",
+				"gain": 0.0
+			}
+        },
+
+        "banks": {
+            "playerHit": {
+                "samples": ["playerHitA", "playerHitB"]
+            },
+			"uiClick": {
+				"samples": ["uiClick"]
+			},
+			"bgMusic": {
+				"samples": ["bgMusic"]
+			}
+        }
+    },
+
+    "events": {
+        "attacked.player": {
+            "region": "world",
+            "bank": "playerHit",
+            "conditions": {
+                "timeoutOnSample": 1000,
+                "limitSamples": 1
+            }
+        },
+
+		"click": {
+			"region": "ui",
+			"bank": "uiClick"
+		},
+
+		"login": {
+			"region": "bg",
+			"bank": "bgMusic"
+		}
+    },
+
+    "settings": {
+        "volume": 1.0
+    }
+}
