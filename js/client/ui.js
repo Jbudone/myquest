@@ -8,6 +8,7 @@ define(
         'client/ui.charbars',
         'client/ui.settings',
         'client/ui.toolbelt',
+        'client/ui.autocomplete',
         'eventful', 'hookable', 'loggable'
     ],
     (
@@ -17,6 +18,7 @@ define(
         UI_CharBars,
         UI_Settings,
         UI_Toolbelt,
+        UI_Autocomplete,
         Eventful, Hookable, Loggable
     ) => {
 
@@ -356,6 +358,10 @@ define(
                 return { x: tileX, y: tileY, canvasX: x, canvasY: y, globalX: mouse.clientX, globalY: mouse.clientY };
             };
 
+            this.setInput = (msg) => {
+                $('#input').val(msg);
+            };
+
             this.initialize = (canvas) => {
 
                 this.canvas = canvas;
@@ -389,6 +395,22 @@ define(
                     _UI.doHook('input').post(msg);
                 });
 
+                this.registerHook('inputTab');
+                $('#input').on('keydown', function(e) {
+
+                    const keyCode = e.keyCode || e.which;
+                    if (keyCode === 9) {
+                        const msg = $('#input').val();
+                        if (!_UI.doHook('inputTab').pre(msg)) return;
+
+                        _UI.doHook('inputTab').post(msg);
+
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+
+
                 this.registerHook('inputSubmit');
                 $('#inputForm').on('submit', function(evt) {
                     const msg = $('#input').val();
@@ -415,6 +437,7 @@ define(
                 this.loadModule(UI_CharBars);
                 this.loadModule(UI_Settings);
                 this.loadModule(UI_Toolbelt);
+                this.loadModule(UI_Autocomplete);
             };
 
             this.loadModule = (module) => {

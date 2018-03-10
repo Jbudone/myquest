@@ -251,6 +251,62 @@ h3 {
 	color: red;
 }
 
+/* === Autocomplete === */
+
+#ui-autocomplete {
+    width: 600px;
+    position: absolute;
+    background: #FAFAFA;
+    margin-left: 10px;
+    border: #DDD 2px solid;
+    border-radius: 6px;
+}
+
+#ui-autocomplete-container {
+	display: flex;
+	flex-direction: column;
+}
+
+.ui-autocomplete-cmd:hover {
+	background: #F0F0F0;
+}
+
+.ui-autocomplete-cmd:hover .autocomplete-cmd {
+
+}
+
+.ui-autocomplete-cmd.active {
+	background: #F0F0A0;
+}
+
+.autocomplete-cmd {
+	border-bottom: #DDD thin solid;
+    padding: 2px 20px 0px 12px;
+    grid-template-columns: 70% 30%;
+    grid-template-rows: auto;
+    grid-template-areas: "head head" "desc desc";
+    display: grid;
+	text-decoration: none;
+    color: #000;
+}
+
+.autocomplete-typedcmd {
+	font-weight: bold;
+    font-size: 22px;
+}
+
+.autocomplete-hint {
+	font-style: italic;
+	text-align: right;
+}
+
+.autocomplete-desc {
+	grid-area: desc;
+	font-size: 12px;
+}
+
+/* === Movable UI === */
+
 
 .movable-ui {
 	position: absolute;
