@@ -257,6 +257,10 @@ define(
 
                     const self = this;
 
+                    entityMenuUI.hover(() => {}, () => {
+                        this.hide();
+                    });
+
                     this.addOption = function(label, callback, admin) {
 
                         const menuList = admin ? adminMenuListUI : menuListUI;
@@ -281,7 +285,7 @@ define(
 
                     this.display = function(entity, mouse) {
 
-                        const leftPos = mouse.globalX,
+                        const leftPos = mouse.globalX - 10,
                             topPos = mouse.globalY + $('#entity-menu').height();
                         entityMenuUI.removeClass('hidden')
                                         .offset({ left: leftPos, top: topPos });

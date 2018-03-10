@@ -69,6 +69,22 @@ define(['loggable'], (Loggable) => {
                         .text(label) )
                 .click(() => {
                     callback();
+
+                    // Manually hide the 
+                    // FIXME: Should be able to do this with pure CSS, we just want to hide the toolbelt when we've
+                    // clicked an option. We can do this w/ 
+                    //
+                    //      #ui-toolbelt:active #toolbelt-container {
+                    //      	opacity: 0;
+                    //      	visibility: hidden;
+                    //      }
+                    //
+                    // But the problem here is that the click event doesn't come through
+                    toolbeltContainerEl.addClass('hidden');
+                    setTimeout(() => {
+                        toolbeltContainerEl.removeClass('hidden');
+                    }, 100);
+
                     return false;
                 })
                 .appendTo(toolbeltContainerEl);

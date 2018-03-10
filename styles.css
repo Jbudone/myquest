@@ -697,6 +697,13 @@ input.error {
 	transition-delay: 0s, 0s, 0.3s;
 }
 
+/*
+#ui-toolbelt:active #toolbelt-container {
+	opacity: 0;
+	visibility: hidden;
+}
+*/
+
 #toolbelt-container {
 	background-color: #000;
 	width: 200px;
@@ -708,12 +715,13 @@ input.error {
 	opacity: 0;
 	visibility: hidden;
 	transition: all 0.3s ease-in-out 0s, visibility 0s linear 0.3s, z-index 0s linear 0.01s;
+	padding-top: 10px;
 }
 
 .toolbelt-option {
     display: block;
     text-decoration: none;
-    margin: 2px 12px;
+    margin: 6px 12px;
     color: #FAFAFA;
 }
 
