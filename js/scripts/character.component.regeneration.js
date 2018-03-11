@@ -95,7 +95,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         // I would love to include level in the regen, but this feels awkward if NPCs don't have a
                         // level. Come back later to determine if we should include level in the regen, but maybe only
                         // for players? Or perhaps we'll give NPCs levels later on?
-                        let newHealth = character.health + Math.pow(character.stats.health.curMax, 0.5) * 0.04 * character.stats.con.cur;
+                        let newHealth = character.health + Math.ceil(Math.pow(character.stats.health.curMax, 0.5) * 0.04 * character.stats.con.cur);
                         newHealth = parseInt(newHealth, 10);
                         if (newHealth > character.stats.health.curMax) {
                             newHealth = character.stats.health.curMax;
@@ -131,9 +131,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 });
             },
 
-            unload() {
-                server.handler(EVT_REGENERATE).unset();
-            }
+            unload() { }
         };
     };
 
