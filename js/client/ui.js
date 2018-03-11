@@ -362,6 +362,10 @@ define(
                 $('#input').val(msg);
             };
 
+            this.focusInput = () => {
+                $('#input').focus();
+            };
+
             this.initialize = (canvas) => {
 
                 this.canvas = canvas;
@@ -401,15 +405,21 @@ define(
                     const keyCode = e.keyCode || e.which;
                     if (keyCode === 9) {
                         const msg = $('#input').val();
-                        if (!_UI.doHook('inputTab').pre(msg)) return;
+                        if (!_UI.doHook('inputTab').pre(msg, e)) return;
 
-                        _UI.doHook('inputTab').post(msg);
+                        _UI.doHook('inputTab').post(msg, e);
 
                         e.preventDefault();
                         return false;
                     }
                 });
 
+                this.registerHook('clickedInput');
+                $('#input').click(() => {
+                    if (!_UI.doHook('clickedInput').pre()) return;
+
+                    _UI.doHook('clickedInput').post();
+                });
 
                 this.registerHook('inputSubmit');
                 $('#inputForm').on('submit', function(evt) {
@@ -420,6 +430,14 @@ define(
 
                     _UI.doHook('inputSubmit').post(msg);
                     return false;
+                });
+
+
+                this.registerHook('clickedWindow');
+                $(window).click(() => {
+                    if (!_UI.doHook('clickedWindow').pre()) return;
+
+                    _UI.doHook('clickedWindow').post();
                 });
 
                 this.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, (entity) => {
