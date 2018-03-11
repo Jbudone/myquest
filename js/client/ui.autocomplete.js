@@ -10,6 +10,7 @@ define(['loggable'], (Loggable) => {
             activeCmdEl      = null,
             activeCmdElIdx   = -1;
 
+        let history = [];
 
         // We hook into both global (window) clicks and input clicks. However, since both will come we need a way to
         // tell if the window click has come from an input click. This way we can ignore the window click and handle it
@@ -31,7 +32,7 @@ define(['loggable'], (Loggable) => {
             this.hideWindow();
         };
 
-        this.addOption = (cmd, desc) => {
+        this.addOption = (cmd, desc, hint) => {
 
             const uiCmd = $('<div/>')
                             .addClass('ui-autocomplete-cmd')
@@ -54,7 +55,7 @@ define(['loggable'], (Loggable) => {
                                             )
                                             .append( $('<span/>')
                                                 .addClass('autocomplete-hint')
-                                                .text("Admin")
+                                                .text( hint )
                                             )
                                             .append( $('<span/>')
                                                 .addClass('autocomplete-desc')
@@ -76,6 +77,10 @@ define(['loggable'], (Loggable) => {
                                                 .addClass('autocomplete-history-typedcmd')
                                                 .text( cmd )
                                             )
+                                            .append( $('<span/>')
+                                                .addClass('autocomplete-hint')
+                                                .text( hint )
+                                            )
                                             .appendTo( uiCmd );
             }
 
@@ -94,6 +99,40 @@ define(['loggable'], (Loggable) => {
             activeCmdElIdx = -1;
         };
 
+        this.addHistoryCommand = (cmd) => {
+
+            if (cmd[0] !== '/') return; // Not a command
+            const typedCmd = cmd.substr(1);
+
+            let foundItem = false;
+            for (let i = 0; i < history.length; ++i) {
+                if (history[i].historyCmd === typedCmd) {
+                    foundItem = true;
+                    history[i].date = Date.now();
+                }
+            }
+
+            if (!foundItem) {
+                history.push({
+                    date: Date.now(),
+                    historyCmd: typedCmd
+                });
+            }
+
+            const historyCommands = JSON.stringify(history);
+            localStorage.setItem('historyCommands', historyCommands);
+        };
+
+        this.getHistoryCommands = () => {
+
+            const historyCommands = localStorage.getItem('historyCommands');
+            if (historyCommands) {
+                return JSON.parse(historyCommands);
+            }
+
+            return [];
+        };
+
         this.findMatchingCommands = (search) => {
 
             const matches = [];
@@ -103,16 +142,7 @@ define(['loggable'], (Loggable) => {
                 }
             });
 
-            // FIXME: Search history
-            // FIXME: We only want unique history
-            const history = [
-                { historyCmd: "teleport 100 100" },
-                { historyCmd: "teleport 120 37" },
-                { historyCmd: "give_buff DeathSickness" },
-                { historyCmd: "give_xp 42" },
-                { historyCmd: "teleport 0 0" }
-            ];
-
+            // Search history. We want to do this last so that commands get preference and show up top
             history.forEach((cmd) => {
                 if (cmd.historyCmd.indexOf(search) === 0) {
                     matches.push(cmd);
@@ -137,12 +167,16 @@ define(['loggable'], (Loggable) => {
 
                 if (cmd.typedCommand) {
                     // Command
-                    const typedCmd = '/' + cmd.typedCommand;
-                    this.addOption(typedCmd, cmd.desc || "lol this one doesn't even have a description!");
+                    const typedCmd = '/' + cmd.typedCommand,
+                        hint = cmd.requiresAdmin ? "Admin" : "";
+                    this.addOption(typedCmd, cmd.description, hint);
                 } else {
                     // History
-                    const typedCmd = '/' + cmd.historyCmd;
-                    this.addOption(typedCmd);
+                    const typedCmd = '/' + cmd.historyCmd,
+                        date = (new Date(cmd.date));
+
+                    let hint = `${date.getDate()}/${date.getMonth()}/${date.getFullYear() % 100}`;
+                    this.addOption(typedCmd, null, hint);
                 }
             });
 
@@ -192,9 +226,15 @@ define(['loggable'], (Loggable) => {
                     return false;
                 }
 
-                searchCmd = '';
                 return true;
             }).after((msg) => {
+
+                if (searchCmd) {
+                    msg = msg.trim();
+                    this.addHistoryCommand(msg);
+                }
+
+                searchCmd = '';
                 this.hideWindow();
             });
 
@@ -250,6 +290,8 @@ define(['loggable'], (Loggable) => {
 
                 pendingInputClick = false;
             });
+
+            history = this.getHistoryCommands();
         };
 
         this.step = () => { };

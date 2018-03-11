@@ -7,6 +7,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'admin',
             command: CMD_ADMIN,
             requiresAdmin: false,
+            description: "/admin [password] : gives admin permissions",
             args: [
                 {
                     name: 'password',
@@ -43,6 +44,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'crash',
             command: CMD_CRASH,
             requiresAdmin: false,
+            description: "/crash : crashes locally",
             args: [],
             client: () => {
 
@@ -57,6 +59,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'admin_crash',
             command: CMD_ADMIN_CRASH,
             requiresAdmin: true,
+            description: "/admin_crash : sends a crash to the server",
             args: [],
             server: (evt, data, self) => {
                 try {
@@ -78,6 +81,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'gain_xp',
             command: CMD_ADMIN_GAIN_XP,
             requiresAdmin: true,
+            description: "/gain_xp [amount] : gives some amount of XP",
             args: [
                 {
                     name: 'XP',
@@ -116,6 +120,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'suicide',
             command: CMD_ADMIN_SUICIDE,
             requiresAdmin: true,
+            description: "/suicide : kills yourself",
             args: [],
             server: (evt, data, self, player) => {
 
@@ -141,6 +146,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'give_buff',
             command: CMD_ADMIN_GIVE_BUFF,
             requiresAdmin: true,
+            description: "/give_buff [buff] : give yourself a specified buff",
             args: [
                 {
                     name: 'buffres',
@@ -183,6 +189,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'teleport',
             command: CMD_ADMIN_TELEPORT,
             requiresAdmin: true,
+            description: "/teleport [x] [y] : teleport to a given location",
             args: [
                 {
                     name: 'x',
