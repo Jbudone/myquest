@@ -266,7 +266,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
             unload() {
                 character.hook(UpdatedLevelEvt, this).remove();
                 server.handler(EVT_UPDATE_XP).unset();
-                server.handler(EVT_UPDATE_LEVEL).unset();
             }
         };
     };
