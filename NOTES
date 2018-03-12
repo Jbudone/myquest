@@ -316,6 +316,9 @@ WORKING ON (was previously working on)
 	- /teleport to another area
     - Map Editor: Switch spawns from object layer to normal layer (easier for placement)
     - Before crash, pop open debugger (also w/ test)
+	  	- Client (with inspector closed)
+		- Server online
+		- SIGINT while waiting for inspector
     - FIXME: sheetedit get rid of tilesize and avatar setup/manipulation
     - Clean resources (.new files, unused files, sprites, folder structure)
 	- Right click on entity; admin features enabled
@@ -323,27 +326,24 @@ WORKING ON (was previously working on)
 	  	- modify NPC stats (for this entity or ALL entities of this type)
 	- Server watch for json changes and autoreload those parts? (Specifically npc.json)
 	- Admin toolbelt
-	  	- Improve appearance + animation (hover buggy)
+	  	- Improve appearance
 		- Abstract where we add options (shouldn't be done within the toolbelt ui)
 		- Add admin commands on admin
 		- Command: Character template
 		- Command: Reset AI -- specfically remove yourself from enemy neuralnet
-    - game.chat commands: history of commands
+    - Autocomplete: show "..." ellipses if there's more commands; tab cycles through extra commands
 	- BUG: Regen from 10 -> 20 (doesn't increase?)
-	- BUG: Command to damage entity isn't immediately updating client UI healthbar
 	- Admin Commands: Abstract out of player
-	- Admin: Command Damage Entity: Should come from null source (currently we don't allow null source for either server/client)
 	- Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
 	- BUG: Reloading files (npcs): sometimes doesn't trigger; sometimes triggers multiple times for 1 change
 	- BUG: UI.unload -- removeEventListener requires cb to remove; maybe jquery to add/remove/manage events?
 	- Reloading npcs: need to update players w/ changes? -- need to netRestore changed characters OR trigger an event (similar to regen) w/ reloaded shiz
 	- netSerialize/Restore overhaul
-		- Temporarily turn off netSerialize for damage events
 		- Character components
 		- Owner only (separate netSerializeArr) -- only create this for players
 		- Initial character (ignore part of netRestore) -- send cursor pos (length of netSerializeArray), and only restore starting from that offset
 		- Specific getter/setter on stat types: owner only? cb?
-		- Client CB on change
+		- Client CB on change  (current CB setup is kind of gross)
 		- Early out for setter that doesn't actually change the value
 		- Move all necessary variables over to new system (NOTE: shouldn't do this for non-netVars since its unecessary overhead)
 		- Consider removing EVT_REGEN (can just use this system now)
@@ -355,7 +355,6 @@ WORKING ON (was previously working on)
     - People say that getImageData/putImageData is *incredibly* slow, and can't be GPU accelerated(?). This also doesn't work now w/ canvas acceleration. May need to look into WebGL solution
         - Reaching the edge (clear pages?)
         - Teleport? Zone? Death?
-    - BUG: Raptor offset/size?
     - BUG: Firefox sometimes doesn't start (timeout)
     - BUG: Hitch zoning between pages (particularly in Firefox) -- could continue temp pooled page rendering trick + webworker rendering new pages
     - Zoning remotely before locally: we should document this, and perform an audit to confirm its good and scales well
