@@ -304,10 +304,6 @@ WORKING ON (was previously working on)
 			- Look into http2 changes which may make packing images pointless
     - BUG: Map Exporter: Adding avatar to base/sprite layer doesn't result in gid error (it should!); should confirm gid's so it doesn't result in a confusing error when starting up server
     - Bake Spritesheet: Add / Modify sheets.json (option)
-    - Avatars no scale: scale all avatars up + adjust anims/sheet data/etc.  (NOTE: Browserquest spritesheets have various sized sheets, use those)
-        - Fix UI
-        - Fix avatar offset
-        - Fix king (1 tile missing?)
     - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
 	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
     - game.chat player zones out (or respawns), loses admin commands (locally only?)
@@ -315,50 +311,71 @@ WORKING ON (was previously working on)
 	- ctrl+c kill not working; or resulting in bug in errorReport
 	- /teleport to another area
     - Map Editor: Switch spawns from object layer to normal layer (easier for placement)
-    - Before crash, pop open debugger (also w/ test)
-	  	- Client (with inspector closed)
-		- Server online
-		- SIGINT while waiting for inspector
     - FIXME: sheetedit get rid of tilesize and avatar setup/manipulation
-    - Clean resources (.new files, unused files, sprites, folder structure)
+    - Clean sprites folder;   cache/sprites/scrawnyGoblin.webp  , sprites/goblin/{scrawnyGoblin.png,goblin.json}
 	- Right click on entity; admin features enabled
 		- Improve appearance
-	  	- modify NPC stats (for this entity or ALL entities of this type)
 	- Server watch for json changes and autoreload those parts? (Specifically npc.json)
 	- Admin toolbelt
 	  	- Improve appearance
 		- Abstract where we add options (shouldn't be done within the toolbelt ui)
 		- Add admin commands on admin
-		- Command: Character template
-		- Command: Reset AI -- specfically remove yourself from enemy neuralnet
+*   	- Command: Character template -- maybe not necessary since we can just have multiple players w/ preset templates and levelling disabled
+*	    - Command: Reset AI -- specfically remove yourself from enemy neuralnet
+*       - Command: Disable levelling component on character (to test out attacking without levelling)
+*       - Command: Clear buffs (or particularly DeathSickness)
     - Autocomplete: show "..." ellipses if there's more commands; tab cycles through extra commands
-	- BUG: Regen from 10 -> 20 (doesn't increase?)
 	- Admin Commands: Abstract out of player
 	- Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
-	- BUG: Reloading files (npcs): sometimes doesn't trigger; sometimes triggers multiple times for 1 change
+*   - BUG: Reloading files (npcs): sometimes doesn't trigger; sometimes triggers multiple times for 1 change
 	- BUG: UI.unload -- removeEventListener requires cb to remove; maybe jquery to add/remove/manage events?
 	- Reloading npcs: need to update players w/ changes? -- need to netRestore changed characters OR trigger an event (similar to regen) w/ reloaded shiz
-	- netSerialize/Restore overhaul
-		- Character components
+    - netSerialize/Restore overhaul
+		- Character components? Other parts (eg. character.inventory, character.ai)
 		- Owner only (separate netSerializeArr) -- only create this for players
-		- Initial character (ignore part of netRestore) -- send cursor pos (length of netSerializeArray), and only restore starting from that offset
-		- Specific getter/setter on stat types: owner only? cb?
-		- Client CB on change  (current CB setup is kind of gross)
-		- Early out for setter that doesn't actually change the value
-		- Move all necessary variables over to new system (NOTE: shouldn't do this for non-netVars since its unecessary overhead)
 		- Consider removing EVT_REGEN (can just use this system now)
-		- Only create netSerializeArr for server
-		- Initial netSerializeEnabled: shouldn't be in netSerialize (should be at end of initialize & after restoring from db)
-		- netSerialize only sends stats to owner; either send stats (only need to send if different from default) OR only netSerialize health for non-owners
-		- Look into character.stats usage elsewhere (to fix): db, buffs.statbuff, client/game, ui.stats
+		- netSerialize only sends stats to owner; Should stats not be netVars? Or should we also netSerialize stats?
+		- Look into character.stats usage elsewhere (to fix): db, buffs.statbuff (eg. deathsickness, levelling), client/game, ui.stats
         - LOOK INTO: Reloading character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
-    - People say that getImageData/putImageData is *incredibly* slow, and can't be GPU accelerated(?). This also doesn't work now w/ canvas acceleration. May need to look into WebGL solution
-        - Reaching the edge (clear pages?)
-        - Teleport? Zone? Death?
     - BUG: Firefox sometimes doesn't start (timeout)
     - BUG: Hitch zoning between pages (particularly in Firefox) -- could continue temp pooled page rendering trick + webworker rendering new pages
-    - Zoning remotely before locally: we should document this, and perform an audit to confirm its good and scales well
+    - Renderer: Look into UI (movable name/health) rendering options; CSS restyling/recalculations causing hitches
+            - We could use the entities canvas already
+            - We could have a separate UI canvas and use pooled pages (similar to bg pooled pages), then for movables that move use blitting to clear that part of the canvas and redraw in that region
+    - Test map w/ lots of entities; how is performance on sprites canvas? Can we benefit from utilizing similar technology to pooled bg, and also use blitting to clear areas where something has changed (animation, etc.)
+    - Get rid of EVT_ZONE triggering locally for player (possibly for all entities?)
+        - Can we get away with not triggering this locally? We can rework some logic (UI, camera) to determine your page based off of your global position
+        - We change our curPage (area.zone(page)) w/ EVT_ZONE locally AND remotely; this seems dangerous depending on the ordering and potential mismatch of things. Would be better to only use reomte curPage
+        - Renderer.updatePages, UI.updatePages: could update on remote zone
     - Renderer: pooledPagesCopyImageData -- consider getting rid of this option
+    - Grunt monitor filesystem (watch) sometimes not working
+*   - BUG: Player 2 attacked rhino, player 1 finished off rhino, then rhino respawned; player 1 left PVS of rhino, player 2 started attacking rhino then zoned out, player 1 started walking back and rhino was found to be chasing player 1
+    - Modify assert (or roll out our own) to make use of waitForInspector
+    - NPC inheritance
+    - NPCs: get rid of "damage"
+*   - Combat: debuff effects (eg. poison arrows, thrown potions, etc.); how to add this to NPCs too? (NOTE: NPCs we want it % of time to happen)
+    - Map: Layers that auto flatten into sprites layer (eg. fenced off area which is in another area, so we can easily modify fence layer later)
+    - BUG: Reloading NPCs health -- changing maxHealth doesn't netSerialize to clients, so they see npcs respawn (or auto update current health?) to a fraction of their old curMaxHealth
+    - Idle anim; between attack animations also go to idle anim (in same direction)
+*   - Regen: No regen while being attacked (cooldown after being damaged from a source)
+*   - Level rewards: stat bonus, health
+    - Mesh setup:
+*       - BUG: Blender script outputed to "shotsshots"  (should be shots)
+*       - BUG: Didn't set sprite_size
+*       - BUG: Anim names: "front", "back"  instead of "up" "down"
+        - BUG: Placed image in / instead of /sprites
+*       - Setup extra cmdline args for render/bake  (NOTE: render --quick not working)
+    - Come up with a better model -> in-game procedure
+*       - cache should be automated
+*       - previewing model+anim should be easier/faster
+*       - node cacheBuilder after sheetEdit should be easier
+*       - anim compare w/ other sprite (both attacking; chasing, etc.)
+        - anim preview should be slower / easier to analyze  (perhaps each anim-type side-by-side?)
+*       - tool for editing textures w/ imagemagick
+*       - setup imagemagick lookup colour palette
+        - fix pixelation step
+*       - auto add to avatar? auto add to npcs?
+        - error checking (validate sprite.json)
 
 
 	- Browser Debugging Snippets
@@ -503,6 +520,9 @@ WORKING ON (was previously working on)
        - Sprites not updating
             - node cacheBuilder.js  (also, add sprite to cache)
 
+       - Map/Spritesheets look crazy after updating sprite_size
+            - node cacheBuilder.js  (also restart server)
+
 	- Mapping
 	   - New map
 		    - Orthogonal/CSV; 100x100 map; 16x16 tiles   # NOTE: Larger maps seem to be a problem, so trying out smaller maps for now
@@ -514,19 +534,115 @@ WORKING ON (was previously working on)
 			  	- add map to world.json
 				- run tools/export-world.json
 
+	- Adding a New Mesh
+        - Create a single .blend file w/ all of the animations included (each anim can be in a separate frame if necessary)
+        - Create a sprite.json file describing the mesh view and animations
+        - tools/export-model --blender-file [Blender file] --sprite-sheet [Sprite.json file] --render  # Renders the model
+        - tools/export-model --blender-file [Blender file] --sprite-sheet [Sprite.json file] --bake    # Bakes shots to spritesheet
+
 
 
 Next Priority
 	== Design
-	- Stats/Resists, Experience, Loot; Exploring (npcs levels and where they're located in world)
-	  	- Lower level creatures wandering around outside of camps; camps contain bigger creatures; bosses & special camps have long spawn times
-		- 
+*   - Enemy placement; story/gameplay -- where players go to level up; how levelling works (eg. quad kiting tricks, group-only camps, quests, exploration), do we want multiple areas for each level, themed areas, etc.
+        - Places of interest (eg. epic quest areas -- epic quests also partially necessary for obtaining new skills?, high level gear, crafting items, rare raw material (eg. ore for
+          mining, trees for chopping), keeps to be captured/held, raid content, runes (powerups w/ extended timers that
+          somewhat persist through death) are all incredibly tough to break in and require help w/ groups
+        - Levelling is somewhat grindy, and you get less XP w/ groups (shared), but allows you to get into those areas of interest
+        - Levelling solo requires skill to get good XP, or you can safely go for lower level guys
+        - Minor interest areas (eg. regular quests, usable/crucial basic items, crafting)
+        - NOTE: Solo w/ skill attacking (eg. quad kiting) should get around as much XP as groups
+        - Holding keeps: defensive gear that requires crafting? rare drop items? etc. that you can get from other areas of interest
+        - God quests, faction quests (eg. rising in ranks for a particular faction, having influence in their politics)
+        - Harvesting: some areas can be auto harvested w/ particular gear setup there. It will automine the area, but
+          that will leave the area barren and without minerals for other people to mine. They can destroy your harvester
+          to re-enable mining opportunities there. But you can also setup defensive structures around your mining
+          equipment
+        - Defensive gear: siege equipment, magic obelisks, guards, etc.;  NOTE: Some defensive equipment are vulnerable
+          to certain tactics, eg. invisibility, sneakiness, magic shields, etc.  But you can also setup sensors to sense
+          through invisibility, motion detectors for sneakiness. Setup shields around sensors, and magic cancellors to
+          cancel magic shields
+        - Robbing banks: banks charge you for maintaining their defensive structures; but people can break through
+          defensive structures to take everything from the bank. Some banks may offer packages that forward your stuff
+          to another vault when things get scary. NOTE: some banks will have particularly strong defenses (eg.
+          incredibly powerful dragons, etc.); it should be incredibly hard to rob a particular vault, but virtually
+          impossible to rob the entire bank
+
+        Level Layout: Very different areas for different strategies (eg. quad kiting forests, trap kiting, groups);
+          large areas can lead off into different areas of interest primarily for groups, and 1 or 2 areas intended for
+          raid purposes. But you should have to fight through enemies to get to these areas of interest
+    - Bats/Snakes /etc. lvl 1 - 5
+    - Bunny Rat monster? lvl 5-10; +
+        - Scrawny Bunny Rat
+            (in forest w/ snakes/bats)
+            - Lvl 4
+            - No items
+        - Whipper Snapper
+            - Lvl 6
+            - No items
+        - Bunny Rat
+            - Lvl 7
+            - No items
+        - Bunny Wiz
+            - Lvl 9
+            - Some of them on unable to reach places
+            - Casts magic, melee if up close
+            - Items: potion of healing
+        - Sir Bounce A lot
+            - Lvl 12
+            - Boss: Melee, magic if you're running away (then chase?), quick regen
+            - Items: Snuggly fur coat (cold resist), lucky bunny paw (+dex), potion of bounciness (+blink randomly; lasts for X time, a while? tends to blink you in the direction you're walking)
+    - Goblins  lvl 8-13; ++
+        - Scrawny Goblin
+            - Lvl 5
+            - No items
+        - Goblin
+            - Lvl 8
+            - No items
+        - Knife Flinger
+            - Lvl 9
+            - Throws daggers; periodically goes *fast*
+            - Items: throwing daggers; potion of speed
+        - Demolitions Expert
+            - Lvl 11
+            - Throws potions: damage/explosion (fire dmg)
+        - Berserker
+            - Lvl 12
+            - Bigger
+            - Items: potion of rage, potion of vitality
+        - Camp Leader
+            - Lvl 13
+            - Bigger
+            - Items: Dagger, helmet (fire resist)
+        - Prison Guard
+            - Lvl 13
+            - Has a pet raptor (guard's pet; lvl 9)
+            - Bigger
+            - Large health pool / AC
+            - Items: Guard's jacket (AC, +con)
+        - Gobble
+            - Lvl 16
+            - Boss: Fast, periodically goes *very* fast
+            - Items: Potion of speed
+    - Raptors
+        - Baby raptor
+            - Lvl 6
+            - No items
+        - 
 
 
-	 - Level rewards (gain xp, statIncrease)
+    - Add NPC levels (for xp), AC, con
+    - XP Gained formula: their level vs. your level, how much of their XP do you gain?
+    - Clever way to have weapon/armor for npcs without actually using weapons/inventory
+	- Level rewards (gain xp, statIncrease)
 		- { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
-	 - Level XP loss calculation
-	 - Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+                           s/d/c str/dex/con
+        - Level 1: 20 hp,  2/2/2                -- 3x base XP
+        - Level 2: 24 hp,  3/3/2
+        - Level 3: 30 hp,  4/3/3
+
+	- Level XP loss calculation
+	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
 	   	Skill in weapon? (warrior skill)
 
 		str -- strengthen base damage                                   <-|  Str/Dex should be equivalent in terms of effectiveness
@@ -537,7 +653,7 @@ Next Priority
 		speed -- improve attack speed
 		skill -- improve effectiveness of str/dex/speed towards particular weapon type
 
-		enemy AC, con
+		Determine: enemy AC, con, wpn spd, speed? wpn dmg, wpn skill?
 
 
 
@@ -557,8 +673,6 @@ Next Priority
 	 - Combat: attack/speed formula (level/stats/randomness)
 
 
-	   Levelling
-	   	- Level 1: 2 minutes to level (6 kills?)
 	   Stats + Resists + Hinderances (eating/blindness/stun/confusion)
 	   Items
 	   Enemies / Toughness
@@ -569,17 +683,6 @@ Next Priority
 				   Attacking level 3, finish with -20-10% health (die in most cases)  (50 seconds)
 		- Level 2: 10 seconds to kill a level 1; finish with 80-90% health; 10 seconds
 		  		   25 seconds to kill a level 2; finish with 60-70% health; 
-
-		 - Time to level up
-		   	Level 1
-			  - level 1s: 4x
-			  - Level 2s: 2.5x
-			  - Level 3s: 2x
-		 - Time to kill
-		   	Level 1
-			  - Level 1: 5s
-			  - Level 2: 9s
-		 - HP after fight
 
 
 
@@ -611,9 +714,11 @@ Next Priority
 
 Future
 	- Skills
+    - Magic
 	- Better interaction (right click entities/avatars, conversation tree)
 	- Better UI
 	  	- Store messages in localization files & packages which slot messages & UI effects into UI
+        - Look into full screen(ish) game canvas: #canvas turn off overflow
 	- Gameplay system/scripts, triggers/traps
 	- Quest rewards: faction / opening up conversations with other npcs; epic quest; class quest; keys to locked areas (need key to get in, but lose key on death -- key quests should be weekly/different quests so you're punished for losing your key)
 	- Groups or smarter XP (eg. people who assisted in killing, gave buffs, healing, etc.)
@@ -1136,6 +1241,7 @@ EXTERNAL ASSETS
     * Lighting: Add a sun, and hemisphere light surrounding mesh on every angle (XYZ|+-1); can move to each layer for multiple layer/anims: m + shift click each layer
     * Shadeless: Mesh -> Material -> Shading -> [X] Shadeless;  this makes the mesh insensitive to any lighting
     * Dependencies: File -> External Data -> Find/Report Missing Files
+    * Dependency Textures: Find mesh (under Armament) -> Texture -> (find texture being used) -> Change source image
     * Rendering: blender/cycles may depend on how it was already setup
     * Edge rendering: Render -> Post Processing -> Edge / Threshold 10
     * Transparent Background: Render -> Shading -> Alpha -> Transparent
