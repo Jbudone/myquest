@@ -195,6 +195,18 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 });
             },
 
+            clearBuffs() {
+
+                this.Log("Clearing all buffs on buffmgr");
+                for (let i = 0; i < this.buffs.length; ++i) {
+                    const buff = this.buffs[i];
+                    buff.timer = 0.0;
+                }
+
+                // Clear buffs immediately (the next instructions may depend on these being cleared)
+                this.step(0);
+            },
+
             needsUpdate: true,
 
             step(delta) {

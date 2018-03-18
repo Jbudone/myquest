@@ -120,6 +120,20 @@ define(
                 return false;
             };
 
+            this.clearInventory = () => {
+
+                for (let i = 0; i < this.slots.length; ++i) {
+                    const slot = this.slots[i],
+                        item   = slot.item;
+                    if (item) {
+                        this.doHook('updatedSlot').pre(i);
+                        slot.item = null;
+                        slot.stack = 0;
+                        this.doHook('updatedSlot').post(i);
+                    }
+                }
+            };
+
             this.serialize = () => {
 
                 // TODO: Could cache the serialized data and only re-do when dirty

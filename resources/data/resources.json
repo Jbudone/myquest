@@ -54,5 +54,9 @@
     "fx": {
         "file": "fx.json",
         "options": {}
+    },
+    "testing": {
+        "file": "testing.json",
+        "options": {}
     }
 }

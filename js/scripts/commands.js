@@ -186,6 +186,82 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             }
         },
         {
+            typedCommand: 'give_item',
+            command: CMD_ADMIN_GIVE_ITEM,
+            requiresAdmin: true,
+            description: "/give_item [item] : give yourself a specified item",
+            args: [
+                {
+                    name: 'itemres',
+                    sanitize: (p) => p,
+                    test: (p) => p in Items,
+                    error: "ItemRes not valid"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                if
+                (
+                    _.isObject(data) &&
+                    _.isString(data.itemres) &&
+                    data.itemres in Items
+                )
+                {
+                    this.Log(`Giving you an item: ${data.itemres}`);
+
+                    // Add item to inventory
+                    const itmRef  = Items[data.itemres],
+                        inventory = player.movable.character.inventory,
+                        result    = inventory.addItem(itmRef);
+
+                    if (result !== false) {
+                        player.respond(evt.id, true, {
+                            itmres: data.itemres,
+                            slot: result
+                        });
+                    }
+                }
+
+                player.respond(evt.id, false, { });
+            },
+            client: {
+                succeeded: (self, data) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+
+                    const itmRef = Resources.items.list[data.itmres];
+                    player.character.inventory.addItem(itmRef, data.slot);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'clear_buffs',
+            command: CMD_ADMIN_CLEAR_BUFFS,
+            requiresAdmin: true,
+            description: "/clear_buffs : clear yourself of all buffs",
+            args: [],
+            server: (evt, data, self, player) => {
+
+                let success = true;
+                this.Log(`Clearing your buffs`);
+                player.movable.character.charComponent('buffmgr').clearBuffs();
+
+                player.respond(evt.id, success, {
+
+                });
+            },
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Successfully clearing buffs", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Failed to clear buffs ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
             typedCommand: 'teleport',
             command: CMD_ADMIN_TELEPORT,
             requiresAdmin: true,
@@ -230,6 +306,57 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 },
                 failed: () => {
                     UI.postMessage("Fail in teleport! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'character_template',
+            command: CMD_ADMIN_CHARACTER_TEMPLATE,
+            requiresAdmin: true,
+            description: "/character_template [template_name] : Loads into a specified character template",
+            args: [
+                {
+                    name: 'charTemplate',
+                    sanitize: (p) => p,
+                    test: (p) => p in TestingData.charTemplates,
+                    error: "Invalid character template"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isString(data.charTemplate) &&
+                    data.charTemplate in TestingData.charTemplates
+                )
+                {
+                    this.Log(`User loading into character template: (${data.charTemplate})`);
+                    results = player.setCharacterTemplate(TestingData.charTemplates[data.charTemplate]);
+                    player.respond(evt.id, true, results);
+                }
+
+                player.respond(evt.id, success, { });
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self, data) => {
+                    UI.postMessage("Successfully loaded into character template", MESSAGE_GOOD);
+
+                    if (data.items) {
+                        const inventory = player.character.inventory;
+                        inventory.clearInventory();
+                        data.items.forEach((item) => {
+                            const itmRef = Resources.items.list[item.itmres];
+                            inventory.addItem(itmRef, item.slot);
+                        });
+                    }
+                },
+                failed: () => {
+                    UI.postMessage("Failed to load into character template", MESSAGE_BAD);
                 }
             }
         }

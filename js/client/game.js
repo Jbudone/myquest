@@ -515,8 +515,13 @@ define(
                         const entity = The.area.pages[page].movables[entityId];
                         if (!entity) throw Err(`Entity not found in area: ${entityId}`);
 
-                        entity.character.netUpdate(netSerialize);
+                        entity.character.netUpdate(netSerialize, false);
                     };
+
+                    server.registerHandler(EVT_NETSERIALIZE_OWNER);
+                    server.handler(EVT_NETSERIALIZE_OWNER).set((evt, data) => {
+                        The.player.character.netUpdate(data.serialize, true);
+                    });
 
                     // Path Cancelled
                     server.onEntityPathCancelled = (page, event) => {
@@ -1300,8 +1305,10 @@ define(
                 };
                 The.scripting.Rules  = Resources.rules;
                 The.scripting.Buffs  = Resources.buffs;
+                The.scripting.Items  = Resources.items.list;
                 The.scripting.Quests = Resources.quests;
                 The.scripting.Interactions = Resources.interactions;
+                The.scripting.TestingData  = Resources.testing;
 
 
                 // -------------------------------------------------------------------------------------------------- //

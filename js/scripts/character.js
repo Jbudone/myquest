@@ -28,6 +28,7 @@ define(
 
             this.entity.character = this;
             this.initialized = false;
+            this.isPlayer = (entity.playerID ? true : false);
 
             this.setLogPrefix(`char: ${entity.id}`);
             this.Log(`Setting character on entity ${entity.id}`, LOG_DEBUG);
@@ -52,6 +53,10 @@ define(
             const netIndices = [];
             if (Env.isServer) {
                 this.netUpdateArr = []; // Things that have changed since we last sent out an update
+
+                if (this.isPlayer) {
+                    this.netUpdateOwnerArr = [];
+                }
             } else {
 
                 // The server may send a netSerialize of the character's state while there's items already in the
@@ -60,6 +65,7 @@ define(
                 // will send a cursor for the netUpdateArr length, so we can skip ahead to this position when we receive
                 // the first netUpdate
                 this.netUpdateCursor = 0;
+                this.netUpdateCursorOwner = 0;
             }
 
             // Are we currently serializing netVars? NOTE: We may want to turn this on/off if we plan to modify a
@@ -69,7 +75,7 @@ define(
                 netSerializeEnabled = enabled;
             };
 
-            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback) => {
+            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback, ownerOnly) => {
 
                 if (!obj.props) {
                     Object.defineProperty(obj, 'props', {
@@ -78,7 +84,22 @@ define(
                     });
                 }
 
-                let propSet_Net_CB = (value) => {
+                if (!this.isPlayer && ownerOnly) return;
+
+                // FIXME: This is disgusting! Lets see if we can string build our function instead  (new Function("..."))
+                let propSet_Own_Net_CB = (value) => {
+                                    const oldVal = obj.props[propName];
+                                    if (value === oldVal) return;
+
+                                    obj.props[propName] = value;
+                                    callback(oldVal, value);
+
+                                    if (netSerializeEnabled) {
+                                        this.netUpdateOwnerArr.push(propKey);
+                                        this.netUpdateOwnerArr.push(value);
+                                    }
+                                },
+                    propSet_Net_CB = (value) => {
                                     const oldVal = obj.props[propName];
                                     if (value === oldVal) return;
 
@@ -88,6 +109,16 @@ define(
                                     if (netSerializeEnabled) {
                                         this.netUpdateArr.push(propKey);
                                         this.netUpdateArr.push(value);
+                                    }
+                                },
+                    propSet_Own_Net = (value) => {
+                                    const oldVal = obj.props[propName];
+                                    if (value === oldVal) return;
+
+                                    obj.props[propName] = value;
+                                    if (netSerializeEnabled) {
+                                        this.netUpdateOwnerArr.push(propKey);
+                                        this.netUpdateOwnerArr.push(value);
                                     }
                                 },
                     propSet_Net = (value) => {
@@ -119,8 +150,15 @@ define(
                     },
 
                     "set": (shouldNetSerialize ? 
-                              (callback ? propSet_Net_CB : propSet_Net) :
-                              (callback ? propSet_CB : propSet))
+                            (
+                                (ownerOnly && Env.isServer) ?
+                                    (callback ? propSet_Own_Net_CB : propSet_Own_Net) :
+                                    (callback ? propSet_Net_CB : propSet_Net)
+                            )
+                            :
+                            (callback ? propSet_CB : propSet)
+                        )
+
                 });
 
                 if (shouldNetSerialize) {
@@ -155,7 +193,6 @@ define(
                 return this.charComponents.find((c) => c.name === name);
             };
 
-            this.isPlayer = (entity.playerID ? true : false);
             this.delta = 0;
 
             this.registerHook('healthChanged');
@@ -432,6 +469,18 @@ define(
 
                             this.netUpdateArr = [];
                         }
+
+                        if (this.isPlayer && this.netUpdateOwnerArr.length) {
+                            // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateOwnerArr
+
+                            this.entity.player.send(EVT_NETSERIALIZE_OWNER, {
+                                serialize: this.netUpdateOwnerArr,
+                                entityId: _character.entity.id,
+                                page: _character.entity.page.index
+                            });
+
+                            this.netUpdateOwnerArr = [];
+                        }
                     }
                 });
             };
@@ -540,6 +589,10 @@ define(
 
                         _character.stats = this.serializeStats();
                         _character.inventory = this.inventory.serialize();
+
+                        if (this.netUpdateOwnerArr && this.netUpdateOwnerArr.length) {
+                            _character.netUpdateCursorOwner = this.netUpdateOwnerArr.length;
+                        }
                     }
 
                     // We may netSerialize while there's still netVars in the netUpdate buffer waiting to be sent out.
@@ -902,6 +955,7 @@ define(
 
                     if (_character.netUpdateCursor) {
                         this.netUpdateCursor = _character.netUpdateCursor;
+                        this.netUpdateCursorOwner = _character.netUpdateCursorOwner;
                     }
 
                     this.initialized = true;
@@ -932,7 +986,7 @@ define(
 
                 },
 
-                netUpdate: (netUpdateArr) => {
+                netUpdate: (netUpdateArr, owner) => {
 
                     assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
                     for (let i = this.netUpdateCursor; i < netUpdateArr.length; i += 2) {
@@ -945,7 +999,11 @@ define(
                         netIndex.obj[propName] = propValue;
                     }
 
-                    this.netUpdateCursor = 0;
+                    if (owner) {
+                        this.netUpdateCursor = 0;
+                    } else {
+                        this.netUpdateCursorOwner = 0;
+                    }
                 },
 
                 setToUser: () => {

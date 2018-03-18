@@ -29,6 +29,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
             rules: {},
             fx: {},
             cache: {},
+            testing: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
@@ -60,6 +61,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 						if (!resource) {
 							this.Log("Resource ("+resourceID+") not found", LOG_ERROR);
 							failed();
+                            return;
 						}
 
 						this.Log("Loading resource: " + resourceID + "("+resource.file+")");
@@ -287,6 +289,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			else if (assetID == 'world') return initializeWorld(asset);
 			else if (assetID == 'components') return initializeComponents(asset);
 			else if (assetID == 'cache') return initializeCache(asset);
+			else if (assetID == 'testing') return initializeTesting(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
 
@@ -712,6 +715,12 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 			var res = JSON.parse(asset);
             this.cache = res;
+        }.bind(_interface)),
+
+        initializeTesting = (function(asset){
+
+			var res = JSON.parse(asset);
+            this.testing = res;
         }.bind(_interface)),
 
         loadComponents = (function(){

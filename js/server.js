@@ -316,7 +316,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const Resources = (new ResourceMgr());
                             GLOBAL.Resources = Resources;
                             Resources.initialize(
-                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components']
+                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'testing']
                             ).then((assets) => {
 
                                 // Load World
@@ -378,8 +378,10 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             The.scripting.redis  = redis;
                             The.scripting.Rules  = Resources.rules;
                             The.scripting.Buffs  = Resources.buffs;
+                            The.scripting.Items  = Resources.items.list;
                             The.scripting.Quests = Resources.quests;
                             The.scripting.Interactions = Resources.interactions;
+                            The.scripting.TestingData  = Resources.testing;
 
                             Resources.loadComponents().then(() => {
                                 Resources.loadScripts(Resources._scriptRes).then(() => {

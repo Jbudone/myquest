@@ -605,6 +605,60 @@ define(
                 this.handlePendingEvents();
             };
 
+            this.setCharacterTemplate = (template) => {
+
+                const results = {},
+                    success = true;
+
+                this.movable.character.charComponent('buffmgr').clearBuffs();
+
+                for (const statName in template.stats) {
+                    const stat = template.stats[statName];
+                    this.movable.character.stats[statName].cur = stat;
+                    this.movable.character.stats[statName].curMax = stat;
+                    this.movable.character.stats[statName].max = stat;
+                }
+
+                for (const componentName in template.components) {
+                    const templateComponent = template.components[componentName],
+                        charComponent = this.movable.character.charComponent(componentName);
+
+                    for (const key in templateComponent) {
+                        charComponent[key] = templateComponent[key];
+                    }
+                }
+
+                if (template.items) {
+
+                    results.items = [];
+
+                    const inventory = this.movable.character.inventory;
+                    inventory.clearInventory();
+
+                    template.items.forEach((itm) => {
+
+                        if (!(itm in Resources.items.list)) {
+                            success = false;
+                            return;
+                        }
+
+                        const itmRef = Resources.items.list[itm],
+                            result   = inventory.addItem(itmRef);
+
+                        if (result === false) {
+                            success = false;
+                        } else {
+                            results.items.push({
+                                itmres: itm,
+                                slot: result
+                            });
+                        }
+                    });
+                }
+
+                return results;
+            };
+
             // FIXME: Abstract this to admin commands
             this.registerHandler(CMD_ADMIN_DAMAGE_ENTITY);
             this.handler(CMD_ADMIN_DAMAGE_ENTITY).set((evt, data) => {

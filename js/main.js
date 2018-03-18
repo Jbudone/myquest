@@ -51,7 +51,7 @@ define(
             // TODO: Find a better way to coordinate with node assertion
             // TODO: Setup option to disable in production
             const assert = (expr, message) => {
-                if (!expr) throw Err(message);
+                if (!expr) { debugger; throw Err(message); }
             };
 
 
@@ -59,6 +59,8 @@ define(
             window.assert      = assert;
             window.Profiler    = Profiler;
             window.ErrorReporter = ErrorReporter;
+
+            window.onerror = errorInGame;
 
 
             // ------------------------------------------------------------------------------------------------------ //
@@ -233,7 +235,7 @@ define(
 
                 Resources = (new Resources());
                 window.Resources = Resources;
-                Resources.initialize(['cache', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx']).then((assets) => {
+                Resources.initialize(['cache', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx', 'testing']).then((assets) => {
                     loaded('resources');
                 })
                 .catch((e) => { errorInGame(e); });

@@ -8,23 +8,9 @@ define(['loggable', 'component'], (Loggable, Component) => {
         UI              = The.UI;
 
 
-    let staticInit = function() {};
     let server;
     if (!Env.isServer) {
-
         server = The.scripting.server;
-        staticInit = function() {
-
-            server.registerHandler(EVT_UPDATE_LEVEL, 'character.level');
-            server.handler(EVT_UPDATE_LEVEL).set(function(evt, data) {
-                UI.postMessage(`Ding! ${data.entityId} levelled up to ${data.level}`, MESSAGE_INFO);
-                The.area.movables[data.entityId].character.doHook(UpdatedLevelEvt).post(data);
-            });
-
-            // FIXME: Need to static unload when unloading all levelling components (zoning out)
-
-            staticInit = function(){};
-        };
     }
 
     const Levelling = function(character) {
@@ -36,8 +22,25 @@ define(['loggable', 'component'], (Loggable, Component) => {
         this.setLogGroup('Component');
         this.setLogPrefix(`Levelling: ${character.entity.id}`);
 
-        this.level = 0;
-        this.XP = 0;
+        character.addProperty('level', 'level', this, 0, true, Env.isServer ? null : (oldLevel, newLevel) => {
+        
+            const data = {
+                    entityId: character.entity.id,
+                    level: newLevel,
+                    XP: this.XP
+                };
+            UI.postMessage(`Ding! ${data.entityId} levelled up to ${newLevel}`, MESSAGE_INFO);
+            The.area.movables[data.entityId].character.doHook(UpdatedLevelEvt).post(data);
+        });
+
+        character.addProperty('XP', 'XP', this, 0, true, Env.isServer ? null : (oldXP, newXP) => {
+
+            if (this.XP > this.achievedXP) {
+                this.achievedXP = this.XP;
+            }
+
+            UI.postMessage(`Yay, XP!  ${this.XP} / ${this.achievedXP}`);
+        }, true);
 
         // If we lose XP/Levels for what ever reason (*cough* dying *cough*) we want to keep track of what XP/Level
         // we've actually achieved. This is mostly important for visual effects (visual cue that we're regaining lost
@@ -87,7 +90,8 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
                     const prevXP = this.XP,
                         prevLevel = this.level;
-                    this.XP += data.XP;
+
+                    let newXP = this.XP + data.XP;
 
                     let increasedMaxXP = true;
                     if (
@@ -95,7 +99,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         (
                             // Same level but not the achieved XP
                             this.level === this.achievedLevel &&
-                            this.XP <= this.achievedXP
+                            newXP <= this.achievedXP
                         )
                     )
                     {
@@ -103,35 +107,26 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     }
 
                     if (increasedMaxXP) {
-                        this.achievedXP = this.XP;
+                        this.achievedXP = newXP;
                     }
 
 
-                    if (this.XP >= levelRules.nextLevelXP) {
+                    if (newXP >= levelRules.nextLevelXP) {
 
-                        ++this.level;
-                        this.XP = this.XP - levelRules.nextLevelXP;
-                        levelRules = Rules.level[this.level];
+                        // NOTE: We want XP to netSerialize before level (for callback ordering)
+                        const newLevel = this.level + 1;
+                        this.XP = newXP - levelRules.nextLevelXP;
+                        levelRules = Rules.level[newLevel];
+                        this.level = newLevel;
 
 
                         if (increasedMaxXP) {
                             // FIXME: Levelup!
                             this.achievedLevel = this.level;
-                            this.achievedXP = this.XP;
+                            this.achievedXP = newXP;
                         }
-
-                        character.entity.page.broadcast(EVT_UPDATE_LEVEL, {
-                            entityId: character.entity.id,
-                            level: this.level,
-                            XP: this.XP
-                        });
                     } else {
-
-                        if (character.entity.player) {
-                            character.entity.player.send(EVT_UPDATE_XP, {
-                                XP: this.XP
-                            });
-                        }
+                        this.XP = newXP;
                     }
 
                     this.Log(`You gained some XP: (Level ${prevLevel}, XP ${prevXP}) => (Level ${this.level}, XP ${this.XP} / ${levelRules.nextLevelXP}); achieved: ${this.achievedLevel} level  ${this.achievedXP} XP`);
@@ -155,23 +150,12 @@ define(['loggable', 'component'], (Loggable, Component) => {
                             this.Log("Dropping your level");
 
                             // Need to drop a level
-                            --this.level;
-                            levelRules = Rules.level[this.level];
+                            // NOTE: We want XP to netSerialize before level (for callback ordering)
+                            const newLevel = this.level - 1;
+                            levelRules = Rules.level[newLevel];
                             this.XP = levelRules.nextLevelXP + XP;
                             assert(this.XP >= 0, "We dropped enough XP to drop more than one level!");
-
-                            character.entity.page.broadcast(EVT_UPDATE_LEVEL, {
-                                entityId: character.entity.id,
-                                level: this.level,
-                                XP: this.XP
-                            });
-                        } else {
-
-                            if (character.entity.player) {
-                                character.entity.player.send(EVT_UPDATE_XP, {
-                                    XP: this.XP
-                                });
-                            }
+                            this.level = newLevel;
                         }
 
                         this.Log(`You lost some XP: (Level ${prevLevel}, XP ${prevXP}) => (Level ${this.level}, XP ${this.XP} / ${levelRules.nextLevelXP}); achieved: ${this.achievedLevel} level  ${this.achievedXP} XP`);
@@ -190,15 +174,16 @@ define(['loggable', 'component'], (Loggable, Component) => {
             },
 
             restore(component) {
+                // NOTE: We're going to serialize XP/level separately, no need to netSerialize too
+                character.setNetSerializeEnabled(false);
                 this.commonRestore(component);
+                character.setNetSerializeEnabled(true);
             }
         };
 
         this.client = {
 
             initialize() {
-
-                staticInit();
 
                 character.hook(UpdatedLevelEvt, this).after(function(data){
 
@@ -215,8 +200,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         increasedMaxXP = false;
                     }
 
-                    this.level = data.level;
-                    this.XP    = data.XP;
                     levelRules = Rules.level[this.level];
 
                     if (increasedMaxXP) {
@@ -233,18 +216,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         UI.postMessage("Just catching up to my old level..");
                     }
                 });
-
-                server.registerHandler(EVT_UPDATE_XP, 'character.levelling');
-                server.handler(EVT_UPDATE_XP).set((evt, data) => {
-
-                    this.XP = data.XP;
-                    if (this.XP > this.achievedXP) {
-                        this.achievedXP = this.XP;
-                    }
-                    
-                    UI.postMessage(`Yay, XP!  ${this.XP} / ${this.achievedXP}`);
-                });
-
             },
 
             serialize() {
@@ -265,7 +236,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
             unload() {
                 character.hook(UpdatedLevelEvt, this).remove();
-                server.handler(EVT_UPDATE_XP).unset();
             }
         };
     };

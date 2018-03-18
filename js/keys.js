@@ -124,6 +124,7 @@ define(function(){
     addKey('EVT_ACTIVATE');
     addKey('EVT_DEACTIVATE');
     addKey('EVT_NETSERIALIZE');
+    addKey('EVT_NETSERIALIZE_OWNER');
 
 
 	/// %%%%%%%%%%%%%%%%%%%%%
@@ -158,6 +159,9 @@ define(function(){
     addKey('CMD_ADMIN_DAMAGE_ENTITY');
     addKey('CMD_ADMIN_TELEPORT');
     addKey('CMD_CRASH');
+    addKey('CMD_ADMIN_CHARACTER_TEMPLATE');
+    addKey('CMD_ADMIN_CLEAR_BUFFS');
+    addKey('CMD_ADMIN_GIVE_ITEM');
 
 	addKey('HOOK_INTO_MAP');
 
@@ -191,10 +195,6 @@ define(function(){
 	addKey('TEST_CHECKJPS'); // Testing
 
     addKey('EVT_REGENERATE');
-    addKey('EVT_GAIN_XP');
-    addKey('EVT_GAIN_LEVEL');
-    addKey('EVT_UPDATE_XP');
-    addKey('EVT_UPDATE_LEVEL');
     addKey('EVT_BUFFED');
     addKey('EVT_BUFFED_PRIVATE');
     addKey('EVT_BUFF_REMOVED_PRIVATE');
