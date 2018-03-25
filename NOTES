@@ -315,16 +315,11 @@ WORKING ON (was previously working on)
     - Clean sprites folder;   cache/sprites/scrawnyGoblin.webp  , sprites/goblin/{scrawnyGoblin.png,goblin.json}
 	- Right click on entity; admin features enabled
 		- Improve appearance
-		- Command: Get aggro
 	- Server watch for json changes and autoreload those parts? (Specifically npc.json)
 	- Admin toolbelt
 	  	- Improve appearance
 		- Abstract where we add options (shouldn't be done within the toolbelt ui)
-		- Add admin commands on admin
-*   	- Command: Character template -- maybe not necessary since we can just have multiple players w/ preset templates and levelling disabled
-    		- settings: levelling disabled
-*	    - Command: Reset AI -- specfically remove yourself from enemy neuralnet
-*       - Command: Disable levelling component on character (to test out attacking without levelling)
+ 	    - Command: Reset AI -- specfically remove yourself from enemy neuralnet
     - Autocomplete: show "..." ellipses if there's more commands; tab cycles through extra commands
 	- Admin Commands: Abstract out of player
 	- Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
@@ -351,14 +346,31 @@ WORKING ON (was previously working on)
     - Grunt monitor filesystem (watch) sometimes not working
 *   - BUG: Player 2 attacked rhino, player 1 finished off rhino, then rhino respawned; player 1 left PVS of rhino, player 2 started attacking rhino then zoned out, player 1 started walking back and rhino was found to be chasing player 1
     - Modify assert (or roll out our own) to make use of waitForInspector
+	- Fix waitForInspector when we've already connected to the inspector
     - NPC inheritance
     - NPCs: get rid of "damage"
 *   - Combat: debuff effects (eg. poison arrows, thrown potions, etc.); how to add this to NPCs too? (NOTE: NPCs we want it % of time to happen)
+		- effect on the weapon (or projectile for ranged). 
+		  	- could pass effect into .damage; then handle effect accordingly
+			  	- apart of damageData
+				- check if procs, manipulate data, post effects on character
+				- weapon: {
+					dmg: 10,
+					spd: 12,
+					lvl: 6,
+					effects: [
+						{
+							type: buff,
+							buffRes: poison,
+							chance: 0.2,
+							args: ...?
+						},
+
+					]
+				  }
+			- could pre/post hook into effect (see if it procs, perform effects)
     - Map: Layers that auto flatten into sprites layer (eg. fenced off area which is in another area, so we can easily modify fence layer later)
-    - BUG: Reloading NPCs health -- changing maxHealth doesn't netSerialize to clients, so they see npcs respawn (or auto update current health?) to a fraction of their old curMaxHealth
     - Idle anim; between attack animations also go to idle anim (in same direction)
-*   - Regen: No regen while being attacked (cooldown after being damaged from a source)
-*   - Level rewards: stat bonus, health
     - Mesh setup:
 *       - BUG: Blender script outputed to "shotsshots"  (should be shots)
 *       - BUG: Didn't set sprite_size
@@ -376,7 +388,6 @@ WORKING ON (was previously working on)
         - fix pixelation step
 *       - auto add to avatar? auto add to npcs?
         - error checking (validate sprite.json)
-	- Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
 
 
 	- Browser Debugging Snippets
