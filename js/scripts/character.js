@@ -556,6 +556,12 @@ define(
                     this.brain = this._script.addScript(new AI(game, _character)); // NOTE: brain will be initialized automatically after character is initialized
                     this.initListeners();
                     this.loadComponents();
+
+                    // NPCs have finished loading at this point. Player will need to restore their components/etc. from
+                    // db restore
+                    if (!this.isPlayer) {
+                        netSerializeEnabled = true;
+                    }
                 },
 
                 // Serialize character (saving)
@@ -989,7 +995,8 @@ define(
                 netUpdate: (netUpdateArr, owner) => {
 
                     assert(netUpdateArr.length % 2 === 0, "netUpdate received w/ an odd number of elements: every item changed should include a pair of items (key,value)");
-                    for (let i = this.netUpdateCursor; i < netUpdateArr.length; i += 2) {
+                    let cursor = owner ? this.netUpdateCursorOwner : this.netUpdateCursor;
+                    for (let i = cursor; i < netUpdateArr.length; i += 2) {
                         const propKey = netUpdateArr[i],
                             propValue = netUpdateArr[i+1],
                             netIndex  = netIndices[propKey],
@@ -1000,9 +1007,9 @@ define(
                     }
 
                     if (owner) {
-                        this.netUpdateCursor = 0;
-                    } else {
                         this.netUpdateCursorOwner = 0;
+                    } else {
+                        this.netUpdateCursor = 0;
                     }
                 },
 

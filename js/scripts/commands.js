@@ -247,10 +247,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 let success = true;
                 this.Log(`Clearing your buffs`);
                 player.movable.character.charComponent('buffmgr').clearBuffs();
-
-                player.respond(evt.id, success, {
-
-                });
+                player.respond(evt.id, success, {});
             },
             client: {
                 succeeded: (self) => {
@@ -357,6 +354,26 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 },
                 failed: () => {
                     UI.postMessage("Failed to load into character template", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'disable_xp',
+            command: CMD_ADMIN_DISABLE_XP,
+            requiresAdmin: true,
+            description: "/disable_xp : Disable levelling component for player",
+            args: [],
+            server: (evt, data, self, player) => {
+                this.Log(`User disabling levelling component.. What a fool`);
+                player.movable.character.charComponent('levelling').enabled = false;
+                player.respond(evt.id, true, {});
+            },
+            client: {
+                succeeded: (self, data) => {
+                    UI.postMessage("Successfully disabled levelling", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Failed to disabled levelling", MESSAGE_BAD);
                 }
             }
         }

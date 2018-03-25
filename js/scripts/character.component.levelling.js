@@ -48,8 +48,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
         // we've already achieved
         this.achievedXP = 0;
         this.achievedLevel = 0;
-
-        let levelRules = null;
+        this.enabled = true;
 
         // Common serialization
         this.commonSerialize = () => {
@@ -70,19 +69,20 @@ define(['loggable', 'component'], (Loggable, Component) => {
             this.XP            = component.XP;
             this.achievedXP    = component.achievedXP;
             this.achievedLevel = component.achievedLevel;
-
-            levelRules = Rules.level[this.level];
         };
 
-        this.nextLevelXP = () => levelRules.nextLevelXP;
+        this.nextLevelXP = () => Rules.level[this.level].nextLevelXP;
 
         this.server = {
 
             initialize() {
 
                 character.hook(GainXPEvt, this).after(function(data){
+                    if (!this.enabled) return;
+
                     this.Log(`Woahh I just gained some XP ${data.XP}`);
 
+                    let levelRules = Rules.level[this.level];
                     if (!levelRules.nextLevelXP) {
                         this.Log("Looks like I'm at the max level..");
                         return;
@@ -119,11 +119,25 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         levelRules = Rules.level[newLevel];
                         this.level = newLevel;
 
-
                         if (increasedMaxXP) {
                             // FIXME: Levelup!
                             this.achievedLevel = this.level;
-                            this.achievedXP = newXP;
+                            this.achievedXP = this.XP;
+
+                            // Level stat increases
+                            if (levelRules.bonuses) {
+                                for (const bonusKey in levelRules.bonuses) {
+                                    const stat = character.stats[bonusKey],
+                                        statInc = levelRules.bonuses[bonusKey];
+                                    if (stat.curMax === stat.max) {
+                                        if (stat.cur === stat.curMax) {
+                                            stat.cur += statInc;
+                                        }
+                                        stat.curMax += statInc;
+                                    }
+                                    stat.max += statInc;
+                                }
+                            }
                         }
                     } else {
                         this.XP = newXP;
@@ -133,8 +147,10 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 });
 
                 character.hook(DeathEvt, this).after(function(advocate){
+                    if (!this.enabled) return;
 
                     this.Log("You just died!", LOG_DEBUG);
+                    let levelRules = Rules.level[this.level];
 
                     // Lose XP
                     if (levelRules.canLoseXP) {
@@ -162,7 +178,6 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     }
                 });
 
-                levelRules = Rules.level[this.level];
             },
 
             netSerialize() {
@@ -200,7 +215,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         increasedMaxXP = false;
                     }
 
-                    levelRules = Rules.level[this.level];
+                    let levelRules = Rules.level[this.level];
 
                     if (increasedMaxXP) {
                         this.achievedXP = this.XP;

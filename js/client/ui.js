@@ -800,6 +800,12 @@ define(
                 $('#inputForm').addClass('admin');
 
                 this.entityMenu.enableAdmin();
+
+                for (let i=0; i<this.modules.length; ++i) {
+                    if (_.isFunction(this.modules[i].enableAdmin)) {
+                        this.modules[i].enableAdmin();
+                    }
+                }
             };
 
             this.entityMenu = new this.components.EntityMenuUI();

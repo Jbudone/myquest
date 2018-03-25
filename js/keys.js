@@ -162,6 +162,7 @@ define(function(){
     addKey('CMD_ADMIN_CHARACTER_TEMPLATE');
     addKey('CMD_ADMIN_CLEAR_BUFFS');
     addKey('CMD_ADMIN_GIVE_ITEM');
+    addKey('CMD_ADMIN_DISABLE_XP');
 
 	addKey('HOOK_INTO_MAP');
 

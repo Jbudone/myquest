@@ -37,7 +37,12 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
         this.server = {
 
-            initialize() { },
+            initialize() {
+
+                character.hook('damaged', this).after(() => {
+                    this.nextTick = this.tickTime; // Reset regen tick counter
+                });
+            },
 
             needsUpdate: true,
 

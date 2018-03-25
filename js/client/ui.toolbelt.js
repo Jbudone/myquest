@@ -57,6 +57,26 @@ define(['loggable'], (Loggable) => {
                 })
                 .catch(errorInGame);
             });
+
+            this.addOption("Clear Buffs", () => {
+                The.scripting.server.request(CMD_ADMIN_CLEAR_BUFFS, { })
+                .then((data) => {
+                    The.UI.postMessage("Clear Buffs Command: Success");
+                }, (data) => {
+                    The.UI.postMessage("Clear Buffs Command: Failed");
+                })
+                .catch(errorInGame);
+            });
+
+            this.addOption("Disable XP", () => {
+                The.scripting.server.request(CMD_ADMIN_DISABLE_XP, { })
+                .then((data) => {
+                    The.UI.postMessage("Disable XP Command: Success");
+                }, (data) => {
+                    The.UI.postMessage("Disable XP Command: Failed");
+                })
+                .catch(errorInGame);
+            });
         };
 
         this.addOption = (label, callback) => {
@@ -89,6 +109,12 @@ define(['loggable'], (Loggable) => {
                 })
                 .appendTo(toolbeltContainerEl);
         };
+
+        this.enableAdmin = () => {
+            uiToolbelt.removeClass('hidden');
+        };
+
+        uiToolbelt.addClass('hidden');
 
         this.step = () => { };
     };

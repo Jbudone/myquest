@@ -9,12 +9,32 @@
         "components": {
             "levelling": {
                 "level": 1,
-                "XP": 0
+                "XP": 0,
+                "achievedLevel": 1,
+                "achievedXP": 0
             }
         },
         "items": [
             "itm_potion", "itm_potion", "itm_potion", "itm_potion",
             "itm_helmet", "itm_helmet"
         ]
+    },
+    "NewCharacterNoLevelling": {
+        "stats": {
+            "health": 100,
+            "str": 1,
+            "dex": 1,
+            "con": 1
+        },
+        "components": {
+            "levelling": {
+                "enabled": false
+            }
+        },
+        "items": [
+            "itm_potion", "itm_potion", "itm_potion", "itm_potion",
+            "itm_helmet", "itm_helmet"
+        ]
+
     }
 }}

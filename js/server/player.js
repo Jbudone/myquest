@@ -666,13 +666,19 @@ define(
                 const character = this.movable.character,
                     area        = this.movable.page.area,
                     target      = area.movables[data.id];
-                let err         = null;
+                let err         = null,
+                    source      = null;
 
                 if (!target) err = "No target currently";
                 else if (!_.isObject(target)) err = "Target not found";
                 else if (!_.isObject(target.character)) err = "Target does not have a character reference"; // FIXME: Unecessary once we fix the issue below
                 //else if (!(target.character instanceof Character)) err = "Target does not have a character reference";
                 // FIXME: No reference to Character before scripts have been initialized
+
+                if (data.source) source = area.movables[data.source];
+                if (source) source = source.character;
+
+                if (data.source !== null && !source) err = `Invalid source for damage: ${data.source}`;
 
                 if (!err) {
                     if (!target.character.isAttackable()) err = "Character is not attackable";
@@ -686,7 +692,7 @@ define(
                     return;
                 }
 
-                target.character.damage(data.amount, null, {});
+                target.character.damage(data.amount, source, {});
 
                 this.respond(evt.id, true);
             });

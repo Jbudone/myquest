@@ -16,11 +16,21 @@
         {
             "message": "You have reached level 2",
             "nextLevelXP": 20,
-            "canLoseXP": true
+            "canLoseXP": true,
+            "bonuses": {
+                "str": 1,
+                "con": 1,
+                "health": 10
+            }
         },
         {
             "message": "You have reached level 3",
-            "canLoseXP": true
+            "canLoseXP": true,
+            "bonuses": {
+                "str": 2,
+                "con": 1,
+                "health": 10
+            }
         }
     ]
 }

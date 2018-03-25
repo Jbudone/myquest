@@ -265,10 +265,11 @@ define(
                         ui.postMessage(`     Constitution: ${entity.npc.stats.con}`);
                     }, true);
 
-                    ui.entityMenu.addOption('Damage Entity', (entity) => {
+                    ui.entityMenu.addOption('Damage Entity (null source)', (entity) => {
                         server.makeRequest(CMD_ADMIN_DAMAGE_ENTITY, {
                             id: entity.id,
-                            amount: 20
+                            amount: 20,
+                            source: null
                         }).then((data) => {
                             ui.postMessage("Damage Entity Command: Success");
                         }, (data) => {
@@ -276,6 +277,20 @@ define(
                         })
                         .catch(errorInGame);
                     }, true);
+
+                    ui.entityMenu.addOption('Damage Entity (from me)', (entity) => {
+                        server.makeRequest(CMD_ADMIN_DAMAGE_ENTITY, {
+                            id: entity.id,
+                            amount: 20,
+                            source: The.player.id
+                        }).then((data) => {
+                            ui.postMessage("Damage Entity Command: Success");
+                        }, (data) => {
+                            ui.postMessage("Damage Entity Command: Failed");
+                        })
+                        .catch(errorInGame);
+                    }, true);
+
                 }
                 ui.postMessage("Initializing game..", MESSAGE_PROGRAM);
                 ui.camera = The.camera;
