@@ -200,9 +200,6 @@ define(
                 if (!this.doHook('healthChanged').pre()) return;
 
                 if (!Env.isServer) {
-                    if (The.player.name == "jbud" && this.entity.npc.name == "rhino") {
-                        console.log("HERE");
-                    }
                     if (this.entity.ui) {
                         this.entity.ui.healthChanged();
                     }

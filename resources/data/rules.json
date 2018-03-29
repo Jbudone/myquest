@@ -10,7 +10,7 @@
         },
         {
             "message": "You have reached level 1",
-            "nextLevelXP": 20,
+            "nextLevelXP": 24,
             "canLoseXP": false
         },
         {
