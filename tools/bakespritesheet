@@ -79,9 +79,13 @@ INPUT_DIR="shots/"
 OUTPUT="convertsprites.png"
 SPEED="slow"
 PREVIEW_ANIM=false
+COMPARE_WITH_SPRITE=false
 POST_PROCESSING=""
 EXPORT_RESULTS_FILE="sprite.export.json"
+ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest"
+SPRITE_SIZE=false
 
+echo "$@"
 while [ $# -gt 0 ]; do
     case "$1" in
         -r | --frame-ratio ) FRAME_RATIO="$2"; shift; shift ;;
@@ -91,7 +95,18 @@ while [ $# -gt 0 ]; do
         -o | --output ) OUTPUT="$2"; shift; shift ;;
         -u | --speed ) SPEED="$2"; shift; shift ;;
         -v | --verbose ) VERBOSE=true; shift ;;
+        --sprite-size ) SPRITE_SIZE=( $2 $3 ); shift; shift; shift ;;
         -p | --preview-anim ) PREVIEW_ANIM=true; shift ;;
+        --compare-with-sprite ) shift ;
+            if [ $PREVIEW_ANIM = false ]; then
+                echo "--compare-with-sprite requires --preview-anim first"
+                exit
+            fi
+            compareSprite="$1"; shift;
+            anim="$1"; shift;
+            camera="$1";
+            COMPARE_WITH_SPRITE=( "$compareSprite" "$anim" "$camera" )
+            shift ;;
         --post-processing ) POST_PROCESSING="$2"; shift; shift ;;
         --export-results-file ) EXPORT_RESULTS_FILE="$2"; shift; shift ;;
         -- ) shift; break ;;
@@ -111,254 +126,304 @@ echo "  Post Processing: $POST_PROCESSING"
 
 #MAGICK_THREAD_LIMIT=1
 
+TRIMMED_DIR="$INPUT_DIR/../shots.trimmed"
 
+if [ ! -f "$EXPORT_RESULTS_FILE" ]; then
+    echo "{}" > "$EXPORT_RESULTS_FILE"
+fi
 
-# Trim images
-images=( $( find "$INPUT_DIR" -iname '*.png' ) )
-maxWidth=0
-maxHeight=0
-minTrimWidth=999999999
-minTrimHeight=999999999
-#allImageWidths=()
-#allImageHeights=()
-minTrims=(9999999 9999999 9999999 9999999) # How much were we able to trim (minimum) on each side?
-for f in "${images[@]}"; do
+EXPORT_JSON=$( cat $EXPORT_RESULTS_FILE | jq '.' )
 
-    # Trim Image
-    origSize=( $( identify -format "%w %h" "$f" ) )
-    if [ $DO_TRIM -eq 1 ]; then
+if [ ! -d "$TRIMMED_DIR" ]; then
+    mkdir "$TRIMMED_DIR"
+fi
 
-        # TODO: Determine how much we can trim without having to create a file
-        convert -trim "$f" "$f.trim"
-        size=( $( identify -format "%w %h" "$f.trim" ) )
-        rm "$f.trim"
+SHOTS_HASH=$( echo $EXPORT_JSON | jq --raw-output 'try .renderHash catch ""' )
 
-        trimmedWidth=$( echo "${origSize[0]} - ${size[0]}" | bc -l )
-        if [[ $trimmedWidth -lt $minTrimWidth ]]; then
-            minTrimWidth=$trimmedWidth
-        fi
-
-        trimmedHeight=$( echo "${origSize[1]} - ${size[1]}" | bc -l )
-        if [[ $trimmedHeight -lt $minTrimHeight ]]; then
-            minTrimHeight=$trimmedHeight
-        fi
-
-        convert "$f" -gravity East -splice 1x0 -trim +repage "$f.left.trim"
-        leftTrimmedWidth=$( identify -format "%w" "$f.left.trim" )
-        leftTrim=$( echo "${origSize[0]} - $leftTrimmedWidth" | bc -l )
-        rm "$f.left.trim"
-        if [[ $leftTrim -lt ${minTrims[0]} ]]; then
-            minTrims[0]=$leftTrim
-        fi
-
-        # Right trim
-        convert "$f" -gravity West -splice 1x0 -trim +repage "$f.right.trim"
-        rightTrimmedWidth=$( identify -format "%w" "$f.right.trim" )
-        rightTrim=$( echo "${origSize[0]} - $rightTrimmedWidth" | bc -l )
-        rm "$f.right.trim"
-        if [[ $rightTrim -lt ${minTrims[1]} ]]; then
-            minTrims[1]=$rightTrim
-        fi
-
-        # Top trim
-        convert "$f" -gravity South -splice 0x1 -trim +repage "$f.top.trim"
-        topTrimmedHeight=$( identify -format "%h" "$f.top.trim" )
-        topTrim=$( echo "${origSize[1]} - $topTrimmedHeight" | bc -l )
-        rm "$f.top.trim"
-        if [[ $topTrim -lt ${minTrims[2]} ]]; then
-            minTrims[2]=$topTrim
-        fi
-
-        # Bottom trim
-        convert "$f" -gravity North -splice 0x1 -trim +repage "$f.bottom.trim"
-        bottomTrimmedHeight=$( identify -format "%h" "$f.bottom.trim" )
-        bottomTrim=$( echo "${origSize[1]} - $bottomTrimmedHeight" | bc -l )
-        rm "$f.bottom.trim"
-        if [[ $bottomTrim -lt ${minTrims[3]} ]]; then
-            minTrims[3]=$bottomTrim
-        fi
-
-        echo "Trim ($f): $leftTrim $rightTrim $topTrim $bottomTrim"
-    fi
-
-    if [[ ${origSize[0]} -gt $maxWidth ]]; then
-        maxWidth=${origSize[0]}
-    fi
-
-    if [[ ${origSize[1]} -gt $maxHeight ]]; then
-        maxHeight=${origSize[1]}
-    fi
-
-
-    #allImageWidths=( "${allImageWidths[@]}" "${size[1]}" )
-    #allImageHeights=( "${allImageHeights[@]}" "${size[2]}" )
+# Hash the rendered shots folder
+# Has it changed at all? Does it match our last renderHash hash?
+# TODO: This depends on ordering; will that matter? Otherwise we could store hashes in a list, sort, then hash the result
+renderHash=""
+for f in $( find "$INPUT_DIR" -type f | xargs ); do
+    renderHash="$renderHash$( md5sum $f | awk '{ print $1 }' )"
 done
 
-if [ $DO_TRIM -eq 1 ]; then
-    minTrimWidth=$( echo "${minTrims[0]} + ${minTrims[1]}" | bc -l )
-    minTrimHeight=$( echo "${minTrims[2]} + ${minTrims[3]}" | bc -l )
-    echo "Trim: $minTrimWidth x $minTrimHeight"
-else
-    minTrimWidth=0
-    minTrimHeight=0
-fi
+renderHash="$( echo $renderHash | md5sum | awk '{ print $1 }' )"
 
-maxWidth=$( echo "$maxWidth - $minTrimWidth" | bc -l )
-maxHeight=$( echo "$maxHeight - $minTrimHeight" | bc -l )
-echo "Max size is: $maxWidth x $maxHeight"
+if [ "$renderHash" != "$SHOTS_HASH" ]; then
+    echo "Render dir hash ($renderHash) != Saved hash ($SHOTS_HASH).. Need to retrim"
+    echo "Storing trimmed shots in $TRIMMED_DIR"
 
-echo "Trims: ${minTrims[@]}"
+    rm -r "$TRIMMED_DIR"
+    cp -r "$INPUT_DIR" "$TRIMMED_DIR"
 
-if [[ $maxWidth -lt $MAX_SIZE ]]; then
-    if [[ $maxHeight -lt $MAX_SIZE ]]; then
-        # Don't bother upscaling if its not necessary
-        MAX_SIZE=$maxWidth
-        if [[ $MAX_SIZE < $maxHeight ]]; then
-            MAX_SIZE=$maxHeight
-        fi
-    fi
-fi
+    EXPORT_JSON=$( echo $EXPORT_JSON | jq ". += { \"renderHash\": \"$renderHash\" }" )
 
-# Scale width/height down to MAX_SIZE, but retain ratio
-newWidth=$maxWidth
-newHeight=$maxHeight
-if [[ $maxWidth -gt $MAX_SIZE || $maxHeight -gt $MAX_SIZE ]]; then
-    sizeRatio=$( echo "$maxWidth / $maxHeight" | bc -l )
-    if [[ $maxWidth -gt $maxHeight ]]; then
-        newWidth=$MAX_SIZE
-        newHeight=$( echo "$newWidth / $sizeRatio" | bc -l )
-        newHeight=$( echo "($newHeight + 0.5) / 1" | bc )
-    else
-        newHeight=$MAX_SIZE
-        newWidth=$( echo "$newHeight * $sizeRatio" | bc -l )
-        newWidth=$( echo "($newWidth + 0.5) / 1" | bc )
-    fi
-fi
-
-echo "New sizes: $newWidth,$newHeight"
-
-if [ $DO_TRIM -eq 1 ]; then
-    tmpFolder=$( mktemp -d )
-    # Trim images and extend to maxWidth/maxHeight
+    # Trim images
+    images=( $( find "$TRIMMED_DIR" -iname '*.png' ) )
+    maxWidth=0
+    maxHeight=0
+    minTrimWidth=999999999
+    minTrimHeight=999999999
+    #allImageWidths=()
+    #allImageHeights=()
+    minTrims=(9999999 9999999 9999999 9999999) # How much were we able to trim (minimum) on each side?
     for f in "${images[@]}"; do
-        # FIXME: Determine how much trim on left/right, then fill in extent accordingly (so that we keep sprite centered correctly, rather than recentering the entire sprite)
-        # Left spacing / Right spacing ratio should be equal to the left spacing / right spacing of the extents
 
-        # 1) Find desired crop
-        # 2) Crop image -> resize to newWidth/newHeight
+        # Trim Image
+        origSize=( $( identify -format "%w %h" "$f" ) )
+        if [ $DO_TRIM -eq 1 ]; then
 
-#        origSize=( $( identify -format "%w %h" "$f" ) )
-#
-#        echo "Orig Size: ${origSize[@]}"
-#
-#        # Determine how much can be trimmed on the left
-#        convert "$f" -gravity East -splice 1x0 -trim +repage "$f.left.trim"
-#        leftTrimmedWidth=$( identify -format "%w" "$f.left.trim" )
-#        leftTrim=$( echo "${origSize[0]} - $leftTrimmedWidth" | bc -l )
-#        rm "$f.left.trim"
-#
-#        # Right trim
-#        convert "$f" -gravity West -splice 1x0 -trim +repage "$f.right.trim"
-#        rightTrimmedWidth=$( identify -format "%w" "$f.right.trim" )
-#        rightTrim=$( echo "${origSize[0]} - $rightTrimmedWidth" | bc -l )
-#        rm "$f.right.trim"
-#
-#        # Top trim
-#        convert "$f" -gravity South -splice 0x1 -trim +repage "$f.top.trim"
-#        topTrimmedHeight=$( identify -format "%h" "$f.top.trim" )
-#        topTrim=$( echo "${origSize[1]} - $topTrimmedHeight" | bc -l )
-#        rm "$f.top.trim"
-#
-#        # Bottom trim
-#        convert "$f" -gravity North -splice 0x1 -trim +repage "$f.bottom.trim"
-#        bottomTrimmedHeight=$( identify -format "%h" "$f.bottom.trim" )
-#        bottomTrim=$( echo "${origSize[1]} - $bottomTrimmedHeight" | bc -l )
-#        rm "$f.bottom.trim"
-#
-#        echo "Trim shiz -- $f"
-#        echo "  left: $leftTrim"
-#        echo "  right: $rightTrim"
-#        echo "  top: $topTrim"
-#        echo "  bottom: $bottomTrim"
-#
-#        widthTrim=$( echo "$leftTrim + $rightTrim" | bc -l )
-#        leftEmptySpaceRatio=$( echo "$leftTrim / $widthTrim" | bc -l )
-#        rightEmptySpaceRatio=$( echo "$rightTrim / $widthTrim" | bc -l )
-#        emptySpaceRatio=$( echo "${origSize[0]} / $widthTrim" | bc -l )
-#        emptySpace=$( echo "$maxWidth * $emptySpaceRatio" | bc -l )
-#        emptySpace=$( echo "($emptySpace + 0.5) / 1" | bc )
-#        if [ $emptySpace -lt 0 ]; then
-#            emptySpace=$( echo "$emptySpace * -1" | bc -l )
-#        fi
-#
-#        emptySpaceLeft=$( echo "$emptySpace * $leftEmptySpaceRatio" | bc -l )
-#        emptySpaceLeft=$( echo "($emptySpaceLeft + 0.5) / 1" | bc )
-#        emptySpaceRight=$( echo "$emptySpace * $rightEmptySpaceRatio" | bc -l )
-#        emptySpaceRight=$( echo "($emptySpaceRight + 0.5) / 1" | bc )
-#
-#        echo " Width Trim: $widthTrim"
-#        echo " Left/Empty Ratio: $leftEmptySpaceRatio"
-#        echo " Right/Empty Ratio: $rightEmptySpaceRatio"
-#        echo " EmptySpace: $emptySpace"
-#        echo " Empty/Left: $emptySpaceLeft"
-#        echo " Empty/Right: $emptySpaceRight"
-#
-#        heightTrim=$( echo "$topTrim + $bottomTrim" | bc -l )
-#        topEmptySpaceRatio=$( echo "$topTrim / $heightTrim" | bc -l )
-#        bottomEmptySpaceRatio=$( echo "$bottomTrim / $heightTrim" | bc -l )
-#        emptySpaceRatio=$( echo "${origSize[1]} / $heightTrim" | bc -l )
-#        emptySpace=$( echo "$maxHeight * $emptySpaceRatio" | bc -l )
-#        emptySpace=$( echo "($emptySpace + 0.5) / 1" | bc )
-#        if [ $emptySpace -lt 0 ]; then
-#            emptySpace=$( echo "$emptySpace * -1" | bc -l )
-#        fi
-#        emptySpaceTop=$( echo "$emptySpace * $topEmptySpaceRatio" | bc -l )
-#        emptySpaceTop=$( echo "($emptySpaceTop + 0.5) / 1" | bc )
-#        emptySpaceBottom=$( echo "$emptySpace * $bottomEmptySpaceRatio" | bc -l )
-#        emptySpaceBottom=$( echo "($emptySpaceBottom + 0.5) / 1" | bc )
-#
-#        echo " Height Trim: $heightTrim"
-#        echo " Top/Empty Ratio: $topEmptySpaceRatio"
-#        echo " Bottom/Empty Ratio: $bottomEmptySpaceRatio"
-#        echo " EmptySpace: $emptySpace"
-#        echo " Empty/Top: $emptySpaceTop"
-#        echo " Empty/Bottom: $emptySpaceBottom"
-#
-#        echo " ---"
-#        echo " crop: $( echo $maxWidth )x$( echo $maxHeight )-$( echo $emptySpaceLeft )-$( echo $emptySpaceRight )"
+            # TODO: Determine how much we can trim without having to create a file
+            convert -trim "$f" "$f.trim"
+            size=( $( identify -format "%w %h" "$f.trim" ) )
+            rm "$f.trim"
 
-        cropWidth=$( echo "${origSize[0]} - ${minTrims[0]} - ${minTrims[1]}" | bc -l )
-        cropHeight=$( echo "${origSize[1]} - ${minTrims[2]} - ${minTrims[3]}" | bc -l )
-        echo " crop: $( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )"
+            trimmedWidth=$( echo "${origSize[0]} - ${size[0]}" | bc -l )
+            if [[ $trimmedWidth -lt $minTrimWidth ]]; then
+                minTrimWidth=$trimmedWidth
+            fi
 
-        #convert "$f" -background none -trim "$f.trim"
+            trimmedHeight=$( echo "${origSize[1]} - ${size[1]}" | bc -l )
+            if [[ $trimmedHeight -lt $minTrimHeight ]]; then
+                minTrimHeight=$trimmedHeight
+            fi
 
-        # Trim -> Resize + Extents
+            convert "$f" -gravity East -splice 1x0 -trim +repage "$f.left.trim"
+            leftTrimmedWidth=$( identify -format "%w" "$f.left.trim" )
+            leftTrim=$( echo "${origSize[0]} - $leftTrimmedWidth" | bc -l )
+            rm "$f.left.trim"
+            if [[ $leftTrim -lt ${minTrims[0]} ]]; then
+                minTrims[0]=$leftTrim
+            fi
 
-        #convert "$f" -background none -resize "$( echo $newWidth )x$( echo $newHeight )" -extent "$( echo $maxWidth )x$( echo $maxHeight )" "$f.trim.2.png"
+            # Right trim
+            convert "$f" -gravity West -splice 1x0 -trim +repage "$f.right.trim"
+            rightTrimmedWidth=$( identify -format "%w" "$f.right.trim" )
+            rightTrim=$( echo "${origSize[0]} - $rightTrimmedWidth" | bc -l )
+            rm "$f.right.trim"
+            if [[ $rightTrim -lt ${minTrims[1]} ]]; then
+                minTrims[1]=$rightTrim
+            fi
 
-        convert "$f" -background none +repage -crop "$( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )" -resize "$( echo $newWidth )x$( echo $newHeight )" "$f.trim.png"
-        mv "$f.trim.png" "$f"
-        #convert "$f" -background none -crop "$( echo $maxWidth )x$( echo $maxHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )" -resize "$( echo $newWidth )x$( echo $newHeight )" "$f.trim.png"
+            # Top trim
+            convert "$f" -gravity South -splice 0x1 -trim +repage "$f.top.trim"
+            topTrimmedHeight=$( identify -format "%h" "$f.top.trim" )
+            topTrim=$( echo "${origSize[1]} - $topTrimmedHeight" | bc -l )
+            rm "$f.top.trim"
+            if [[ $topTrim -lt ${minTrims[2]} ]]; then
+                minTrims[2]=$topTrim
+            fi
 
-        #convert "$f" -background none -crop "$( echo $maxWidth )x$( echo $maxHeight )+$( echo $emptySpaceLeft )+$( echo $emptySpaceRight )" "$f.trim.2.png"
-        #exit # For now..
+            # Bottom trim
+            convert "$f" -gravity North -splice 0x1 -trim +repage "$f.bottom.trim"
+            bottomTrimmedHeight=$( identify -format "%h" "$f.bottom.trim" )
+            bottomTrim=$( echo "${origSize[1]} - $bottomTrimmedHeight" | bc -l )
+            rm "$f.bottom.trim"
+            if [[ $bottomTrim -lt ${minTrims[3]} ]]; then
+                minTrims[3]=$bottomTrim
+            fi
 
-        #convert -trim "$f" "$f.trim"
-        #convert "$f.trim" -gravity center -background none -extent "$( echo $maxWidth )x$( echo $maxHeight )" "$f.trim.2"
-        #rm "$f.trim"
-        #mv "$f.trim.2" "$f"
+            echo "Trim ($f): $leftTrim $rightTrim $topTrim $bottomTrim"
+        fi
+
+        if [[ ${origSize[0]} -gt $maxWidth ]]; then
+            maxWidth=${origSize[0]}
+        fi
+
+        if [[ ${origSize[1]} -gt $maxHeight ]]; then
+            maxHeight=${origSize[1]}
+        fi
+
+
+        #allImageWidths=( "${allImageWidths[@]}" "${size[1]}" )
+        #allImageHeights=( "${allImageHeights[@]}" "${size[2]}" )
     done
 
-    echo "Trimmed and max size is: $maxWidth,$maxHeight"
-    rm -r "$tmpFolder"
-fi
+    if [ $DO_TRIM -eq 1 ]; then
+        minTrimWidth=$( echo "${minTrims[0]} + ${minTrims[1]}" | bc -l )
+        minTrimHeight=$( echo "${minTrims[2]} + ${minTrims[3]}" | bc -l )
+        echo "Trim: $minTrimWidth x $minTrimHeight"
+    else
+        minTrimWidth=0
+        minTrimHeight=0
+    fi
 
+    maxWidth=$( echo "$maxWidth - $minTrimWidth" | bc -l )
+    maxHeight=$( echo "$maxHeight - $minTrimHeight" | bc -l )
+    echo "Max size is: $maxWidth x $maxHeight"
+
+    echo "Trims: ${minTrims[@]}"
+
+    if [[ $maxWidth -lt $MAX_SIZE ]]; then
+        if [[ $maxHeight -lt $MAX_SIZE ]]; then
+            # Don't bother upscaling if its not necessary
+            MAX_SIZE=$maxWidth
+            if [[ $MAX_SIZE < $maxHeight ]]; then
+                MAX_SIZE=$maxHeight
+            fi
+        fi
+    fi
+
+    # Scale width/height down to MAX_SIZE, but retain ratio
+    newWidth=$maxWidth
+    newHeight=$maxHeight
+    if [[ $maxWidth -gt $MAX_SIZE || $maxHeight -gt $MAX_SIZE ]]; then
+        sizeRatio=$( echo "$maxWidth / $maxHeight" | bc -l )
+        if [[ $maxWidth -gt $maxHeight ]]; then
+            newWidth=$MAX_SIZE
+            newHeight=$( echo "$newWidth / $sizeRatio" | bc -l )
+            newHeight=$( echo "($newHeight + 0.5) / 1" | bc )
+        else
+            newHeight=$MAX_SIZE
+            newWidth=$( echo "$newHeight * $sizeRatio" | bc -l )
+            newWidth=$( echo "($newWidth + 0.5) / 1" | bc )
+        fi
+    fi
+
+    echo "New sizes: $newWidth,$newHeight"
+
+    if [ $DO_TRIM -eq 1 ]; then
+        tmpFolder=$( mktemp -d )
+        # Trim images and extend to maxWidth/maxHeight
+        for f in "${images[@]}"; do
+            # FIXME: Determine how much trim on left/right, then fill in extent accordingly (so that we keep sprite centered correctly, rather than recentering the entire sprite)
+            # Left spacing / Right spacing ratio should be equal to the left spacing / right spacing of the extents
+
+            # 1) Find desired crop
+            # 2) Crop image -> resize to newWidth/newHeight
+
+    #        origSize=( $( identify -format "%w %h" "$f" ) )
+    #
+    #        echo "Orig Size: ${origSize[@]}"
+    #
+    #        # Determine how much can be trimmed on the left
+    #        convert "$f" -gravity East -splice 1x0 -trim +repage "$f.left.trim"
+    #        leftTrimmedWidth=$( identify -format "%w" "$f.left.trim" )
+    #        leftTrim=$( echo "${origSize[0]} - $leftTrimmedWidth" | bc -l )
+    #        rm "$f.left.trim"
+    #
+    #        # Right trim
+    #        convert "$f" -gravity West -splice 1x0 -trim +repage "$f.right.trim"
+    #        rightTrimmedWidth=$( identify -format "%w" "$f.right.trim" )
+    #        rightTrim=$( echo "${origSize[0]} - $rightTrimmedWidth" | bc -l )
+    #        rm "$f.right.trim"
+    #
+    #        # Top trim
+    #        convert "$f" -gravity South -splice 0x1 -trim +repage "$f.top.trim"
+    #        topTrimmedHeight=$( identify -format "%h" "$f.top.trim" )
+    #        topTrim=$( echo "${origSize[1]} - $topTrimmedHeight" | bc -l )
+    #        rm "$f.top.trim"
+    #
+    #        # Bottom trim
+    #        convert "$f" -gravity North -splice 0x1 -trim +repage "$f.bottom.trim"
+    #        bottomTrimmedHeight=$( identify -format "%h" "$f.bottom.trim" )
+    #        bottomTrim=$( echo "${origSize[1]} - $bottomTrimmedHeight" | bc -l )
+    #        rm "$f.bottom.trim"
+    #
+    #        echo "Trim shiz -- $f"
+    #        echo "  left: $leftTrim"
+    #        echo "  right: $rightTrim"
+    #        echo "  top: $topTrim"
+    #        echo "  bottom: $bottomTrim"
+    #
+    #        widthTrim=$( echo "$leftTrim + $rightTrim" | bc -l )
+    #        leftEmptySpaceRatio=$( echo "$leftTrim / $widthTrim" | bc -l )
+    #        rightEmptySpaceRatio=$( echo "$rightTrim / $widthTrim" | bc -l )
+    #        emptySpaceRatio=$( echo "${origSize[0]} / $widthTrim" | bc -l )
+    #        emptySpace=$( echo "$maxWidth * $emptySpaceRatio" | bc -l )
+    #        emptySpace=$( echo "($emptySpace + 0.5) / 1" | bc )
+    #        if [ $emptySpace -lt 0 ]; then
+    #            emptySpace=$( echo "$emptySpace * -1" | bc -l )
+    #        fi
+    #
+    #        emptySpaceLeft=$( echo "$emptySpace * $leftEmptySpaceRatio" | bc -l )
+    #        emptySpaceLeft=$( echo "($emptySpaceLeft + 0.5) / 1" | bc )
+    #        emptySpaceRight=$( echo "$emptySpace * $rightEmptySpaceRatio" | bc -l )
+    #        emptySpaceRight=$( echo "($emptySpaceRight + 0.5) / 1" | bc )
+    #
+    #        echo " Width Trim: $widthTrim"
+    #        echo " Left/Empty Ratio: $leftEmptySpaceRatio"
+    #        echo " Right/Empty Ratio: $rightEmptySpaceRatio"
+    #        echo " EmptySpace: $emptySpace"
+    #        echo " Empty/Left: $emptySpaceLeft"
+    #        echo " Empty/Right: $emptySpaceRight"
+    #
+    #        heightTrim=$( echo "$topTrim + $bottomTrim" | bc -l )
+    #        topEmptySpaceRatio=$( echo "$topTrim / $heightTrim" | bc -l )
+    #        bottomEmptySpaceRatio=$( echo "$bottomTrim / $heightTrim" | bc -l )
+    #        emptySpaceRatio=$( echo "${origSize[1]} / $heightTrim" | bc -l )
+    #        emptySpace=$( echo "$maxHeight * $emptySpaceRatio" | bc -l )
+    #        emptySpace=$( echo "($emptySpace + 0.5) / 1" | bc )
+    #        if [ $emptySpace -lt 0 ]; then
+    #            emptySpace=$( echo "$emptySpace * -1" | bc -l )
+    #        fi
+    #        emptySpaceTop=$( echo "$emptySpace * $topEmptySpaceRatio" | bc -l )
+    #        emptySpaceTop=$( echo "($emptySpaceTop + 0.5) / 1" | bc )
+    #        emptySpaceBottom=$( echo "$emptySpace * $bottomEmptySpaceRatio" | bc -l )
+    #        emptySpaceBottom=$( echo "($emptySpaceBottom + 0.5) / 1" | bc )
+    #
+    #        echo " Height Trim: $heightTrim"
+    #        echo " Top/Empty Ratio: $topEmptySpaceRatio"
+    #        echo " Bottom/Empty Ratio: $bottomEmptySpaceRatio"
+    #        echo " EmptySpace: $emptySpace"
+    #        echo " Empty/Top: $emptySpaceTop"
+    #        echo " Empty/Bottom: $emptySpaceBottom"
+    #
+    #        echo " ---"
+    #        echo " crop: $( echo $maxWidth )x$( echo $maxHeight )-$( echo $emptySpaceLeft )-$( echo $emptySpaceRight )"
+
+            cropWidth=$( echo "${origSize[0]} - ${minTrims[0]} - ${minTrims[1]}" | bc -l )
+            cropHeight=$( echo "${origSize[1]} - ${minTrims[2]} - ${minTrims[3]}" | bc -l )
+            echo " crop: $( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )"
+
+            #convert "$f" -background none -trim "$f.trim"
+
+            # Trim -> Resize + Extents
+
+            #convert "$f" -background none -resize "$( echo $newWidth )x$( echo $newHeight )" -extent "$( echo $maxWidth )x$( echo $maxHeight )" "$f.trim.2.png"
+
+            convert "$f" -background none +repage -crop "$( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )" -resize "$( echo $newWidth )x$( echo $newHeight )" "$f.trim.png"
+            mv "$f.trim.png" "$f"
+            #convert "$f" -background none -crop "$( echo $maxWidth )x$( echo $maxHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )" -resize "$( echo $newWidth )x$( echo $newHeight )" "$f.trim.png"
+
+            #convert "$f" -background none -crop "$( echo $maxWidth )x$( echo $maxHeight )+$( echo $emptySpaceLeft )+$( echo $emptySpaceRight )" "$f.trim.2.png"
+            #exit # For now..
+
+            #convert -trim "$f" "$f.trim"
+            #convert "$f.trim" -gravity center -background none -extent "$( echo $maxWidth )x$( echo $maxHeight )" "$f.trim.2"
+            #rm "$f.trim"
+            #mv "$f.trim.2" "$f"
+        done
+
+        echo "Trimmed and max size is: $maxWidth,$maxHeight"
+        rm -r "$tmpFolder"
+    fi
+else
+    echo "Render has not changed. Skipping trim"
+fi
 
 if [ $PREVIEW_ANIM = true ]; then
 
+    if [ $COMPARE_WITH_SPRITE != false ]; then
+        # FIXME: Find image for sprite, boundaries/sprite sizes/etc. and cache in comapre_with_sprite
+        SHEETS_JSON_FILE="$ROOT_FOLDER/resources/data/sheets.json"
+        SPRITE_JSON=$( cat $SHEETS_JSON_FILE | jq ".spritesheets.list[] | select(.id == \"${COMPARE_WITH_SPRITE[0]}\")" )
+        SPRITE_IMAGE="$ROOT_FOLDER$( echo $SPRITE_JSON | jq --raw-output '.image' )"
+        SPRITE_ANIM=$( echo $SPRITE_JSON | jq ".data.animations[\"${COMPARE_WITH_SPRITE[1]}_${COMPARE_WITH_SPRITE[2]}\"]" )
+        SPRITE_ANIM_X=$( echo $SPRITE_ANIM | jq '.x | tonumber' )
+        SPRITE_ANIM_Y=$( echo $SPRITE_ANIM | jq '.y | tonumber' )
+        SPRITE_ANIM_W=$( echo $SPRITE_ANIM | jq '.w | tonumber' )
+        SPRITE_ANIM_H=$( echo $SPRITE_ANIM | jq '.h | tonumber' )
+        SPRITE_ANIM_L=$( echo $SPRITE_ANIM | jq '.l | tonumber' )
+
+        echo ".data.animations[\"${COMPARE_WITH_SPRITE[1]}_${COMPARE_WITH_SPRITE[2]}\"]"
+
+        COMPARE_WITH_SPRITE=( ${COMPARE_WITH_SPRITE[@]} $SPRITE_IMAGE $SPRITE_ANIM_X $SPRITE_ANIM_Y $SPRITE_ANIM_W $SPRITE_ANIM_H $SPRITE_ANIM_L )
+    fi
+
     # Find all images
-    subFolders=( $( find "$INPUT_DIR" -type d ) )
+    subFolders=( $( find "$TRIMMED_DIR" -type d ) )
     #tmpFolder=$( mktemp -d )
     #allAnimResults=()
     rm "$OUTPUT"
@@ -380,8 +445,50 @@ if [ $PREVIEW_ANIM = true ]; then
         allPreviewImages=("${allPreviewImages[@]}" "${images[@]}")
     done
 
+
+    if [ $COMPARE_WITH_SPRITE != false ]; then
+        # TODO
+        #  - For each allPreviewImages, render a temporary image w/ it paired w/ this sprite
+        #  - Replace allPreviewImages w/ new (temporary) images
+        #  - Be sure to delete temporary images afterwards
+        SPRITE_IMAGE=${COMPARE_WITH_SPRITE[3]}
+        SPRITE_ANIM_X=${COMPARE_WITH_SPRITE[4]}
+        SPRITE_ANIM_Y=${COMPARE_WITH_SPRITE[5]}
+        SPRITE_ANIM_W=${COMPARE_WITH_SPRITE[6]}
+        SPRITE_ANIM_H=${COMPARE_WITH_SPRITE[7]}
+        SPRITE_ANIM_L=${COMPARE_WITH_SPRITE[8]}
+
+        extentW=${SPRITE_SIZE[0]}
+        if [[ $extentW < $SPRITE_ANIM_W ]]; then
+            extentW=$SPRITE_ANIM_W
+        fi
+
+        extentH=${SPRITE_SIZE[1]}
+        if [[ $extentH < $SPRITE_ANIM_H ]]; then
+            extentH=$SPRITE_ANIM_H
+        fi
+
+        combinedImages=()
+        tmpFolder="." #$( mktemp -d )
+        for (( i=0; i<${#allPreviewImages[@]}; i++ )); do
+            renderedImage=${allPreviewImages[i]}
+
+            echo "${COMPARE_WITH_SPRITE[@]}"
+            spriteAnimN=$(( $i % $SPRITE_ANIM_L ))
+            spriteAnimX=$(( $SPRITE_ANIM_X + $spriteAnimN * $SPRITE_ANIM_W ))
+
+            output="$tmpFolder/$i.png"
+
+            convert \( $( echo ${allPreviewImages[i]} ) -background none +repage $( echo $POST_PROCESSING ) -filter box -resize $( echo ${SPRITE_SIZE[0]} )x$( echo ${SPRITE_SIZE[1]} ) \) \( $SPRITE_IMAGE -background none +repage -crop $( echo $SPRITE_ANIM_W )x$( echo $SPRITE_ANIM_H )+$( echo $spriteAnimX )+$( echo $SPRITE_ANIM_Y ) \) -gravity center -extent $( echo $extentW )x$( echo $extentH ) +append "$output"
+            combinedImages=( "${combinedImages[@]}" "$output" )
+        done
+
+        allPreviewImages=( ${combinedImages[@]} )
+    fi
+
+
     # Convert + Add into gif
-    convert -loop 0 -delay 5 +repage -dispose Background "${allPreviewImages[@]}" $( echo $POST_PROCESSING ) out.gif
+    convert -loop 0 -delay 20 +repage -dispose Background "${allPreviewImages[@]}" out.gif
     #convert -loop 0 -delay 4 -dispose Background "${allPreviewImages[@]}" -modulate 100,80 +dither -gravity center -resize "$( echo $newWidth )x$( echo $newHeight )" -background none -extent "$( echo $newWidth )x$( echo $newHeight )" out.gif
 else
 
@@ -390,10 +497,9 @@ else
     echo "${tileSize[@]}"
     yOffset=0
 
-    subFolders=( $( find "$INPUT_DIR" -type d ) )
+    subFolders=( $( find "$TRIMMED_DIR" -type d ) )
     tmpFolder=$( mktemp -d )
     allAnimResults=()
-    renderResults=$( cat $EXPORT_RESULTS_FILE | jq '.' )
     rm "$OUTPUT"
     for (( i=0; i<${#subFolders[@]}; i++ )); do
         folder=${subFolders[i]}
@@ -412,8 +518,8 @@ else
         if [ $count -gt 0 ]; then
 
             # FIXME: Fetch this from render results
-            subFolder=${folder:${#INPUT_DIR}}/
-            folderRenderResults=$( echo $renderResults | jq ".render.folders[] | select(.folder == \"$subFolder\")" )
+            subFolder=${folder:${#TRIMMED_DIR}}/
+            folderRenderResults=$( echo $EXPORT_JSON | jq ".render.folders[] | select(.folder == \"$subFolder\")" )
             folderAnim=$( echo $folderRenderResults | jq --raw-output '.anim' )
             folderCamera=$( echo $folderRenderResults | jq --raw-output '.camera' )
 
@@ -456,8 +562,7 @@ else
 
     # Sprite size; tilesize
     bakeResults=$( echo $bakeResults | jq ".sprite += { width: ${tileSize[0]}, height: ${tileSize[1]}, rows: ${#allAnimResults} }" )
-    renderResults=$( echo $renderResults | jq ". += $bakeResults" )
-    echo "$renderResults" | jq '.' > "$EXPORT_RESULTS_FILE"
+    EXPORT_JSON=$( echo $EXPORT_JSON | jq ". += $bakeResults" )
 
     #convert $tmpFolder/*.png -append convertsprites.png
     # NOTE: 1GiB memory seems fine for multitasking; but quite slow; if walking away from computer then we should allow an option to turn resource limits off
@@ -475,4 +580,5 @@ else
     rm -r $tmpFolder
 fi
 
+echo "$EXPORT_JSON" | jq '.' > "$EXPORT_RESULTS_FILE"
 echo "Converted!"

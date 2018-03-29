@@ -29,12 +29,21 @@ ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myque
 
 BAKE=false
 
+QUICK_RENDER=false
+RENDER_BOUNDS_CHECK=false
+RENDER_TEST_MESH=false
 FRAME_RATIO=1
 MAX_SIZE=128
 DO_TRIM=true
 INPUT_DIR="shots/"
 OUTPUT="convertsprites.png"
 SPEED="slow"
+SPRITE_VARIANT="basic"
+
+RENDER_ONE_FRAME=false
+PREVIEW_ANIM=false
+COMPARE_WITH_SPRITE=false
+ONE_FRAME=false
 
 UPDATE_SPRITESHEETS_RESOURCE=true
 
@@ -53,6 +62,41 @@ while [ $# -gt 0 ]; do
         -o | --output ) OUTPUT="$2"; shift; shift ;;
         -u | --speed ) SPEED="$2"; shift; shift ;;
         -v | --verbose ) VERBOSE=true; shift ;;
+        -q | --quick ) QUICK_RENDER=true; shift ;;
+        --variant ) echo "Sprite variant"; SPRITE_VARIANT="$2"; shift; shift ;;
+
+        --bounds ) RENDER_BOUNDS_CHECK=true; shift ;;
+        --test-mesh ) RENDER_TEST_MESH=true; shift ;;
+
+        --one-frame ) RENDER_ONE_FRAME=true; shift ;;
+        --preview-anim ) shift ; previewAnim="$1";
+            camera="all"
+            case "$2" in
+                left ) camera="left"; shift ;;
+                right ) camera="right"; shift ;;
+                up ) camera="up"; shift ;;
+                down ) camera="down"; shift ;;
+            esac
+            PREVIEW_ANIM=( "$previewAnim" "$camera" )
+            shift ;;
+        --compare-with-sprite ) shift ;
+            if [ $PREVIEW_ANIM = false ]; then
+                echo "--compare-with-sprite requires --preview-anim first"
+                exit
+            fi
+            compareSprite="$1"; shift;
+            anim="$1"; shift;
+            camera="all"
+            case "$1" in
+                left ) camera="left"; shift ;;
+                right ) camera="right"; shift ;;
+                up ) camera="up"; shift ;;
+                down ) camera="down"; shift ;;
+            esac
+            COMPARE_WITH_SPRITE=( "$compareSprite" "$anim" "$camera" )
+            ;;
+        --one-frame ) ONE_FRAME=true; shift ;;
+
         -- ) shift; break ;;
         * ) echo "Unknown option $1" ; exit ;;
     esac
@@ -67,15 +111,58 @@ fi
 
 SPRITE_JSON=$( cat "$SPRITE_SHEET" | jq '.' )
 
+
 EXPORT_RESULTS_FILE="$MESH_FOLDER/sprite.export.json"
+
+SPRITE_VARIANT_JSON=$( echo "$SPRITE_JSON" | jq "try .variants[\"$SPRITE_VARIANT\"] catch \"\"" )
+
+if [ "$SPRITE_VARIANT_JSON" == "null" ]; then
+    echo "Invalid sprite variant: $SPRITE_VARIANT"
+    exit
+fi
+
+SPRITE_PREPROCESSING=$( echo $SPRITE_VARIANT_JSON | jq --raw-output 'try .preProcess catch ""' ) 
+SPRITE_POSTPROCESSING=$( echo $SPRITE_VARIANT_JSON | jq --raw-output 'try .postProcess catch ""' ) 
 
 # Render Model shots?
 if [ $RENDER = true ]; then
     
     echo "Rendering to $RENDER_DIR"
 
+    extraOptions=""
+    if [ $QUICK_RENDER = true ]; then
+        extraOptions="$extraOptions --quick"
+    fi
+
+    if [ $RENDER_BOUNDS_CHECK = true ]; then
+        extraOptions="$extraOptions --bounds"
+    fi
+
+    if [ $RENDER_TEST_MESH = true ]; then
+        extraOptions="$extraOptions --testmesh"
+    fi
+
+    if [ $RENDER_ONE_FRAME = true ]; then
+        extraOptions="$extraOptions --oneFrame"
+    fi
+
+    if [ $PREVIEW_ANIM != false ]; then
+        extraOptions="$extraOptions --previewAnim ${PREVIEW_ANIM[0]} ${PREVIEW_ANIM[1]}"
+    fi
+
+    if [[ $( realpath $RENDER_DIR ) = *"$ROOT_FOLDER"* ]]; then
+        echo "Safely removing render dir"
+        rm -r $RENDER_DIR
+    fi
+
+    if [ "$SPRITE_PREPROCESSING" != "" ]; then
+        echo "Preprocessing sprite before rendering:"
+        echo "$SPRITE_PREPROCESSING"
+        $( cd "$MESH_FOLDER" ; $SPRITE_PREPROCESSING )
+    fi
+
     #blender Basilisk.josh.blend --verbose 0 --background --python ../../tools/blender.batchrender.py --json sprite.json
-    blender "$BLENDER_FILE" --verbose 0 --background --python "$BLENDER_SCRIPT" --json "$SPRITE_SHEET" --output "$RENDER_DIR" --resultsOutput "$EXPORT_RESULTS_FILE"
+    blender "$BLENDER_FILE" --verbose 0 --background --python "$BLENDER_SCRIPT" --json "$SPRITE_SHEET" $extraOptions --output "$RENDER_DIR" --resultsOutput "$EXPORT_RESULTS_FILE"
 fi
 
 # Bake the Renders?
@@ -88,8 +175,9 @@ if [ $BAKE = true ]; then
     #../../tools/bakespritesheet --frame-ratio 2 --size 256 --no-trim --folder shots.3 --output testjosh.png --speed superslow
     echo "Render Dir: $RENDER_DIR"
 
-    postProcessing=$( echo "$SPRITE_JSON" | jq --raw-output 'if has("postProcessing") then .postProcessing else "" end' )
     renderRegionSize=$( echo "$SPRITE_JSON" | jq --raw-output 'if has("renderRegionSize") then .renderRegionSize else 256 end' )
+    spriteWidth=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.width' )    # Game width
+    spriteHeight=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.height' )  # Game height
     output=$( echo "$SPRITE_JSON" | jq --raw-output '.output' )
 
     extraOptions=""
@@ -97,7 +185,16 @@ if [ $BAKE = true ]; then
         extraOptions="$extraOptions --no-trim"
     fi
 
-    "$BAKE_SCRIPT" --frame-ratio 2 --size "$renderRegionSize" --folder "$RENDER_DIR" --output "$output" --speed superslow --post-processing "$postProcessing" $extraOptions --export-results-file "$EXPORT_RESULTS_FILE"
+    if [ $PREVIEW_ANIM != false ]; then
+        extraOptions="$extraOptions --preview-anim"
+
+        if [ $COMPARE_WITH_SPRITE != false ]; then
+            echo "Comparing with sprite: ${COMPARE_WITH_SPRITE[0]} ${COMPARE_WITH_SPRITE[1]} ${COMPARE_WITH_SPRITE[2]}"
+            extraOptions="$extraOptions --compare-with-sprite ${COMPARE_WITH_SPRITE[@]}"
+        fi
+    fi
+
+    "$BAKE_SCRIPT" --frame-ratio 2 --size "$renderRegionSize" --folder "$RENDER_DIR" --output "$output" --speed superslow --post-processing "$SPRITE_POSTPROCESSING" --sprite-size $spriteWidth $spriteHeight $extraOptions --export-results-file "$EXPORT_RESULTS_FILE"
 fi
 
 if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
@@ -165,7 +262,6 @@ if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
         echo "Updating Sprite"
     fi
     echo $SHEET_SPRITE_JSON | jq '.'
-    #echo $SHEET_JSON | jq '.'
     echo $SHEET_JSON | jq '.' > "$SHEETS_JSON_FILE" 
 fi
 

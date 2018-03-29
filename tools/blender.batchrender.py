@@ -36,6 +36,8 @@ parser.add_argument('--quick', nargs='*')
 parser.add_argument('--bounds', nargs='*', help="check for bounds of mesh / camera position")
 parser.add_argument('--json', nargs=1, help="sprite json file")
 parser.add_argument('--testmesh', nargs='*', help="test detected mesh")
+parser.add_argument('--oneFrame', nargs='*', help="")
+parser.add_argument('--previewAnim', nargs=2, help="preview the model (first frame of an anim)")
 parser.add_argument('--output', nargs=1)
 parser.add_argument('--resultsOutput', nargs=1)
 args = parser.parse_args()
@@ -58,6 +60,7 @@ if 'animations' not in data:
     print("No animations found in json")
     sys.exit()
 
+
 scene = bpy.data.scenes["Scene"]
 obj_camera = bpy.data.objects["Camera"]
 cwd = os.getcwd()
@@ -65,6 +68,8 @@ parentDir = cwd + "/"
 
 if args.output:
     parentDir = args.output[0]
+else:
+    parentDir = "$parentDir/shots/"
 
 print("Parent Dir: " + parentDir)
 
@@ -88,6 +93,11 @@ renderSets = list()
 animations = data['animations']
 for i in range(len(animations)):
     animation = animations[i]
+
+    if args.previewAnim != None:
+        if args.previewAnim[0] != animation['name']:
+            continue
+
     renderSets.append( RenderSet(animation['layer'], animation['name'], animation['frameStart'], animation['frameEnd']) )
 
 
@@ -105,15 +115,27 @@ print("Analyzing Model")
 # Find the mesh items
 meshItems = list()
 meshItem = None
-if 'meshName' in data:
-    meshItem = bpy.data.objects[data['meshName']]
-else:
-    items = bpy.data.objects.items()
-    meshItems = list(filter(lambda item: item[1].type != "CAMERA" and item[1].type != "LAMP", items))
-    meshItem = meshItems[1][1]
+
+def GetMeshItem(layer):
+    if 'meshName' in data:
+        meshName = data['meshName']
+        if layer != 0:
+            meshName += ".00" + str(layer)
+        mesh = bpy.data.objects[meshName]
+    else:
+        items = bpy.data.objects.items()
+        meshItems = list(filter(lambda item: item[1].type != "CAMERA" and item[1].type != "LAMP", items))
+        mesh = meshItems[1][1]
+
+    if mesh == None:
+        print("Could not find mesh in layer: " + str(renderSet.layer))
+        sys.exit()
+    return mesh
+
+meshItem = GetMeshItem(0)
 
 boundsDirections = [
- (-1.0, -1.0, -1.0), 
+ (-1.0, -1.0, -1.0),
  (-1.0, -1.0, 1.0),
  (-1.0, 1.0, 1.0),
  (-1.0, 1.0, -1.0),
@@ -135,6 +157,15 @@ def maxAbsBounds(boundsA, boundsB, direction):
         return True, boundsA
     return False, boundsB
 
+def setActiveLayer(layerIndex):
+    # NOTE: We need to set the desired layer to active twice; since we cannot have no active layers, so if we attempt to
+    # deactivate the active layer before we've activated this one, then it won't deactivate
+    bpy.data.scenes['Scene'].render.layers["RenderLayer"].layers[layerIndex] = True
+    bpy.data.scenes['Scene'].layers[layerIndex] = True
+    for i in range(20):
+        bpy.data.scenes['Scene'].render.layers["RenderLayer"].layers[i] = True if (i == layerIndex) else False
+        bpy.data.scenes['Scene'].layers[i] = True if (i == layerIndex) else False
+
 
 # Initial bounds
 meshBounds = worldBounds(meshItem)
@@ -151,15 +182,18 @@ meshBounds = list(map(lambda bound: maxAbsBounds(bound[0], bound[1], bound[2])[1
 maxBoundsFrames = [0 for i in range(len(boundsDirections))]
 for i in range(len(renderSets)):
     renderSet = renderSets[i]
+    setActiveLayer(renderSet.layer)
     for j in range(renderSet.firstFrame, renderSet.lastFrame):
         bpy.context.scene.frame_set(j)
         if not 'bounds' in args:
-            meshBounds = list(map(lambda bound: maxAbsBounds(bound[0], bound[1], bound[2])[1], list(zip(meshBounds, worldBounds(meshItem), boundsDirections))))
+            mesh = GetMeshItem(renderSet.layer)
+            meshBounds = list(map(lambda bound: maxAbsBounds(bound[0], bound[1], bound[2])[1], list(zip(meshBounds, worldBounds(mesh), boundsDirections))))
         else:
             #
             # Go through all bounds again and determine max
+            mesh = GetMeshItem(renderSet.layer)
             for k in range(len(boundsDirections)):
-                curBounds = worldBounds(meshItem)
+                curBounds = worldBounds(mesh)
                 sameMax, maxBetweenThese = maxAbsBounds(meshBounds[k], curBounds[k], boundsDirections[k])
                 if not sameMax:
                     # New max bounds
@@ -178,13 +212,18 @@ if args.testmesh != None:
     print(meshItem)
     print("Center: " + str(center))
     print("Mesh Bounds: " + str(meshBounds))
+
+    print("Copy the following into python console to add bounds (spheres):")
+    for i in range(len(meshBounds)):
+        bound = meshBounds[i]
+        print("bpy.ops.mesh.primitive_uv_sphere_add(32, ring_count=16, size=0.1, view_align=False, enter_editmode=False, location=Vector((" + str(bound[0]) + ", " + str(bound[1]) + ", " + str(bound[2]) + ")))")
     sys.exit()
 
 # Find ideal camera position for provided forward/up vectors
 def determineCamera(vec, rad, offset):
 
     cameraDir = cos(rad) * vec[0] + sin(rad) * vec[1]
-    print("Camera Dir: (" + str(cameraDir.x) + ", " + str(cameraDir.y) + ", " + str(cameraDir.z) + ")")
+    print("  Camera Dir: (" + str(cameraDir.x) + ", " + str(cameraDir.y) + ", " + str(cameraDir.z) + ")")
 
     # Cylinder
     # If we construct a cylinder centered on the mesh and oriented in the
@@ -240,10 +279,54 @@ def determineCamera(vec, rad, offset):
         if normalDist > cylinderTip:
             cylinderTip = normalDist
 
-    print("Cylinder radius: " + str(cylinderRadius))
-    print("Cylinder tip: " + str(cylinderTip))
-    cameraPos = center + cameraDir * (cylinderTip + 2.0 * cylinderRadius / tan(radians(49.1 / 2.0)) + offset) # FIXME: Get camera FOV
-    return cameraPos, cameraDir, cylinderTip, cylinderRadius
+    print("  Cylinder radius: " + str(cylinderRadius))
+    print("  Cylinder tip: " + str(cylinderTip))
+    print("  Cylinder center: " + str(center))
+    offset = 0 # cylinderRadius / tan(radians(49.1 / 2.0))
+    FOV = bpy.data.cameras[0].angle #FIXME: Find actual camera
+    print("  Using FOV: " + str(FOV * 180.0 / 3.14159))
+    cameraPos = center + cameraDir * (cylinderTip + cylinderRadius / tan(FOV / 2.0) + offset) # FIXME: Get camera FOV
+    print("  Camera Pos: " + str(cameraPos))
+    #cameraRot = [cameraDir[0] * 90, cameraDir[1] * 90, cameraDir[2] * 90]
+    cameraRot = eulerFromLookDir(vec[0], vec[1], cameraDir)
+    print("  Camera Rot: " + str(cameraRot))
+    print("  Forward: " + str(vec[0]))
+    print("  Up: " + str(vec[1]))
+    return cameraPos, cameraRot, cylinderTip, cylinderRadius
+
+def eulerFromLookDir(forward, up, direction):
+    # FIXME: This considers the general look direction, but needs to be rotated to look AT the mesh. Need to find the
+    # plane w/ normal equal to the cross of forward/cylinder, then rotate the euler along that normal. OR we could take
+    # the cylinder dir and adjust our euler to that
+    #
+    # Forward/Up -> Euler
+    # 1) Set the up euler (hardcoded) ??? Is this necessary?
+    # 2) Rotate forward along the up axis: multiply by -1 if axis if up is -1;  1 -> 90, -1 -> -90
+    #
+    # Euler -> Look At
+    # 1) Rotate heading based off of angle diff
+    # 2) Rotate pitch based off of angle diff
+    euler = None
+    if forward == Vector((0, -1, 0)) and up == Vector((0, 0, 1)):
+        euler = Euler((radians(-90), radians(180), radians(180)), 'XYZ')
+    elif forward == Vector((0, 1, 0)) and up == Vector((0, 0, 1)):
+        euler = Euler((radians(-90), radians(180), 0), 'XYZ')
+    elif forward == Vector((1, 0, 0)) and up == Vector((0, 0, 1)):
+        euler = Euler((radians(-90), radians(180), radians(-90)), 'XYZ')
+    elif forward == Vector((-1, 0, 0)) and up == Vector((0, 0, 1)):
+        euler = Euler((radians(-90), radians(180), radians(90)), 'XYZ')
+
+    if euler == None:
+        print("Error! No hardcoded euler value provided for the given forward/up look direction")
+        print("Forward: " + str(forward))
+        print("Up: " + str(up))
+        print("Either add an euler for this particular pair, or be awesome and figure out the math to determine the euler for arbitrary look dirs")
+        sys.exit()
+
+    print("     Forward: " + str(forward))
+    print("     Direction: " + str(direction))
+    euler.x -= acos(forward.dot(direction))
+    return euler
 
 # Move camera to position
 # Used for debugging (when open in blender)
@@ -251,7 +334,8 @@ def testCameraPosition(camera, vec, deg, offset):
     rad = radians(deg)
     cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(vec, rad, offset)
     camera.location = cameraPos
-    look_at(camera, lookAtPoint)
+    #look_at(camera, lookAtPoint)
+    camera.rotation_euler = cameraDir
     bpy.ops.mesh.primitive_cylinder_add(radius = cylinderRadius, depth = 3.0, location = center)
     bpy.context.object.rotation_euler = camera.rotation_euler
 
@@ -287,7 +371,7 @@ def render(animation, writeStill, suppressOutput):
 # Render each potential rotation for user to determine which is accurate
 def renderPossibleRotations(camera, offset):
 
-    renderDir = parentDir + "shots.checkvec/"
+    renderDir = parentDir + ".checkvec/"
     os.system("rm " + renderDir + "*.png")
     if not os.path.exists(renderDir):
         os.makedirs(renderDir)
@@ -316,7 +400,8 @@ def renderPossibleRotations(camera, offset):
         # Forward Camera
         cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(possibleVecs[i], 0.0, offset)
         camera.location = cameraPos
-        look_at(camera, lookAtPoint)
+        #look_at(camera, lookAtPoint)
+        camera.rotation_euler = cameraDir
 
         # Render
         forwardFilename = "forward_" + possibleVecs[i][2]
@@ -327,7 +412,8 @@ def renderPossibleRotations(camera, offset):
         # Top Camera
         cameraPos, cameraDir, cylinderTip, cylinderRadius = determineCamera(possibleVecs[i], radians(90.0), offset)
         camera.location = cameraPos
-        look_at(camera, lookAtPoint)
+        #look_at(camera, lookAtPoint)
+        camera.rotation_euler = cameraDir
 
         # Render
         topFilename = "top_" + possibleVecs[i][2]
@@ -366,10 +452,15 @@ def getAllCameras(forwardVec, upVec, viewRad, offset):
 
     # Find all ideal camera positions
     cameraPositions = []
-    cameraPositions.append( determineCamera(objectForwardCamera, viewRad, offset) + tuple(['front']) )
-    cameraPositions.append( determineCamera( (objectBackCamera, objectForwardCamera[1]), viewRad, offset) + tuple(['back']) )
+    print("Camera: Down")
+    cameraPositions.append( determineCamera(objectForwardCamera, viewRad, offset) + tuple(['down']) )
+    print("Camera: Up")
+    cameraPositions.append( determineCamera( (objectBackCamera, objectForwardCamera[1]), viewRad, offset) + tuple(['up']) )
+    print("Camera: Left")
     cameraPositions.append( determineCamera( (objectLeftCamera, objectForwardCamera[1]), viewRad, offset) + tuple(['left']) )
+    print("Camera: Right")
     cameraPositions.append( determineCamera( (objectRightCamera, objectForwardCamera[1]), viewRad, offset) + tuple(['right']) )
+
 
     return cameraPositions
 
@@ -434,7 +525,7 @@ if args.bounds != None:
     # Render each max bounds frame for each camera
     print("Rendering max bounds for each camera")
 
-    renderDir = parentDir + "shots.checkbounds/"
+    renderDir = parentDir + ".checkbounds/"
     os.system("rm " + renderDir + "*.png")
     if not os.path.exists(renderDir):
         os.makedirs(renderDir)
@@ -453,7 +544,8 @@ if args.bounds != None:
         for j in range(len(cameraPositions)):
             cameraPosition = cameraPositions[j]
             camera.location = cameraPosition[0]
-            look_at(camera, lookAtPoint)
+            #look_at(camera, lookAtPoint)
+            camera.rotation_euler = cameraPositions[1]
             filename = "bounds_" + str(i) + "." + str(j) + ".png"
             filenames.append(renderDir + filename)
             filenamesStr += renderDir + filename + " "
@@ -470,7 +562,6 @@ if args.bounds != None:
             break
 
     sys.exit()
-
 
 # Render all frames/camera pairs
 
@@ -495,7 +586,10 @@ cameraPositions = getAllCameras(forwardVec, upVec, viewRad, extraCameraOffset)
 # Prepare directories for each anim/camera
 for i in range(len(renderSets)):
     renderSet = renderSets[i]
-    animDir = parentDir + "shots/" + renderSet.anim + "/"
+    setActiveLayer(renderSet.layer)
+
+    animDir = parentDir + "/" + renderSet.anim + "/"
+
     renderSet.animDir = animDir
     if not os.path.exists(animDir):
         os.makedirs(animDir)
@@ -534,25 +628,46 @@ def setRenderOptions(renderSettings):
 
 setRenderOptions(quickRenderSettings)
 
+renderResultsFile = args.resultsOutput
 renderResults = {"render":{ "folders": [] }}
+if renderResultsFile:
+    try:
+        renderResults = json.load(open(renderResultsFile[0]))
+        if not 'render' in renderResults:
+            renderResults['render'] = {}
+        renderResults['render']['folders'] = []
+    except:
+        renderResults = {"render":{ "folders": [] }}
+
 
 camera = obj_camera
 for i in range(len(renderSets)):
     renderSet = renderSets[i]
         
+    setActiveLayer(renderSet.layer)
     animDir = renderSet.animDir
     scene.frame_start = renderSet.firstFrame
     scene.frame_end = renderSet.lastFrame
     scene.frame_step = frameStep
 
+    if args.oneFrame != None:
+        scene.frame_end = scene.frame_start
+
     for j in range(len(cameraPositions)):
         cameraPosition = cameraPositions[j]
         camera.location = cameraPosition[0]
-        look_at(camera, lookAtPoint)
+        camera.rotation_euler = cameraPosition[1] # FIXME: JOSH: Is this legit?
+        print(" Camera pos: " + str(cameraPosition))
+        print(" Camera desired rot: " + str(cameraPosition[1]))
+        print(" Camera rot: " + str(camera.rotation_euler))
         bpy.context.scene.camera = camera
         print(str(camera.location))
 
         outputDir = animDir + cameraPosition[4] + "/"
+
+        if args.previewAnim != None and (args.previewAnim[1] != cameraPosition[4] and args.previewAnim[1] != "all"):
+            continue
+
         print("  Output dir: " + outputDir)
         scene.render.filepath = outputDir
         render(True, True, True)
