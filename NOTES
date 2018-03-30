@@ -372,22 +372,51 @@ WORKING ON (was previously working on)
     - Map: Layers that auto flatten into sprites layer (eg. fenced off area which is in another area, so we can easily modify fence layer later)
     - Idle anim; between attack animations also go to idle anim (in same direction)
     - Mesh setup:
-*       - BUG: Blender script outputed to "shotsshots"  (should be shots)
-*       - BUG: Didn't set sprite_size
-*       - BUG: Anim names: "front", "back"  instead of "up" "down"
         - BUG: Placed image in / instead of /sprites
-*       - Setup extra cmdline args for render/bake  (NOTE: render --quick not working)
+        - Fix default avatar to looking to the right; specify avatar by anim name/dir?
+        - Fix bounds checking (way off for bunnyrat)
+            - Provide python cmd to create cylinder & circle
+        - Fix bunnyrat camera placement (seems like he's standing in a different spot for left/right/up/down)
     - Come up with a better model -> in-game procedure
 *       - cache should be automated
 *       - previewing model+anim should be easier/faster
+            - render first frame of a particular anim (or by default just first anim); with/without post-processing and with/without texture processing
+            - render particular anim/camera; with/without post-processing + texture processing
+
+            --preview-anim [anim [camera]] --one-frame --variant [sprite texture variant; texture/post/size/etc.] --compare-with [sprite:anim:camera]
+                --preview-shots for separate renders  (as opposed to --preview-anim)
+                --compare-with  depends on --preview-anim; combines anim from another sprite w/ this one; if no camera specified then each camera, and each camera anim should loop until both anims have finished on that camera
+                - FIX: Clean folders before/after? (if we only render one anim then don't bother creating anim folders; if we only render one camera then don't bother creating camera folders)
+                - FIX: --compare-with-sprite loopN == max(compareSpriteAnimL, previewSpriteAnimL)    (so we don't cut one loop short)
+                - FIX: preview anim: save in shots.preview
+                - FIX: --compare-with-sprite camera = all
+                - FIX: --compare-with-sprite extent
+*           --side-by-side   display preview anims side-by-side in a loop (useful for checking post processing quickly; particularly --side-by-side --one-frame)
+        - Should hash .blend file and sprite.json to see if we need to re-render or not -- NOTE: Would also need to hash dependent files (eg. texture), might be worth it to restructure folders to keep all blend related files under one folder, then recursive md5sum that folder. Will need to render to separate variant folders (since different preprocess/etc.)
 *       - node cacheBuilder after sheetEdit should be easier
 *       - anim compare w/ other sprite (both attacking; chasing, etc.)
-        - anim preview should be slower / easier to analyze  (perhaps each anim-type side-by-side?)
+*       - anim preview should be slower / easier to analyze  (perhaps each anim-type side-by-side?)
 *       - tool for editing textures w/ imagemagick
+            - set a placeholder texture image; then write texture changes at bake time to that one file
+            - list of sprite variants + settings: texture changes, post-processing changes
+                - clut: convert magenta.png josh.gradient.test.png -clut +dither asdf.png
+                - remap: convert magenta.png +dither -remap josh.gradient.test.png asdf.png
+                - convert magenta.png -separate -threshold 50% -combine +dither -remap josh.gradient.test.png asdf.png
 *       - setup imagemagick lookup colour palette
-        - fix pixelation step
+*       - fix pixelation step
 *       - auto add to avatar? auto add to npcs?
-        - error checking (validate sprite.json)
+        - error checking (validate sprite.json: "atk", "walk" anims; spriteSize included, etc. ; blender check valid anim/camera args)
+*       - Faster trims
+	- Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
+    - Fix model -> spritesheet camera/size issue:
+        - Sprite moving particularly far in one animation: we don't want to extend the sprite size, instead we want to
+          offset the sprite in-game (by some scale of the actual offset). Since this is on a per-frame-per-anim
+          situation, need to allow per-frame offsets. eg. Death (body sprawling out), flying
+        - Center of sprite: We may want to specify the center of the sprite (could use a visual tool like a sphere, and
+          name in mesh.center), such that the sprite draw location indicates the center of the sprite being drawn there.
+          Helps for weird situations like long tails (we want those to draw, but the rest of the mesh to draw in the
+          central part). Would need sprite offset per-frame-per-anim. NOTE: center object may need to change per-frame
+          (would want it to follow some vertex or something)
 
 
 	- Browser Debugging Snippets
@@ -1255,7 +1284,7 @@ EXTERNAL ASSETS
     * Dependencies: File -> External Data -> Find/Report Missing Files
     * Dependency Textures: Find mesh (under Armament) -> Texture -> (find texture being used) -> Change source image
     * Rendering: blender/cycles may depend on how it was already setup
-    * Edge rendering: Render -> Post Processing -> Edge / Threshold 10
+    * Edge rendering: Render -> Post Processing -> Edge / Threshold 10  (or Freestyle)
     * Transparent Background: Render -> Shading -> Alpha -> Transparent
     * Adding Normals: Mesh -> Texture -> Add Texture ->
         - Image Sampling: [X] Normal Map  (Tangent Space)
@@ -1263,3 +1292,5 @@ EXTERNAL ASSETS
         - Influence: [ ] Diffuse; [X] Geometry (Normal)
         - Place before image texture
     * Compositing: Go to compositing view; [X] Use NodesA ; Render Result (bottom of composite render window) Channels Color/Alpha
+    * Pixelation: Set resolution lower than the sprite size, so during baking process the shots are scaled up
+    * Try turning off anti-aliasing
