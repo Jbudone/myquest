@@ -119,6 +119,8 @@ define(['loggable'], (Loggable) => {
                 });
             }
 
+            history.sort((cmd1, cmd2) => cmd1.date < cmd2.date);
+
             const historyCommands = JSON.stringify(history);
             localStorage.setItem('historyCommands', historyCommands);
         };
@@ -148,7 +150,6 @@ define(['loggable'], (Loggable) => {
                     matches.push(cmd);
                 }
             });
-
 
             return matches;
         };
@@ -292,6 +293,7 @@ define(['loggable'], (Loggable) => {
             });
 
             history = this.getHistoryCommands();
+            history.sort((cmd1, cmd2) => cmd1.date < cmd2.date);
         };
 
         this.step = () => { };
