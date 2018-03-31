@@ -27,6 +27,35 @@
             }
         }
 	},
+    {
+		"id": "MinorPoison",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "CUR_ADD",
+                    "stat": "health",
+                    "amount": -10,
+                    "permanent": false
+                }
+            ],
+            "options": {
+                "duration": 3000,
+                "tick": {
+                    "time": 1000,
+                    "repeatedActivate": true
+                }
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Temporary Damage",
+                "description": "Ouch!"
+            }
+        }
+
+    },
 	{
 		"id": "KingBadBuff",
         "base": "statbuff",

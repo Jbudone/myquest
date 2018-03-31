@@ -24,6 +24,21 @@ define(['loggable', 'component'], (Loggable, Component) => {
             this.timer = buffRes.args.options.duration;
         };
 
+        this.step = (character, delta) => {
+
+            const prevTimer = this.timer;
+            if ((this.timer -= delta) <= 0) {
+                return false;
+            }
+
+            const tick  = this.buffRes.args.options.tick,
+                ticked  = (prevTimer % tick.time) < (this.timer % tick.time);
+            if (prevTimer !== buffRes.args.options.duration && ticked) {
+                //assert(ticks === 1, "We shouldn't need to tick more than once per step");
+                this.modified = this.base.tick(character, buffRes.args, this.modified);
+            }
+        };
+
         if (Env.isServer) {
 
             this.deactivate = (character) => {
@@ -213,7 +228,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
                 for (let i = 0; i < this.buffs.length; ++i) {
                     const buff = this.buffs[i];
-                    if ((buff.timer -= delta) <= 0) {
+                    if (buff.step(character, delta) === false) {
                         buff.deactivate(character);
 
 

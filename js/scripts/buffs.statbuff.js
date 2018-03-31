@@ -1,6 +1,9 @@
 define(['scripts/buffs.base'], function(BuffBase){
 
-    const MAX_MULTIPLIER = "MAX_MULTIPLIER";
+    const MAX_MULTIPLIER = "MAX_MULTIPLIER",
+        CUR_MULTIPLIER   = "CUR_MULTIPLIER",
+        CUR_ADDMULT      = "CUR_ADDMULT",
+        CUR_ADD          = "CUR_ADD";
 
 	const StatBuff = function() {
 
@@ -13,29 +16,68 @@ define(['scripts/buffs.base'], function(BuffBase){
                 const modified = {};
 
                 for (let i = 0; i < args.stats.length; ++i) {
-                    const statBuff = args.stats[i],
-                        charStat   = character.stats[statBuff.stat],
-                        curRatio   = charStat.cur / charStat.curMax;
 
-                    let newMax = parseInt(charStat.curMax * statBuff.amount, 10),
+                    const statBuff = args.stats[i],
+                        charStat   = character.stats[statBuff.stat];
+
+                    let newMax = charStat.curMax,
+                        newCur = charStat.cur,
+                        difference = 0;
+
+                    if (statBuff.type === MAX_MULTIPLIER) {
+
+                        const curRatio   = charStat.cur / charStat.curMax;
+
+                        newMax = parseInt(charStat.curMax * statBuff.amount, 10);
                         newCur = parseInt(curRatio * newMax, 10);
 
-                    // FIXME: Stats should probably have a more reasonable upperbound per stat
-                    newMax = _.clamp(newMax, 1, Number.MAX_SAFE_INTEGER);
-                    newCur = _.clamp(newCur, 1, Number.MAX_SAFE_INTEGER);
+                        // FIXME: Stats should probably have a more reasonable upperbound per stat
+                        newMax = _.clamp(newMax, 1, Number.MAX_SAFE_INTEGER);
+                        newCur = _.clamp(newCur, 1, Number.MAX_SAFE_INTEGER);
 
+                        difference = newMax - charStat.curMax;
 
-                    modified[statBuff.stat] = {
-                        difference: (newMax - charStat.curMax),
-                        curMax: newMax,
-                        cur: newCur
-                    };
+                        console.log("Buffing stat (.curMax) " + statBuff.stat + " to " + charStat.curMax);
+
+                        console.log("Your " + statBuff.stat + " is now " + charStat.cur);
+
+                    } else if (statBuff.type === CUR_MULTIPLIER) {
+
+                        newCur = parseInt(charStat.cur * statBuff.amount, 10);
+                        newCur = _.clamp(newCur, Number.MIN_SAFE_INTEGER, charStat.curMax);
+                        difference = newCur - charStat.cur;
+
+                        console.log(`Buffing (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${difference})`);
+
+                    } else if (statBuff.type === CUR_ADDMULT) {
+
+                        let addAmt = parseInt(charStat.cur * statBuff.amount, 10);
+                        newCur = _.clamp(charStat.cur + addAmt, Number.MIN_SAFE_INTEGER, charStat.curMax);
+                        difference = newCur - charStat.cur;
+
+                        console.log(`Buffing (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${difference})`);
+
+                    } else if (statBuff.type === CUR_ADD) {
+
+                        newCur = _.clamp(charStat.cur + statBuff.amount, Number.MIN_SAFE_INTEGER, charStat.curMax);
+                        difference = newCur - charStat.cur;
+
+                        console.log(`Buffing (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${difference})`);
+
+                    } else {
+                        throw Err(`Unexpected statBuff type: ${statBuff.type}`);
+                    }
 
                     charStat.curMax = newMax;
                     charStat.cur    = newCur;
-                    console.log("Buffing stat " + statBuff.stat + " to " + charStat.curMax);
 
-                    console.log("Your " + statBuff.stat + " is now " + charStat.cur);
+                    modified[statBuff.stat] = {
+                        difference: difference,
+                        curMax: charStat.curMax,
+                        cur: newCur,
+                        permanent: _.defaultTo(statBuff.permanent, true),
+                        type: statBuff.type
+                    };
                 }
 
                 return modified;
@@ -46,30 +88,89 @@ define(['scripts/buffs.base'], function(BuffBase){
                 const _modified = {};
 
                 for (const statName in modified) {
-                    const modifiedStat = modified[statName].difference,
-                        charStat       = character.stats[statName],
-                        curRatio       = charStat.cur / charStat.curMax;
 
-                    let newMax = parseInt(charStat.curMax - modifiedStat, 10),
+                    if (modified[statName].permanent === true) continue;
+
+                    const statBuff     = modified[statName],
+                        modifiedStat   = statBuff.difference,
+                        charStat       = character.stats[statName];
+
+                    let newMax = charStat.curMax,
+                        newCur = charStat.cur,
+                        difference = 0;
+
+                    if (statBuff.type === MAX_MULTIPLIER) {
+
+                        const curRatio = charStat.cur / charStat.curMax;
+
+                        newMax = parseInt(charStat.curMax - modifiedStat, 10);
                         newCur = parseInt(curRatio * newMax, 10);
 
-                    // FIXME: Stats should probably have a more reasonable upperbound per stat
-                    newMax = _.clamp(newMax, 1, Number.MAX_SAFE_INTEGER);
-                    newCur = _.clamp(newCur, 1, Number.MAX_SAFE_INTEGER);
+                        // FIXME: Stats should probably have a more reasonable upperbound per stat
+                        newMax = _.clamp(newMax, 1, Number.MAX_SAFE_INTEGER);
+                        newCur = _.clamp(newCur, 1, Number.MAX_SAFE_INTEGER);
 
-                    _modified[statName] = {
-                        difference: (newMax - charStat.curMax),
-                        curMax: newMax,
-                        cur: newCur
-                    };
+                        difference = newMax - charStart.curMax;
+
+                        console.log("Restoring stat " + statName + " to " + charStat.curMax);
+
+                    } else if (statBuff.type === CUR_MULTIPLIER) {
+
+                        newCur = parseInt(charStat.cur - modifiedStat, 10);
+                        newCur = _.clamp(newCur, 1, charStat.curMax);
+
+                        difference = newMax - charStart.curMax;
+
+                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+
+                    } else if (statBuff.type === CUR_ADDMULT) {
+                        
+                        newCur = parseInt(charStat.cur - modifiedStat, 10);
+                        newCur = _.clamp(newCur, 1, charStat.curMax);
+
+                        difference = newCur - charStat.cur;
+
+                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+                    } else if (statBuff.type === CUR_ADD) {
+
+                        newCur = parseInt(charStat.cur - modifiedStat, 10);
+                        newCur = _.clamp(newCur, 1, charStat.curMax);
+
+                        difference = newCur - charStat.cur;
+
+                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+                    } else {
+                        throw Err(`Unexpected statBuff type: ${statBuff.type}`);
+                    }
 
                     charStat.curMax = newMax;
                     charStat.cur = newCur;
-                    console.log("Restoring stat " + statName + " to " + charStat.curMax);
 
+                    _modified[statName] = {
+                        difference: difference,
+                        curMax: newMax,
+                        cur: newCur
+                    };
                 }
 
                 return _modified;
+            },
+
+            tick(character, args, modified) {
+                const newModified = this.activate(character, args);
+
+                // Merge old modified stuff w/ newModified stuff
+                _.each(newModified, (modification, stat) => {
+                    if (!modified[stat]) {
+                        modified[stat] = modification;
+                    } else {
+                        modified[stat].difference += modification.difference;
+                        modified[stat].cur = modification.cur;
+                        modified[stat].curMax = modification.curMax;
+                    }
+                });
+
+                return modified;
             }
 		};
 
@@ -93,6 +194,10 @@ define(['scripts/buffs.base'], function(BuffBase){
                     charStat.curMax = modStat.curMax;
                     charStat.cur = modStat.cur;
                 }
+            },
+
+            tick(character, args, modified) {
+
             }
 		};
 
