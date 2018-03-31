@@ -98,6 +98,10 @@ define(() => {
                         });
                     };
 
+                    img.onerror = function() {
+                        throw Err(`Error loading img`);
+                    };
+
                     const url = cacheNode.asset;
                     img.src = url;
                 }
