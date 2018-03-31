@@ -504,6 +504,8 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                             curY += spriteH;
 						}
 
+                        assert(Object.keys(animations).length > 0, `No animations for sheet ${_sheet.id}`);
+
                         // NOTE: To debug canvas just uncomment this
                         //document.body.appendChild(canvas);
 
