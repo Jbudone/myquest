@@ -346,6 +346,8 @@ define(
             this.respawning = () => {
                 if (!this.doHook('respawning').pre()) return;
 
+                netSerializeEnabled = false;
+
                 this.Log("Respawning", LOG_DEBUG);
                 this.entity.cancelPath();
                 this.entity.zoning = false;
@@ -357,6 +359,8 @@ define(
                 this.alive = true;
                 this.health = this.stats.health.curMax;
                 this.brain.reset();
+
+                netSerializeEnabled = true;
 
                 this.doHook('respawning').post();
             };
