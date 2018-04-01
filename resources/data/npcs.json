@@ -35,7 +35,7 @@
         "damage":5,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -62,7 +62,7 @@
         "damage":5,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"range",
@@ -90,7 +90,7 @@
         "AI":true,
         "level":1,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -117,7 +117,7 @@
         "damage":2,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -145,7 +145,7 @@
         "damage":2,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -172,7 +172,7 @@
         "damage":3,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -200,13 +200,15 @@
         "damage":3,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
             "range":1,
             "attackTime":1000,
-            "chaseDistance":20
+            "chaseDistance":20,
+            "wpnDmg": 10,
+            "wpnLvl": 1
         },
         "stats":
         {
@@ -260,7 +262,7 @@
         "damage":3,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
@@ -298,7 +300,7 @@
         "damage":3,
         "AI":true,
         "strategy":"strategy.basic_melee",
-        "components":["regeneration"],
+        "components":["regeneration", "buffmgr"],
         "attackInfo":
         {
             "ability":"melee",
