@@ -310,6 +310,27 @@ define(
                     return; // do not post damaged since we've died
                 }
 
+                // FIXME: Abstract where we check if an effect is proc'd and how its applied
+                // NOTE: We want to process effects AFTER handling damage/death, otherwise our effect could activate and
+                // instantly kill the entity before we've processed the original damage source
+                if (damageData.effects) {
+                    chance = Math.random();
+                    damageData.effects.forEach((effect) => {
+                        if (chance < effect.chance) {
+                            // Effect has proc'd
+                            if (effect.type === "buff") {
+                                assert(effect.buffres in Buffs, `Unexpected buffres: ${effect.buffres}`);
+                                this.Log(`Giving you a buff: ${effect.buffres}`);
+                                this.doHook('BuffEvt').post({
+                                    buff: Buffs[effect.buffres]
+                                });
+                            } else {
+                                throw Err(`Unexpected damageData effect type: ${effect.type}`);
+                            }
+                        }
+                    });
+                }
+
                 this.doHook('damaged').post();
             };
 
