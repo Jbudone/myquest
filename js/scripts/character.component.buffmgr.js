@@ -31,11 +31,14 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 return false;
             }
 
-            const tick  = this.buffRes.args.options.tick,
-                ticked  = (prevTimer % tick.time) < (this.timer % tick.time);
-            if (prevTimer !== buffRes.args.options.duration && ticked) {
-                //assert(ticks === 1, "We shouldn't need to tick more than once per step");
-                this.modified = this.base.tick(character, buffRes.args, this.modified);
+            const tick = this.buffRes.args.options.tick;
+
+            if (tick) {
+                const ticked = (prevTimer % tick.time) < (this.timer % tick.time);
+                if (prevTimer !== buffRes.args.options.duration && ticked) {
+                    //assert(ticks === 1, "We shouldn't need to tick more than once per step");
+                    this.modified = this.base.tick(character, buffRes.args, this.modified);
+                }
             }
         };
 
