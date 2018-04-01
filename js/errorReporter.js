@@ -166,6 +166,8 @@ define(() => {
 
             const reportDir = parsedError.reportDir; // FIXME: Maybe this should be parentDirectory instead?
 
+            console.log(`${chalk.bold.red(parsedError.error)}`);
+
             let level = 0;
             for (let i = 0; i < parsedError.stack.length; ++i) {
 
