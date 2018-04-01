@@ -72,6 +72,8 @@ define(['lib/stacktrace'], function(Stack){
           console.error(message);
           console.error(args);
           debugger;
+      } else {
+          DEBUGGER();
       }
     return { message: message, args: args, stack: stack };
   }
