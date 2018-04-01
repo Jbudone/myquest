@@ -24,8 +24,15 @@
         "id": "itm_dagger",
         "base": "weapon",
         "args": {
-            "dmg": 2,
-            "lvl": 1
+            "dmg": 1,
+            "lvl": 1,
+            "effects": [
+                {
+                    "type": "buff",
+                    "buffres": "MinorPoison",
+                    "chance": 0.0
+                }
+            ]
         },
         "types": [ "PICKUP", "WIELD_LEFTHAND" ],
         "stack": 1
