@@ -140,16 +140,16 @@ const util          = require('util'),
     WebSocketServer = require('ws').Server,
     chalk           = require('chalk'),
     prettyjson      = require('prettyjson'),
-    assert          = require('assert'),    // TODO: Disable in production
+    //assert          = require('assert'),    // TODO: Disable in production
     filepath        = require('path'),
     SourceMap       = require('source-map');
+
 
 GLOBAL.util = util;
 GLOBAL._ = _;
 GLOBAL.Promise = Promise;
 GLOBAL.chalk = chalk;
 GLOBAL.prettyjson = prettyjson;
-GLOBAL.assert = assert;
 GLOBAL.WebSocketServer = WebSocketServer;
 GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('path').dirname('')  returns an empty string
 
@@ -158,6 +158,16 @@ GLOBAL.fs = fs;
 GLOBAL.DEBUGGER = () => {
     waitForInspector();
 };
+
+const assert = (expr, message) => {
+    if (!expr) {
+        console.log(message);
+        DEBUGGER();
+        throw Err(message);
+    }
+};
+
+GLOBAL.assert = assert;
 
 // Promise.longStackTraces();
 
