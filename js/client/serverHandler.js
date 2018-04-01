@@ -14,6 +14,12 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.requestsId        = 0;
         this.requests          = []; // Requests sent to server
 
+        // We could receive multiple related events in the same frame, but require them to be processed in order (eg.
+        // NetSerialize a character's health going below 0, resulting in death, before receiving the death event). This
+        // allows us to handle high priority events first, and then go through the remaining events afterwards. Its
+        // unfortunate to do things this way, but currently not viable to reorder those events/broadcasts on the server
+        this.highPriorityEvents = [ EVT_NETSERIALIZE ];
+
         this.connect = (link) => {
 
             this.requestBuffer.pushArchive();
@@ -54,6 +60,18 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         const page = parseInt(evt.page, 10),
                             buffer = JSON.parse(evt.events),
                             events = buffer.events;
+
+                        // Reorder events so that high priority events are processed first
+                        for (let i = 0; i < events.length; ++i) {
+                            const event = JSON.parse(events[i]),
+                                evtType = event.evtType;
+
+                            if (this.highPriorityEvents.indexOf(evtType) > -1) {
+                                events.unshift(events[i]);
+                                events.splice(i + 1, 1);
+                            }
+                        }
+
                         for (let i = 0; i < events.length; ++i) {
                             const event = JSON.parse(events[i]),
                                 evtType = event.evtType;
