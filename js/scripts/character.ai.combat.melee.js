@@ -27,13 +27,13 @@ define(
                     _script = this;
                 },
 
-                calculateDamage: (target) => {
+                calculateDamage: (attackInfo, target) => {
 
-                    const weapons = character.inventory.getEquipped('WIELD_LEFTHAND'),
-                        weapon    = weapons.length > 0 ? weapons[0] : null;
+                    // FIXME: NPCs need a default inventory
+                    //const weapon    = weapons.length > 0 ? weapons[0] : null;
 
-                    let wpnDamage = weapon ? weapon.args.dmg : 1,
-                        wpnLevel  = weapon ? weapon.args.lvl : 1;
+                    let wpnDamage = attackInfo.wpnDmg,
+                        wpnLevel  = attackInfo.wpnLvl;
 
 
                     let strContribution = 0.4;
@@ -67,10 +67,39 @@ define(
                     }
 
                     // FIXME: Abstract damage
-                    const damage = this.calculateDamage(target);
+                    const damageData = {},
+                        attackInfo   = {
+                            wpnDmg: 1,
+                            wpnLvl: 1,
+                            AC: 2.0
+                        };
+
+                    if (character.inventory) {
+                        const weapons = character.inventory.getEquipped('WIELD_LEFTHAND');
+
+                        if (weapons.length > 0) {
+                            const weapon = weapons[0];
+
+                            attackInfo.wpnDmg = weapon.args.dmg;
+                            attackInfo.wpnLvl = weapon.args.lvl;
+
+                            if (weapon.args.effects) {
+                                damageData.effects = weapon.args.effects;
+                            }
+                        }
+                    } else {
+
+                        // Default attackInfo on npc?
+                        if (character.entity.npc.attackInfo) {
+                            attackInfo.wpnDmg = _.defaultTo(character.entity.npc.attackInfo.wpnDmg, attackInfo.wpnDmg);
+                            attackInfo.wpnLvl = _.defaultTo(character.entity.npc.attackInfo.wpnLvl, attackInfo.wpnDmg);
+                        }
+                    }
+                        
+                    const damage = this.calculateDamage(attackInfo, target);
                     this.Log(` I TOTALLY SCRATCHED YOU FOR ${damage}`, LOG_DEBUG);
 
-                    target.damage(damage, character, {});
+                    target.damage(damage, character, damageData);
 
                     return true;
                 }
