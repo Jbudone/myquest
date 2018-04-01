@@ -129,6 +129,7 @@ define(
                         this.doHook('updatedSlot').pre(i);
                         slot.item = null;
                         slot.stack = 0;
+                        slot.active = false;
                         this.doHook('updatedSlot').post(i);
                     }
                 }
@@ -303,6 +304,7 @@ define(
 
                         slot.item = null;
                         slot.stack = 0;
+                        slot.active = false;
                     }
                 };
 
