@@ -67,20 +67,43 @@ define(['scripts/buffs.base'], function(BuffBase){
                     } else {
                         throw Err(`Unexpected statBuff type: ${statBuff.type}`);
                     }
-
-                    charStat.curMax = newMax;
-                    charStat.cur    = newCur;
-
-                    modified[statBuff.stat] = {
+                    
+                    const modification = {
                         difference: difference,
-                        curMax: charStat.curMax,
+                        curMax: newMax,
                         cur: newCur,
                         permanent: _.defaultTo(statBuff.permanent, true),
                         type: statBuff.type
-                    };
+                    }
+
+                    this.handleStatChange(character, statBuff, modification);
+
+                    modified[statBuff.stat] = modification;
                 }
 
                 return modified;
+            },
+
+            handleStatChange(character, statBuff, modified) {
+
+                const charStat = character.stats[statBuff.stat];
+
+                // If we're updating health we need to explicitly damage the character (and probably heal later too).
+                // Even if we're updating max, we could in turn be updating cur as well (ratio changed)
+                if (statBuff.stat === "health" && modified.cur !== charStat.cur) {
+                    // Health is a special case; need to run through damage/heal
+
+                    if (modified.difference < 0) {
+                        const source = null; // FIXME: Who did this buff come from
+                        character.damage(modified.difference * -1, source, {});
+                    } else {
+                        charStat.cur = modified.newCur;
+                    }
+
+                }
+
+                charStat.curMax = modified.curMax;
+                charStat.cur    = modified.cur;
             },
 
             deactivate(character, args, modified) {
@@ -143,14 +166,15 @@ define(['scripts/buffs.base'], function(BuffBase){
                         throw Err(`Unexpected statBuff type: ${statBuff.type}`);
                     }
 
-                    charStat.curMax = newMax;
-                    charStat.cur = newCur;
-
-                    _modified[statName] = {
+                    const modification = {
                         difference: difference,
                         curMax: newMax,
                         cur: newCur
                     };
+
+                    this.handleStatChange(character, statBuff, modification);
+
+                    _modified[statName] = modification;
                 }
 
                 return _modified;
