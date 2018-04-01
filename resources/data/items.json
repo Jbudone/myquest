@@ -19,5 +19,15 @@
         "args": { "amt": 10 },
         "types": [ "PICKUP", "WORN_HELMET" ],
         "stack": 1
+    },
+    {
+        "id": "itm_dagger",
+        "base": "weapon",
+        "args": {
+            "dmg": 2,
+            "lvl": 1
+        },
+        "types": [ "PICKUP", "WIELD_LEFTHAND" ],
+        "stack": 1
     }
 ]}

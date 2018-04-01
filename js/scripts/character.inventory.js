@@ -156,6 +156,23 @@ define(
                 return serialized;
             };
 
+            this.getEquipped = (filterType) => {
+
+                const equipped = [];
+                for (let i = 0; i < this.slots.length; ++i) {
+                    const invSlot = this.slots[i];
+
+                    if (invSlot.active) {
+                        // FIXME: We should symbolize itemTypes so that we don't do unnecessary string cmp
+                        if (!filterType || invSlot.item.types.indexOf(filterType) > -1) {
+                            equipped.push(invSlot.item);
+                        }
+                    }
+                }
+
+                return equipped;
+            };
+
             if (Env.isServer) {
 
                 const player = character.entity.player;

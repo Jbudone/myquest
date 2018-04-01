@@ -29,12 +29,17 @@ define(
 
                 calculateDamage: (target) => {
 
-                    let wpnDamage = 1; // FIXME: Check actual weapon; otherwise default is hand-to-hand for 1?
+                    const weapons = character.inventory.getEquipped('WIELD_LEFTHAND'),
+                        weapon    = weapons.length > 0 ? weapons[0] : null;
+
+                    let wpnDamage = weapon ? weapon.args.dmg : 1,
+                        wpnLevel  = weapon ? weapon.args.lvl : 1;
+
+
                     let strContribution = 0.4;
                     let str = character.stats.str.cur;
                     let maxCrit = 1.6, minCrit = 0.6;
                     let dex = character.stats.dex.cur;
-                    let wpnLevel = 1; // FIXME: Check actual weapon; otherwise default is 1?
                     let maxDex = 2.0 * wpnLevel,
                         minDex = 0.5 * wpnLevel,
                         dexScore = (dex - minDex) / (maxDex - minDex);
