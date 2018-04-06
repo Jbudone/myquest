@@ -53,7 +53,6 @@ if not os.path.exists(jsonFile[0]):
     sys.exit()
 
 data = json.load(open(jsonFile[0]))
-pprint(data)
 
 # Check data for stuff we need
 if 'animations' not in data:
