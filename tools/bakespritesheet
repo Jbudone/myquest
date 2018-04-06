@@ -150,7 +150,13 @@ done
 
 renderHash="$( echo $renderHash | md5sum | awk '{ print $1 }' )"
 
-if [ "$renderHash" != "$SHOTS_HASH" ]; then
+
+
+# NOTE: We need the trimmed width/height; if we've trimmed the images but don't have this then we need to trim again to fetch these
+newWidth=$( echo $EXPORT_JSON | jq --raw-output '.sprite.width' )
+newHeight=$( echo $EXPORT_JSON | jq --raw-output '.sprite.height' )
+
+if [ "$renderHash" != "$SHOTS_HASH" ] || [ "$newWidth" == "null" ] || [ "$newHeight" == "null" ]; then
     echo "Render dir hash ($renderHash) != Saved hash ($SHOTS_HASH).. Need to retrim"
     echo "Storing trimmed shots in $TRIMMED_DIR"
 
@@ -175,6 +181,7 @@ if [ "$renderHash" != "$SHOTS_HASH" ]; then
         if [ $DO_TRIM -eq 1 ]; then
 
             # TODO: Determine how much we can trim without having to create a file
+            # TODO: We can at least split processing time in half by doing two at once (left/top, right/bottom)
             convert -trim "$f" "$f.trim"
             size=( $( identify -format "%w %h" "$f.trim" ) )
             rm "$f.trim"
@@ -189,6 +196,7 @@ if [ "$renderHash" != "$SHOTS_HASH" ]; then
                 minTrimHeight=$trimmedHeight
             fi
 
+            # Left trim
             convert "$f" -gravity East -splice 1x0 -trim +repage "$f.left.trim"
             leftTrimmedWidth=$( identify -format "%w" "$f.left.trim" )
             leftTrim=$( echo "${origSize[0]} - $leftTrimmedWidth" | bc -l )
@@ -375,7 +383,7 @@ if [ "$renderHash" != "$SHOTS_HASH" ]; then
 
             cropWidth=$( echo "${origSize[0]} - ${minTrims[0]} - ${minTrims[1]}" | bc -l )
             cropHeight=$( echo "${origSize[1]} - ${minTrims[2]} - ${minTrims[3]}" | bc -l )
-            echo " crop: $( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )"
+            #echo " crop: $( echo $cropWidth )x$( echo $cropHeight )+$( echo ${minTrims[0]} )+$( echo ${minTrims[2]} )"
 
             #convert "$f" -background none -trim "$f.trim"
 
@@ -417,7 +425,7 @@ if [ $PREVIEW_ANIM = true ]; then
         SPRITE_ANIM_H=$( echo $SPRITE_ANIM | jq '.h | tonumber' )
         SPRITE_ANIM_L=$( echo $SPRITE_ANIM | jq '.l | tonumber' )
 
-        echo ".data.animations[\"${COMPARE_WITH_SPRITE[1]}_${COMPARE_WITH_SPRITE[2]}\"]"
+        #echo ".data.animations[\"${COMPARE_WITH_SPRITE[1]}_${COMPARE_WITH_SPRITE[2]}\"]"
 
         COMPARE_WITH_SPRITE=( ${COMPARE_WITH_SPRITE[@]} $SPRITE_IMAGE $SPRITE_ANIM_X $SPRITE_ANIM_Y $SPRITE_ANIM_W $SPRITE_ANIM_H $SPRITE_ANIM_L )
     fi
@@ -426,7 +434,11 @@ if [ $PREVIEW_ANIM = true ]; then
     subFolders=( $( find "$TRIMMED_DIR" -type d ) )
     #tmpFolder=$( mktemp -d )
     #allAnimResults=()
-    rm "$OUTPUT"
+
+    if [ -f "out.gif" ]; then
+        rm "out.gif"
+    fi
+
     allPreviewImages=()
     for (( i=0; i<${#subFolders[@]}; i++ )); do
         folder=${subFolders[i]}
@@ -469,7 +481,7 @@ if [ $PREVIEW_ANIM = true ]; then
         fi
 
         combinedImages=()
-        tmpFolder="." #$( mktemp -d )
+        tmpFolder="$( mktemp -d )"
         for (( i=0; i<${#allPreviewImages[@]}; i++ )); do
             renderedImage=${allPreviewImages[i]}
 
@@ -484,23 +496,41 @@ if [ $PREVIEW_ANIM = true ]; then
         done
 
         allPreviewImages=( ${combinedImages[@]} )
+    else
+
+        postImages=()
+        tmpFolder="$( mktemp -d )"
+        for (( i=0; i<${#allPreviewImages[@]}; i++ )); do
+            renderedImage=${allPreviewImages[i]}
+            output="$tmpFolder/$i.png"
+
+            convert $( echo ${allPreviewImages[i]} ) $( echo $POST_PROCESSING ) "$output"
+            postImages=( "${postImages[@]}" "$output" )
+        done
+
+        allPreviewImages=( ${postImages[@]} )
     fi
 
 
     # Convert + Add into gif
     convert -loop 0 -delay 20 +repage -dispose Background "${allPreviewImages[@]}" out.gif
     #convert -loop 0 -delay 4 -dispose Background "${allPreviewImages[@]}" -modulate 100,80 +dither -gravity center -resize "$( echo $newWidth )x$( echo $newHeight )" -background none -extent "$( echo $newWidth )x$( echo $newHeight )" out.gif
+    echo "Output: out.gif"
 else
 
     bakeResults='{ "anims": [], "sprite": {} }'
     tileSize=( $newWidth $newHeight )
-    echo "${tileSize[@]}"
+    echo "tileSize: ${tileSize[@]}"
     yOffset=0
 
     subFolders=( $( find "$TRIMMED_DIR" -type d ) )
     tmpFolder=$( mktemp -d )
     allAnimResults=()
-    rm "$OUTPUT"
+
+    if [ -f "$OUTPUT" ]; then
+        rm "$OUTPUT"
+    fi
+
     for (( i=0; i<${#subFolders[@]}; i++ )); do
         folder=${subFolders[i]}
         count=`ls -1 $folder/*.png 2>/dev/null | wc -l`
@@ -576,6 +606,7 @@ else
     fi
 
     convert $( echo ${allAnimResults[@]} ) -append "$OUTPUT"
+    echo "Output: $OUTPUT"
 
     rm -r $tmpFolder
 fi
