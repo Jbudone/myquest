@@ -238,7 +238,7 @@ var exportAreas = function(){
 
 
 							layers['sprites'].data  = layers['sprites'].data.data;
-							if (layers['spawns'] !== null) layers['spawns'].data = layers['spawns'].data.objects;
+							if (layers['spawns'] !== null) layers['spawns'].data = layers['spawns'].data.data;
 							if (layers['items'] !== null) layers['items'].data = layers['items'].data.data;
 							if (layers['interactables'] !== null) layers['interactables'].data = layers['interactables'].data.objects;
 
@@ -585,12 +585,36 @@ var exportAreas = function(){
 											// Check if there's an item here
 											if (layers.items &&
 												 y+iy<layers.items.height && x+ix<layers.items.width && // Within item layer range?
-												 (iy+y)*layers.sprites.width+(ix+x)<layers.items.data.length) {
+												 (iy+y)*layers.items.width+(ix+x)<layers.items.data.length) {
 												var item = layers.items.data[(iy+y)*layers.items.width+(ix+x)];
 												if (item != 0) {
 													page.items[iy*pageWidth + ix] = item;
 												}
 											}
+
+
+                                            // Check if there's an NPC spawn here
+                                            if (layers.spawns &&
+												 y+iy<layers.spawns.height && x+ix<layers.spawns.width && // Within item layer range?
+												 (iy+y)*layers.spawns.width+(ix+x)<layers.spawns.data.length) {
+
+												var spawn = layers.spawns.data[(iy+y)*layers.spawns.width+(ix+x)];
+												if (spawn != 0) {
+
+                                                    var spawnStartGID = 0;
+                                                    for (var i=0; i<tilesets.length; ++i) {
+                                                        if (tilesets[i].name == "npcs") { // TODO: abstract this
+                                                            spawnStartGID = tilesets[i].firstgid;
+                                                        }
+                                                    }
+
+                                                    var spawnObj = {
+                                                        id: avatars[spawn - spawnStartGID]
+                                                    };
+
+                                                    area.spawns[(y+iy)*areaWidth+(x+ix)] = spawnObj;
+												}
+                                            }
 										}
 									}
 								}
@@ -784,32 +808,6 @@ var exportAreas = function(){
 
 							}
 
-
-
-							// Spawn Layer
-							///////////////////
-							if (layers.spawns) {
-
-								var spawnStartGID = 0;
-								for (var i=0; i<tilesets.length; ++i) {
-									if (tilesets[i].name == "npcs") { // TODO: abstract this
-										spawnStartGID = tilesets[i].firstgid;
-									}
-								}
-
-								for (var i=0; i<layers.spawns.data.length; ++i) {
-
-									// find tile
-									var spawn = layers.spawns.data[i],
-										tx    = parseInt(spawn.x / tileSize),
-										ty    = parseInt(spawn.y / tileSize),
-										spawnObj = {
-											id: avatars[spawn.gid - spawnStartGID]
-										};
-
-									area.spawns[ty*areaWidth+tx] = spawnObj;
-								}
-							}
 
 
 							// Interactables Layer
