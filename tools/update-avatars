@@ -50,23 +50,27 @@ for (( i=0; i<$spritesLen; i++ )); do
     py=$( echo $sprite | jq '.data.avatar.y | tonumber' )
     pw=$( echo $sprite | jq '.data.avatar.w | tonumber' )
     ph=$( echo $sprite | jq '.data.avatar.h | tonumber' )
+    pt=$( echo $sprite | jq --raw-output '.data.avatar.title' )
 
-    spritesList=( ${spritesList[@]} $spriteName $spriteImage $px $py $pw $ph )
+    spritesList=( ${spritesList[@]} $spriteName $spriteImage $px $py $pw $ph $pt )
 done
 
 # Create each avatar image
 tmpFolder=$( mktemp -d )
 resizedImages=()
-for (( i=0; i<${#spritesList[@]}; i=i+6 )); do
+font="C059-Roman"
+fontSize=8
+for (( i=0; i<${#spritesList[@]}; i=i+7 )); do
     
     spriteName=${spritesList[i]}
     spriteImage=${spritesList[i+1]}
     spriteWidth=${spritesList[i+4]}
     spriteHeight=${spritesList[i+5]}
+    spriteTitle=${spritesList[i+6]}
 
     echo "Avatar $spriteName: $spriteImage  $spriteWidth"x"$spriteHeight"
     resizedImage="$tmpFolder/$spriteName.png"
-    convert "$spriteImage" +repage -crop "$spriteWidth"x"$spriteHeight"+0+0 +repage -trim -background none -filter box -resize "$avatarWidth"x"$avatarHeight" -gravity center -extent "$avatarWidth"x"$avatarHeight" "$resizedImage"
+    convert "$spriteImage" +repage -crop "$spriteWidth"x"$spriteHeight"+0+0 +repage -trim -background none -filter box -resize "$avatarWidth"x"$avatarHeight" -gravity center -extent "$avatarWidth"x"$avatarHeight" +repage -gravity North -font "$font" -fill white -pointsize "$fontSize" -annotate 0 "$spriteTitle"  "$resizedImage"
     resizedImages=( ${resizedImages[@]} $resizedImage )
 done
 
