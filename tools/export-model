@@ -28,6 +28,7 @@ SPRITE_SHEET=""
 ROOT_FOLDER="/home/jbud/jdrive/jstuff/work/personal/jbud/summit/playground/myquest"
 
 BAKE=false
+UPDATE_SPRITESHEETS_RESOURCE=true
 
 QUICK_RENDER=false
 RENDER_BOUNDS_CHECK=false
@@ -45,8 +46,6 @@ PREVIEW_ANIM=false
 COMPARE_WITH_SPRITE=false
 ONE_FRAME=false
 
-UPDATE_SPRITESHEETS_RESOURCE=true
-
 while [ $# -gt 0 ]; do
     case "$1" in
         -r | --render ) RENDER=true; shift ;;
@@ -63,7 +62,7 @@ while [ $# -gt 0 ]; do
         -u | --speed ) SPEED="$2"; shift; shift ;;
         -v | --verbose ) VERBOSE=true; shift ;;
         -q | --quick ) QUICK_RENDER=true; shift ;;
-        --variant ) echo "Sprite variant"; SPRITE_VARIANT="$2"; shift; shift ;;
+        --variant ) SPRITE_VARIANT="$2"; shift; shift ;;
 
         --bounds ) RENDER_BOUNDS_CHECK=true; shift ;;
         --test-mesh ) RENDER_TEST_MESH=true; shift ;;
@@ -78,6 +77,7 @@ while [ $# -gt 0 ]; do
                 down ) camera="down"; shift ;;
             esac
             PREVIEW_ANIM=( "$previewAnim" "$camera" )
+            UPDATE_SPRITESHEETS_RESOURCE=false
             shift ;;
         --compare-with-sprite ) shift ;
             if [ $PREVIEW_ANIM = false ]; then
@@ -102,17 +102,30 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+if [ $BAKE = false ] && [ "$UPDATE_SPRITESHEETS_RESOURCE" = true ]; then
+    UPDATE_SPRITESHEETS_RESOURCE=false
+fi
 
 BLENDER_SCRIPT="$ROOT_FOLDER/tools/blender.batchrender.py"
 MESH_FOLDER="$( dirname "$BLENDER_FILE" )"
+OUTPUT_FOLDER="$MESH_FOLDER/output"
+if [ ! -d "$OUTPUT_FOLDER" ]; then
+    mkdir "$OUTPUT_FOLDER"
+fi
+
+VARIANT_FOLDER="$OUTPUT_FOLDER/$SPRITE_VARIANT"
+if [ ! -d "$VARIANT_FOLDER" ]; then
+    mkdir "$VARIANT_FOLDER"
+fi
+
 if [ "$RENDER_DIR" == "" ]; then
-    RENDER_DIR="$MESH_FOLDER/shots"
+    RENDER_DIR="$VARIANT_FOLDER/shots"
 fi
 
 SPRITE_JSON=$( cat "$SPRITE_SHEET" | jq '.' )
 
 
-EXPORT_RESULTS_FILE="$MESH_FOLDER/sprite.export.json"
+EXPORT_RESULTS_FILE="$VARIANT_FOLDER/sprite.export.json"
 
 SPRITE_VARIANT_JSON=$( echo "$SPRITE_JSON" | jq "try .variants[\"$SPRITE_VARIANT\"] catch \"\"" )
 
@@ -120,6 +133,22 @@ if [ "$SPRITE_VARIANT_JSON" == "null" ]; then
     echo "Invalid sprite variant: $SPRITE_VARIANT"
     exit
 fi
+
+# Validate the variant
+spriteVariantOutput=$( echo "$SPRITE_VARIANT_JSON" | jq '.output' )
+spriteVariantAvatar=$( echo "$SPRITE_VARIANT_JSON" | jq '.avatarTitle' )
+if [ "$spriteVariantOutput" == "null" ]; then
+    echo "Sprite variant doesn't have a valid output!"
+    exit
+fi
+if [ "$spriteVariantAvatar" == "null" ]; then
+    echo "Sprite variant doesn't have a valid avatarTitle!"
+    exit
+fi
+
+# Allow sprite variant settings to override sprite default settings
+# Override possible overriden animations
+SPRITE_JSON=$( cat "$SPRITE_SHEET" | jq ". + .variants[\"$SPRITE_VARIANT\"] | . + {"animations": (.overrideAnimations + .animations  | unique_by(.name))}" )
 
 SPRITE_PREPROCESSING=$( echo $SPRITE_VARIANT_JSON | jq --raw-output 'try .preProcess catch ""' ) 
 SPRITE_POSTPROCESSING=$( echo $SPRITE_VARIANT_JSON | jq --raw-output 'try .postProcess catch ""' ) 
@@ -152,7 +181,9 @@ if [ $RENDER = true ]; then
 
     if [[ $( realpath $RENDER_DIR ) = *"$ROOT_FOLDER"* ]]; then
         echo "Safely removing render dir"
-        rm -r $RENDER_DIR
+        if [ -d "$RENDER_DIR" ]; then
+            rm -r $RENDER_DIR
+        fi
     fi
 
     if [ "$SPRITE_PREPROCESSING" != "" ]; then
@@ -178,7 +209,7 @@ if [ $BAKE = true ]; then
     renderRegionSize=$( echo "$SPRITE_JSON" | jq --raw-output 'if has("renderRegionSize") then .renderRegionSize else 256 end' )
     spriteWidth=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.width' )    # Game width
     spriteHeight=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.height' )  # Game height
-    output=$( echo "$SPRITE_JSON" | jq --raw-output '.output' )
+    output="$RENDER_DIR/../output.png"
 
     extraOptions=""
     if [ $DO_TRIM = false ]; then
@@ -195,15 +226,20 @@ if [ $BAKE = true ]; then
     fi
 
     "$BAKE_SCRIPT" --frame-ratio 2 --size "$renderRegionSize" --folder "$RENDER_DIR" --output "$output" --speed superslow --post-processing "$SPRITE_POSTPROCESSING" --sprite-size $spriteWidth $spriteHeight $extraOptions --export-results-file "$EXPORT_RESULTS_FILE"
+
+    rawOut=$( echo "$SPRITE_JSON" | jq --raw-output '.output' )
+    #imgOutput="$ROOT_FOLDER/sprites/${rawOut%.*}.$SPRITE_VARIANT${rawOut##*.}"
+    imgOutput="$ROOT_FOLDER/sprites/$rawOut"
+    convert "$output" "$imgOutput"
 fi
 
-if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
+if [ "$UPDATE_SPRITESHEETS_RESOURCE" = true ]; then
 
     SHEETS_JSON_FILE="$ROOT_FOLDER/resources/data/sheets.json"
     SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
 
-    SPRITE_NAME=$( echo $SPRITE_JSON | jq --raw-output '.spriteName' )
-    SPRITE_IMAGE=$( echo $SPRITE_JSON | jq --raw-output '.output' )
+    SPRITE_NAME="$( echo $SPRITE_JSON | jq --raw-output '.spriteName' ).$SPRITE_VARIANT"
+    SPRITE_IMAGE="/sprites/"$( echo $SPRITE_JSON | jq --raw-output '.output' )
     SPRITE_WIDTH=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.width' )    # Game width
     SPRITE_HEIGHT=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.height' )  # Game height
 
@@ -217,7 +253,7 @@ if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
     spriteAnimsLength=$( echo $EXPORTED_JSON | jq '.anims | length' )
 
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { id: \"$SPRITE_NAME\" }" )
-    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { image: \"/$SPRITE_IMAGE\" }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { image: \"$SPRITE_IMAGE\" }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sheet_offset: { x: 0, y: 0 } }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_offset: { x: 0, y: 0 } }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_size: { w: $SPRITE_WIDTH, h: $SPRITE_HEIGHT } }" )
@@ -248,10 +284,23 @@ if [ $UPDATE_SPRITESHEETS_RESOURCE = true ]; then
         SHEET_SPRITE_ANIMATIONS=$( echo $SHEET_SPRITE_ANIMATIONS | jq ". + { $spriteAnimName: $sheetAnim }" )
     done
 
-    SHEET_SPRITE_DATA=$( echo "{ \"avatar\": 0 }" | jq ". += { animations: $SHEET_SPRITE_ANIMATIONS }" )
+    avatarTitle=$( echo $SPRITE_VARIANT_JSON | jq --raw-output '.avatarTitle' )
+    avatarAnim=$( echo $SPRITE_JSON | jq --raw-output 'if has("avatarAnim") then .avatarAnim else "walk_down" end' )
+    avatarAnimData=$( echo $SHEET_SPRITE_ANIMATIONS | jq ".[\"$avatarAnim\"]" )
+
+    SHEET_SPRITE_AVATAR="{}"
+    SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { x: $( echo $avatarAnimData | jq '.x' )  }" )
+    SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { y: $( echo $avatarAnimData | jq '.y' )  }" )
+    SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { w: $( echo $avatarAnimData | jq '.w' )  }" )
+    SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { h: $( echo $avatarAnimData | jq '.h' )  }" )
+    SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { title: \"$avatarTitle\" }" )
+
+    SHEET_SPRITE_DATA=$( echo "{}" | jq ". += { animations: $SHEET_SPRITE_ANIMATIONS, avatar: $SHEET_SPRITE_AVATAR }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { data: $SHEET_SPRITE_DATA }" )
 
+
     spriteAlreadyAdded=$( echo $SHEET_JSON | jq ".spritesheets.list[] | select(.id == \"$SPRITE_NAME\") | ." )
+
     if [ -z "$spriteAlreadyAdded" ]; then
         # Add sprite
         SHEET_JSON=$( echo $SHEET_JSON | jq ".spritesheets.list += [ $SHEET_SPRITE_JSON ]" )
