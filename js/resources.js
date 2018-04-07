@@ -729,11 +729,13 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
             return new Promise(function(loaded, failed){
                 let numLoading = 0;
-                _.each(componentsAssets, function(componentFilename, componentName){
-                    let componentFile = 'scripts/'+componentFilename;
+                _.each(componentsAssets, function(componentData, componentName){
+                    let componentFile = 'scripts/'+componentData.file;
                     ++numLoading;
                     requirejs([componentFile], function(component){
-                        this.components[componentName] = component;
+                        this.components[componentName] = _.merge(componentData, {
+                            flyweight: component
+                        });
 
                         // FIXME: Should confirm component object
                         if (!component.name) throw Err(`Component [${componentName}] did not have a name!`)

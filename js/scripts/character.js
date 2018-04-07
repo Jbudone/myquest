@@ -95,6 +95,7 @@ define(
                                     callback(oldVal, value);
 
                                     if (netSerializeEnabled) {
+                                        if (!_.isFinite(value)) DEBUGGER();
                                         this.netUpdateOwnerArr.push(propKey);
                                         this.netUpdateOwnerArr.push(value);
                                     }
@@ -107,6 +108,7 @@ define(
                                     callback(oldVal, value);
 
                                     if (netSerializeEnabled) {
+                                        if (!_.isFinite(value)) DEBUGGER();
                                         this.netUpdateArr.push(propKey);
                                         this.netUpdateArr.push(value);
                                     }
@@ -117,6 +119,7 @@ define(
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
+                                        if (!_.isFinite(value)) DEBUGGER();
                                         this.netUpdateOwnerArr.push(propKey);
                                         this.netUpdateOwnerArr.push(value);
                                     }
@@ -127,6 +130,7 @@ define(
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
+                                        if (!_.isFinite(value)) DEBUGGER();
                                         this.netUpdateArr.push(propKey);
                                         this.netUpdateArr.push(value);
                                     }
@@ -181,7 +185,18 @@ define(
             this.loadComponents = function() {
                 for (let i = 0; i < this._charComponents.length; ++i) {
                     const componentName = this._charComponents[i],
-                        component = Resources.components[componentName].newInstance(this);
+                        componentRes    = Resources.components[componentName];
+
+                    // Some components are restricted to their owners only. Don't bother creating/initializing
+                    // components which don't belong to us (client)
+                    if (!Env.isServer) {
+                        if (this.entity !== The.player && componentRes.forOwnerOnly) {
+                            continue;
+                        }
+                    }
+
+                    const component = componentRes.flyweight.newInstance(this);
+                    component.replicateOwnerOnly = component.forOwnerOnly;
                     
                     this.charComponents.push( component );
                     component.initialize();
@@ -606,6 +621,7 @@ define(
                 },
 
                 // NetSerialize character (serialized to users)
+                // Owner: This only occurs on respawn (not on login)
                 netSerialize: (forOwner) => {
 
                     const _character = {
@@ -615,8 +631,11 @@ define(
                     if (forOwner) {
                         _character.components = [];
                         for (let i = 0; i < this.charComponents.length; ++i) {
-                            const component = this.charComponents[i],
-                              netSerializedComponent = component.netSerialize();
+                            const component = this.charComponents[i];
+
+                            if (component.replicateOwnerOnly && !forOwner) continue;
+
+                            const netSerializedComponent = component.netSerialize();
                             netSerializedComponent.name = component.name; // FIXME: THere's got to be a better way
                             _character.components.push(netSerializedComponent);
                         }

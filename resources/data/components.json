@@ -1,8 +1,26 @@
 {
-    "regeneration": "character.component.regeneration",
-    "levelling": "character.component.levelling",
-    "buffmgr": "character.component.buffmgr",
-    "deathmgr": "character.component.deathmgr",
-    "questmgr": "character.component.questmgr",
-    "interactionmgr": "character.component.interactionmgr"
+    "regeneration": {
+        "file": "character.component.regeneration",
+        "forOwnerOnly": true
+    },
+    "levelling": {
+        "file": "character.component.levelling",
+        "forOwnerOnly": false
+    },
+    "buffmgr": {
+        "file": "character.component.buffmgr",
+        "forOwnerOnly": true
+    },
+    "deathmgr": {
+        "file": "character.component.deathmgr",
+        "forOwnerOnly": true
+    },
+    "questmgr": {
+        "file": "character.component.questmgr",
+        "forOwnerOnly": true
+    },
+    "interactionmgr": {
+        "file": "character.component.interactionmgr",
+        "forOwnerOnly": true
+    }
 }

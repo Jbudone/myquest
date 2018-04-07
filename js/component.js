@@ -12,6 +12,9 @@ define(() => {
         assert(_.isString(name), "Initialized Component without a name");
         this.name = name;
 
+        // Do we replicate this component to all players or only to the owner?
+        this.replicateOwnerOnly = false;
+
         // Should this component be updated every step?
         // TODO: If this goes false and will likely be false for a while, then we should remove component from update
         // list. Then when this becomes true, run Character.ComponentNeedsUpdateChanged(this) to add it to step list

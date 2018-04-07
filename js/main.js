@@ -54,6 +54,11 @@ define(
                 if (!expr) { debugger; throw Err(message); }
             };
 
+            window.DEBUGGER = () => {
+                debugger;
+            };
+
+
 
             window.errorInGame = errorInGame;
             window.assert      = assert;
