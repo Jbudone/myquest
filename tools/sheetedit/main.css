@@ -124,6 +124,8 @@
 	background: #FDFDFD;
 	padding: 10px;
 	float: left;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 
 .assetContainer {

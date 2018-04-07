@@ -37,6 +37,7 @@ var Sheet = function(canvas){
 			redrawTime: 50,
 			hoverAlpha: 0.4,
 			gridAlpha: 0.2,
+            maxWidth: 800 // FIXME: This depends on screen size
 	},  redraw = function(){
 
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -305,9 +306,18 @@ var Sheet = function(canvas){
 
 			sheetDataSetup();
 
-			canvas.style.width  = this.width;
-			canvas.style.height = this.height;
-			canvas.width        = this.width;
+            let canvasWidth = this.width,
+                canvasHeight = this.height;
+            const maxWidth = settings.maxWidth;
+            if (canvasWidth > maxWidth) {
+                let ratio    = canvasHeight / canvasWidth;
+                canvasWidth  = maxWidth;
+                canvasHeight = maxWidth * ratio;
+            }
+
+			canvas.style.width  = canvasWidth; // Resulting width/height of css element
+			canvas.style.height = canvasHeight;
+			canvas.width        = this.width;  // Canvas internal width/height (do not resize this unless you also scale)
 			canvas.height       = this.height;
 
 			ready = true;
