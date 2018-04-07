@@ -50,7 +50,7 @@ $(document).ready(function(){
 		sheet     = null,
 		resources = null;
 
-	var dataDir = '../../data/data/';
+	var dataDir = '../../resources/data/';
 	$.getJSON(dataDir + 'resources.json', function(data){
 
 		// Data is the list of resources

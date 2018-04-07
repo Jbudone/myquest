@@ -264,10 +264,6 @@ var Editor = function(container, sheet){
 
 	view_spritesheet.components = {
 		id: $('#spritesheet_id'),
-		tilesize: {
-			input: $('#spritesheet_tilesize'),
-			value: $('#spritesheet_tilesize_value')
-		},
 		showgrid: $('#spritesheet_showgrid'),
 		sheet_offset: {
 			y: $('#spritesheet_sheet_offset_y'),
@@ -300,18 +296,6 @@ var Editor = function(container, sheet){
 	};
 
 
-	view_spritesheet.components.tilesize.input[0].min = 1;
-	view_spritesheet.components.tilesize.input[0].max = 1000;
-	view_spritesheet.components.tilesize.input[0].oninput = null;
-	view_spritesheet.components.tilesize.input[0].oninput = function(){
-		var newTilesize = parseInt(this.value);
-		view_spritesheet.data.tilesize = newTilesize;
-		view_spritesheet.components.tilesize.value.text( newTilesize );
-		sheet.adjustSheet( view_spritesheet.data );
-		interface.onModified();
-		view_spritesheet.modified();
-	};
-
 	view_spritesheet.components.id[0].oninput = null;
 	view_spritesheet.components.id[0].oninput = function(){
 		var newID = this.value;
@@ -319,12 +303,6 @@ var Editor = function(container, sheet){
 		view_spritesheet.linkEl.text( newID );
 		interface.onModified();
 		view_spritesheet.modified();
-	};
-
-	view_spritesheet.components.showgrid[0].onchange = null;
-	view_spritesheet.components.showgrid[0].onchange = function(){
-		var showgrid = this.checked;
-		sheet.gridMode( showgrid );
 	};
 
 	view_spritesheet.components.sheet_offset.y[0].oninput = null;
@@ -401,11 +379,14 @@ var Editor = function(container, sheet){
 		this.data = data;
 		if (!data.data) data.data = {};
 		if (!data.data.animations) data.data.animations = {};
-		if (!data.data.avatar) data.data.avatar = 0;
+		if (!data.data.avatar) data.data.avatar = {
+              "x": 0,
+              "y": 0,
+              "w": 64,
+              "h": 64
+        };
 
 		view_spritesheet.components.id.val( data.id );
-		view_spritesheet.components.tilesize.input.val( parseInt(data.tilesize) );
-		view_spritesheet.components.tilesize.value.text( parseInt(data.tilesize) );
 		view_spritesheet.components.sheet_offset.x.val( parseInt(data.sheet_offset.x) );
 		view_spritesheet.components.sheet_offset.y.val( parseInt(data.sheet_offset.y) );
 		view_spritesheet.components.sprite_offset.x.val( parseInt(data.sprite_offset.x) );
@@ -423,8 +404,8 @@ var Editor = function(container, sheet){
 				animation = {
                     x: 0,
                     y: 0,
-                    w: data.tilesize,
-                    h: data.tilesize,
+                    w: 64, // FIXME: Use what ever the last animation has for w/h
+                    h: 64,
                     l: 1,
                     flipX: false
 				};

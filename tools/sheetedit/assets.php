@@ -5,8 +5,9 @@ $success = false;
 
 if ($request == "sheets") {
 
-	$assets = json_encode($_POST['assets']);
+	$assets = $_POST['assets'];
 	$success = file_put_contents($_POST['file'], $assets);
+    $data = json_encode($_POST);
 
 } else if ($request == "avatars") {
 
