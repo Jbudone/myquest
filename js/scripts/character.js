@@ -367,6 +367,12 @@ define(
             this.respawning = () => {
                 if (!this.doHook('respawning').pre()) return;
 
+                // Since we may have some leftover netSerialize stuff (which won't have sent since this character is
+                // dead) we would send that when it respawns. The problem is that we will respawn and send leftover
+                // netSerialize data in the same frame, and the priority manager will handle netSerialize data (eg.
+                // setting its health to 0 from when it died) before its created and respawned on the client. Since the
+                // old netSerialize data is stale and null by now, lets just clear it
+                this.netUpdateArr = [];
                 netSerializeEnabled = false;
 
                 this.Log("Respawning", LOG_DEBUG);
