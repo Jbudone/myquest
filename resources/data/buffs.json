@@ -16,7 +16,7 @@
                 }
             ],
             "options": {
-                "duration": 300000
+                "duration": 8000
             }
         },
         "effects": {
@@ -36,7 +36,7 @@
                     "type": "CUR_ADD",
                     "stat": "health",
                     "amount": -10,
-                    "permanent": false
+                    "permanent": true
                 }
             ],
             "options": {

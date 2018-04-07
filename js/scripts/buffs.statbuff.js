@@ -72,11 +72,11 @@ define(['scripts/buffs.base'], function(BuffBase){
                         difference: difference,
                         curMax: newMax,
                         cur: newCur,
-                        permanent: _.defaultTo(statBuff.permanent, true),
+                        permanent: _.defaultTo(statBuff.permanent, false),
                         type: statBuff.type
                     }
 
-                    this.handleStatChange(character, statBuff, modification);
+                    this.handleStatChange(character, statBuff.stat, statBuff, modification);
 
                     modified[statBuff.stat] = modification;
                 }
@@ -84,20 +84,20 @@ define(['scripts/buffs.base'], function(BuffBase){
                 return modified;
             },
 
-            handleStatChange(character, statBuff, modified) {
+            handleStatChange(character, statName, statBuff, modified) {
 
-                const charStat = character.stats[statBuff.stat];
+                const charStat = character.stats[statName];
 
                 // If we're updating health we need to explicitly damage the character (and probably heal later too).
                 // Even if we're updating max, we could in turn be updating cur as well (ratio changed)
-                if (statBuff.stat === "health" && modified.cur !== charStat.cur) {
+                if (statName === "health" && modified.cur !== charStat.cur) {
                     // Health is a special case; need to run through damage/heal
 
                     if (modified.difference < 0) {
                         const source = null; // FIXME: Who did this buff come from
                         character.damage(modified.difference * -1, source, {});
                     } else {
-                        charStat.cur = modified.newCur;
+                        charStat.cur = modified.cur;
                     }
 
                 }
@@ -133,7 +133,7 @@ define(['scripts/buffs.base'], function(BuffBase){
                         newMax = _.clamp(newMax, 1, Number.MAX_SAFE_INTEGER);
                         newCur = _.clamp(newCur, 1, Number.MAX_SAFE_INTEGER);
 
-                        difference = newMax - charStart.curMax;
+                        difference = newMax - charStat.curMax;
 
                         console.log("Restoring stat " + statName + " to " + charStat.curMax);
 
@@ -142,9 +142,9 @@ define(['scripts/buffs.base'], function(BuffBase){
                         newCur = parseInt(charStat.cur - modifiedStat, 10);
                         newCur = _.clamp(newCur, 1, charStat.curMax);
 
-                        difference = newMax - charStart.curMax;
+                        difference = newMax - charStat.curMax;
 
-                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+                        console.log(`Removing Buff. Restoring (${statName}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
 
                     } else if (statBuff.type === CUR_ADDMULT) {
                         
@@ -153,7 +153,7 @@ define(['scripts/buffs.base'], function(BuffBase){
 
                         difference = newCur - charStat.cur;
 
-                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+                        console.log(`Removing Buff. Restoring (${statName}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
                     } else if (statBuff.type === CUR_ADD) {
 
                         newCur = parseInt(charStat.cur - modifiedStat, 10);
@@ -161,7 +161,7 @@ define(['scripts/buffs.base'], function(BuffBase){
 
                         difference = newCur - charStat.cur;
 
-                        console.log(`Removing Buff. Restoring (${statBuff.stat}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
+                        console.log(`Removing Buff. Restoring (${statName}) from ${charStat.cur} -> ${newCur}    (diff: ${modifiedStat})`);
                     } else {
                         throw Err(`Unexpected statBuff type: ${statBuff.type}`);
                     }
@@ -172,7 +172,7 @@ define(['scripts/buffs.base'], function(BuffBase){
                         cur: newCur
                     };
 
-                    this.handleStatChange(character, statBuff, modification);
+                    this.handleStatChange(character, statName, statBuff, modification);
 
                     _modified[statName] = modification;
                 }
