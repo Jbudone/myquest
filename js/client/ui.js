@@ -170,7 +170,7 @@ define(
                     this.hidden = false;
 
 
-                    $('#canvas').append( this.ui );
+                    $('#movable-uis').append( this.ui );
                     this.update(true);
                 },
 
@@ -287,10 +287,26 @@ define(
 
                     this.display = function(entity, mouse) {
 
-                        const leftPos = mouse.globalX - 10,
-                            topPos = mouse.globalY + $('#entity-menu').height();
-                        entityMenuUI.removeClass('hidden')
-                                        .offset({ left: leftPos, top: topPos });
+                        // NOTE: Need remove hidden first since we need to know width/height (0 if hidden) for
+                        // determining position
+                        entityMenuUI.removeClass('hidden');
+
+                        const canvasOffset = $('#canvas').offset();
+                        let leftPos        = mouse.globalX - canvasOffset.left + window.scrollX - 10,
+                            topPos         = mouse.globalY - canvasOffset.top + window.scrollY + $('#entity-menu').height(),
+                            rightPos       = leftPos + entityMenuUI.width(),
+                            bottomPos      = topPos + entityMenuUI.height(),
+                            maxRight       = $('#canvas').width() - 20,
+                            maxBottom      = $('#canvas').height() - 20;
+
+                        // Does the window position go beyond the bounds of the canvas?
+                        leftPos = _.clamp(leftPos, 0, maxRight - entityMenuUI.width());
+                        topPos  = _.clamp(topPos, 0, maxBottom - entityMenuUI.height());
+
+                        entityMenuUI.css({
+                                        'margin-left': leftPos,
+                                        'margin-top': topPos
+                                    });
 
                         lastClickedEntity = entity;
                     };

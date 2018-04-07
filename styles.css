@@ -699,10 +699,11 @@ input.error {
 /* === UI Entity Menu === */
 
 #entity-menu {
-	position: absolute;
 	background-color: #000;
     min-width: 300px;
     min-height: 140px;
+	max-width: fit-content;
+	max-height: fit-content;
     opacity: 0.8;
     border-radius: 4px;
     padding: 6px 10px;
