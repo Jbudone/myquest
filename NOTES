@@ -407,6 +407,22 @@ WORKING ON (was previously working on)
 *       - auto add to avatar? auto add to npcs?
         - error checking (validate sprite.json: "atk", "walk" anims; spriteSize included, etc. ; blender check valid anim/camera args)
 *       - Faster trims
+        - Include .blend file in sprite.json (no need to manually have to specify this)
+        - Could have a sprites.json file in /  which points to each sprite and their sprite.json file
+        - --compare-with-variant
+*       - Look into why Bunnyrat is so small for up/down compared to left/right
+        - Clean folder structure for sprites; git add sprite.json files; encrypt sprite folders + git add?; all sprite images for sheets should be in a git added folder so its easy to see when new ones need to be added (git status)
+            - /resources/sprites: sprites for sheets in game
+            - /sprites/...
+                - sprite.json
+            - cache folder??
+                - all art output should be placed here (although structured: tilesheets, spritesheets)
+                - add directly to resources folder?  (no more cache folder, just goes right into here)
+                - ALL resources added to git (public!)
+                - need public/private resources (models, maps, raw sounds, etc.)
+                    - /art, /sfx, /maps: private
+                    - resources: public/build (all json files references shit from here)  ; NOTE: some raw files here too (eg. data, json)
+        - OUTPUT param to override output (for testing/checking)
 	- Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
     - Fix model -> spritesheet camera/size issue:
         - Sprite moving particularly far in one animation: we don't want to extend the sprite size, instead we want to
@@ -417,6 +433,19 @@ WORKING ON (was previously working on)
           Helps for weird situations like long tails (we want those to draw, but the rest of the mesh to draw in the
           central part). Would need sprite offset per-frame-per-anim. NOTE: center object may need to change per-frame
           (would want it to follow some vertex or something)
+*   - Combat damage
+        - Fetch weapon info for calculation (otherwise defaults)
+        - Separate constants into rules?
+    - Symbolize item.types (for quicker comparisons than string cmp)
+*   - BUG: Sometimes enemy respawns w/ netSerialize of its health < 0; we need to not netSerialize ANYTHING before respawn
+*   - BUG: Refresh the game while buffed w/ deathsickness (error in deactivate buff on client)
+*   - BUG: Avatars: ordering was mixed up somehow (bat showed up before bunnyrat)
+    - Avatars: Make avatars larger to fit titles, but center the sprites such that they appear on the tile w/ a decent size
+*   - Sheet Editor
+        - Scrolling through spritesheets/tilesheets
+        - Resizing canvas (max size)
+        - Anim preview overflows
+        - Anim flipX
 
 
 	- Browser Debugging Snippets
@@ -613,6 +642,8 @@ Next Priority
           large areas can lead off into different areas of interest primarily for groups, and 1 or 2 areas intended for
           raid purposes. But you should have to fight through enemies to get to these areas of interest
     - Bats/Snakes /etc. lvl 1 - 5
+        - flappy
+        - flapper
     - Bunny Rat monster? lvl 5-10; +
         - Scrawny Bunny Rat
             (in forest w/ snakes/bats)
