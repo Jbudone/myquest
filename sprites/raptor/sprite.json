@@ -1,0 +1,105 @@
+{
+    "spriteName": "raptor",
+    "output": "sprites/raptor.png",
+    "meshName": "raptor",
+    "animations": [
+        {
+            "name": "walk_slow",
+            "layer": 0,
+            "frameStart": 0,
+            "frameEnd": 34
+        },
+        {
+            "name": "walk",
+            "layer": 0,
+            "frameStart": 35,
+            "frameEnd": 52
+        },
+        {
+            "name": "idle",
+            "layer": 0,
+            "frameStart": 53,
+            "frameEnd": 80
+        },
+        {
+            "name": "atk",
+            "layer": 0,
+            "frameStart": 395,
+            "frameEnd": 425
+        },
+        {
+            "name": "attack2",
+            "layer": 0,
+            "frameStart": 426,
+            "frameEnd": 456
+        },
+        {
+            "name": "attack3",
+            "layer": 0,
+            "frameStart": 457,
+            "frameEnd": 488
+        },
+        {
+            "name": "hit",
+            "layer": 0,
+            "frameStart": 582,
+            "frameEnd": 600
+        },
+        {
+            "name": "hit2",
+            "layer": 0,
+            "frameStart": 601,
+            "frameEnd": 619
+        },
+        {
+            "name": "death",
+            "layer": 0,
+            "frameStart": 610,
+            "frameEnd": 648
+        }
+    ],
+    "variants": {
+        "basic": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,2.0 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -modulate 100,160 -fill yellow -colorize -80% -fill red -colorize -10% -fill blue -colorize -20% -scale 60% -scale 166%"
+        },
+        "red": {
+            "preProcess": "convert Raptor_fantasy_Red.tga -level 0%,100%,2.0 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -modulate 100,160 -fill yellow -colorize -80% -fill red -colorize -10% -fill blue -colorize -20% -scale 60% -scale 166% -posterize 7"
+        },
+        "brown": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,2.0 -modulate 100,160,200 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -scale 60% -scale 166% -posterize 7"
+        },
+        "redalt": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,2.0 -modulate 100,160,220 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -scale 60% -scale 166% -posterize 7"
+        },
+        "redalt2": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,2.0 -modulate 140,200,200 -fill purple -tint 400 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -scale 60% -scale 166% -posterize 7"
+        },
+        "yellow": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,1.8 -modulate 140,200 -fill purple -tint 80 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -fill purple -tint 20 -scale 60% -scale 166% -posterize 7"
+        },
+        "yellowalt": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,1.8 -modulate 140,200 -colorspace gray -fill purple -tint 60 texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -fill purple -tint 20 -scale 60% -scale 166% -posterize 7"
+        },
+        "test": {
+            "preProcess": "convert Raptor_fantasy.tga -level 0%,100%,1.8 ( +clone -colorspace gray -function polynomial -8,8,0 -background purple -alpha shape ) -composite texture.tga",
+            "postProcess": " +dither -level 0%,100%,1.6 -posterize 8 -scale 60% -scale 166% -posterize 7"
+        }
+    },
+    "viewAngle": 40,
+    "forwardVec": [0, -1, 0],
+    "upVec": [0, 0, 1],
+    "cameraOffset": -2.4,
+    "frameStep": 3,
+    "renderRegionSize": 256,
+    "spriteSize": {
+        "width": 128,
+        "height": 117
+    }
+}

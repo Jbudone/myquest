@@ -10,7 +10,7 @@ var __scriptInject_definedVar = function(){
                 // NOTE: Unbuilt scripts have the /*SCRIPTINJECT*/ placeholder; these are replaced with the actual
                 // SCRIPT.INJECTION.js with build-scripts. If we modify SCRIPT.INJECTION.js then we'll need to rebuild
                 // scripts from scratch (to get the /*SCRIPTINJECT*/ placeholder back)
-                throw new Error("We've added a new scripting variable ("+key+") but forgot to declare it in SCRIPT.INJECTION.js. Also may need to remove and rebuild scripts with build-scripts (rm -r dist/scripts && ./build-scripts)");
+                throw new Error("We've added a new scripting variable ("+key+") but forgot to declare it in SCRIPT.INJECTION.js. Also may need to remove and rebuild scripts with build-scripts (rm -r dist/js/scripts && ./build-scripts)");
             }
         }
     };

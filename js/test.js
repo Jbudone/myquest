@@ -126,7 +126,7 @@ var jsdom = require('jsdom').jsdom;
             ++x;
             let connectOn = 9222 + x;
 
-            const botOptions = ['./dist/test/bot2.js'];
+            const botOptions = ['./dist/js/test/bot2.js'];
             if (options.debug) {
                 botOptions.unshift('--inspect=' + connectOn, '--debug-brk');
             }
@@ -134,7 +134,7 @@ var jsdom = require('jsdom').jsdom;
             const bot = spawn('node', botOptions, { stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
 
             // Detached/Unref doesn't seem to kill bot when we kill parent and attempt to kill bot
-            //const bot = spawn('node', ['--inspect', '--debug-brk', './dist/test/bot2.js'], { detached: true, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
+            //const bot = spawn('node', ['--inspect', '--debug-brk', './dist/js/test/bot2.js'], { detached: true, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
             //bot.unref();
 
             // Pipe stdout to process stdout

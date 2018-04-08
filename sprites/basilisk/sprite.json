@@ -1,0 +1,30 @@
+{
+    "spriteName": "basilisk",
+    "meshName": "_Basilisk",
+    "output": "sprites\/basilisk.png",
+    "spriteSize": {
+        "width": 96,
+        "height": 64
+    },
+    "animations": [
+        {
+            "name": "walk",
+            "layer": 0,
+            "frameStart": 0,
+            "frameEnd": 34
+        }
+    ],
+    "variants": {
+        "basic": {
+            "postProcess": "-modulate 80,100 -posterize 5 +dither"
+        }
+    },
+    "cameraOffset": 0,
+    "viewAngle": 0,
+    "lookAt": [0, 0, 0],
+    "cameraClipStart": 100.0,
+    "cameraClipEnd": 2000.0,
+    "forwardVec": [0, -1, 0],
+    "upVec": [0, 0, 1],
+    "postProcessing": ""
+}

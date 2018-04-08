@@ -23,7 +23,7 @@ define(() => {
                 // binary format, and process/read it accordingly
                 if (cacheNode.options.cached) {
 
-                    const assetFile = cacheNode.asset;
+                    const assetFile = '/dist/resources/' + cacheNode.asset;
 
                     if (!assetFile) {
                         failed(`Could not find cache for ${file} (${assetFile})`);
@@ -99,10 +99,10 @@ define(() => {
                     };
 
                     img.onerror = function() {
-                        throw Err(`Error loading img`);
+                        throw Err(`Error loading img: ${cacheNode.asset}`);
                     };
 
-                    const url = cacheNode.asset;
+                    const url = '/dist/resources/' + cacheNode.asset;
                     img.src = url;
                 }
             });

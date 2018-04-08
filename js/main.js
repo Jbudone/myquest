@@ -65,7 +65,9 @@ define(
             window.Profiler    = Profiler;
             window.ErrorReporter = ErrorReporter;
 
-            window.onerror = errorInGame;
+            window.addEventListener('error', (e) => {
+                errorInGame(e.error);
+            });
 
 
             // ------------------------------------------------------------------------------------------------------ //

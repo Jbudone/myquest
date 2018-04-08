@@ -65,7 +65,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 						}
 
 						this.Log("Loading resource: " + resourceID + "("+resource.file+")");
-                        const file = 'resources/data/' + resource.file;
+                        const file = 'dist/resources/data/' + resource.file;
 						this.read(file).then((function(data){
 							assets[resourceID] = data;
 
@@ -137,7 +137,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 					if (script.script) {
 							
 
-						var scriptFile = "dist/scripts/"+script.script;
+						var scriptFile = "dist/js/scripts/"+script.script;
 						script.name = scriptName;
 						Log("Loading script: "+scriptFile);
 						++scriptsToLoad;
@@ -162,7 +162,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 							_.each(components, function(componentFile, componentName){
 								++scriptsToLoad;
 								Log("Loading script: "+componentFile);
-								require(["dist/scripts/"+componentFile], function(component){
+								require(["dist/js/scripts/"+componentFile], function(component){
 									--scriptsToLoad;
 									Log("Loaded script: "+this.name+"."+componentName+" waiting on "+scriptsToLoad+" more..");
 									_interface.scripts[this.name].components[componentName] = component;
@@ -766,7 +766,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
                 const cacheNode = this.cache.cacheList.find((el) => el.name === imageRes);
                 assert(cacheNode, `Could not find cache for ${imageRes}`);
-                const url = cacheNode.asset;
+                const url = '/dist/resources/' + cacheNode.asset;
                 img.src = url;
 
                 // FIXME: Cache asset, then just return that cached image; we only need 1 instance of each image, but
@@ -782,7 +782,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
                 const cacheNode = this.cache.cacheList.find((el) => el.name === soundRes);
                 assert(cacheNode, `Could not find cache for ${soundRes}`);
-                const src = cacheNode.asset;
+                const src = '/dist/resources/' + cacheNode.asset;
 
                 const request = new XMLHttpRequest();
                 request.open('GET', src, true);

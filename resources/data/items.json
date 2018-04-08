@@ -16,8 +16,11 @@
     {
         "id": "itm_helmet",
         "base": "armor",
-        "args": { "amt": 10 },
-        "types": [ "PICKUP", "WORN_HELMET" ],
+        "args": {
+            "amt": 10,
+            "ac": 1
+        },
+        "types": [ "PICKUP", "WORN_HELMET", "ARMOR" ],
         "stack": 1
     },
     {

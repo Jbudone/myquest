@@ -80,8 +80,8 @@ define(function(){
 				websocket: 'ws://127.0.0.1:1338/',
 				websocketTest: 'ws://127.0.0.1:1339/',
 				http: (typeof location != "undefined" ? location.origin : 'http://myquest.local'), // NOTE: server doesn't need this
-                resources: 'resources/data/resources.json',
-                resourcesTest: 'resources/data/resources.json'
+                resources: 'dist/resources/data/resources.json',
+                resourcesTest: 'dist/resources/data/resources.json'
 			},
 
 			server: {

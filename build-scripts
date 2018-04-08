@@ -7,7 +7,7 @@ node_modules/.bin/uglifyjs js/SCRIPT.INJECTION.js > js/SCRIPT.INJECTION.min.js
 printf "\n" >> js/SCRIPT.INJECTION.min.js
 
 #START=$(date +%s.%N)
-for f in dist/scripts/*.js; do
+for f in dist/js/scripts/*.js; do
     if grep -q "^\s*\/\*\s*SCRIPTINJECT\s*\*\/" $f
     then
         sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//r js/SCRIPT.INJECTION.min.js' $f

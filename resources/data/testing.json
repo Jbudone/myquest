@@ -1,7 +1,7 @@
 {"charTemplates": {
     "NewCharacter": {
         "stats": {
-            "health": 100,
+            "health": 10,
             "str": 1,
             "dex": 1,
             "con": 1

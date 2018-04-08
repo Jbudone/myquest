@@ -1,0 +1,84 @@
+{
+    "spriteName": "bunnyrat",
+    "output": "bunnyrat.png",
+    "meshName": "bunnyrat",
+    "avatarAnim": "walk_right",
+    "animations": [
+        {
+            "name": "atk",
+            "layer": 0,
+            "frameStart": 0,
+            "frameEnd": 31
+        },
+        {
+            "name": "hit",
+            "layer": 1,
+            "frameStart": 0,
+            "frameEnd": 26
+        },
+        {
+            "name": "walk",
+            "layer": 2,
+            "frameStart": 0,
+            "frameEnd": 16
+        },
+        {
+            "name": "idle",
+            "layer": 4,
+            "frameStart": 0,
+            "frameEnd": 31
+        }
+    ],
+    "variants": {
+        "basic": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,180 -colors 8 Textures/asdf.png",
+            "postProcess": "-modulate 150,140 +dither -colors 8",
+            "avatarTitle": "bunnyish",
+            "output": "bunnyrat.basic.png",
+            "spriteSize": {
+                "width": 64,
+                "height": 58
+            }
+        },
+        "blue": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,160,220 -colors 8 Textures/asdf.png",
+            "postProcess": "-modulate 150,140 +dither -colors 8",
+            "output": "bunnyrat.blue.png",
+            "avatarTitle": "blue"
+        },
+        "purple": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,160,260 -colors 8 Textures/asdf.png",
+            "postProcess": "-modulate 150,140 +dither -colors 8"
+        },
+        "orange": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,160,280 -colors 8 -fill orange -tint 70 Textures/asdf.png",
+            "postProcess": "-modulate 160,140 +dither -colors 8"
+        },
+        "violet": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,100,280 -colors 8 -fill magenta -tint 70 Textures/asdf.png",
+            "postProcess": "-modulate 160,100 +dither -colors 8"
+        },
+        "magenta": {
+            "preProcess": "convert Textures/BunnyRatMonster-Magenta.tga -modulate 120,100,280 -colors 8 -fill magenta -tint 20 Textures/asdf.png",
+            "postProcess": "-modulate 160,100 +dither -colors 8"
+        },
+        "blue2": {
+            "preProcess": "convert Textures/BunnyRatMonster-Blue.tga -modulate 100,120 -colors 8 Textures/asdf.png",
+            "postProcess": "-modulate 160,140 +dither -colors 8"
+        },
+        "red": {
+            "preProcess": "convert Textures/BunnyRatMonster-Black.tga -modulate 100,120 -fill red -tint 80 -colors 8 Textures/asdf.png",
+            "postProcess": "-modulate 160,140 +dither -colors 8"
+        }
+    },
+    "viewAngle": 20,
+    "forwardVec": [0, -1, 0],
+    "upVec": [0, 0, 1],
+    "cameraOffset": -2.4,
+    "frameStep": 3,
+    "renderRegionSize": 256,
+    "spriteSize": {
+        "width": 92,
+        "height": 84
+    }
+}

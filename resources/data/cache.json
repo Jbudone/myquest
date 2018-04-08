@@ -4,7 +4,7 @@
             "name": "tiles",
             "rawAsset": "sprites/tilesheet.png",
             "rawAssetHash": "5411feee99c3eb34f8f304fc4117e86c",
-            "asset": "cache/tilesheet.cache",
+            "asset": "sheets/tilesheet.cache",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -18,7 +18,7 @@
             "name": "tiles2",
             "rawAsset": "sprites/tilesheet2.png",
             "rawAssetHash": "8c056c88bf9b645de7f1e651ed525be5",
-            "asset": "cache/tilesheet2.webp",
+            "asset": "sheets/tilesheet2.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -32,7 +32,7 @@
             "name": "king",
             "rawAsset": "sprites/king.png",
             "rawAssetHash": "",
-            "asset": "sprites/king.png",
+            "asset": "sheets/king.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -46,7 +46,7 @@
             "name": "items",
             "rawAsset": "sprites/fft_a2.png",
             "rawAssetHash": "",
-            "asset": "cache/fft_a2.webp",
+            "asset": "sheets/fft_a2.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -60,7 +60,7 @@
             "name": "firefox",
             "rawAsset": "sprites/firefox.png",
             "rawAssetHash": "",
-            "asset": "sprites/firefox.png",
+            "asset": "sheets/firefox.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -74,7 +74,7 @@
             "name": "bat",
             "rawAsset": "sprites/bat.png",
             "rawAssetHash": "",
-            "asset": "sprites/bat.png",
+            "asset": "sheets/bat.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -88,7 +88,7 @@
             "name": "goblin",
             "rawAsset": "sprites/goblin.png",
             "rawAssetHash": "",
-            "asset": "sprites/goblin.png",
+            "asset": "sheets/goblin.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -102,7 +102,7 @@
             "name": "deathknight",
             "rawAsset": "sprites/deathknight.png",
             "rawAssetHash": "",
-            "asset": "sprites/deathknight.png",
+            "asset": "sheets/deathknight.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -116,7 +116,7 @@
             "name": "spider",
             "rawAsset": "sprites/spider01.png",
             "rawAssetHash": "",
-            "asset": "sprites/spider01.png",
+            "asset": "sheets/spider01.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -130,7 +130,7 @@
             "name": "snake",
             "rawAsset": "sprites/snake.png",
             "rawAssetHash": "",
-            "asset": "sprites/snake.png",
+            "asset": "sheets/snake.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -144,21 +144,7 @@
             "name": "bat",
             "rawAsset": "sprites/bat.png",
             "rawAssetHash": "",
-            "asset": "sprites/bat.png",
-            "assetHash": "",
-            "type": "image",
-            "options": {
-                "cached": false,
-                "encrypted": false,
-                "packed": false,
-                "preprocess": false
-            }
-        },
-        {
-            "name": "wolf",
-            "rawAsset": "sprites/wolf.png",
-            "rawAssetHash": "",
-            "asset": "sprites/wolf.png",
+            "asset": "sheets/bat.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -172,7 +158,7 @@
             "name": "rhino",
             "rawAsset": "sprites/rhino.png",
             "rawAssetHash": "",
-            "asset": "sprites/rhino.png",
+            "asset": "sheets/rhino.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -186,7 +172,7 @@
             "name": "raptor",
             "rawAsset": "sprites/raptor.png",
             "rawAssetHash": "",
-            "asset": "sprites/raptor.png",
+            "asset": "sheets/raptor.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -200,7 +186,35 @@
             "name": "bunnyrat",
             "rawAsset": "sprites/bunnyrat.png",
             "rawAssetHash": "",
-            "asset": "sprites/bunnyrat.png",
+            "asset": "sheets/bunnyrat.png",
+            "assetHash": "",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "bunnyrat.basic",
+            "rawAsset": "sprites/bunnyrat.png",
+            "rawAssetHash": "",
+            "asset": "sheets/bunnyrat.png",
+            "assetHash": "",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "bunnyrat.blue",
+            "rawAsset": "sprites/bunnyrat.blue.png",
+            "rawAssetHash": "",
+            "asset": "sheets/bunnyrat.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -214,7 +228,7 @@
             "name": "basilisk",
             "rawAsset": "sprites/basilisk.png",
             "rawAssetHash": "",
-            "asset": "sprites/basilisk.png",
+            "asset": "sheets/basilisk.png",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -228,7 +242,7 @@
             "name": "winterland",
             "rawAsset": "sprites/winterland.png",
             "rawAssetHash": "0333af6d1d8a9ce4fde00aa547f4511b",
-            "asset": "cache/winterland.cache",
+            "asset": "sheets/winterland.cache",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -242,7 +256,7 @@
             "name": "deathsickness",
             "rawAsset": "resources/icons/deathsickness.png",
             "rawAssetHash": "",
-            "asset": "cache/deathsickness.webp",
+            "asset": "icons/deathsickness.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -256,7 +270,7 @@
             "name": "muted",
             "rawAsset": "resources/icons/muted.png",
             "rawAssetHash": "",
-            "asset": "cache/muted.webp",
+            "asset": "icons/muted.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -270,7 +284,7 @@
             "name": "unmuted",
             "rawAsset": "resources/icons/unmuted.png",
             "rawAssetHash": "",
-            "asset": "cache/unmuted.webp",
+            "asset": "icons/unmuted.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -284,7 +298,7 @@
             "name": "toolbelt",
             "rawAsset": "resources/icons/toolbelt.png",
             "rawAssetHash": "",
-            "asset": "cache/toolbelt.webp",
+            "asset": "icons/toolbelt.webp",
             "assetHash": "",
             "type": "image",
             "options": {
@@ -298,7 +312,7 @@
             "name": "uiclick",
             "rawAsset": "resources/sounds/uiclick.mp3",
             "rawAssetHash": "",
-            "asset": "cache/uiclick.mp3",
+            "asset": "sounds/uiclick.mp3",
             "assetHash": "",
             "type": "sound",
             "options": {
@@ -312,7 +326,7 @@
             "name": "grunt",
             "rawAsset": "resources/sounds/grunt.mp3",
             "rawAssetHash": "",
-            "asset": "cache/grunt.mp3",
+            "asset": "sounds/grunt.mp3",
             "assetHash": "",
             "type": "sound",
             "options": {
@@ -326,9 +340,275 @@
             "name": "rivervale",
             "rawAsset": "resources/sounds/rivervale.mp4",
             "rawAssetHash": "",
-            "asset": "cache/rivervale.mp4",
+            "asset": "sounds/rivervale.mp4",
             "assetHash": "",
             "type": "sound",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "avatars.json",
+            "rawAsset": "resources/data/avatars.json",
+            "rawAssetHash": "",
+            "asset": "data/avatars.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "fx.json",
+            "rawAsset": "resources/data/fx.json",
+            "rawAssetHash": "",
+            "asset": "data/fx.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "interactions.json",
+            "rawAsset": "resources/data/interactions.json",
+            "rawAssetHash": "",
+            "asset": "data/interactions.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "npcs.json",
+            "rawAsset": "resources/data/npcs.json",
+            "rawAssetHash": "",
+            "asset": "data/npcs.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "resources.json",
+            "rawAsset": "resources/data/resources.json",
+            "rawAssetHash": "",
+            "asset": "data/resources.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "scripts.json",
+            "rawAsset": "resources/data/scripts.json",
+            "rawAssetHash": "",
+            "asset": "data/scripts.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "testing.json",
+            "rawAsset": "resources/data/testing.json",
+            "rawAssetHash": "",
+            "asset": "data/testing.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "assets.json",
+            "rawAsset": "resources/data/assets.json",
+            "rawAssetHash": "",
+            "asset": "data/assets.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "buffs.json",
+            "rawAsset": "resources/data/buffs.json",
+            "rawAssetHash": "",
+            "asset": "data/buffs.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "components.json",
+            "rawAsset": "resources/data/components.json",
+            "rawAssetHash": "",
+            "asset": "data/components.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "interactables.json",
+            "rawAsset": "resources/data/interactables.json",
+            "rawAssetHash": "",
+            "asset": "data/interactables.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "items.json",
+            "rawAsset": "resources/data/items.json",
+            "rawAssetHash": "",
+            "asset": "data/items.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "quests.json",
+            "rawAsset": "resources/data/quests.json",
+            "rawAssetHash": "",
+            "asset": "data/quests.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "rules.json",
+            "rawAsset": "resources/data/rules.json",
+            "rawAssetHash": "",
+            "asset": "data/rules.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "sheets.json",
+            "rawAsset": "resources/data/sheets.json",
+            "rawAssetHash": "",
+            "asset": "data/sheets.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "world.json",
+            "rawAsset": "resources/data/world.json",
+            "rawAssetHash": "",
+            "asset": "data/world.json",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "map-intro",
+            "rawAsset": "resources/maps/map-intro",
+            "rawAssetHash": "",
+            "asset": "maps/map-intro",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "largemap",
+            "rawAsset": "resources/maps/largemap",
+            "rawAssetHash": "",
+            "asset": "maps/largemap",
+            "assetHash": "",
+            "type": "data",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "home",
+            "rawAsset": "resources/maps/home",
+            "rawAssetHash": "",
+            "asset": "maps/home",
+            "assetHash": "",
+            "type": "data",
             "options": {
                 "cached": false,
                 "encrypted": false,

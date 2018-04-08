@@ -422,6 +422,28 @@ WORKING ON (was previously working on)
                 - need public/private resources (models, maps, raw sounds, etc.)
                     - /art, /sfx, /maps: private
                     - resources: public/build (all json files references shit from here)  ; NOTE: some raw files here too (eg. data, json)
+                    - we could have ALL data in /resources, then /build for built stuff
+                        - json/data would also go through caching (EVERYTHING goes through caching, even if just a copy)
+                        - this also allows us to force json changes through a JSON validation system
+                        - OR we could put it under dist/ w/ scripts:  dist/js, dist/resources
+
+            - /js: scripts
+            - /resources: dev resources (everything)
+            - /dist
+                - /js: compiled js
+                - /resources: cached/processed assets, validated json
+            - rename cacheBuilder to resourceBuilder; integrate w/ grunt
+
+            2) Rename cacheBuilder -> resourcesBuilder/Processor (rename other things accordingly)
+            3) Integrate to grunt
+            4) JSON validator; disallow server to run without validated JSON?
+            5) cacheBuilder: rawAsset  "resources/" shouldn't be necessary, should be root folder for assets
+            -- reload npcs/json: auto move to dist and watch data files there
+            -- clean cache.json ( "dataList": [ "resources.json", "sheets.json", ... ] ), OR read data files from resources, maps from world, sheets from sheets, etc.  and allow cacheOptions in there then get rid of cache.json entirely :O
+                - Grunt: watch areahashes.json for changes to copy over maps, etc?
+                - Should only need to rebuild a specific asset group (maps, images, sounds, etc.) or even specific asset
+                - ./resourceBuilder --checkNeedsRebuild (or a bash script)   to go through all cache and see if a rebuild is required (without doing anything); resources.json contains rawAssetHash for each data, sheets.json, sounds.json, etc.   so we can just compare hash w/ file to see if rebuild is needed. Run this on server startup, and don't start if rebuild is needed. Grunt watch resources folder for changes and run this script to see if rebuild is needed, and if so then rebuild. NOTE: Need to run resources.json last since updating a sheet will change sheets.json hash which in turn will update resources.json
+            -- resources/sprites: bunnyrat.json, bat.json, etc.     resources/sprites/models/bunnyrat (actual model here);  .gitignore  resources/sprites/models
         - OUTPUT param to override output (for testing/checking)
 	- Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
     - Fix model -> spritesheet camera/size issue:
@@ -437,15 +459,25 @@ WORKING ON (was previously working on)
         - Fetch weapon info for calculation (otherwise defaults)
         - Separate constants into rules?
     - Symbolize item.types (for quicker comparisons than string cmp)
-*   - BUG: Sometimes enemy respawns w/ netSerialize of its health < 0; we need to not netSerialize ANYTHING before respawn
-*   - BUG: Refresh the game while buffed w/ deathsickness (error in deactivate buff on client)
 *   - BUG: Avatars: ordering was mixed up somehow (bat showed up before bunnyrat)
     - Avatars: Make avatars larger to fit titles, but center the sprites such that they appear on the tile w/ a decent size
+    - Spawn bodyguard: spawns a bodyguard (w/ some characterTemplate) w/ AI that follows you and aggros enemies -- could have different AI strategies for different bodyguard types
 *   - Sheet Editor
-        - Scrolling through spritesheets/tilesheets
-        - Resizing canvas (max size)
         - Anim preview overflows
         - Anim flipX
+    - Scroll up in chatbox, when something new is added it automatically scrolls down (if we manually scroll up then should disable that)
+    - Mouse hovering enemy/item: bigger bounding box rather than just the tile
+    - Need a better mouse icon when hovering item/interactable/npc
+    - GodMode: cannot die
+    - Add character template, buffs, etc. to autoreload
+    - Validate JSON on startup: validate all JSON data files on startup to ensure we don't run into unexpected issues
+*   - Combat feel:
+        - enemy runs to you before you've reached them, so you are both out of place
+        - takes a while to autoattack enemy
+        - damage feels too late: you get hit at the same time that you kill the enemy?
+    - Reloading npcs:
+        - We *CANNOT* cache values from old npcs, or npcs in general, otherwise we keep a stale npcs
+        - brain/components/etc. of character need to have an initializeNPC routine (find a suitable name!) that runs on startup and when we reload NPCs
 
 
 	- Browser Debugging Snippets

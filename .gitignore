@@ -2,6 +2,7 @@
 *.swo
 js/scripts/ready/
 
+sprites/
 js/SCRIPT.INJECTION.min.js
 dist/
 node_modules*

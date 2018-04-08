@@ -20,7 +20,7 @@ module.exports = function(grunt){
 					expand: true,
 					cwd: 'js/',
 					src: ['**/*.js','!lib/*'],
-					dest: 'dist/'
+					dest: 'dist/js'
 				}
 				]
 			}
@@ -36,7 +36,7 @@ module.exports = function(grunt){
 					expand: true,
 					cwd: 'js/',
 					src: ['**/*.js','!lib/*'],
-					dest: 'dist/'
+					dest: 'dist/js'
 				}
 				]
 			}
@@ -55,7 +55,7 @@ module.exports = function(grunt){
           files: {
             cwd: 'js',  // set working folder / root to copy
             src: '**/*',           // copy all files and subfolders
-            dest: 'dist',    // destination folder
+            dest: 'dist/js',    // destination folder
             expand: true           // required when using cwd
           }
         },

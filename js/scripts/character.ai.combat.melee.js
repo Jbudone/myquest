@@ -27,13 +27,11 @@ define(
                     _script = this;
                 },
 
-                calculateDamage: (attackInfo, target) => {
-
-                    // FIXME: NPCs need a default inventory
-                    //const weapon    = weapons.length > 0 ? weapons[0] : null;
+                calculateDamage: (attackInfo, defensiveInfo, target) => {
 
                     let wpnDamage = attackInfo.wpnDmg,
-                        wpnLevel  = attackInfo.wpnLvl;
+                        wpnLevel  = attackInfo.wpnLvl,
+                        AC        = defensiveInfo.AC;
 
 
                     let strContribution = 0.4;
@@ -52,8 +50,8 @@ define(
 
 
                     // Resist
-                    let AC = 2.0; // FIXME: Fetch from character armour
                     let hit = damage * (damage) / (AC + damage);
+                    console.log(`Damage (${damage}), AC (${AC}), hit (${hit})`);
 
                     hit = Math.round(hit);
                     return hit;
@@ -66,17 +64,18 @@ define(
                         return false;
                     }
 
-                    // FIXME: Abstract damage
                     const damageData = {},
                         attackInfo   = {
                             wpnDmg: 1,
-                            wpnLvl: 1,
-                            AC: 2.0
+                            wpnLvl: 1
+                        },
+                        defensiveInfo = {
+                            AC: 0
                         };
 
                     if (character.inventory) {
-                        const weapons = character.inventory.getEquipped('WIELD_LEFTHAND');
 
+                        const weapons = character.inventory.getEquipped('WIELD_LEFTHAND');
                         if (weapons.length > 0) {
                             const weapon = weapons[0];
 
@@ -95,8 +94,25 @@ define(
                             attackInfo.wpnLvl = _.defaultTo(character.entity.npc.attackInfo.wpnLvl, attackInfo.wpnDmg);
                         }
                     }
+
+                    if (target.inventory) {
+
+                        const armors = target.inventory.getEquipped('ARMOR');
+                        for (let i = 0; i < armors.length; ++i) {
+                            const armor = armors[i];
+                            attackInfo.AC += armor.args.ac;
+                        }
+                    } else {
+
+                        // Default attackInfo on npc?
+                        if (target.entity.npc.attackInfo) {
+                            defensiveInfo.AC = _.defaultTo(target.entity.npc.attackInfo.AC, defensiveInfo.AC);
+                        }
+                    }
+
                         
-                    const damage = this.calculateDamage(attackInfo, target);
+                    // FIXME: Abstract damage
+                    const damage = this.calculateDamage(attackInfo, defensiveInfo, target);
                     this.Log(` I TOTALLY SCRATCHED YOU FOR ${damage}`, LOG_DEBUG);
 
                     target.damage(damage, character, damageData);

@@ -95,14 +95,17 @@
         {
             "ability":"melee",
             "range":1,
-            "attackTime":800,
-            "chaseDistance":12
+            "attackTime":1800,
+            "chaseDistance":12,
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 1
         },
         "stats":
         {
-            "health":10,
+            "health":5,
             "str":1,
-            "dex":2,
+            "dex":1,
             "con":1
         }
     },

@@ -1141,7 +1141,7 @@ define(
 
                         FX.event('damaged', entity, { amount, health });
 
-                        if (attackerEntity) {
+                        if (attacker) {
                             ui.postMessage(`${attacker.npc.name} attacked ${entity.npc.name} for ${amount} damage (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
                         } else {
                             ui.postMessage(`${entity.npc.name} damaged for ${amount} by a null source (${entity.character.health} / ${entity.character.stats.health.curMax})`, styleType);
