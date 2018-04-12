@@ -4,7 +4,8 @@
     "list": [
       {
         "id": "tiles",
-        "image": "/sprites/tilesheet.png",
+        "image": "sprites/tilesheet.png",
+        "output": "sprites/tilesheet.png",
         "columns": 20,
         "tilesize": "16",
         "rows": 98,
@@ -494,11 +495,19 @@
         "gid": {
           "first": 1224,
           "last": 3183
-        }
+        },
+        "hash": "5411feee99c3eb34f8f304fc4117e86c",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "items",
-        "image": "/sprites/fft_a2.png",
+        "image": "sprites/fft_a2.png",
+        "output": "sprites/fft_a2.png",
         "tilesize": "24",
         "columns": 16,
         "rows": 40,
@@ -518,11 +527,19 @@
         "gid": {
           "first": 8,
           "last": 647
-        }
+        },
+        "hash": "e0c1260b4ea8059a31ad52d16ce785ef",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "tiles2",
-        "image": "/sprites/tilesheet2.png",
+        "image": "sprites/tilesheet2.png",
+        "output": "sprites/tilesheet2.png",
         "tilesize": "16",
         "columns": 16,
         "rows": 960,
@@ -541,11 +558,19 @@
         "gid": {
           "first": 3184,
           "last": 18543
-        }
+        },
+        "hash": "8c056c88bf9b645de7f1e651ed525be5",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "king",
-        "image": "/sprites/king.png",
+        "image": "sprites/king.png",
+        "output": "sprites/king.png",
         "tilesize": "16",
         "columns": 4,
         "rows": 2,
@@ -568,11 +593,19 @@
         "gid": {
           "first": 0,
           "last": 7
-        }
+        },
+        "hash": "e22940a360fc654183bb1fb70a2d7553",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "winterland",
-        "image": "/sprites/winterland.png",
+        "image": "sprites/winterland.png",
+        "output": "sprites/winterland.cache",
         "tilesize": "16",
         "columns": 16,
         "rows": 36,
@@ -588,7 +621,14 @@
         "gid": {
           "first": 648,
           "last": 1223
-        }
+        },
+        "hash": "0333af6d1d8a9ce4fde00aa547f4511b",
+		"options": {
+			"cached": false,
+			"encrypted": true,
+			"packed": false,
+			"preprocess": false
+		}
       }
     ]
   },
@@ -597,7 +637,8 @@
     "list": [
       {
         "id": "firefox",
-        "image": "/sprites/firefox.png",
+        "image": "sprites/firefox.png",
+        "output": "sprites/firefox.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -707,11 +748,19 @@
               "l": "2"
             }
           }
-        }
+        },
+        "hash": "c69d41af9d788ae6f8619e45dde32b22",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "goblin",
-        "image": "/sprites/goblin.png",
+        "image": "sprites/goblin.png",
+        "output": "sprites/goblin.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -807,11 +856,19 @@
               "l": "3"
             }
           }
-        }
+        },
+        "hash": "68ac9fce77281ca5532123817b015ef9",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "deathknight",
-        "image": "/sprites/deathknight.png",
+        "image": "sprites/deathknight.png",
+        "output": "sprites/deathknight.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -892,11 +949,19 @@
               "l": "4"
             }
           }
-        }
+        },
+        "hash": "33ac83a234af39287acce20cfe7d2a80",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "spider",
-        "image": "/sprites/spider01.png",
+        "image": "sprites/spider01.png",
+        "output": "sprites/spider01.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -975,11 +1040,19 @@
               "l": "4"
             }
           }
-        }
+        },
+        "hash": "72f8e3bc609b5774979f0ecdc2314953",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "snake",
-        "image": "/sprites/snake.png",
+        "image": "sprites/snake.png",
+        "output": "sprites/snake.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -1060,11 +1133,19 @@
               "l": "5"
             }
           }
-        }
+        },
+        "hash": "c775ace7a2decb94012a5f23e54660ef",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "rhino",
-        "image": "/sprites/rhino.png",
+        "image": "sprites/rhino.png",
+        "output": "sprites/rhino.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -1151,11 +1232,19 @@
               "flipX": "false"
             }
           }
-        }
+        },
+        "hash": "4e40572347b5726a18c8952eb5372d60",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "raptor",
-        "image": "/sprites/raptor.png",
+        "image": "sprites/raptor.png",
+        "output": "sprites/raptor.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -1433,11 +1522,19 @@
         },
         "tilesize": 64,
         "columns": 0,
-        "rows": 0
+        "rows": 0,
+        "hash": "44b6189bcbcc07187e8166bb47598b94",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "basilisk",
-        "image": "/sprites/basilisk.png",
+        "image": "sprites/basilisk.png",
+        "output": "sprites/basilisk.png",
         "sheet_offset": {
           "x": "0",
           "y": "0"
@@ -1488,11 +1585,19 @@
               "h": "150"
             }
           }
-        }
+        },
+        "hash": "0c891d1c86af6463ee1c20a12962891c",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "bunnyrat",
-        "image": "/bunnyrat.png",
+        "image": "sprites/bunnyrat.png",
+        "output": "sprites/bunnyrat.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -1630,11 +1735,19 @@
             "h": 86,
             "title": "bunnyish"
           }
-        }
+        },
+        "hash": "f8cf2dd0e1489ada3cebbf942a818b44",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "bat",
-        "image": "/sprites/bat.png",
+        "image": "sprites/bat.png",
+        "output": "sprites/bat.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -1721,11 +1834,19 @@
             "h": 64,
             "title": "bat"
           }
-        }
+        },
+        "hash": "6251d847036cb0cbf1fa7f394b7bc28b",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "bunnyrat.basic",
-        "image": "/bunnyrat.png",
+        "image": "sprites/bunnyrat.png",
+        "output": "sprites/bunnyrat.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -1863,11 +1984,19 @@
             "h": 86,
             "title": "bunnyish"
           }
-        }
+        },
+        "hash": "f8cf2dd0e1489ada3cebbf942a818b44",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       },
       {
         "id": "bunnyrat.blue",
-        "image": "/sprites/bunnyrat.blue.png",
+        "image": "sprites/bunnyrat.blue.png",
+        "output": "sprites/bunnyrat.blue.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -2005,7 +2134,14 @@
             "h": 86,
             "title": "blue"
           }
-        }
+        },
+        "hash": "645c59accd6e0406db4deca1b16de241",
+		"options": {
+			"cached": false,
+			"encrypted": false,
+			"packed": false,
+			"preprocess": false
+		}
       }
     ]
   }

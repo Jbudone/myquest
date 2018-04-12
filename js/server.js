@@ -337,9 +337,11 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 The.world = world;
 
                                 // Load Areas
-                                _.each(json.areas, (areaFile, areaID) => {
+                                _.each(json.areas, (areaDetails, areaID) => {
+
+                                    const areaFile = areaDetails.file;
                                     loading(`area ${areaID}`);
-                                    fs.readFile(`dist/resources/maps/${areaFile}`, (e, areaRawData) => {
+                                    fs.readFile(`dist/resources/${areaFile}`, (e, areaRawData) => {
 
                                         if (e) errorInGame(e);
 

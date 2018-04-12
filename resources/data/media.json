@@ -1,0 +1,95 @@
+{
+    "list": [
+        {
+            "name": "deathsickness",
+            "file": "icons/deathsickness.png",
+            "hash": "",
+            "output": "icons/deathsickness.webp",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": "convert"
+            }
+        },
+        {
+            "name": "muted",
+            "file": "icons/muted.png",
+            "hash": "",
+            "output": "icons/muted.webp",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": "convert"
+            }
+        },
+        {
+            "name": "unmuted",
+            "file": "icons/unmuted.png",
+            "hash": "",
+            "output": "icons/unmuted.webp",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": "convert"
+            }
+        },
+        {
+            "name": "toolbelt",
+            "file": "icons/toolbelt.png",
+            "hash": "",
+            "output": "icons/toolbelt.webp",
+            "type": "image",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": "convert"
+            }
+        },
+        {
+            "name": "uiclick",
+            "file": "sounds/uiclick.mp3",
+            "hash": "",
+            "output": "sounds/uiclick.mp3",
+            "type": "sound",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "grunt",
+            "file": "sounds/grunt.mp3",
+            "hash": "",
+            "output": "sounds/grunt.mp3",
+            "type": "sound",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        },
+        {
+            "name": "rivervale",
+            "file": "sounds/rivervale.mp4",
+            "hash": "",
+            "output": "sounds/rivervale.mp4",
+            "type": "sound",
+            "options": {
+                "cached": false,
+                "encrypted": false,
+                "packed": false,
+                "preprocess": false
+            }
+        }
+    ]
+}

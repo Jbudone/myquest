@@ -1,62 +1,78 @@
 {
-    "cache": {
-        "file": "cache.json",
-        "options": {}
+  "media": {
+      "file": "media.json",
+      "options": {}
+  },
+  "sheets": {
+    "file": "sheets.json",
+    "options": {},
+    "hash": "4d28c7a0f9a2b9f3932c917fbc06190e"
+  },
+  "avatars": {
+    "file": "avatars.json",
+    "options": {},
+    "hash": "c66a7881e9f59139e5018be8a15db88c"
+  },
+  "npcs": {
+    "file": "npcs.json",
+    "options": {
+      "reloadable": true
     },
-	"sheets": {
-        "file": "sheets.json",
-        "options": {}
-    },
-	"avatars": {
-        "file": "avatars.json",
-        "options": {}
-    },
-	"npcs": {
-        "file": "npcs.json",
-        "options": { "reloadable": true }
-    },
-	"world": {
-        "file": "world.json",
-        "options": {}
-    },
-	"items": {
-        "file": "items.json",
-        "options": {}
-    },
-	"buffs": {
-        "file": "buffs.json",
-        "options": {}
-    },
-	"interactables": {
-        "file": "interactables.json",
-        "options": {}
-    },
-    "quests": {
-        "file": "quests.json",
-        "options": {}
-    },
-    "interactions": {
-        "file": "interactions.json",
-        "options": {}
-    },
-	"scripts": {
-        "file": "scripts.json",
-        "options": {}
-    },
-    "components": {
-        "file": "components.json",
-        "options": {}
-    },
-    "rules": {
-        "file": "rules.json",
-        "options": {}
-    },
-    "fx": {
-        "file": "fx.json",
-        "options": {}
-    },
-    "testing": {
-        "file": "testing.json",
-        "options": {}
-    }
+    "hash": "2da5f79e80b7470a8a58ee28fc0afb37"
+  },
+  "world": {
+    "file": "world.json",
+    "options": {},
+    "hash": "d3bccff2787a77abfee37251e914c48c"
+  },
+  "items": {
+    "file": "items.json",
+    "options": {},
+    "hash": "d35cbbfe03db647f3395941551aa4aee"
+  },
+  "buffs": {
+    "file": "buffs.json",
+    "options": {},
+    "hash": "d870c474633540c0f5a8509b4ba771d0"
+  },
+  "interactables": {
+    "file": "interactables.json",
+    "options": {},
+    "hash": "5f1950a78647aa90bc4048bb8b71cde3"
+  },
+  "quests": {
+    "file": "quests.json",
+    "options": {},
+    "hash": "429119de868b2b2b90cbdcdb4e6433ac"
+  },
+  "interactions": {
+    "file": "interactions.json",
+    "options": {},
+    "hash": "9557113f15326cddd142e843d9a2e231"
+  },
+  "scripts": {
+    "file": "scripts.json",
+    "options": {},
+    "hash": "5472e25e76309cf2cccd7886cf130ab8"
+  },
+  "components": {
+    "file": "components.json",
+    "options": {},
+    "hash": "316b4a9789084cfcf260fecb02c503c8"
+  },
+  "rules": {
+    "file": "rules.json",
+    "options": {},
+    "hash": "efdfbeab80c256347e3d63afdf7ccf0d"
+  },
+  "fx": {
+    "file": "fx.json",
+    "options": {},
+    "hash": "9cae6486264cb67ac14b3f8dd5851f64"
+  },
+  "testing": {
+    "file": "testing.json",
+    "options": {},
+    "hash": "d297e75c9190aa76e09638eb8d8e991c"
+  }
 }

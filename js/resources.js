@@ -28,7 +28,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
             components: {},
             rules: {},
             fx: {},
-            cache: {},
+            media: {},
             testing: {},
 
 			initialize: function(){},
@@ -288,7 +288,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			else if (assetID == 'scripts') return initializeScripts(asset);
 			else if (assetID == 'world') return initializeWorld(asset);
 			else if (assetID == 'components') return initializeComponents(asset);
-			else if (assetID == 'cache') return initializeCache(asset);
+			else if (assetID == 'media') return initializeMedia(asset);
 			else if (assetID == 'testing') return initializeTesting(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
@@ -298,12 +298,13 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			var res = JSON.parse(asset);
 			var makeSheet = function(_sheet){
 				var sheet = {
-					file: _sheet.image,
+					file: '/dist/resources' + _sheet.output,
 					offset: {
 						x: parseInt(_sheet.sheet_offset.x),
 						y: parseInt(_sheet.sheet_offset.y),
 					},
 					image: ((Env.isServer||Env.isBot)? null : (new Image())),
+                    options: _sheet.options, // FIXME: It sucks to retain options here (wasted memory), but we need it for knowing if the file is encrypted
 					data: { }
 				};
 
@@ -365,6 +366,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 					}
 				}
 
+				this.sheets[_sheet.id] = sheet;
                 if (!Env.isServer) {
                     ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                         sheet.image = bitmapImage;
@@ -372,8 +374,6 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                         throw Err(err);
                     });
                 }
-
-				this.sheets[_sheet.id] = sheet;
 			});
 
 			if (Env.isServer || Env.isBot) {
@@ -514,6 +514,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 					}.bind(env));
 
+                    this.sprites[_sheet.id] = sheet;
                     if (!Env.isServer) {
                         ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                             sheet.image = bitmapImage;
@@ -522,8 +523,6 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                             throw Err(err);
                         });
                     }
-
-                    this.sprites[_sheet.id] = sheet;
 				});
 
 			}
@@ -713,10 +712,10 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
             componentsAssets = res;
         }.bind(_interface)),
 
-        initializeCache = (function(asset){
+        initializeMedia = (function(asset){
 
 			var res = JSON.parse(asset);
-            this.cache = res;
+            this.media = res;
         }.bind(_interface)),
 
         initializeTesting = (function(asset){
@@ -764,9 +763,9 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                     succeeded(this);
                 };
 
-                const cacheNode = this.cache.cacheList.find((el) => el.name === imageRes);
-                assert(cacheNode, `Could not find cache for ${imageRes}`);
-                const url = '/dist/resources/' + cacheNode.asset;
+                const mediaNode = this.media.list.find((el) => el.name === imageRes);
+                assert(mediaNode, `Could not find media for ${imageRes}`);
+                const url = '/dist/resources/' + mediaNode.output;
                 img.src = url;
 
                 // FIXME: Cache asset, then just return that cached image; we only need 1 instance of each image, but
@@ -780,9 +779,9 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
             return new Promise(function(success, fail){
 
-                const cacheNode = this.cache.cacheList.find((el) => el.name === soundRes);
-                assert(cacheNode, `Could not find cache for ${soundRes}`);
-                const src = '/dist/resources/' + cacheNode.asset;
+                const mediaNode = this.media.list.find((el) => el.name === soundRes);
+                assert(mediaNode, `Could not find media for ${soundRes}`);
+                const src = '/dist/resources/' + mediaNode.output;
 
                 const request = new XMLHttpRequest();
                 request.open('GET', src, true);

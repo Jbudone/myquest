@@ -16,17 +16,17 @@ define(() => {
 
         readImage: (name) => {
             return new Promise((succeeded, failed) => {
-                const cacheNode = Resources.cache.cacheList.find((el) => el.name === name);
-                assert(cacheNode, `Could not find cache for ${name}`);
+                let mediaNode = Resources.sheets[name] || Resources.sprites[name] || Resources.media.list.find((el) => el.name === name);
+                assert(mediaNode, `Could not find node for ${name}`);
 
                 // Has the file been cached? If so then we must send an XHR request in order to open the file in a
                 // binary format, and process/read it accordingly
-                if (cacheNode.options.cached) {
+                if (mediaNode.options.encrypted) {
 
-                    const assetFile = '/dist/resources/' + cacheNode.asset;
+                    const assetFile = mediaNode.file;
 
                     if (!assetFile) {
-                        failed(`Could not find cache for ${file} (${assetFile})`);
+                        failed(`Could not find media for ${file} (${assetFile})`);
                     }
 
                     // TODO: Should offload this stuff into webworkers
@@ -36,7 +36,7 @@ define(() => {
                     oReq.onload = (oEvent) => {
 
                         if (oReq.response) {
-                            if (cacheNode.options.encrypted) {
+                            if (mediaNode.options.encrypted) {
 
                                 const encrypted = new Uint8Array(oReq.response),
                                     options     = {
@@ -99,10 +99,10 @@ define(() => {
                     };
 
                     img.onerror = function() {
-                        throw Err(`Error loading img: ${cacheNode.asset}`);
+                        throw Err(`Error loading img: ${mediaNode.file}`);
                     };
 
-                    const url = '/dist/resources/' + cacheNode.asset;
+                    const url = mediaNode.file;
                     img.src = url;
                 }
             });

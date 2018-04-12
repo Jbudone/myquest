@@ -349,26 +349,9 @@ WORKING ON (was previously working on)
 	- Fix waitForInspector when we've already connected to the inspector
     - NPC inheritance
     - NPCs: get rid of "damage"
+	- Fix: statBuff is not very flexible (eg. cannot have max/cur multiplier for same stat in same buff; tick seems questionable), should validate buffRes on startup to confirm its good. Cleaning this up for scalability could instead allow us to overcomplicate buffs
 *   - Combat: debuff effects (eg. poison arrows, thrown potions, etc.); how to add this to NPCs too? (NOTE: NPCs we want it % of time to happen)
-		- effect on the weapon (or projectile for ranged). 
-		  	- could pass effect into .damage; then handle effect accordingly
-			  	- apart of damageData
-				- check if procs, manipulate data, post effects on character
-				- weapon: {
-					dmg: 10,
-					spd: 12,
-					lvl: 6,
-					effects: [
-						{
-							type: buff,
-							buffRes: poison,
-							chance: 0.2,
-							args: ...?
-						},
-
-					]
-				  }
-			- could pre/post hook into effect (see if it procs, perform effects)
+		- Handle for ranged
     - Map: Layers that auto flatten into sprites layer (eg. fenced off area which is in another area, so we can easily modify fence layer later)
     - Idle anim; between attack animations also go to idle anim (in same direction)
     - Mesh setup:
@@ -463,6 +446,8 @@ WORKING ON (was previously working on)
     - Avatars: Make avatars larger to fit titles, but center the sprites such that they appear on the tile w/ a decent size
     - Spawn bodyguard: spawns a bodyguard (w/ some characterTemplate) w/ AI that follows you and aggros enemies -- could have different AI strategies for different bodyguard types
 *   - Sheet Editor
+        - Large canvas: move the avatar options to the right and allow avatars list to collapse (if we have a not very wide screen: laptop)
+		- Large canvas: automatically determine maxWidth (should stretch from left -> avatar options box)
         - Anim preview overflows
         - Anim flipX
     - Scroll up in chatbox, when something new is added it automatically scrolls down (if we manually scroll up then should disable that)
@@ -478,6 +463,8 @@ WORKING ON (was previously working on)
     - Reloading npcs:
         - We *CANNOT* cache values from old npcs, or npcs in general, otherwise we keep a stale npcs
         - brain/components/etc. of character need to have an initializeNPC routine (find a suitable name!) that runs on startup and when we reload NPCs
+    - Add all media assets (tilesheets, spritesheets, sounds, images), maybe even all assets entirely? to a global assets list for quick lookup
+	- Look into media storage for git for dist/  (eg. git-lfs); worth it?
 
 
 	- Browser Debugging Snippets

@@ -1,7 +1,15 @@
 {
 	"areas":{
-		"main":"map-intro",
-		"home":"home",
-        "largemap": "largemap"
+		"main": {
+            "file": "maps/map-intro",
+            "hash": ""
+        },
+		"home": {
+            "file": "maps/home",
+            "hash": ""
+        },
+        "largemap": {
+            "file": "maps/largemap"
+        }
 	}
 }

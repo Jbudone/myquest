@@ -89,9 +89,10 @@ var exportAreas = function(){
 
 			var world = JSON.parse(data);
 
-			_.each(world.areas, function(areaFile, areaName){
+			_.each(world.areas, function(areaDetails, areaName){
 				var areaID = areaName,
-					filename = '../resources/maps/' + world.areas[areaID];
+                    areaFile = areaDetails.file,
+					filename = '../resources/' + areaFile;
 
 				exec("md5sum "+filename+".tmx | awk '{printf \"%s\", $1}'", function(err, stdout, stderr){
 
