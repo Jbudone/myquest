@@ -10,17 +10,14 @@ define(() => {
             return res;
         },
 
-        cacheImage: (image) => {
-            // Cache = xBytes + yBytes + width + height + data
-        },
-
         readImage: (name) => {
             return new Promise((succeeded, failed) => {
                 let mediaNode = Resources.sheets[name] || Resources.sprites[name] || Resources.media.list.find((el) => el.name === name);
                 assert(mediaNode, `Could not find node for ${name}`);
 
-                // Has the file been cached? If so then we must send an XHR request in order to open the file in a
-                // binary format, and process/read it accordingly
+                // FIXME: We have the ability to process images in binary format separately (eg. encrypted images;
+                // packed images)
+                // Send an XHR request in order to open the file in a binary format, and process/read it accordingly
                 if (mediaNode.options.encrypted) {
 
                     const assetFile = mediaNode.file;

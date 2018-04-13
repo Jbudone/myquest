@@ -229,7 +229,7 @@ if [ $BAKE = true ]; then
 
     rawOut=$( echo "$SPRITE_JSON" | jq --raw-output '.output' )
     #imgOutput="$ROOT_FOLDER/sprites/${rawOut%.*}.$SPRITE_VARIANT${rawOut##*.}"
-    imgOutput="$ROOT_FOLDER/sprites/$rawOut"
+    imgOutput="$ROOT_FOLDER/resources/sprites/$rawOut"
     convert "$output" "$imgOutput"
 fi
 
@@ -239,7 +239,7 @@ if [ "$UPDATE_SPRITESHEETS_RESOURCE" = true ]; then
     SHEET_JSON=$( cat $SHEETS_JSON_FILE | jq '.' )
 
     SPRITE_NAME="$( echo $SPRITE_JSON | jq --raw-output '.spriteName' ).$SPRITE_VARIANT"
-    SPRITE_IMAGE="/sprites/"$( echo $SPRITE_JSON | jq --raw-output '.output' )
+    SPRITE_IMAGE="sprites/"$( echo $SPRITE_JSON | jq --raw-output '.output' )
     SPRITE_WIDTH=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.width' )    # Game width
     SPRITE_HEIGHT=$( echo $SPRITE_JSON | jq --raw-output '.spriteSize.height' )  # Game height
 
@@ -254,6 +254,7 @@ if [ "$UPDATE_SPRITESHEETS_RESOURCE" = true ]; then
 
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { id: \"$SPRITE_NAME\" }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { image: \"$SPRITE_IMAGE\" }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { output: \"$SPRITE_IMAGE\" }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sheet_offset: { x: 0, y: 0 } }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_offset: { x: 0, y: 0 } }" )
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { sprite_size: { w: $SPRITE_WIDTH, h: $SPRITE_HEIGHT } }" )
@@ -296,7 +297,9 @@ if [ "$UPDATE_SPRITESHEETS_RESOURCE" = true ]; then
     SHEET_SPRITE_AVATAR=$( echo $SHEET_SPRITE_AVATAR | jq ". + { title: \"$avatarTitle\" }" )
 
     SHEET_SPRITE_DATA=$( echo "{}" | jq ". += { animations: $SHEET_SPRITE_ANIMATIONS, avatar: $SHEET_SPRITE_AVATAR }" )
+    SHEET_SPRITE_OPTIONS=$( echo "{}" | jq '. += { cached: false, encrypted: false, packed: false, preprocess: false }')
     SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { data: $SHEET_SPRITE_DATA }" )
+    SHEET_SPRITE_JSON=$( echo $SHEET_SPRITE_JSON | jq ". + { options: $SHEET_SPRITE_OPTIONS }" )
 
 
     spriteAlreadyAdded=$( echo $SHEET_JSON | jq ".spritesheets.list[] | select(.id == \"$SPRITE_NAME\") | ." )

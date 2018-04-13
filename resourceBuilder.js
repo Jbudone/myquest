@@ -28,7 +28,8 @@ const util          = require('util'),
     execSync        = require('child_process').execSync;
 
 const Settings = {
-    forceRebuild: false
+    forceRebuild: false,
+    checkNeedsRebuild: false
 }
 
 // Process Server arguments
@@ -37,6 +38,11 @@ process.argv.forEach((val) => {
     if (val === "--force-rebuild") {
         console.log("Recaching all resources");
         Settings.forceRebuild = true;
+    }
+
+    if (val === "--needs-rebuild") {
+        console.log("Checking if resources need rebuilding");
+        Settings.checkNeedsRebuild = true;
     }
 });
 
@@ -91,12 +97,16 @@ openpgp.config.aead_protect = true // activate fast AES-GCM mode (not yet OpenPG
 //      }
 //
 //
-// -- automatically added sheets (eg. modelExport) add options {}, output; write to 'resources/sprites/'
 // -- get rid of areahashes and just use world.json for hash (would need 2 types of hashes stored here)
 // -- Process hashing: compare processedHash === distHash && rawHash === hash   (in case raw asset changed, but also in case we encrypt so hash !== distHash ever)
 // 8) Filter asset if necessary (specified package or resource)
 // 9) --force-rebuild
 // 10) Integrate w/ Grunt
+// 11) --needs-rebuild
+// -- nicer output (colours n shiz)
+// -- clean this file up
+// -- get rid of references to old caching system in js
+// -- hash -> processedHash; rawHash -> hash
 
 let Resources = null;
 
@@ -110,7 +120,8 @@ const packageRoutines = {
                     file: 'resources/data/' + packageDetails.file,
                     output: 'dist/resources/data/' + packageDetails.file,
                     type: "data",
-                    processedHash: null,
+                    rawHash: packageDetails.rawHash,
+                    processedHash: packageDetails.hash,
                     options: packageDetails.options
                 });
             });
@@ -122,7 +133,8 @@ const packageRoutines = {
             return true;
         },
         "updateAsset": (data, assetName, asset) => {
-            data[assetName].hash = asset.hash;
+            data[assetName].hash = asset.processedHash;
+            data[assetName].rawHash = asset.hash;
         }
     },
 
@@ -136,6 +148,7 @@ const packageRoutines = {
                     file: 'resources/' + assetDetails.file,
                     output: 'dist/resources/' + assetDetails.output,
                     type: assetDetails.type,
+                    rawHash: assetDetails.rawHash,
                     processedHash: assetDetails.hash,
                     options: assetDetails.options
                 });
@@ -150,7 +163,8 @@ const packageRoutines = {
             console.log(`Updating an asset in media: ${assetName}`);
 
             let media = data.list.find((media) => media.name === assetName);
-            media.hash = asset.hash;
+            media.hash = asset.processedHash;
+            media.rawHash = asset.hash;
         }
     },
 	"sheets": {
@@ -161,9 +175,10 @@ const packageRoutines = {
                     name: sheet.id,
                     type: "image",
                     file: 'resources/' + sheet.image,
+                    rawHash: sheet.rawHash,
                     processedHash: sheet.hash,
                     options: sheet.options,
-                    output: 'dist/resources' + sheet.output,
+                    output: 'dist/resources/' + sheet.output,
                     sheetType: 'tilesheet'
                 });
             });
@@ -173,9 +188,10 @@ const packageRoutines = {
                     name: sheet.id,
                     type: "image",
                     file: 'resources/' + sheet.image,
+                    rawHash: sheet.rawHash,
                     processedHash: sheet.hash,
                     options: sheet.options,
-                    output: 'dist/resources' + sheet.output,
+                    output: 'dist/resources/' + sheet.output,
                     sheetType: 'spritesheet'
                 });
             });
@@ -198,7 +214,10 @@ const packageRoutines = {
             }
 
             let sheet = list.find((sheet) => sheet.id === assetName);
-            sheet.hash = asset.hash;
+            sheet.hash = asset.processedHash;
+            sheet.rawHash = asset.hash;
+
+            console.log(sheet);
         }
     },
 	"avatars": {
@@ -232,6 +251,7 @@ const packageRoutines = {
                     file: 'resources/' + assetDetails.file,
                     output: 'dist/resources/' + assetDetails.file,
                     type: "map",
+                    rawHash: assetDetails.rawHash,
                     processedHash: assetDetails.hash
                 });
             });
@@ -245,7 +265,8 @@ const packageRoutines = {
             console.log(`Updating an asset in world: ${assetName}`);
 
             let area = data.areas[assetName];
-            area.hash = asset.hash;
+            area.hash = asset.processedHash;
+            area.rawHash = asset.hash;
         }
     },
 	"items": {
@@ -395,7 +416,8 @@ let readPackage = (package, file) => {
                     packageRoutine = packageRoutines[package],
                     assets         = packageRoutine.read(data);
 
-                success({data, assets, hash: rawAssetHash});
+                success({data, assets});
+                //success({data, assets, hash: rawAssetHash});
             });
         });
 
@@ -417,14 +439,14 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
         let readPackagePromise = new Promise((success, fail) => {
             readPackage(packageDetails.name, packageDetails.file).then((details) => {
                 
-                const { data, assets, hash } = details;
+                const { data, assets } = details;
                 const package = {
                     name: packageDetails.name,
                     file: packageDetails.file,
                     output: packageDetails.output,
                     type: "data",
-                    rawHash: hash,
-                    processedHash: packageDetails.hash,
+                    rawHash: packageDetails.rawHash,
+                    processedHash: packageDetails.processedHash,
                     options: packageDetails.options,
                     data: data,
                     assets: assets
@@ -486,99 +508,119 @@ let processResources = (package) => {
         if (package.assets && package.assets.length) {
             package.assets.forEach((asset) => {
 
-                let processAsset = new Promise((success, fail) => {
+                let processAsset = () => {
+                    return new Promise((success, fail) => {
 
-                    // Process asset if the hash has changed
-                    // NOTE: We need to get the hash here, in case we've changed the asset somewhere along the way to here
-                    let hash     = fileHash(asset.file),
-                        distHash = fs.existsSync(asset.output) ? fileHash(asset.output) : "";
-                    //console.log(asset.processedHash + ' === ' + hash + "    (" + asset.file + ")");
-                    console.log(distHash + ' === ' + hash + "    (" + asset.file + ")");
-                    // FIXME: What if processed asset has a different hash than our cached hash? (ie. accidentally
-                    // deleted file, or manually edited dist file)
-                    if (distHash !== hash) { // FIXME: Force rebuild
-                    //if (asset.processedHash !== hash) { // FIXME: Force rebuild
-                        console.log(`Asset to process (hash has changed)! ${package.name}`);
+                        // Process asset if the hash has changed
+                        // NOTE: We need to get the hash here, in case we've changed the asset somewhere along the way to here
+                        let hash     = fileHash(asset.file),
+                            distHash = fs.existsSync(asset.output) ? fileHash(asset.output) : "";
+                        if (asset.processedHash !== distHash || asset.rawHash !== hash || Settings.forceRebuild) { // FIXME: Force rebuild
+                            console.log(`Asset to process (hash has changed)! ${package.name}: ${asset.name}`);
+                            console.log("Output: " + asset.processedHash + " !== " + distHash + " ? ");
+                            console.log("Raw Asset: " + asset.rawHash + " !== " + hash + " ? ");
 
-                        if (asset.type === "image") {
+                            if (Settings.checkNeedsRebuild) {
+                                process.exit(2);
+                            }
 
-                            processImage(asset).then(() => {
-                                asset.hash = hash;
-                                const packageRoutine = packageRoutines[package.name],
-                                    assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
+                            updatedPackage = true;
+                            if (asset.type === "image") {
 
+                                processImage(asset).then(() => {
+                                    asset.hash = hash;
+                                    let processedHash = fileHash(asset.output);
+                                    asset.processedHash = processedHash;
+                                    console.log("Asset hashes: " + hash + " " + processedHash);
+                                    const packageRoutine = packageRoutines[package.name],
+                                        assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
+
+                                    success();
+                                }, (err) => {
+                                    console.error("Error processing image: " + err);
+                                    fail(err);
+                                });
+                            } else if (asset.type === "data") {
+
+                                createDirectoriesFor(asset.output);
+                                fs.copyFile(asset.file, asset.output, (err) => {
+
+                                    if (err) {
+                                        console.error(err);
+                                        fail();
+                                        return;
+                                    }
+
+                                    asset.hash = hash;
+                                    let processedHash = fileHash(asset.output);
+                                    asset.processedHash = processedHash;
+                                    console.log("Processed output: " + asset.output + ": " + processedHash);
+                                    const packageRoutine = packageRoutines[package.name],
+                                        assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
+
+                                    console.log(package.data);
+                                    success();
+                                });
+                            } else if (asset.type === "sound") {
+
+                                createDirectoriesFor(asset.output);
+                                fs.copyFile(asset.file, asset.output, (err) => {
+
+                                    if (err) {
+                                        console.error(err);
+                                        fail();
+                                        return;
+                                    }
+
+                                    asset.hash = hash;
+                                    let processedHash = fileHash(asset.output);
+                                    asset.processedHash = processedHash;
+                                    const packageRoutine = packageRoutines[package.name],
+                                        assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
+
+                                    success();
+                                });
+                            } else if (asset.type === "map") {
+
+                                createDirectoriesFor(asset.output);
+                                fs.copyFile(asset.file, asset.output, (err) => {
+
+                                    if (err) {
+                                        console.error(err);
+                                        fail();
+                                        return;
+                                    }
+
+                                    asset.hash = hash;
+                                    let processedHash = fileHash(asset.output);
+                                    asset.processedHash = processedHash;
+                                    const packageRoutine = packageRoutines[package.name],
+                                        assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
+
+                                    success();
+                                });
+                            } else {
                                 success();
-                            }, (err) => {
-                                console.error("Error processing image: " + err);
-                                fail(err);
-                            });
-                        } else if (asset.type === "data") {
-
-                            if (!_.isString(asset.file) || !_.isString(asset.output)) debugger;
-                            createDirectoriesFor(asset.output);
-                            fs.copyFile(asset.file, asset.output, (err) => {
-
-                                if (err) {
-                                    console.error(err);
-                                    fail();
-                                    return;
-                                }
-
-                                asset.hash = hash;
-                                const packageRoutine = packageRoutines[package.name],
-                                    assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
-
-                                success();
-                            });
-                        } else if (asset.type === "sound") {
-
-                            createDirectoriesFor(asset.output);
-                            fs.copyFile(asset.file, asset.output, (err) => {
-
-                                if (err) {
-                                    console.error(err);
-                                    fail();
-                                    return;
-                                }
-
-                                asset.hash = hash;
-                                const packageRoutine = packageRoutines[package.name],
-                                    assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
-
-                                success();
-                            });
-                        } else if (asset.type === "map") {
-
-                            createDirectoriesFor(asset.output);
-                            fs.copyFile(asset.file, asset.output, (err) => {
-
-                                if (err) {
-                                    console.error(err);
-                                    fail();
-                                    return;
-                                }
-
-                                asset.hash = hash;
-                                const packageRoutine = packageRoutines[package.name],
-                                    assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
-
-                                success();
-                            });
+                            }
                         } else {
                             success();
                         }
-                    } else {
-                        success();
-                    }
-                });
+                    });
+                };
 
 
                 // If this asset itself is a package, then we need to attempt to process it as a package before we
                 // process it as an asset. eg. data files in resources (sheets.json is both an asset and a package)
+                // FIXME: This promise shit is a mess, clean up this slop
                 if (asset.assets) {
-                    processingAssetsPromises.push(processResources(asset).then(processAsset));
+                    let bothPromises = new Promise((success, fail) => {
+                        processResources(asset).then(processAsset).then(() => {
+                            success();
+                        });
+                    });
+                    processingAssetsPromises.push(bothPromises);
                 } else {
-                    processingAssetsPromises.push(processAsset);
+                    processingAssetsPromises.push(processAsset());
                 }
             });
 
@@ -593,6 +635,8 @@ let processResources = (package) => {
                         return;
                     }
 
+                    console.log("Saving package changes: " + package.name + " ==> " + package.file);
+
                     // Save package JSON (save .data)
                     const prettyCache = JSON.stringify(package.data); // TODO Prettify cache json?
                     fs.writeFile(package.file, prettyCache, (err, bufferData) => {
@@ -601,6 +645,7 @@ let processResources = (package) => {
                             return;
                         }
 
+                        console.log("Saved to " + package.file);
                         success();
                     });
                 });
