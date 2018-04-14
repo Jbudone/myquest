@@ -124,12 +124,22 @@ define(
                             throw Err("We've created a path which is invalid");
                         }
 
+                        // Do we have any walks that we don't want to send to the server? If we don't want to send any
+                        // of them then mark path as dontSendToServer
+                        if (path.walks.find((w) => !w.dontSendToServer) === undefined) {
+                            path.dontSendToServer = true;
+                        }
+
                         // We may not want to send this path to the server. If so then early-out.  This could be because
                         // we've received this path from the server (eg. automated movement) and we only needed to
                         // process it locally
                         if (path.dontSendToServer) {
                             return true;
                         }
+
+                        // FIXME: Should we ever have a path that we want to send to the server consisting of 1 or more
+                        // walks that we don't want to send to the server? (Sending the partial path) -- look into this
+                        assert(path.walks.find((w) => w.dontSendToServer) === undefined, "Unexpected path consisting of walks that we don't want to send to the server");
 
                         server.addPath(path, state)
                             .then(() => {}, (response) => {
