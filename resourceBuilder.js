@@ -33,18 +33,26 @@ const Settings = {
 }
 
 // Process Server arguments
-process.argv.forEach((val) => {
+for (let i=0; i<process.argv.length; ++i) {
 
-    if (val === "--force-rebuild") {
+    const arg = process.argv[i];
+
+    if (arg === "--force-rebuild") {
         console.log("Recaching all resources");
         Settings.forceRebuild = true;
     }
 
-    if (val === "--needs-rebuild") {
+    if (arg === "--needs-rebuild") {
         console.log("Checking if resources need rebuilding");
         Settings.checkNeedsRebuild = true;
     }
-});
+
+    if (arg === "--package") {
+        const filterPackage = process.argv[++i];
+        console.log("Filtering package: " + filterPackage);
+        Settings.filterPackage = filterPackage;
+    }
+}
 
 // Prepare openpgp stuff
 openpgp.initWorker({ path: 'node_modules/openpgp/dist/openpgp.worker.js' }) // set the relative web worker path
@@ -98,15 +106,24 @@ openpgp.config.aead_protect = true // activate fast AES-GCM mode (not yet OpenPG
 //
 //
 // -- get rid of areahashes and just use world.json for hash (would need 2 types of hashes stored here)
-// -- Process hashing: compare processedHash === distHash && rawHash === hash   (in case raw asset changed, but also in case we encrypt so hash !== distHash ever)
-// 8) Filter asset if necessary (specified package or resource)
-// 9) --force-rebuild
-// 10) Integrate w/ Grunt
-// 11) --needs-rebuild
+// 8) Filter asset if necessary (specified package or resource) --- if we update an asset does that mean we'll always update the package? If so then we should only filter packages in Grunt. Can Grunt listen for changes and wait X seconds before recompiling? (exceptions: npcs.json or other pure data files?), could store a list of files that have changed and pass them all into here
+//      - what if we have nested packages, and change one of those packages -- might need a delay?
+//      - delay: what if we change a package (automated) and continue processing w/ intention of changing another package or the same one again -- delay is dependent on that process finishing
+//      - we could ONLY watch certain packages, and expect other packages (eg. sheets) to rebuild via exporter -- but what if we touch it manually?
+//      - some files we want to reload immediately (eg. npcs, buffs, testing)
+//
+//      -- Watch/Rebuild immediately: list of packages (npcs, buffs, etc.)
+//      -- Watch/Rebuild after delay (careful w/ delay time): list of packages (sheets, media, avatars, world)
+// 10) Integrate w/ Grunt & Server
+//      - Grunt: Watch Resource packages; list of those w/ rebuild delay/immediate
+//      - Grunt: Rebuild when necessary -- read exit code for indicator of failure
+//      - Server: --needs-rebuild  ; read exit code to determine, then exit if needed
+// -- move this to tools/
 // -- nicer output (colours n shiz)
 // -- clean this file up
 // -- get rid of references to old caching system in js
 // -- hash -> processedHash; rawHash -> hash
+// -- get rid of cache.json
 
 let Resources = null;
 
@@ -114,7 +131,19 @@ const packageRoutines = {
     "resources": {
         "read": (data) => {
             const assets = [];
-            _.forEach(data, (packageDetails, packageName) => {
+            let packageData = data;
+            if (Settings.filterPackage) {
+                packageData = {};
+                const package = data[Settings.filterPackage];
+                if (!package) {
+                    console.error("Could not find package: " + Settings.filterPackage + "!");
+                    process.exit(1);
+                }
+
+                packageData[Settings.filterPackage] = package;
+            }
+
+            _.forEach(packageData, (packageDetails, packageName) => {
                 assets.push({
                     name: packageName,
                     file: 'resources/data/' + packageDetails.file,
@@ -387,42 +416,21 @@ let fileHash = (file) => {
 };
 
 let readPackage = (package, file) => {
-
     return new Promise((success, fail) => {
+        fs.readFile(file, (err, bufferData) => {
 
-        // FIXME: Would be nice to not need to read file twice for hash + read
-        const hash     = crypto.createHash('md5'),
-            rawAssetFd = fs.createReadStream(file);
+            if (err) {
+                console.error(`Error reading package: ${err}`);
+                fail(err);
+                return;
+            }
 
-        rawAssetFd.on('end', () => {
+            const data         = JSON.parse(bufferData),
+                packageRoutine = packageRoutines[package],
+                assets         = packageRoutine.read(data);
 
-            // Finished piping raw asset into the hasher
-            hash.end();
-
-            const rawAssetHash = hash.read().toString('hex');
-
-            rawAssetFd.destroy();
-            hash.destroy();
-
-            fs.readFile(file, (err, bufferData) => {
-
-                if (err) {
-                    console.error(`Error reading package: ${err}`);
-                    fail(err);
-                    return;
-                }
-
-                const data         = JSON.parse(bufferData),
-                    packageRoutine = packageRoutines[package],
-                    assets         = packageRoutine.read(data);
-
-                success({data, assets});
-                //success({data, assets, hash: rawAssetHash});
-            });
+            success({data, assets});
         });
-
-        rawAssetFd.pipe(hash);
-
     });
 };
 

@@ -458,6 +458,8 @@ WORKING ON (was previously working on)
     - Validate JSON on startup: validate all JSON data files on startup to ensure we don't run into unexpected issues
 *   - Combat feel:
         - enemy runs to you before you've reached them, so you are both out of place
+            Attacking enemy: Enemy should anticipate that you're about to attack them, and wait instead of aggro
+            Not attacking enemy: If you pass by an enemy and go into aggro range -- ???
         - takes a while to autoattack enemy
         - damage feels too late: you get hit at the same time that you kill the enemy?
     - Reloading npcs:

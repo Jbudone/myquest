@@ -497,12 +497,13 @@
           "last": 3183
         },
         "hash": "5411feee99c3eb34f8f304fc4117e86c",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "5411feee99c3eb34f8f304fc4117e86c"
       },
       {
         "id": "items",
@@ -529,12 +530,13 @@
           "last": 647
         },
         "hash": "e0c1260b4ea8059a31ad52d16ce785ef",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "e0c1260b4ea8059a31ad52d16ce785ef"
       },
       {
         "id": "tiles2",
@@ -560,12 +562,13 @@
           "last": 18543
         },
         "hash": "8c056c88bf9b645de7f1e651ed525be5",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "8c056c88bf9b645de7f1e651ed525be5"
       },
       {
         "id": "king",
@@ -595,12 +598,13 @@
           "last": 7
         },
         "hash": "e22940a360fc654183bb1fb70a2d7553",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "e22940a360fc654183bb1fb70a2d7553"
       },
       {
         "id": "winterland",
@@ -622,13 +626,14 @@
           "first": 648,
           "last": 1223
         },
-        "hash": "0333af6d1d8a9ce4fde00aa547f4511b",
-		"options": {
-			"cached": false,
-			"encrypted": true,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "0993471d3284d766407faf4932a6ec84",
+        "options": {
+          "cached": false,
+          "encrypted": true,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "0333af6d1d8a9ce4fde00aa547f4511b"
       }
     ]
   },
@@ -750,12 +755,13 @@
           }
         },
         "hash": "c69d41af9d788ae6f8619e45dde32b22",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "c69d41af9d788ae6f8619e45dde32b22"
       },
       {
         "id": "goblin",
@@ -858,12 +864,13 @@
           }
         },
         "hash": "68ac9fce77281ca5532123817b015ef9",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "68ac9fce77281ca5532123817b015ef9"
       },
       {
         "id": "deathknight",
@@ -951,12 +958,13 @@
           }
         },
         "hash": "33ac83a234af39287acce20cfe7d2a80",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "33ac83a234af39287acce20cfe7d2a80"
       },
       {
         "id": "spider",
@@ -1042,12 +1050,13 @@
           }
         },
         "hash": "72f8e3bc609b5774979f0ecdc2314953",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "72f8e3bc609b5774979f0ecdc2314953"
       },
       {
         "id": "snake",
@@ -1135,12 +1144,13 @@
           }
         },
         "hash": "c775ace7a2decb94012a5f23e54660ef",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "c775ace7a2decb94012a5f23e54660ef"
       },
       {
         "id": "rhino",
@@ -1233,13 +1243,14 @@
             }
           }
         },
-        "hash": "4e40572347b5726a18c8952eb5372d60",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "96fb1e62c4fd5ef49c0f23bdc8143cda",
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "96fb1e62c4fd5ef49c0f23bdc8143cda"
       },
       {
         "id": "raptor",
@@ -1523,13 +1534,14 @@
         "tilesize": 64,
         "columns": 0,
         "rows": 0,
-        "hash": "44b6189bcbcc07187e8166bb47598b94",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "99cdf1ab890dfbe447a12ce5a231ff11",
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "99cdf1ab890dfbe447a12ce5a231ff11"
       },
       {
         "id": "basilisk",
@@ -1586,13 +1598,14 @@
             }
           }
         },
-        "hash": "0c891d1c86af6463ee1c20a12962891c",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "f88e0a29c0d20114e6b47e51818814a8",
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "f88e0a29c0d20114e6b47e51818814a8"
       },
       {
         "id": "bunnyrat",
@@ -1736,13 +1749,14 @@
             "title": "bunnyish"
           }
         },
-        "hash": "f8cf2dd0e1489ada3cebbf942a818b44",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "83bc5540028eba823c3b746f4147f1fb",
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "83bc5540028eba823c3b746f4147f1fb"
       },
       {
         "id": "bat",
@@ -1836,12 +1850,13 @@
           }
         },
         "hash": "6251d847036cb0cbf1fa7f394b7bc28b",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "6251d847036cb0cbf1fa7f394b7bc28b"
       },
       {
         "id": "bunnyrat.basic",
@@ -1985,13 +2000,14 @@
             "title": "bunnyish"
           }
         },
-        "hash": "f8cf2dd0e1489ada3cebbf942a818b44",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "hash": "83bc5540028eba823c3b746f4147f1fb",
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "83bc5540028eba823c3b746f4147f1fb"
       },
       {
         "id": "bunnyrat.blue",
@@ -2136,12 +2152,13 @@
           }
         },
         "hash": "645c59accd6e0406db4deca1b16de241",
-		"options": {
-			"cached": false,
-			"encrypted": false,
-			"packed": false,
-			"preprocess": false
-		}
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "rawHash": "645c59accd6e0406db4deca1b16de241"
       }
     ]
   }

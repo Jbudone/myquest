@@ -188,7 +188,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         }
     });
 
-    requirejs(
+    const continueStartup = () => {
+
+        requirejs(
         [
             'objectmgr', 'utilities', 'extensions', 'event', 'errors', 'fsm', 'profiler'
         ],
@@ -365,7 +367,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         _.each(The.world.areas, (area) => {
                                             _.each(area.movables, (movable) => {
                                                 if (movable.playerID) return;
-                                                movable.character.loadStats();
+                                                movable.character.reloadNPC();
                                             });
                                         });
                                     }
@@ -718,4 +720,21 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
             })
             .catch((e) => { errorInGame(e); });
         });
+    };
+
+    // Check ResourceBuilder in case our resources are out of sync
+    const { exec } = require('child_process');
+    console.log("Checking resourceBuilder if resources are in sync");
+    exec('node resourceBuilder.js --needs-rebuild', (error, stdout, stderr) => {
+
+        console.log(stdout);
+        console.error(stderr);
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        continueStartup();
+    });
 });
