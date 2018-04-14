@@ -20,7 +20,7 @@ define(() => {
                 // Send an XHR request in order to open the file in a binary format, and process/read it accordingly
                 if (mediaNode.options.encrypted) {
 
-                    const assetFile = mediaNode.file;
+                    const assetFile = mediaNode.fileDist;
 
                     if (!assetFile) {
                         failed(`Could not find media for ${file} (${assetFile})`);
@@ -99,7 +99,7 @@ define(() => {
                         throw Err(`Error loading img: ${mediaNode.file}`);
                     };
 
-                    const url = mediaNode.file;
+                    const url = mediaNode.fileDist;
                     img.src = url;
                 }
             });

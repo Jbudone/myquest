@@ -298,7 +298,8 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			var res = JSON.parse(asset);
 			var makeSheet = function(_sheet){
 				var sheet = {
-					file: '/dist/resources' + _sheet.output,
+					file: '/resources/' + _sheet.image,
+					fileDist: '/dist/resources/' + _sheet.output,
 					offset: {
 						x: parseInt(_sheet.sheet_offset.x),
 						y: parseInt(_sheet.sheet_offset.y),
