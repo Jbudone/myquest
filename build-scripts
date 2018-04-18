@@ -3,18 +3,42 @@
 # TODO: find a better way to uglifyjs, remove comments and only keep minified script injection in memory
 
 ## inject INJECT.SCRIPT into all scripts
-node_modules/.bin/uglifyjs js/SCRIPT.INJECTION.js > js/SCRIPT.INJECTION.min.js
-printf "\n" >> js/SCRIPT.INJECTION.min.js
+node_modules/.bin/uglifyjs js/SCRIPT.INJECTION.js > dist/js/SCRIPT.INJECTION.min.js
+printf "\n" >> dist/js/SCRIPT.INJECTION.min.js
 
-#START=$(date +%s.%N)
-for f in dist/js/scripts/*.js; do
+BUILD_FILE=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --file ) BUILD_FILE="$2"; shift; shift ;;
+        -- ) shift; break ;;
+        * ) echo "Unknown option $1" ; exit ;;
+    esac
+done
+
+if [ "$BUILD_FILE" != "" ]; then
+
+    f="$BUILD_FILE"
+    echo "Building script: $f"
     if grep -q "^\s*\/\*\s*SCRIPTINJECT\s*\*\/" $f
     then
-        sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//r js/SCRIPT.INJECTION.min.js' $f
+        sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//r dist/js/SCRIPT.INJECTION.min.js' $f
         sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//d' $f
         echo "$f > $f"
     fi
-done
-#END=$(date +%s.%N)
-#DIFF=$(echo "$END - $START" | bc)
-#echo "$DIFF"
+else
+
+    #START=$(date +%s.%N)
+    for f in dist/js/scripts/*.js; do
+        if grep -q "^\s*\/\*\s*SCRIPTINJECT\s*\*\/" $f
+        then
+            sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//r dist/js/SCRIPT.INJECTION.min.js' $f
+            sed -i '/\/\*\s*SCRIPTINJECT\s*\*\//d' $f
+            echo "$f > $f"
+        fi
+    done
+    #END=$(date +%s.%N)
+    #DIFF=$(echo "$END - $START" | bc)
+    #echo "$DIFF"
+
+fi
