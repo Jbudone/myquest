@@ -322,7 +322,7 @@ var Sheet = function(canvas){
 
 			ready = true;
 		};
-		tilesheet.src = sheet.image;
+		tilesheet.src = '/resources/' + sheet.image;
 		if (sheet.image == "") sheetDataSetup();
 	};
 

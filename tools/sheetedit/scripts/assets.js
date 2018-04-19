@@ -234,7 +234,7 @@ var AssetsManager = function(assets, container, files){
                             success();
                         };
 
-                        env.img.src = env.asset.image;
+                        env.img.src = '/resources/' + env.asset.image;
 					}.bind(env));
 
                     waitingOn.push(imgPromise);

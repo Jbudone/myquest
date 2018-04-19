@@ -620,7 +620,7 @@ var Editor = function(container, sheet){
             console.log(data);
         };
 
-        tilesheet.src = data.image;
+        tilesheet.src = '/resources/' + data.image;
     };
 
 
