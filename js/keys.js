@@ -70,8 +70,8 @@ define(function(){
 	/// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
 	/// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    addKeyGroup('ITM', ['USE', 'PICKUP', 'WORN_HELMET', 'WORN_CHEST', 'WIELD_LEFTHAND', 'ARMOR'], OPT_BITWISE);
-    _global['ITM_WEARABLE'] = ITM_WORN_HELMET | ITM_WORN_CHEST | ITM_WIELD_LEFTHAND; // FIXME: Need a cleaner way to do this; would also need it to work within group
+    addKeyGroup('ITM', ['USE', 'PICKUP', 'WORN_HELMET', 'WORN_GLOVES', 'WORN_CHEST', 'WIELD_LEFTHAND', 'ARMOR'], OPT_BITWISE);
+    _global['ITM_WEARABLE'] = ITM_WORN_HELMET | ITM_WORN_CHEST | ITM_WORN_GLOVES | ITM_WIELD_LEFTHAND; // FIXME: Need a cleaner way to do this; would also need it to work within group
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Event IDs

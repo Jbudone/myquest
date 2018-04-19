@@ -24,6 +24,17 @@
         "stack": 1
     },
     {
+        "id": "itm_furrygloves",
+        "base": "armor",
+        "name": "furry gloves",
+        "args": {
+            "amt": 10,
+            "ac": 2
+        },
+        "types": [ "PICKUP", "WORN_GLOVES", "ARMOR" ],
+        "stack": 1
+    },
+    {
         "id": "itm_dagger",
         "base": "weapon",
         "args": {
