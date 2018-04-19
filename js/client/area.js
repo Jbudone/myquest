@@ -562,8 +562,9 @@ define(
                                 entity._character        = movable._character;
                                 entity.page              = this.pages[pageI];
 
-                                // If there's no name then copy over a blank name anyways to keep hidden classes the same
-                                entity.name              = movable.name;
+                                if (movable.name) {
+                                    entity.name = movable.name;
+                                }
 
                                 entity.updatePosition();
 

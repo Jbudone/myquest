@@ -486,8 +486,9 @@ define(
                         entity.position.global.x = addedEntity.position.global.x;
                         entity.updatePosition();
 
-                        // If there's no name then copy over a blank name anyways to keep hidden classes the same
-                        entity.name              = addedEntity.name;
+                        if (addedEntity.name) {
+                            entity.name = addedEntity.name;
+                        }
 
                         // Add path if necessary
                         // TODO: This extra parse is probably unecessary. Find a way to not have to do it
@@ -537,7 +538,7 @@ define(
                     };
 
                     server.onEntityNetserialize = (page, entityId, netSerialize) => {
-                        const entity = The.area.pages[page].movables[entityId];
+                        const entity = The.area.movables[entityId];
                         if (!entity) throw Err(`Entity not found in area: ${entityId}`);
 
                         entity.character.netUpdate(netSerialize, false);

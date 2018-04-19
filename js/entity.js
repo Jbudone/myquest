@@ -7,7 +7,7 @@ define(['sprite', 'eventful'], function(Sprite, Eventful){
         this.id       = (++entities);
         this.npc      = Resources.npcs[spriteID];
         this.page     = page;
-        this.name     = undefined;
+        this.name     = this.npc.name;
 
         extendClass(this).with(Eventful);
 
