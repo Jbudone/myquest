@@ -44,7 +44,7 @@ for (( i=0; i<$spritesLen; i++ )); do
     sprite=$( echo $sheetSprites | jq ".[$i]" )
 
     spriteName=$( echo $sprite | jq --raw-output '.id' )
-    spriteImage="$ROOT_FOLDER$( echo $sprite | jq --raw-output '.image' )"
+    spriteImage="$ROOT_FOLDER/resources/$( echo $sprite | jq --raw-output '.image' )"
 
     px=$( echo $sprite | jq '.data.avatar.x | tonumber' )
     py=$( echo $sprite | jq '.data.avatar.y | tonumber' )
@@ -81,7 +81,7 @@ for (( i=0; i<${#resizedImages[@]}; i=i+5 )); do
 
     output="$tmpFolder/avatars-$row.png"
     convert "${resizedImages[@]:i:avatarColumns}" +append "$output"
-    row=row+1
+    row=$(( $row + 1 ))
     rowImages=( ${rowImages[@]} $output )
 done
 
