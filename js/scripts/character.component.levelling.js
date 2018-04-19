@@ -160,7 +160,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         const prevLevel = this.level,
                             prevXP = this.XP;
 
-                        const loseXP = 20;
+                        const loseXP = Math.ceil(levelRules.nextLevelXP * 0.1);
                         let XP = this.XP - loseXP;
                         if (XP < 0) {
                             this.Log("Dropping your level");
@@ -222,6 +222,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         this.achievedLevel = this.level;
                     }
 
+                    FX.event('levelup', $(this), {});
                     this.Log(`Woahhh I just levelled up! ${data.level}`);
                     UI.postMessage(`  Zomg the levelup is for me! ${this.level} / ${this.achievedLevel}`);
 
