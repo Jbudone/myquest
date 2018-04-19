@@ -521,6 +521,7 @@
             "0": "itm_dagger",
             "186": "itm_book",
             "287": "itm_helmet",
+            "288": "itm_furrygloves",
             "605": "itm_potion",
             "609": "itm_potion2"
           }
@@ -783,8 +784,8 @@
           "avatar": {
             "x": "0",
             "y": "0",
-            "w": "26",
-            "h": "26",
+            "w": "52",
+            "h": "52",
             "title": "goblin"
           },
           "animations": {
@@ -1608,157 +1609,6 @@
         "rawHash": "f88e0a29c0d20114e6b47e51818814a8"
       },
       {
-        "id": "bunnyrat",
-        "image": "sprites/bunnyrat.png",
-        "output": "sprites/bunnyrat.png",
-        "sheet_offset": {
-          "x": 0,
-          "y": 0
-        },
-        "sprite_offset": {
-          "x": 0,
-          "y": 0
-        },
-        "sprite_size": {
-          "w": 92,
-          "h": 84
-        },
-        "tilesize": 64,
-        "columns": 0,
-        "rows": 0,
-        "data": {
-          "animations": {
-            "atk_up": {
-              "x": 0,
-              "y": 0,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "atk_right": {
-              "x": 0,
-              "y": 86,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "atk_left": {
-              "x": 0,
-              "y": 172,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "atk_down": {
-              "x": 0,
-              "y": 258,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "walk_up": {
-              "x": 0,
-              "y": 344,
-              "l": 3,
-              "w": 95,
-              "h": 86
-            },
-            "walk_right": {
-              "x": 0,
-              "y": 430,
-              "l": 3,
-              "w": 95,
-              "h": 86
-            },
-            "walk_left": {
-              "x": 0,
-              "y": 516,
-              "l": 3,
-              "w": 95,
-              "h": 86
-            },
-            "walk_down": {
-              "x": 0,
-              "y": 602,
-              "l": 3,
-              "w": 95,
-              "h": 86
-            },
-            "hit_up": {
-              "x": 0,
-              "y": 688,
-              "l": 5,
-              "w": 95,
-              "h": 86
-            },
-            "hit_right": {
-              "x": 0,
-              "y": 774,
-              "l": 5,
-              "w": 95,
-              "h": 86
-            },
-            "hit_left": {
-              "x": 0,
-              "y": 860,
-              "l": 5,
-              "w": 95,
-              "h": 86
-            },
-            "hit_down": {
-              "x": 0,
-              "y": 946,
-              "l": 5,
-              "w": 95,
-              "h": 86
-            },
-            "idle_up": {
-              "x": 0,
-              "y": 1032,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "idle_right": {
-              "x": 0,
-              "y": 1118,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "idle_left": {
-              "x": 0,
-              "y": 1204,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            },
-            "idle_down": {
-              "x": 0,
-              "y": 1290,
-              "l": 6,
-              "w": 95,
-              "h": 86
-            }
-          },
-          "avatar": {
-            "x": 0,
-            "y": 430,
-            "w": 95,
-            "h": 86,
-            "title": "bunnyish"
-          }
-        },
-        "hash": "83bc5540028eba823c3b746f4147f1fb",
-        "options": {
-          "cached": false,
-          "encrypted": false,
-          "packed": false,
-          "preprocess": false
-        },
-        "rawHash": "83bc5540028eba823c3b746f4147f1fb"
-      },
-      {
         "id": "bat",
         "image": "sprites/bat.png",
         "output": "sprites/bat.png",
@@ -1844,8 +1694,8 @@
           "avatar": {
             "x": 0,
             "y": 0,
-            "w": 64,
-            "h": 64,
+            "w": 96,
+            "h": 144,
             "title": "bat"
           }
         },
@@ -1860,8 +1710,8 @@
       },
       {
         "id": "bunnyrat.basic",
-        "image": "sprites/bunnyrat.png",
-        "output": "sprites/bunnyrat.png",
+        "image": "sprites/bunnyrat.basic.png",
+        "output": "sprites/bunnyrat.basic.png",
         "sheet_offset": {
           "x": 0,
           "y": 0
@@ -1871,8 +1721,8 @@
           "y": 0
         },
         "sprite_size": {
-          "w": 46,
-          "h": 42
+          "w": 64,
+          "h": 58
         },
         "tilesize": 64,
         "columns": 0,
@@ -2000,14 +1850,14 @@
             "title": "bunnyish"
           }
         },
-        "hash": "83bc5540028eba823c3b746f4147f1fb",
+        "hash": "7c25d159157c2af8b700cc5f7f9638bf",
         "options": {
           "cached": false,
           "encrypted": false,
           "packed": false,
           "preprocess": false
         },
-        "rawHash": "83bc5540028eba823c3b746f4147f1fb"
+        "rawHash": "7c25d159157c2af8b700cc5f7f9638bf"
       },
       {
         "id": "bunnyrat.blue",
@@ -2022,8 +1872,8 @@
           "y": 0
         },
         "sprite_size": {
-          "w": 92,
-          "h": 84
+          "w": 64,
+          "h": 58
         },
         "tilesize": 64,
         "columns": 0,
@@ -2148,17 +1998,621 @@
             "y": 430,
             "w": 95,
             "h": 86,
-            "title": "blue"
+            "title": "Basic"
           }
         },
-        "hash": "645c59accd6e0406db4deca1b16de241",
+        "hash": "99b5ec9af9f7b37d447cbd5b53019104",
         "options": {
           "cached": false,
           "encrypted": false,
           "packed": false,
           "preprocess": false
         },
-        "rawHash": "645c59accd6e0406db4deca1b16de241"
+        "rawHash": "99b5ec9af9f7b37d447cbd5b53019104"
+      },
+      {
+        "id": "bunnyrat.orange",
+        "image": "sprites/bunnyrat.orange.png",
+        "output": "sprites/bunnyrat.orange.png",
+        "sheet_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_size": {
+          "w": 64,
+          "h": 58
+        },
+        "tilesize": 64,
+        "columns": 0,
+        "rows": 0,
+        "data": {
+          "animations": {
+            "atk_up": {
+              "x": 0,
+              "y": 0,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_right": {
+              "x": 0,
+              "y": 86,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_left": {
+              "x": 0,
+              "y": 172,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_down": {
+              "x": 0,
+              "y": 258,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "walk_up": {
+              "x": 0,
+              "y": 344,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_right": {
+              "x": 0,
+              "y": 430,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_left": {
+              "x": 0,
+              "y": 516,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_down": {
+              "x": 0,
+              "y": 602,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "hit_up": {
+              "x": 0,
+              "y": 688,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_right": {
+              "x": 0,
+              "y": 774,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_left": {
+              "x": 0,
+              "y": 860,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_down": {
+              "x": 0,
+              "y": 946,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "idle_up": {
+              "x": 0,
+              "y": 1032,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_right": {
+              "x": 0,
+              "y": 1118,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_left": {
+              "x": 0,
+              "y": 1204,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_down": {
+              "x": 0,
+              "y": 1290,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            }
+          },
+          "avatar": {
+            "x": 0,
+            "y": 430,
+            "w": 95,
+            "h": 86,
+            "title": "WhipperSnapper"
+          }
+        },
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "hash": "53bc9145f42eb1c277c846e8cfc29bf6",
+        "rawHash": "53bc9145f42eb1c277c846e8cfc29bf6"
+      },
+      {
+        "id": "bunnyrat.magenta",
+        "image": "sprites/bunnyrat.magenta.png",
+        "output": "sprites/bunnyrat.magenta.png",
+        "sheet_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_size": {
+          "w": 64,
+          "h": 58
+        },
+        "tilesize": 64,
+        "columns": 0,
+        "rows": 0,
+        "data": {
+          "animations": {
+            "atk_up": {
+              "x": 0,
+              "y": 0,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_right": {
+              "x": 0,
+              "y": 86,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_left": {
+              "x": 0,
+              "y": 172,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_down": {
+              "x": 0,
+              "y": 258,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "walk_up": {
+              "x": 0,
+              "y": 344,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_right": {
+              "x": 0,
+              "y": 430,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_left": {
+              "x": 0,
+              "y": 516,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_down": {
+              "x": 0,
+              "y": 602,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "hit_up": {
+              "x": 0,
+              "y": 688,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_right": {
+              "x": 0,
+              "y": 774,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_left": {
+              "x": 0,
+              "y": 860,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_down": {
+              "x": 0,
+              "y": 946,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "idle_up": {
+              "x": 0,
+              "y": 1032,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_right": {
+              "x": 0,
+              "y": 1118,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_left": {
+              "x": 0,
+              "y": 1204,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_down": {
+              "x": 0,
+              "y": 1290,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            }
+          },
+          "avatar": {
+            "x": 0,
+            "y": 430,
+            "w": 95,
+            "h": 86,
+            "title": "Wizard"
+          }
+        },
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "hash": "b9beb8b3da8df3a8481b47a8c4ae4215",
+        "rawHash": "b9beb8b3da8df3a8481b47a8c4ae4215"
+      },
+      {
+        "id": "bunnyrat.red",
+        "image": "sprites/bunnyrat.red.png",
+        "output": "sprites/bunnyrat.red.png",
+        "sheet_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_size": {
+          "w": 64,
+          "h": 58
+        },
+        "tilesize": 64,
+        "columns": 0,
+        "rows": 0,
+        "data": {
+          "animations": {
+            "atk_up": {
+              "x": 0,
+              "y": 0,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_right": {
+              "x": 0,
+              "y": 86,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_left": {
+              "x": 0,
+              "y": 172,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_down": {
+              "x": 0,
+              "y": 258,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "walk_up": {
+              "x": 0,
+              "y": 344,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_right": {
+              "x": 0,
+              "y": 430,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_left": {
+              "x": 0,
+              "y": 516,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_down": {
+              "x": 0,
+              "y": 602,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "hit_up": {
+              "x": 0,
+              "y": 688,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_right": {
+              "x": 0,
+              "y": 774,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_left": {
+              "x": 0,
+              "y": 860,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_down": {
+              "x": 0,
+              "y": 946,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "idle_up": {
+              "x": 0,
+              "y": 1032,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_right": {
+              "x": 0,
+              "y": 1118,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_left": {
+              "x": 0,
+              "y": 1204,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_down": {
+              "x": 0,
+              "y": 1290,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            }
+          },
+          "avatar": {
+            "x": 0,
+            "y": 430,
+            "w": 95,
+            "h": 86,
+            "title": "SirBounceALot"
+          }
+        },
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "hash": "fa5cd65156ba9c97eaded067c479060b",
+        "rawHash": "fa5cd65156ba9c97eaded067c479060b"
+      },
+      {
+        "id": "bunnyrat.violet",
+        "image": "sprites/bunnyrat.violet.png",
+        "output": "sprites/bunnyrat.violet.png",
+        "sheet_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_offset": {
+          "x": 0,
+          "y": 0
+        },
+        "sprite_size": {
+          "w": 64,
+          "h": 58
+        },
+        "tilesize": 64,
+        "columns": 0,
+        "rows": 0,
+        "data": {
+          "animations": {
+            "atk_up": {
+              "x": 0,
+              "y": 0,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_right": {
+              "x": 0,
+              "y": 86,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_left": {
+              "x": 0,
+              "y": 172,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "atk_down": {
+              "x": 0,
+              "y": 258,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "walk_up": {
+              "x": 0,
+              "y": 344,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_right": {
+              "x": 0,
+              "y": 430,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_left": {
+              "x": 0,
+              "y": 516,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "walk_down": {
+              "x": 0,
+              "y": 602,
+              "l": 3,
+              "w": 95,
+              "h": 86
+            },
+            "hit_up": {
+              "x": 0,
+              "y": 688,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_right": {
+              "x": 0,
+              "y": 774,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_left": {
+              "x": 0,
+              "y": 860,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "hit_down": {
+              "x": 0,
+              "y": 946,
+              "l": 5,
+              "w": 95,
+              "h": 86
+            },
+            "idle_up": {
+              "x": 0,
+              "y": 1032,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_right": {
+              "x": 0,
+              "y": 1118,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_left": {
+              "x": 0,
+              "y": 1204,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            },
+            "idle_down": {
+              "x": 0,
+              "y": 1290,
+              "l": 6,
+              "w": 95,
+              "h": 86
+            }
+          },
+          "avatar": {
+            "x": 0,
+            "y": 430,
+            "w": 95,
+            "h": 86,
+            "title": "Bouncer"
+          }
+        },
+        "options": {
+          "cached": false,
+          "encrypted": false,
+          "packed": false,
+          "preprocess": false
+        },
+        "hash": "8753306b822c1712fe563c2f36a5f38a",
+        "rawHash": "8753306b822c1712fe563c2f36a5f38a"
       }
     ]
   }

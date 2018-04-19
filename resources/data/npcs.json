@@ -111,10 +111,11 @@
     },
     {
         "id":"goblin",
-        "name":"goblin",
+        "name":"scrawny goblin",
         "sheet":"goblin",
         "spawn":12000,
         "killable":true,
+        "level":5,
         "XP":10,
         "speed":20,
         "damage":2,
@@ -126,23 +127,26 @@
             "ability":"melee",
             "range":1,
             "attackTime":800,
-            "chaseDistance":12
+            "chaseDistance":12,
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 2
         },
         "stats":
         {
-            "health":10,
-            "str":1,
-            "dex":2,
-            "con":1
+            "health":15,
+            "str":3,
+            "dex":5,
+            "con":3
         }
     },
     {
-        "id":"bunnyrat",
-        "name":"bunnyrat",
-        "sheet":"bunnyrat",
+        "id":"bunnyrat_baby",
+        "name":"baby bunnyrat",
+        "sheet":"bunnyrat.basic",
         "spawn":12000,
         "killable":true,
-        "level":3,
+        "level":4,
         "XP":10,
         "speed":20,
         "damage":2,
@@ -154,13 +158,182 @@
             "ability":"melee",
             "range":1,
             "attackTime":800,
-            "chaseDistance":12
+            "chaseDistance":12,
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 2
         },
         "stats":
         {
             "health":10,
             "str":3,
+            "dex":2,
+            "con":3
+        }
+    },
+    {
+        "id":"bunnyrat_whippersnapper",
+        "name":"whipper snapper",
+        "sheet":"bunnyrat.orange",
+        "spawn":12000,
+        "killable":true,
+        "level":6,
+        "XP":10,
+        "speed":20,
+        "damage":2,
+        "AI":true,
+        "strategy":"strategy.basic_melee",
+        "components":["regeneration", "buffmgr"],
+        "attackInfo":
+        {
+            "ability":"melee",
+            "range":1,
+            "attackTime":800,
+            "chaseDistance":12,
+            "wpnDmg": 2,
+            "wpnLvl": 2,
+            "AC": 3
+        },
+        "stats":
+        {
+            "health":16,
+            "str":3,
             "dex":3,
+            "con":3
+        }
+    },
+    {
+        "id":"bunnyrat_basic",
+        "name":"bunnyrat",
+        "sheet":"bunnyrat.blue",
+        "spawn":12000,
+        "killable":true,
+        "level":8,
+        "XP":10,
+        "speed":20,
+        "damage":2,
+        "AI":true,
+        "strategy":"strategy.basic_melee",
+        "components":["regeneration", "buffmgr"],
+        "attackInfo":
+        {
+            "ability":"melee",
+            "range":1,
+            "attackTime":800,
+            "chaseDistance":12,
+            "wpnDmg": 2,
+            "wpnLvl": 2,
+            "AC": 4
+        },
+        "stats":
+        {
+            "health":18,
+            "str":4,
+            "dex":3,
+            "con":3
+        },
+        "loot": [
+            {
+                "chance":0.2,
+                "items": [
+                    {
+                        "chance": 1.0,
+                        "item": "itm_furrygloves"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id":"bunnyrat_wizard",
+        "name":"bunny wiz",
+        "sheet":"bunnyrat.magenta",
+        "spawn":12000,
+        "killable":true,
+        "level":9,
+        "XP":10,
+        "speed":20,
+        "damage":2,
+        "AI":true,
+        "strategy":"strategy.basic_melee",
+        "components":["regeneration", "buffmgr"],
+        "attackInfo":
+        {
+            "ability":"range",
+            "range":6,
+            "attackTime":800,
+            "chaseDistance":12,
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 2
+        },
+        "stats":
+        {
+            "health":10,
+            "str":3,
+            "dex":2,
+            "con":3
+        }
+    },
+    {
+        "id":"bunnyrat_bouncer",
+        "name":"bouncer",
+        "sheet":"bunnyrat.violet",
+        "spawn":12000,
+        "killable":true,
+        "level":9,
+        "XP":10,
+        "speed":20,
+        "damage":2,
+        "AI":true,
+        "strategy":"strategy.basic_melee",
+        "components":["regeneration", "buffmgr"],
+        "attackInfo":
+        {
+            "ability":"melee",
+            "range":1,
+            "attackTime":800,
+            "chaseDistance":12,
+            "wpnDmg": 3,
+            "wpnLvl": 2,
+            "AC": 4
+        },
+        "stats":
+        {
+            "health":30,
+            "str":5,
+            "dex":3,
+            "con":5
+        }
+    },
+    {
+        "id":"bunnyrat_sirbouncealot",
+        "name":"Sir Bouncealot",
+        "sheet":"bunnyrat.red",
+        "spawn":12000,
+        "killable":true,
+        "level":4,
+        "XP":10,
+        "speed":20,
+        "damage":2,
+        "AI":true,
+        "strategy":"strategy.basic_melee",
+        "components":["regeneration", "buffmgr"],
+        "attackInfo":
+        {
+            "ability":"melee",
+            "range":1,
+            "attackTime":800,
+            "chaseDistance":12,
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 2
+        },
+        "stats":
+        {
+            "health":10,
+            "str":3,
+            "dex":2,
             "con":3
         }
     },
@@ -197,7 +370,7 @@
         "sheet":"snake",
         "spawn":4500,
         "killable":true,
-        "level":3,
+        "level":2,
         "XP":10,
         "speed":10,
         "damage":3,
@@ -210,15 +383,16 @@
             "range":1,
             "attackTime":1000,
             "chaseDistance":20,
-            "wpnDmg": 10,
-            "wpnLvl": 1
+            "wpnDmg": 1,
+            "wpnLvl": 1,
+            "AC": 2
         },
         "stats":
         {
-            "health":30,
-            "str":3,
-            "dex":4,
-            "con":2
+            "health":8,
+            "str":1,
+            "dex":1,
+            "con":1
         },
         "loot": [
             {

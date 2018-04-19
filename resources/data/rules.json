@@ -15,21 +15,106 @@
         },
         {
             "message": "You have reached level 2",
-            "nextLevelXP": 20,
-            "canLoseXP": true,
+            "nextLevelXP": 36,
+            "canLoseXP": false,
             "bonuses": {
                 "str": 1,
                 "con": 1,
-                "health": 10
+                "health": 5
             }
         },
         {
             "message": "You have reached level 3",
-            "canLoseXP": true,
+            "nextLevelXP": 50,
+            "canLoseXP": false,
             "bonuses": {
-                "str": 2,
+                "dex": 1,
+                "health": 9
+            }
+        },
+        {
+            "message": "You have reached level 4",
+            "nextLevelXP": 64,
+            "canLoseXP": false,
+            "bonuses": {
+                "str": 1,
+                "dex": 1,
                 "con": 1,
-                "health": 10
+                "health": 8
+            }
+        },
+        {
+            "message": "You have reached level 5",
+            "canLoseXP": true,
+            "nextLevelXP": 80,
+            "bonuses": {
+                "str": 1,
+                "dex": 1,
+                "con": 1,
+                "health": 8
+            }
+        },
+        {
+            "message": "You have reached level 6",
+            "canLoseXP": true,
+            "nextLevelXP": 96,
+            "bonuses": {
+                "str": 1,
+                "dex": 0,
+                "con": 1,
+                "health": 4
+            }
+        },
+        {
+            "message": "You have reached level 7",
+            "canLoseXP": true,
+            "nextLevelXP": 120,
+            "bonuses": {
+                "str": 1,
+                "dex": 1,
+                "con": 0,
+                "health": 6
+            }
+        },
+        {
+            "message": "You have reached level 8",
+            "canLoseXP": true,
+            "nextLevelXP": 142,
+            "bonuses": {
+                "str": 0,
+                "dex": 1,
+                "con": 1,
+                "health": 2
+            }
+        },
+        {
+            "message": "You have reached level 9",
+            "canLoseXP": true,
+            "nextLevelXP": 176,
+            "bonuses": {
+                "str": 1,
+                "dex": 0,
+                "con": 0,
+                "health": 4
+            }
+        },
+        {
+            "message": "You have reached level 10",
+            "canLoseXP": true,
+            "nextLevelXP": 200,
+            "bonuses": {
+                "str": 1,
+                "dex": 1,
+                "con": 1,
+                "health": 2
+            }
+        },
+        {
+            "message": "You have reached level 11",
+            "canLoseXP": true,
+            "nextLevelXP": 240,
+            "bonuses": {
+                "health": 6
             }
         }
     ]

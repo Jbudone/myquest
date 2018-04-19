@@ -29,7 +29,10 @@
 			"bgMusic": {
 				"sound": "rivervale",
 				"gain": 0.0
-			}
+			},
+            "levelDing": {
+				"sound": "levelDing"
+            }
         },
 
         "banks": {
@@ -41,7 +44,10 @@
 			},
 			"bgMusic": {
 				"samples": ["bgMusic"]
-			}
+			},
+            "levelDing": {
+				"samples": ["levelDing"]
+            }
         }
     },
 
@@ -63,7 +69,12 @@
 		"login": {
 			"region": "bg",
 			"bank": "bgMusic"
-		}
+		},
+
+        "levelup": {
+            "region": "world",
+            "bank": "levelDing"
+        }
     },
 
     "settings": {
