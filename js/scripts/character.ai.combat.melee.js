@@ -100,7 +100,7 @@ define(
                         const armors = target.inventory.getEquipped('ARMOR');
                         for (let i = 0; i < armors.length; ++i) {
                             const armor = armors[i];
-                            attackInfo.AC += armor.args.ac;
+                            defensiveInfo.AC += armor.args.ac;
                         }
                     } else {
 
