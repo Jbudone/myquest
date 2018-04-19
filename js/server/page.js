@@ -222,15 +222,15 @@ define(
                     _.each(this.spawns, (spawn, spawnCoord) => {
 
                         spawnCoord = parseInt(spawnCoord, 10);
-
                         if (!_.isFinite(spawnCoord)) throw Err(`spawnCoord not a number: ${spawnCoord}`);
-                        if (!Resources.npcs[spawn.id]) throw Err(`Could not find spawn unit: ${spawn.id}`);
+
+                        const npc = _.find(Resources.npcs, (n) => n.sheet === spawn.id);
+                        if (!npc) { throw Err(`Could not find spawn unit: ${spawn.id}`); }
 
                         const localY = parseInt(spawnCoord / Env.pageWidth, 10),
                             localX   = spawnCoord % Env.pageWidth;
 
-                        const npc  = Resources.npcs[spawn.id],
-                            entity = new Movable(npc.sheet, this, {
+                        const entity = new Movable(npc.id, this, {
                                 position: {
                                     global: {
                                         x: (this.x + localX) * Env.tileSize,
