@@ -462,11 +462,28 @@ WORKING ON (was previously working on)
             Not attacking enemy: If you pass by an enemy and go into aggro range -- ???
         - takes a while to autoattack enemy
         - damage feels too late: you get hit at the same time that you kill the enemy?
+        - Animation go back to first idle pos in between hits?
+        - Animation: Can we anticipate attacks and begin anim early?
     - Reloading npcs:
         - We *CANNOT* cache values from old npcs, or npcs in general, otherwise we keep a stale npcs
         - brain/components/etc. of character need to have an initializeNPC routine (find a suitable name!) that runs on startup and when we reload NPCs
     - Add all media assets (tilesheets, spritesheets, sounds, images), maybe even all assets entirely? to a global assets list for quick lookup
 	- Look into media storage for git for dist/  (eg. git-lfs); worth it?
+    - ResourceBuilder integrate w/ Grunt
+    - Grunt cleanup output so its easier to see files/packages that actually changed
+    - Colour NPC names based off of their level difference
+    - Players need to start with some piece of armor (at least 1 AC) and already worn
+    - canLoseItems for level: cannot lose items < level 5
+    - Character Template: run sequential commands (either server or client) -- to start out as level 1 and run /level_up  so that we don't have to create a character template for each level (accumulating stat gains for each level!);  /reload_level  to go back to level 1 and /level_up until we hit the same level? Otherwise we could have /reset_to_level 
+    - Command: Set spawn point  (sets it to where you're standing if no coords given)
+    - Command: God mode
+    - Test script to go through pairs of npcs and put them to battle X number of times, to see what the results are. We can use this for adjusting character stats/items and tweaking npc stats, then go through tests to ensure the results fit within some expected ranges (level 5 kills level 1 in < X seconds, remains w/ > Y% health, etc.)
+        - Could this script also report stats when obtaining level X
+        - Should save changes from last run, and only report stats which differ (significantly?) from the last run (eg. only npcs that we've changed), or those which fail our expectations
+        - Could run under Jasmine, or otherwise extend our smoke tests to allow unit tests
+    - Hover over items in inventory to see name/description/icon
+    - BUG: Furry Gloves dropped on ground has different sprite than when in inventory
+    - Fountain of healing
 
 
 	- Browser Debugging Snippets
@@ -670,18 +687,20 @@ Next Priority
             (in forest w/ snakes/bats)
             - Lvl 4
             - No items
-        - Whipper Snapper
+        - Whipper Snapper  (orange)
             - Lvl 6
             - No items
-        - Bunny Rat
-            - Lvl 7
-            - No items
-        - Bunny Wiz
+        - Bunny Rat   (blue)
+            - Lvl 8
+            - Items: furry gloves
+        - Bunny Wiz   (magenta)
             - Lvl 9
             - Some of them on unable to reach places
             - Casts magic, melee if up close
             - Items: potion of healing
-        - Sir Bounce A lot
+        - Bouncer     (violet)
+            - Level 9
+        - Sir Bounce A lot  (red)
             - Lvl 12
             - Boss: Melee, magic if you're running away (then chase?), quick regen
             - Items: Snuggly fur coat (cold resist), lucky bunny paw (+dex), potion of bounciness (+blink randomly; lasts for X time, a while? tends to blink you in the direction you're walking)
