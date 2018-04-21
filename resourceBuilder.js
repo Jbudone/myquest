@@ -21,7 +21,6 @@ const util          = require('util'),
     chalk           = require('chalk'),
     prettyjson      = require('prettyjson'),
     assert          = require('assert'),    // TODO: Disable in production
-    filepath        = require('path'),
     crypto          = require('crypto'),
     openpgp         = require('openpgp'),
     exec            = require('child_process').exec,
@@ -566,7 +565,6 @@ let processResources = (package) => {
                                     const packageRoutine = packageRoutines[package.name],
                                         assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
 
-                                    console.log(package.data);
                                     success();
                                 });
                             } else if (asset.type === "sound") {
