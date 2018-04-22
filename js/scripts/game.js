@@ -474,7 +474,7 @@ define(
 
                         const item = {
                             id: itm_id,
-                            sprite: Resources.items.list[itm_id].sprite,
+                            sprite: Resources.items.list[itm_id].sprite + 1,
                             coord: { x: position.x, y: position.y },
                             page: page.index
                         };
@@ -725,7 +725,7 @@ define(
                             page       = The.area.pages[data.page],
                             item       = {
                                 id: data.item,
-                                sprite: Resources.items.list[data.item].sprite,
+                                sprite: Resources.items.list[data.item].sprite + 1,
                                 coord: position,
                                 page: page.index
                             };
