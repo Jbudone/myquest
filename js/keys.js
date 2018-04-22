@@ -119,6 +119,7 @@ define(function(){
 	addKey('EVT_USE_ITEM');
 	addKey('EVT_DROP_ITEM');
     addKey('EVT_INV_USE_SLOT');
+    addKey('EVT_INV_DROP_SLOT');
 
 	addKey('EVT_INTERACT');
     addKey('EVT_ACTIVATE');

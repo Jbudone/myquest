@@ -8,7 +8,83 @@ define(['loggable'], (Loggable) => {
         const MOUSE_LEFT = 1,
             MOUSE_RIGHT = 3;
 
-        this.touchSlot = (index, action) => {
+
+        // Entity Menu (Context Menu)
+        // A single component that shows up when you right click an entity
+        let ContextMenu = (new function(){
+
+            const uiInventoryContextMenu = $('#ui-inventory-contextmenu');
+
+            const _self = this;
+            this.hidden = true;
+            this.clickedSlot = null;
+
+            this.trigger = (slot, mouse) => {
+
+                this.hidden = !this.hidden;
+                if (this.hidden) {
+                    this.hide();
+                } else {
+                    this.display(slot, mouse);
+                }
+
+            };
+
+
+            this.display = (slot, mouse) => {
+
+                // NOTE: Need remove hidden first since we need to know width/height (0 if hidden) for determining
+                // position
+                uiInventoryContextMenu.removeClass('hidden');
+
+                const canvasOffset = $('#canvas').offset();
+                let leftPos        = mouse.pageX - 40,
+                    topPos         = mouse.pageY + $('#entity-menu').height() - 30;
+
+                this.clickedSlot = slot;
+                uiInventoryContextMenu.css({
+                    'left': leftPos,
+                    'top': topPos
+                });
+            };
+
+            this.hide = () => {
+                this.hidden = true;
+                uiInventoryContextMenu.addClass('hidden');
+                this.clickedSlot = null;
+            };
+
+            this.addOption = (text, cb) => {
+
+                const optionEl = $('<a/>')
+                                    .attr('href', '#')
+                                    .addClass('ui-inventory-contextoption')
+                                    .click(() => {
+                                        const slot = _self.clickedSlot;
+                                        _self.hide();
+                                        cb(slot);
+                                        return false;
+                                    })
+                                    .append( $('<span/>')
+                                        .addClass('ui-inventory-contextoption-label')
+                                        .text(text) );
+
+                uiInventoryContextMenu.append(optionEl);
+            };
+
+
+            uiInventoryContextMenu.hover(() => {}, () => {
+                this.hide();
+            });
+
+
+            this.addOption('Drop Item', (slot) => {
+                const index = slots.findIndex((s) => s === slot);
+                inventory.dropSlot(index);
+            });
+        });
+
+        this.touchSlot = (index, action, mouse) => {
 
             const slot = slots[index];
 
@@ -31,13 +107,12 @@ define(['loggable'], (Loggable) => {
             // switching places for the items rather than holding onto the 2nd item afterwards
             if (action === MOUSE_LEFT) {
 
-                // Left Click: grab/drop item
-                // TODO
+                // Left Click: use/wear item
                 inventory.useSlot(index);
             } else if (action === MOUSE_RIGHT) {
 
-                // Right Click: use/wear
-                inventory.useSlot(index);
+                // Right Click: context menu
+                ContextMenu.trigger(slot, mouse);
             }
         };
 
@@ -75,7 +150,10 @@ define(['loggable'], (Loggable) => {
                         slotContainer.removeClass('hover');
                         uiSlot.removeClass('hover');
                     }).click((evt) => {
-                        this.touchSlot(i, evt.which);
+                        this.touchSlot(i, evt.which, evt);
+                    }).contextmenu((evt) => {
+                        this.touchSlot(i, evt.which, evt);
+                        return false;
                     });
 
                 const ctxSlot = uiSlot[0].getContext('2d');

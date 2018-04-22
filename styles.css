@@ -470,6 +470,33 @@ h3 {
 	margin: 1px;
 }
 
+#ui-inventory-contextmenu {
+	position: absolute;
+	background-color: #000;
+    min-width: 240px;
+    min-height: 100px;
+	max-width: fit-content;
+	max-height: fit-content;
+    opacity: 0.8;
+    border-radius: 4px;
+    padding: 6px 10px;
+    z-index: 99999;
+}
+
+.ui-inventory-contextoption {
+    display: block;
+    text-decoration: none;
+}
+
+.ui-inventory-contextoption-label {
+	color: #EEE;
+}
+
+.ui-inventory-contextoption-label:hover {
+	color: #DFDFDF;
+	font-weight: bold;
+}
+
 .noselect {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
