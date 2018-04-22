@@ -155,7 +155,9 @@ GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('
 
 GLOBAL.fs = fs;
 
-GLOBAL.DEBUGGER = () => {
+GLOBAL.DEBUGGER = (msg) => {
+    if (!msg) msg = 'Debug: ' + (new Error()).stack.split('\n')[2];
+    console.log(msg);
     waitForInspector();
 };
 

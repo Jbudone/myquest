@@ -73,7 +73,8 @@ define(['lib/stacktrace'], function(Stack){
           console.error(args);
           debugger;
       } else {
-          DEBUGGER();
+          const msg = stack.split('\n')[3];
+          DEBUGGER('Err: ' + msg);
       }
     return { message: message, args: args, stack: stack };
   }
