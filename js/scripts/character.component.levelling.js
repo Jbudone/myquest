@@ -193,6 +193,13 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 character.setNetSerializeEnabled(false);
                 this.commonRestore(component);
                 character.setNetSerializeEnabled(true);
+            },
+
+            firstTimeSetup() {
+                this.level         = 1;
+                this.XP            = 0;
+                this.achievedXP    = 0;
+                this.achievedLevel = 1;
             }
         };
 

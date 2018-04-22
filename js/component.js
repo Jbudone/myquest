@@ -84,6 +84,12 @@ define(() => {
         this.unload = function() {
 
         };
+
+        // First Time Setup
+        // When we've created a new character and have nothing to restore from, this sets up our initial state
+        this.firstTimeSetup = function() {
+
+        };
     };
 
     return Component;

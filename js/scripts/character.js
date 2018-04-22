@@ -582,7 +582,12 @@ define(
                     const component      = this.charComponents[i],
                         componentName    = entity.npc.components[i],
                         restoreComponent = _character.components[componentName];
-                    component.restore(restoreComponent);
+
+                    if (restoreComponent) {
+                        component.restore(restoreComponent);
+                    } else {
+                        component.firstTimeSetup();
+                    }
                 }
 
                 this.initialized = true;
