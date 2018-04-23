@@ -77,9 +77,16 @@ define(
             }
 
 
-            this.addItem = (itmRef, slot) => {
+            this.addItem = (itmRef, slot, count) => {
 
                 this.doHook('updatedSlot').pre(slot);
+
+                // FIXME: It sucks to do this recursively, but I don't have time to flesh this out better
+                if (count > 1) {
+                    if (!this.addItem(itmRef, slot, count - 1)) {
+                        return;
+                    }
+                }
 
                 if (_.isNumber(slot)) {
 
@@ -308,6 +315,47 @@ define(
                     }
                 };
 
+                const reqDropSlot = (evt, data) => {
+
+                    const slotI = data.slot;
+
+                    if
+                    (
+                        (
+                            confirm(_.isObject(data), evt, "No args given") &&
+                            confirm('slot' in data && _.isFinite(data.slot), evt, "Bad slot argument given") &&
+                            confirm(inRange(data.slot, 0, this.slots.length - 1), evt, "Bad slot index given")
+                        ) === false
+                    )
+                    {
+                        return;
+                    }
+
+
+                    const slot = this.slots[slotI];
+
+                    // TODO: Stealing similar code from character.js pickup item; should abstract this in some way
+
+                    if
+                    (
+                        (
+                            confirm(slot.item, evt, "No item in slot") &&
+                            confirm(slot.stack > 0, evt, "Not enough items on the stack in slot")
+                        ) === false
+                    )
+                    {
+                        return;
+                    }
+
+                    this.dropSlot(slotI);
+
+                    player.respond(evt.id, true);
+                };
+
+
+                player.registerHandler(EVT_INV_DROP_SLOT);
+                player.handler(EVT_INV_DROP_SLOT).set(reqDropSlot);
+
             } else {
 
                 this.useSlot = (slotI) => {
@@ -381,6 +429,33 @@ define(
 
                     }, (reply) => {
                         The.UI.postMessage(`Could not use item: ${reply.msg}`);
+                    })
+                    .catch(errorInGame);
+                };
+
+                this.dropSlot = (slotI) => {
+
+                    const slot = this.slots[slotI];
+
+                    if (!slot.item || slot.stack === 0) {
+                        return;
+                    }
+
+                    if (slot.active) {
+                        return;
+                    }
+                    
+                    server.request(EVT_INV_DROP_SLOT, {
+                        slot: slotI
+                    })
+                    .then(() => {
+                        this.doHook('updatedSlot').pre(slotI);
+                        slot.item = null;
+                        slot.stack = 0;
+                        slot.active = false;
+                        this.doHook('updatedSlot').post(slotI);
+                    }, (reply) => {
+                        The.UI.postMessage(`Could not drop item: ${reply.msg}`);
                     })
                     .catch(errorInGame);
                 };

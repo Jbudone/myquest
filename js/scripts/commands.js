@@ -189,13 +189,22 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             typedCommand: 'give_item',
             command: CMD_ADMIN_GIVE_ITEM,
             requiresAdmin: true,
-            description: "/give_item [item] : give yourself a specified item",
+            description: "/give_item [item] [count] : give yourself a specified item",
             args: [
                 {
                     name: 'itemres',
                     sanitize: (p) => p,
                     test: (p) => p in Items,
                     error: "ItemRes not valid"
+                },
+                {
+                    name: 'count',
+                    sanitize: (p) => {
+                        const n = parseInt(p, 10);
+                        return _.isFinite(n) ? n : 1;
+                    },
+                    test: (p) => _.isFinite(p),
+                    error: "Count is invalid"
                 }
             ],
             server: (evt, data, self, player) => {
@@ -204,6 +213,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 (
                     _.isObject(data) &&
                     _.isString(data.itemres) &&
+                    _.isFinite(data.count) &&
                     data.itemres in Items
                 )
                 {
@@ -212,11 +222,12 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     // Add item to inventory
                     const itmRef  = Items[data.itemres],
                         inventory = player.movable.character.inventory,
-                        result    = inventory.addItem(itmRef);
+                        result    = inventory.addItem(itmRef, null, data.count);
 
                     if (result !== false) {
                         player.respond(evt.id, true, {
                             itmres: data.itemres,
+                            count: data.count,
                             slot: result
                         });
                     }
@@ -229,7 +240,7 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
 
                     const itmRef = Resources.items.list[data.itmres];
-                    player.character.inventory.addItem(itmRef, data.slot);
+                    player.character.inventory.addItem(itmRef, data.slot, data.count);
                 },
                 failed: () => {
                     UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
