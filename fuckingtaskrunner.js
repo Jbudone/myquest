@@ -32,6 +32,7 @@ const Settings = {
 // - Copy task: folders don't exist? create them
 // - Running out of memory on initial install on AWS -- why are we using so much memory
 // - Fix chokidir running slow, sometimes not reporting file changes
+// - BUG: Things not getting cached? Running full initial run every startup
 //
 //
 
@@ -256,12 +257,13 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         },
 
         UpdateFile: (file) => {
-            console.log(`Cache File has changed: ${file.path}   (${file.hash} !== ${file.cachedHash})`);
 
             const basename = fsPath.basename(file.path);
 
-            const idx = Cache.data.files[basename].findIndex((f) => f.path === file.path);
-            Cache.data.files[basename][idx].cachedHash = file.hash;
+            const idx     = Cache.data.files[basename].findIndex((f) => f.path === file.path),
+                cacheFile = Cache.data.files[basename][idx];
+            console.log(`Cache File has changed: ${file.path}   (${file.hash} !== ${cacheFile.cachedHash})`);
+            cacheFile.cachedHash = file.hash;
         }
     };
 
@@ -473,8 +475,18 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             }
 
 
+            let waitingOnTasks = 0;
             if (updatedCache.length > 0) {
-                console.log("Cache has changed..");
+                console.log("Some files have changed since last run..");
+
+                const finishedProcessingTasks = () => {
+                    console.log("Finished processing items");
+                    Cache.Save();
+
+                    console.log("");
+                    console.log("");
+                    console.log(chalk.underline("Watching for changes"));
+                };
 
                 const processCacheItem = (cacheItem) => {
                     let file = new File(cacheItem.path);
@@ -483,27 +495,44 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                         cacheItem.task.exec({
                             file
                         }).finally(() => {
-                            if (cacheItem.followup.length === 0) return;
+                            if (cacheItem.followup.length === 0) {
+                                if (--waitingOnTasks === 0) finishedProcessingTasks();
+                                //cb(); console.log("Resolved count: " + (++totalCount) + "/" + allTaskPromises.length);
+                                return;
+                            }
 
                             let nextCacheItem = cacheItem.followup.shift();
                             nextCacheItem.followup = cacheItem.followup;
+                            //processCacheItem(nextCacheItem, cb);
                             processCacheItem(nextCacheItem);
                         });
                     } else {
                         cacheItem.task.exec({
                             file
+                        }).finally(() => {
+                            if (--waitingOnTasks === 0) finishedProcessingTasks();
+                            //cb(); console.log("Resolved count: " + (++totalCount) + "/" + allTaskPromises.length);
                         });
                     }
                 };
+
+                let allTaskPromises = [];
 
                 for (let i = 0; i < updatedCache.length; ++i) {
                     let cacheItem = updatedCache[i];
                     if (cacheItem.needsProcess) {
                         processCacheItem(cacheItem);
+                        ++waitingOnTasks;
+                        //allTaskPromises.push(new Promise((resolve, reject) => {
+                        //    processCacheItem(cacheItem, resolve);
+                        //}));
                     }
                 }
 
-                Cache.Save();
+                // TODO: Having problems w/ these promises finishing .all
+                //Promise.all(allTaskPromises).then(() => {
+                //    finishedProcessingTasks();
+                //});
             } else {
                 console.log(chalk.underline("Watching for changes"));
             }
