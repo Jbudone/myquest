@@ -29,7 +29,9 @@ const Settings = {
 // - Clean this shit up
 // - Fix chokidir watch reporting changes on files twice
 // - Map exporter; watch raw map files and replace areahashes.json w/ world.json
-// - Busy Saving Cache: what if we're in the process of writing to cache when all of a sudden we try to save again
+// - Copy task: folders don't exist? create them
+// - Running out of memory on initial install on AWS -- why are we using so much memory
+// - Fix chokidir running slow, sometimes not reporting file changes
 //
 //
 
@@ -74,6 +76,7 @@ const TaskState = function(taskProcess, file) {
 
         ++this.state;
         if (this.state >= taskProcess.processList.length) {
+            taskProcess.finished();
             return; // Finished
         }
 
@@ -181,13 +184,19 @@ const TaskProcess = function() {
         const { file, opt } = args;
         const taskState = new TaskState(this, file);
         taskState.process();
+        return this;
     };
 
+    this.finally = (cb) => {
+        this.finished = cb;
+    };
+
+    this.finished = () => {};
     this.processList = [];
 };
 
 let fileHash = (file) => {
-    let hash = execSync('md5sum ' + file + ' | awk \'{printf \"%s\", $1}\' ');
+    let hash = execSync('cksum ' + file + ' | awk \'{printf \"%s\", $1}\' ');
     return hash.toString('utf8');
 };
 
@@ -260,7 +269,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
     let waitingOnFileListCount = 0;
 
 
-    const watch = (paths, initialRun) => {
+    const watch = (paths, initialRun, runInOrderPackage) => {
 
         // FIXME: chokidar should accept an array of paths, but for some reason it only worked initially for what ever the
         // first file to change was. Any other subsequent changes from other files weren't spotted
@@ -271,16 +280,20 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
         const taskProcess = new TaskProcess();
 
-        const stareAwkwardlyAt = (path) => {
-            const watcher = chokidar.watch(path, { persistent: true });
-            watcher.on('change', (path, stats) => {
-                console.log(`${chalk.yellow('>> ')} "${path}" changed.`);
+        // Queue of tasks waiting to be processed
+        const processingQueue = [];
+        const processQueueItem = (p) => {
+            const path = p.path,
+                file   = new File(path);
+            taskProcess.exec({
+                file: file
+            }).finally(() => {
 
-                const file = new File(path);
-                taskProcess.exec({
-                    file: file
-                });
+                // Remove from process queue
+                let idx = processingQueue.findIndex((q) => q === p);
+                processingQueue.splice(idx, 1);
 
+                // Update Cache
                 const basename = fsPath.basename(path),
                     hash       = fileHash(path);
 
@@ -304,8 +317,49 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     });
                 }
 
-                Cache.Save();
+                // Process next item after this one
+                if (p.runNext) {
+                    processQueueItem(p.runNext);
+                } else if (processingQueue.length === 0) {
+                    Cache.Save();
+                }
                 console.log("");
+            });
+        };
+
+        const stareAwkwardlyAt = (path) => {
+            const watcher = chokidar.watch(path, {
+                persistent: true,
+                atomic: true,
+                awaitWriteFinish: true
+            });
+            watcher.on('change', (path, stats) => {
+                console.log(`${chalk.yellow('>> ')} "${path}" changed.`);
+
+                const queued = {
+                        path: path,
+                        processing: false
+                    };
+
+                processingQueue.push(queued);
+
+                if (runInOrderPackage && processingQueue.length > 1) {
+                    if (processingQueue[processingQueue.length - 1].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
+                    processingQueue[processingQueue.length - 1].runNext = queued;
+                    return;
+                } else {
+                    // Are we already busy processing this file? Then wait until its finished
+                    // NOTE: Ignore the last item (that's us!)
+                    for (let i = processingQueue.length - 2; i >= 0; --i) {
+                        if (processingQueue[i].file === path) {
+                            if (processingQueue[i].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
+                            processingQueue[i].runNext = queued;
+                            return;
+                        }
+                    }
+                }
+
+                processQueueItem(queued);
             });
         };
 
@@ -324,12 +378,21 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 glob(path, {}, function (er, files) {
                     if (files) {
                         for (let i = 0; i < files.length; ++i) {
-                            allWatchedFilesList.push({
+
+                            const watchItem = {
                                 path: files[i],
                                 exists: true,
                                 task: taskProcess,
                                 hash: fileHash(files[i])
-                            });
+                            };
+
+                            if (runInOrderPackage) {
+                                watchItem.runInOrderPackage = runInOrderPackage;
+                                watchItem.followup = [];
+                            }
+
+
+                            allWatchedFilesList.push(watchItem);
                         }
                     }
 
@@ -383,34 +446,67 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     // File being added
                     Cache.AddFile(file);
                     file.needsProcess = true;
-                    updatedCache.push(file);
                 } else if (file.hash !== file.cachedHash) {
                     // File has changed since we last processed
                     Cache.UpdateFile(file);
                     file.needsProcess = true;
-                    updatedCache.push(file);
                 } else {
                     // File has not changed
                 }
+
+                if (file.needsProcess) {
+                    if (file.runInOrderPackage) {
+                        // Do we have any other cacheItems tasked already that we can add this to as a follow-up
+                        // process?
+                        let firstItem = updatedCache.find((c) => c.runInOrderPackage === file.runInOrderPackage);
+                        if (firstItem) {
+                            // Add as a follow-up process
+                            firstItem.followup.push(file);
+                        } else {
+                            // First item of its kind; simply add to update cache list
+                            updatedCache.push(file);
+                        }
+                    } else {
+                        updatedCache.push(file);
+                    }
+                }
             }
+
 
             if (updatedCache.length > 0) {
                 console.log("Cache has changed..");
 
-                for (let i = 0; i < updatedCache.length; ++i) {
-                    let cacheItem = updatedCache[i];
-                    if (cacheItem.needsProcess) {
-                        let file = new File(cacheItem.path);
+                const processCacheItem = (cacheItem) => {
+                    let file = new File(cacheItem.path);
+
+                    if (cacheItem.runInOrderPackage && cacheItem.followup.length > 0) {
+                        cacheItem.task.exec({
+                            file
+                        }).finally(() => {
+                            if (cacheItem.followup.length === 0) return;
+
+                            let nextCacheItem = cacheItem.followup.shift();
+                            nextCacheItem.followup = cacheItem.followup;
+                            processCacheItem(nextCacheItem);
+                        });
+                    } else {
                         cacheItem.task.exec({
                             file
                         });
                     }
+                };
+
+                for (let i = 0; i < updatedCache.length; ++i) {
+                    let cacheItem = updatedCache[i];
+                    if (cacheItem.needsProcess) {
+                        processCacheItem(cacheItem);
+                    }
                 }
 
                 Cache.Save();
+            } else {
+                console.log(chalk.underline("Watching for changes"));
             }
-
-            console.log(chalk.underline("Watching for changes"));
         }
     };
 
@@ -436,7 +532,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             allResources.push(file);
         }
 
-        watch(allResources, true)
+        watch(allResources, true, 'resources')
             .then((file) => {
                 const package = packages.find((p) => p.file === fsPath.basename(file.path));
                 return new Promise((resolve, reject) => {
@@ -455,10 +551,6 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         GotAnotherFileList();
     });
 
-
-    //watch('js/**/*.js', true)
-    //    .then(echoTask)
-    //    .then(copyTask);
 
     ++waitingOnFileListCount;
     watch('js/**/*.js', true)
