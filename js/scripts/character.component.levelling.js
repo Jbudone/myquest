@@ -29,7 +29,11 @@ define(['loggable', 'component'], (Loggable, Component) => {
                     level: newLevel,
                     XP: this.XP
                 };
-            UI.postMessage(`Ding! ${data.entityId} levelled up to ${newLevel}`, MESSAGE_INFO);
+
+            if (!this.isInitializing) {
+                UI.postMessage(`Ding! ${data.entityId} levelled up to ${newLevel}`, MESSAGE_INFO);
+            }
+
             The.area.movables[data.entityId].character.doHook(UpdatedLevelEvt).post(data);
         });
 
@@ -39,7 +43,9 @@ define(['loggable', 'component'], (Loggable, Component) => {
                 this.achievedXP = this.XP;
             }
 
-            UI.postMessage(`Yay, XP!  ${this.XP} / ${this.achievedXP}`);
+            if (!this.isInitializing) {
+                UI.postMessage(`Yay, XP!  ${this.XP} / ${this.achievedXP}`);
+            }
         }, true);
 
         // If we lose XP/Levels for what ever reason (*cough* dying *cough*) we want to keep track of what XP/Level
@@ -229,14 +235,17 @@ define(['loggable', 'component'], (Loggable, Component) => {
                         this.achievedLevel = this.level;
                     }
 
-                    FX.event('levelup', $(this), {});
-                    this.Log(`Woahhh I just levelled up! ${data.level}`);
-                    UI.postMessage(`  Zomg the levelup is for me! ${this.level} / ${this.achievedLevel}`);
 
-                    if (increasedMaxXP) {
-                        UI.postMessage(levelRules.message);
-                    } else {
-                        UI.postMessage("Just catching up to my old level..");
+                    if (!this.isInitializing) {
+                        FX.event('levelup', $(this), {});
+                        this.Log(`Woahhh I just levelled up! ${data.level}`);
+                        UI.postMessage(`  Zomg the levelup is for me! ${this.level} / ${this.achievedLevel}`);
+
+                        if (increasedMaxXP) {
+                            UI.postMessage(levelRules.message);
+                        } else {
+                            UI.postMessage("Just catching up to my old level..");
+                        }
                     }
                 });
             },
@@ -246,15 +255,21 @@ define(['loggable', 'component'], (Loggable, Component) => {
             },
 
             restore(component) {
+                this.isInitializing = true;
                 this.commonRestore(component);
+                this.isInitializing = false;
             },
 
             netRestore(component) {
+                this.isInitializing = true;
                 this.commonRestore(component);
+                this.isInitializing = false;
             },
 
             netInitialize(component) {
+                this.isInitializing = true;
                 this.netRestore(component);
+                this.isInitializing = false;
             },
 
             unload() {
