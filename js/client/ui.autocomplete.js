@@ -137,6 +137,9 @@ define(['loggable'], (Loggable) => {
 
         this.findMatchingCommands = (search) => {
 
+            // Perhaps we're still loading commands
+            if (!Resources.commands) return [];
+
             const matches = [];
             Resources.commands.forEach((cmd) => {
                 if (cmd.typedCommand.indexOf(search) === 0) {
