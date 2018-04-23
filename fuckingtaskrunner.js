@@ -324,6 +324,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     processQueueItem(p.runNext);
                 } else if (processingQueue.length === 0) {
                     Cache.Save();
+
+                    console.log("");
+                    console.log("");
+                    console.log(chalk.underline("Watching for changes"));
                 }
                 console.log("");
             });
