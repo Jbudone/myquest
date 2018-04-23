@@ -993,18 +993,121 @@ define(
             };
 
             this.findOpenTilesAbout = (tile, count, _filter, maxIteration = 40) => {
-                assert(this.isTileOpen(tile), "Provided tile is not open");
+                let found     = 0,
+                    iteration = 0;
+
+                const filter       = _filter ? _filter : () => true,
+                    foundOpenTiles = [];
+
+                // We want to find open tiles in a radius around the source tile, w/ tiles nearest the source tile
+                // coming up first. We can path along concentric circles (increasing radius) to test each tile if its
+                // open
+                //
+                //  Concentric circles:
+                //     For each radius:
+                //       1) Go upwards to the radius point (northern most point of this particular circle); add tile
+                //       2) Add tile to the right
+                //       3) Go down/right, add tile, repeat until we're at y - 1 (north by 1 of the source tile)
+                //       4) Go down, add tile, repeat until we're at y + 1 of source tile   (exactly 2)
+                //       5) Go down/left, add tile, repeat until we're at x + 1
+                //       6) Go left, add tile, repeat until we're at x - 1  (exactly 2)
+                //       7) Go up/left, add tile, repeat until we're at y + 1
+                //       8) Go up/right, add tile, repeat until we're at x - 1
+                //
+                //          NOTE: Diagonal direction delta == (radius - 1)
+
+                const phases = [
+                    { dir: { x: 1,  y: 0 },  count: (r) => 1 },     // North:        Right
+                    { dir: { x: 1,  y: 1 },  count: (r) => r - 1 }, // NE Diagonal:  Down/Right
+                    { dir: { x: 0,  y: 1 },  count: (r) => 2 },     // East:         Down
+                    { dir: { x: -1, y: 1 },  count: (r) => r - 1 }, // SW Diagonal:  Down/Left
+                    { dir: { x: -1, y: 0 },  count: (r) => 2 },     // South:        Left
+                    { dir: { x: -1, y: -1 }, count: (r) => r - 1 }, // SE Diagonal:  Up/Left
+                    { dir: { x: 0,  y: -1 }, count: (r) => 2 },     // West:         Up
+                    { dir: { x: 1,  y: -1 }, count: (r) => r - 1 }  // NE Diagonal:  Up/Right
+                ];
+
+                // Can we add the source tile? Is that open?
+                if (this.isTileOpen(tile) && filter(tile)) {
+                    ++found;
+                    ++iteration;
+
+                    foundOpenTiles.push(new Tile(tile.x, tile.y));
+                    if (found >= count || iteration >= maxIteration) {
+                        return foundOpenTiles;
+                    }
+                }
+
+                // I think the maximum iterations you can hit for a given radius is:
+                //  maxIterations = maxRadius * 3 + 4^(maxRadius - 1)
+                // 
+                // The exponential term I'm pretty unsure about, but works for at least radius <= 4, which may be all we
+                // ever need. But still we should confirm this for later
+                // TODO: (read above)
+                // 
+                // For safety reasons it makes sense to constrain our radius search to the max radius we should hit for
+                // the provided maxIterations:
+                //
+                //  maxIterations = maxRadius * 3 + 4^(maxRadius - 1)
+                //  maxIterations >= maxRadius * 3
+                //  maxRadius <= maxIterations / 3
+
+                const MAX_RADIUS = maxIteration / 3,
+                    tileIter     = new Tile(tile.x, tile.y);
+                for (let radius = 1; radius < MAX_RADIUS; ++radius) {
+
+                    // Get initial tile in this radius (tile north of source tile, on radius of this circle)
+                    //const tileIter = new Tile(tile.x, tile.y - radius);
+                    tileIter.x = tile.x;
+                    tileIter.y = tile.y - radius;
+                    if (this.isTileOpen(tileIter) && filter(tileIter)) {
+                        ++found;
+                        ++iteration;
+
+                        foundOpenTiles.push(new Tile(tileIter.x, tileIter.y));
+                        if (found >= count || iteration >= maxIteration) {
+                            return foundOpenTiles;
+                        }
+                    }
+
+                    for (let phaseI = 0; phaseI < phases.length; ++phaseI) {
+                        const phase = phases[phaseI],
+                            count   = phase.count(radius);
+                        for (let i = 0; i < count; ++i) {
+
+                            // Find the next tile along this circle
+                            tileIter.x += phase.dir.x;
+                            tileIter.y += phase.dir.y;
+
+                            // Is this tile open?
+                            if (this.isTileOpen(tileIter) && filter(tileIter)) {
+                                ++found;
+                                ++iteration;
+
+                                foundOpenTiles.push(new Tile(tileIter.x, tileIter.y));
+                                if (found >= count || iteration >= maxIteration) {
+                                    return foundOpenTiles;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+                return foundOpenTiles;
                 
-                const maxWeight     = 100,
-                    hashCoordinates = (x, y)  => (maxWeight + Env.pageWidth) * y + x,
-                    tilesToSearch   = [tile],
-                    tiles           = {},
-                    found           = 0,
-                    markedTiles     = {};
+                /*
+                OLD ALGORITHM HERE:
+                 - Kept here in case the above turns out to be no good. When you stumble upon this comment in the future, please delete the block below
+                //assert(this.isTileOpen(tile), "Provided tile is not open");
+                
+                //const maxWeight     = 100,
+                //    hashCoordinates = (x, y)  => (maxWeight + Env.pageWidth) * y + x,
+                //    tilesToSearch   = [tile],
+                //    tiles           = {},
+                //    found           = 0,
+                //    markedTiles     = {};
 
-                let iteration       = 0;
-
-                const filter = _filter ? _filter : () => true;
 
                 // Search for open tiles
                 while
@@ -1027,6 +1130,7 @@ define(
                     if (!this.isTileOpen(nextTile)) continue;
 
                     tiles[hash] = nextTile;
+                    foundOpenTiles.unshift(nextTile);
 
                     // Add all of its neighbour tiles to the search list
                     [
@@ -1039,7 +1143,8 @@ define(
                      .map((o) => tilesToSearch.push(o));
                 }
 
-                return _.toArray(tiles);
+                return foundOpenTiles;
+                */
             };
 
 
