@@ -55,7 +55,8 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.state', 'loggable'], (SCRIP
     const Strategy = function(combat, _character) {
 
         extendClass(this).with(Loggable);
-        this.setLogPrefix('Script');
+        this.setLogPrefix(`Strategy  (${_character.entity.id})`);
+        this.setLogGroup('Script');
 
         this.target = null;
 
