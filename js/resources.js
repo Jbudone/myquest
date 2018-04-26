@@ -65,7 +65,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 						}
 
 						this.Log("Loading resource: " + resourceID + "("+resource.file+")");
-                        const file = 'dist/resources/data/' + resource.file;
+                        const file = Env.connection.rootDir + 'dist/resources/data/' + resource.file;
 						this.read(file).then((function(data){
 							assets[resourceID] = data;
 
@@ -97,8 +97,9 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
                                 });
                             }
 
-						}.bind(this)), function(){
+						}.bind(this)), function(e){
 							this.Log("Error loading resources", LOG_ERROR);
+							this.Log(e, LOG_ERROR);
 						})
 						.catch(Error, function(e){ errorInGame(e); })
 						.error(function(e){ errorInGame(e); });
@@ -298,8 +299,8 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			var res = JSON.parse(asset);
 			var makeSheet = function(_sheet){
 				var sheet = {
-					file: '/resources/' + _sheet.image,
-					fileDist: '/dist/resources/' + _sheet.output,
+					file: Env.connection.rootDir + 'resources/' + _sheet.image,
+					fileDist: Env.connection.rootDir + 'dist/resources/' + _sheet.output,
 					offset: {
 						x: parseInt(_sheet.sheet_offset.x),
 						y: parseInt(_sheet.sheet_offset.y),
@@ -766,7 +767,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
                 const mediaNode = this.media.list.find((el) => el.name === imageRes);
                 assert(mediaNode, `Could not find media for ${imageRes}`);
-                const url = '/dist/resources/' + mediaNode.output;
+                const url = Env.connection.rootDir + 'dist/resources/' + mediaNode.output;
                 img.src = url;
 
                 // FIXME: Cache asset, then just return that cached image; we only need 1 instance of each image, but
@@ -782,7 +783,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
                 const mediaNode = this.media.list.find((el) => el.name === soundRes);
                 assert(mediaNode, `Could not find media for ${soundRes}`);
-                const src = '/dist/resources/' + mediaNode.output;
+                const src = Env.connection.rootDir + 'dist/resources/' + mediaNode.output;
 
                 const request = new XMLHttpRequest();
                 request.open('GET', src, true);

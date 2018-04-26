@@ -81,13 +81,17 @@ define(function(){
 				websocketTest: 'ws://127.0.0.1:1339/',
 				http: (typeof location != "undefined" ? location.origin : 'http://myquest.local'), // NOTE: server doesn't need this
                 resources: 'dist/resources/data/resources.json',
-                resourcesTest: 'dist/resources/data/resources.json'
+                resourcesTest: 'dist/resources/data/resources.json',
+                rootDir: ''
 			},
 
 			server: {
                 port:1338,
-				websocket:'ws://54.86.213.238:1338/',
-				http: 'http://54.86.213.238',
+				websocket:'ws://54.85.208.136:1338/',
+				http: 'http://54.85.208.136',
+                resources: 'dist/resources/data/resources.json',
+                resourcesTest: 'dist/resources/data/resources.json',
+                rootDir: '/playground/myquest/'
 			}
 		};
 		this.connection = (testingLocal ? this.connection.local : this.connection.server);
