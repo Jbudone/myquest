@@ -410,7 +410,7 @@ const packageRoutines = {
 };
 
 let fileHash = (file) => {
-    let hash = execSync('md5sum ' + file + ' | awk \'{printf \"%s\", $1}\' ');
+    let hash = execSync('cksum ' + file + ' | awk \'{printf \"%s\", $1}\' ');
     return hash.toString('utf8');
 };
 
@@ -419,7 +419,7 @@ let readPackage = (package, file) => {
         fs.readFile(file, (err, bufferData) => {
 
             if (err) {
-                console.error(`Error reading package: ${err}`);
+                console.error(`Error reading package (${package}): ${err}`);
                 fail(err);
                 return;
             }
