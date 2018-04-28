@@ -1,7 +1,7 @@
 define(['loggable', 'component'], (Loggable, Component) => {
 
     const DeathEvt    = 'die',
-        RespawningEvt = 'respawning',
+        RespawnedEvt  = 'respawned',
         Buffs         = Resources.buffs;
 
     const DeathMgr = function(character) {
@@ -17,7 +17,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
             initialize() {
 
-                character.hook(RespawningEvt, this).after(function(data){
+                character.hook(RespawnedEvt, this).after(function(data){
 
                     this.Log("You just respawned!", LOG_DEBUG);
                     character.doHook('BuffEvt').post({
@@ -43,7 +43,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
             initialize() {
 
-                character.hook(RespawningEvt, this).after(function(data){
+                character.hook(RespawnedEvt, this).after(function(data){
                     UI.postMessage(`Alas, I have died!`, MESSAGE_BAD);
                 });
             }
