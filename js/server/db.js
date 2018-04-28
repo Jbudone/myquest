@@ -21,7 +21,7 @@ define(['loggable'], function(Loggable){
 				// Setup our mongo connection
 				mongo = require('mongodb').MongoClient;
 				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _db){
-					db = _db;
+					db = _db.db('myquest')
 					if (err) {
 						this.Log("Failed to connect", LOG_ERROR);
 						this.Log(err, LOG_ERROR);
