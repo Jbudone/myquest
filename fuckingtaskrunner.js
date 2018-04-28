@@ -337,7 +337,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             const watcher = chokidar.watch(path, {
                 persistent: true,
                 atomic: true,
-                awaitWriteFinish: true
+                awaitWriteFinish: true,
+                usePolling: true,
+                interval: 100
             });
             watcher.on('change', (path, stats) => {
                 console.log(`${chalk.yellow('>> ')} "${path}" changed.`);
@@ -366,6 +368,11 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 }
 
                 processQueueItem(queued);
+            })
+            .on('error', error => console.log(`Watcher error: ${error}`))
+            .on('ready', () => console.log('Initial scan complete. Ready for changes'))
+            .on('raw', (event, path, details) => {
+                console.log('Raw event info:', event, path, details);
             });
         };
 
