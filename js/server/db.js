@@ -6,8 +6,9 @@ define(['loggable'], function(Loggable){
 		this.setLogGroup('DB');
 		this.setLogPrefix('(DB) ');
 
-		var mongo = null,
-			db    = null;
+		var mongo  = null,
+			db     = null,
+            client = null;
 
 		var crypto = require('crypto');
 
@@ -20,8 +21,9 @@ define(['loggable'], function(Loggable){
 
 				// Setup our mongo connection
 				mongo = require('mongodb').MongoClient;
-				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _db){
-					db = _db.db('myquest')
+				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _client){
+                    client = _client;
+					db = _client.db('myquest')
 					if (err) {
 						this.Log("Failed to connect", LOG_ERROR);
 						this.Log(err, LOG_ERROR);
@@ -37,7 +39,7 @@ define(['loggable'], function(Loggable){
 		
 
 		this.disconnect = function(){
-			db.close();
+			client.close();
 		};
 
 
