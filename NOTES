@@ -54,6 +54,8 @@ RvR style areas for different factions (you can work your way into factions); ta
 
 Consider some items (core components) drop on a per-player basis? This prevents players farming areas for cash, and forces players to craft or work for their gear/utilities
 
+Combat that actually requires skill/planning: eg. You're a rogue and spot an animal out in the open. You go invisible and sneak up near it, then place a trap w/ some bait (food). Then make a noise to get the animals attention so it spots the bait. When it hits the trap you reveal yourself and fire a dart at it, then run off in a direction. As it chases you you run through a (non-trap?) that you placed on that ground that speeds you up, then quickly activate a rune that will mezz the animal when it reaches you. You have a moment to place some seeds in the ground surrounding the animal, play your flute to quickly grow them into dry grass, and light it on fire to burn the animal (or perhaps keep it trapped).  Throw over some napalm to explode on the animal
+
 Quests
  - Romeo & Juliet
  - Bridge Troll
@@ -484,6 +486,30 @@ WORKING ON (was previously working on)
     - Hover over items in inventory to see name/description/icon
     - BUG: Furry Gloves dropped on ground has different sprite than when in inventory
     - Fountain of healing
+*   - Determine how to upload media/etc.   (does http need /dist ? what do we upload from /resources ? do we upload /dist/resources manually ?)
+        - /resources/data -- we want local version
+        - /dist/{icons,sounds,sheets} -- we want compiled/encrypted stuff   BUT if we run the resourceBuilder will screw up w/out having source files
+            - We could have taskRunner monitor source (secret) directories for changes, then compress + encrypt dir; encrypted dir is added to git  (/resources/sheets/bunnyrat.zip.gpg)
+                - NOTE: If we do this then we have no way of safely merging encrypted/compressed sources
+                - Later on we could also store a json of hashes for each file in directory of its "installed_hash" (the hash of the file when it was installed/updated); then in ./install_assets we check the installed hash against the current file hash to see if its changed since it was installed, then the local file hash against the incoming file hash (in case we manually copied over, or made the same changes in both), then report conflicts and require user input for either manually overriding or skipping those files in install
+*   - Fix running on server vs. local (root directories, etc.)
+*   - BUG: avatars.json somehow messed up (bat/bunnyrat were swapped)
+*   - Fix: easy way to switch between environment testingLocal
+*   - BUG: cancelPath w/ no path (also happened for player when you're alive -- see screenshot in ~/Pictures)
+*   - Setup server to automatically restart (new server instance) BUT leave the old one running for debugger? -- runserver can check processes to see how many node servers are running (likely paused) and start another one if possible; can current node process disconnect from bash script in some way to allow it to realize its disconnected? Otherwise do we need to use some communication medium, or even have the server touch a file when its either about to shutdown OR waiting for inspector
+*   - BUG: 2 users login next to each other, 1st user won't see 2nd user login
+*   - BUG: One user levels up, other user hears levelUp ding
+*   - BUG: One user waiting in page, other user continuously refreshes to load back in, at one point the 1st user witnesses two copies of the same 2nd player (2 separate entities!)
+*   - BUG: Form autofill doesn't work?
+*   - BUG: Chalk error for user local error (shouldn't be using chalk on client!)
+*   - FIX: Client errorReport sent to server; server all errors (server + clients) emailed to me; server pops into inspector -- errorReport and email to me w/ message of inspector waiting (or just email that inspector is waiting if no user input w/in X time)
+    - Try node native fs.watch rather than chokidar?    OR    signal -USR1 to hook in and see what files its watching and why it isn't triggering
+    - Server: a `killserver` script to sniff out running servers and signal kill them, including runserver script
+    - Server: runserver: auto run in background w/out having to nohup
+    - Easier to deploy patches:
+        - server: git pull js/ directory, possibly other directories, NOT tools/ ; update permissions ; run fuckingtaskrunner
+        - web: same as above?
+        - script to ssh into server + web and run the above deploy commands? watch for errors and halt if there's an issue
 
 
 	- Browser Debugging Snippets
@@ -647,6 +673,23 @@ WORKING ON (was previously working on)
         - Create a sprite.json file describing the mesh view and animations
         - tools/export-model --blender-file [Blender file] --sprite-sheet [Sprite.json file] --render  # Renders the model
         - tools/export-model --blender-file [Blender file] --sprite-sheet [Sprite.json file] --bake    # Bakes shots to spritesheet
+
+    - Putting Online
+        - Connect to AWS: ssh -i "/path/to/aws.key.pem" [link]   # Find link on EC2 instances list on AWS
+        - Req: nodejs (nvm?), mongo, redis, imagemagick
+        - Git: clone/update myquest
+        - npm install/update
+        - Copy resources:  scp -i "/path/to/aws.key.pem" /path/to/local/file [user]@[server]:/path/to/remote/
+        - Update environment.js for 'testingLocal', update websocket/http IP
+        - Start mongo: sudo service mongod start
+        - Start redis: sudo service redis start
+
+        - Debugging:
+            - AWS: Open port 9229 for your IP
+            - Localhost chrome://inspect: Configure devices: add remote IP:9229
+            - Server: node --inspect-brk=0.0.0.0:9229 dist/js/server.js 
+
+        - Security: hide tools
 
 
 
