@@ -91,7 +91,7 @@ define(function(){
 				http: 'http://54.85.208.136',
                 resources: 'dist/resources/data/resources.json',
                 resourcesTest: 'dist/resources/data/resources.json',
-                rootDir: '/playground/myquest/'
+                rootDir: (this.isServer ? '' : '/playground/myquest/')
 			}
 		};
 		this.connection = (testingLocal ? this.connection.local : this.connection.server);
