@@ -37,6 +37,10 @@ define(['eventful'], (Eventful) => {
                 pageId  = The.area.pageIndex(pageX, pageY);
 
             if (pageId !== The.area.curPage.index) {
+
+                // NOTE: We may not have received the pages where we're zoning to yet. Be patient
+                if (!The.area.pages[pageId]) return;
+
                 localX += (The.area.pages[pageId].x - The.area.curPage.x) * Env.tileSize;
                 localY += (The.area.pages[pageId].y - The.area.curPage.y) * Env.tileSize;
             }
