@@ -50,13 +50,76 @@ define(
             // frame. Each item that changes (raw data type) serializes a pair (propKey, newValue), where propKey is the
             // key of the property that changed (synced key between server/client). We append all of these pairs in the
             // array and flush the entire array during the movables update
+            //
+            // NOTE: netSerialize updates are specific to a page, and have to be flushed when the entity zones to a new
+            // page
+            // NOTE: We need netSerialize events to be received in order with respect to page broadcasted events (eg.
+            // damage netSerialize event handled BEFORE EVT_DIED event, and EVT_ADDED_ENTITY event handled before
+            // netSerialize regen event). For this reason we need to keep track of where our netSerialize cursor fits
+            // within the page eventsBuffer, and provide some indicator of ordering. We can do that by appending offsets
+            // w/in the netSerialize array to indicate how many events have occured between the previous netSerialize
+            // set of properties and the next set.
             const netIndices = [];
             if (Env.isServer) {
                 this.netUpdateArr = []; // Things that have changed since we last sent out an update
+                this.netUpdateEvtOffset = 0; // Where does cursor in netUpdateArr fit within array of events in page
 
+                // Specific to owner
                 if (this.isPlayer) {
                     this.netUpdateOwnerArr = [];
+                    this.netUpdateOwnerEvtOffset = 0;
                 }
+
+                this.pushNetUpdateEvt = (propKey, value, forOwner) => {
+
+                    const arr = forOwner ? this.netUpdateOwnerArr : this.netUpdateArr;
+
+                    // Have there been any broadcasted events since our last netUpdate? If so then we need to indicate
+                    // how many so that the client can order events/netSerialize updates accordingly
+                    const eventsSinceLastUpdate = this.netUpdateEvtOffset - this.entity.page.eventsBuffer.length;
+                    assert(eventsSinceLastUpdate <= 0);
+                    if (eventsSinceLastUpdate !== 0) {
+                        arr.push(eventsSinceLastUpdate);
+                    }
+
+                    if (forOwner) {
+                        this.netUpdateOwnerEvtOffset += eventsSinceLastUpdate;
+                    } else {
+                        this.netUpdateEvtOffset += eventsSinceLastUpdate;
+                    }
+
+                    if (!_.isFinite(value)) DEBUGGER();
+                    arr.push(propKey);
+                    arr.push(value);
+                };
+
+                this.flushNetUpdate = (forOwner, overridePage) => {
+
+                    let page = overridePage ? overridePage : this.entity.page;
+                    if (forOwner) {
+                        if (this.netUpdateOwnerArr.length) {
+                            this.entity.player.send(EVT_NETSERIALIZE_OWNER, {
+                                serialize: this.netUpdateOwnerArr,
+                                entityId: _character.entity.id,
+                                page: page.index
+                            });
+
+                            this.netUpdateOwnerArr = [];
+                            this.netUpdateOwnerEvtOffset = 0;
+                        }
+                    } else {
+                        if (this.netUpdateArr.length) {
+                            page.broadcast(EVT_NETSERIALIZE, {
+                                serialize: this.netUpdateArr,
+                                entityId: _character.entity.id,
+                                page: page.index
+                            });
+
+                            this.netUpdateArr = [];
+                            this.netUpdateEvtOffset = 0;
+                        }
+                    }
+                };
             } else {
 
                 // The server may send a netSerialize of the character's state while there's items already in the
@@ -95,9 +158,7 @@ define(
                                     callback(oldVal, value);
 
                                     if (netSerializeEnabled) {
-                                        if (!_.isFinite(value)) DEBUGGER();
-                                        this.netUpdateOwnerArr.push(propKey);
-                                        this.netUpdateOwnerArr.push(value);
+                                        this.pushNetUpdateEvt(propKey, value, true);
                                     }
                                 },
                     propSet_Net_CB = (value) => {
@@ -108,9 +169,7 @@ define(
                                     callback(oldVal, value);
 
                                     if (netSerializeEnabled) {
-                                        if (!_.isFinite(value)) DEBUGGER();
-                                        this.netUpdateArr.push(propKey);
-                                        this.netUpdateArr.push(value);
+                                        this.pushNetUpdateEvt(propKey, value, false);
                                     }
                                 },
                     propSet_Own_Net = (value) => {
@@ -119,9 +178,7 @@ define(
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
-                                        if (!_.isFinite(value)) DEBUGGER();
-                                        this.netUpdateOwnerArr.push(propKey);
-                                        this.netUpdateOwnerArr.push(value);
+                                        this.pushNetUpdateEvt(propKey, value, true);
                                     }
                                 },
                     propSet_Net = (value) => {
@@ -130,9 +187,7 @@ define(
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
-                                        if (!_.isFinite(value)) DEBUGGER();
-                                        this.netUpdateArr.push(propKey);
-                                        this.netUpdateArr.push(value);
+                                        this.pushNetUpdateEvt(propKey, value, false);
                                     }
                                 },
                     propSet_CB = (value) => {
@@ -370,6 +425,12 @@ define(
                         deathData.advocate = advocate.id;
                     }
 
+                    // Before dying we need to flush out any netSerialize updates
+                    this.flushNetUpdate(false);
+                    if (this.isPlayer) {
+                        this.flushNetUpdate(true);
+                    }
+
                     this.entity.page.broadcast(EVT_DIED, deathData);
                 }
 
@@ -421,6 +482,17 @@ define(
                 this.doHook('respawned').post();
             };
 
+            // FIXME: See scripts/game.js for why we have to respawning -> respawned -> page.addEntity; need to fix that
+            // up so that we can addEntity inside of respawned, then get rid of this hacky shit
+            this.registerHook('finishedRespawn');
+            this.finishedRespawn = () => {
+                if (!this.doHook('finishedRespawn').pre()) return;
+
+                this.Log("Finished Respawned");
+
+                this.doHook('finishedRespawn').post();
+            };
+
 
             // Note whenver the character has moved to a new tile
             this.registerHook('moved');
@@ -440,12 +512,43 @@ define(
                 this.doHook('moved').post();
             });
 
-            this.listenTo(this.entity, EVT_ZONE_OUT, () => {
+            this.listenTo(this.entity, EVT_ZONE_OUT, (movable, oldArea, oldPage, area, page) => {
                 this.triggerEvent(EVT_ZONE_OUT);
+
+                if (Env.isServer) {
+                    // Entity has zoned to another page, and since netSerialize updates are specific to each page then
+                    // we need to flush all of our netUpdate events to the page
+                    this.flushNetUpdate(false, oldPage);
+                    if (this.isPlayer) {
+                        this.flushNetUpdate(true, oldPage);
+                    }
+                }
             });
 
             this.listenTo(this.entity, EVT_UNLOADED, () => {
                 this.triggerEvent(EVT_UNLOADED);
+
+                // Triggers when player disconnects
+                if (Env.isServer) {
+                    // Entity has zoned to another page, and since netSerialize updates are specific to each page then
+                    // we need to flush all of our netUpdate events to the page
+                    this.flushNetUpdate(false);
+                    if (this.isPlayer) {
+                        this.flushNetUpdate(true);
+                    }
+                }
+            });
+
+            this.listenTo(this.entity, EVT_ZONE, (movable, oldPage, newPage) => {
+
+                if (Env.isServer) {
+                    // Entity has zoned to another page, and since netSerialize updates are specific to each page then
+                    // we need to flush all of our netUpdate events to the page
+                    this.flushNetUpdate(false, oldPage);
+                    if (this.isPlayer) {
+                        this.flushNetUpdate(true, oldPage);
+                    }
+                }
             });
 
 
@@ -502,27 +605,9 @@ define(
                     }
 
                     if (Env.isServer) {
-                        if (this.netUpdateArr.length) {
-                            // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateArr
-                            this.entity.page.broadcast(EVT_NETSERIALIZE, {
-                                serialize: this.netUpdateArr,
-                                entityId: _character.entity.id,
-                                page: _character.entity.page.index
-                            });
-
-                            this.netUpdateArr = [];
-                        }
-
-                        if (this.isPlayer && this.netUpdateOwnerArr.length) {
-                            // NOTE: This should ONLY ever hit for server; clients should never be filling netUpdateOwnerArr
-
-                            this.entity.player.send(EVT_NETSERIALIZE_OWNER, {
-                                serialize: this.netUpdateOwnerArr,
-                                entityId: _character.entity.id,
-                                page: _character.entity.page.index
-                            });
-
-                            this.netUpdateOwnerArr = [];
+                        this.flushNetUpdate(false);
+                        if (this.isPlayer) {
+                            this.flushNetUpdate(true);
                         }
                     }
                 });

@@ -27,6 +27,7 @@ define(
             this.onSomeEvent           = function() {};
 
             this.pages                 = { }; // Visible pages
+            this.stalePages            = [];
 
             this.queuedDisconnect      = false;
             this.timeToDisconnect      = null;
@@ -92,7 +93,8 @@ define(
                         {
                             teleport: true,
                             page: pageId,
-                            tile: tile
+                            tile: tile,
+                            frameId: The.frameEvtId
                         };
                     this.client.send(JSON.stringify(teleport));
                 });
@@ -110,6 +112,7 @@ define(
                         }
                     }
 
+                    const oldPageList      = this.pages;
                     this.movable.page      = page;
                     this.pages             = {};
                     this.pages[page.index] = page;
@@ -122,7 +125,8 @@ define(
                             {
                                 zone: true,
                                 page: page.index,
-                                pages: {}
+                                pages: {},
+                                frameId: The.frameEvtId
                             };
 
                         if (!oldNeighbours[page.index]) {
@@ -152,6 +156,7 @@ define(
                         this.client.send(JSON.stringify(initialization));
                     }
 
+                    this.changedPages(oldPageList);
                     this.Log(`Player ${this.movable.id} has pages: ${Object.keys(this.pages)}`, LOG_DEBUG);
                 });
 
@@ -180,7 +185,8 @@ define(
                                 position: this.movable.position,
                                 page: this.movable.page.index
                             },
-                            pages: {}
+                            pages: {},
+                            frameId: The.frameEvtId
                         };
 
                         initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
@@ -197,6 +203,20 @@ define(
                 });
 
                 return true;
+            };
+
+            this.changedPages = (oldPages) => {
+                // FIXME: This won't work if we add the same page multiple times (ie. zone multiple times,
+                // losing/adding/losing this page again in one event frame)
+                for (const oldPageId in oldPages) {
+                    const oldPage = oldPages[oldPageId];
+                    if (!_.find(this.pages, oldPage)) {
+                        this.stalePages.push({
+                            page: oldPage,
+                            evtCursor: oldPage.eventsBuffer.length
+                        });
+                    }
+                };
             };
 
             this.respawn = () => {
@@ -229,7 +249,8 @@ define(
                                 page: this.movable.page.index,
                                 _character: this.movable.character.netSerialize(true)
                             },
-                            pages: {}
+                            pages: {},
+                            frameId: The.frameEvtId
                         };
 
                     initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
@@ -523,7 +544,8 @@ define(
                                     areaHeight: area.area.properties.height,
                                     tilesets: area.area.properties.tilesets
                                 },
-                                pages: {}
+                                pages: {},
+                                frameId: The.frameEvtId
                             };
 
                         initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
@@ -596,7 +618,8 @@ define(
                 if (this.isConnected) {
                     this.client.send(JSON.stringify({
                         evtType: evt,
-                        data: args
+                        data: args,
+                        frameId: The.frameEvtId
                     }));
                 }
             };

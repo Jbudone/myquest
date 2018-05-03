@@ -50,7 +50,8 @@ define(
 
                     this.eventsBuffer.push({
                         evtType: EVT_ADDED_ENTITY,
-                        entity: ent
+                        entity: ent,
+                        frameId: (++The.frameEvtId)
                     });
 
 
@@ -159,7 +160,8 @@ define(
 
                         this.eventsBuffer.push({
                             evtType: EVT_PATH_PARTIAL_PROGRESS,
-                            data
+                            data,
+                            frameId: (++The.frameEvtId)
                         });
                     });
 
@@ -191,7 +193,8 @@ define(
 
                         this.eventsBuffer.push({
                             evtType: EVT_CANCELLED_PATH,
-                            data
+                            data,
+                            frameId: (++The.frameEvtId)
                         });
 
                         this.Log(`Entity [${entity.id}] cancelling Path {${path.id}, ${path.flag}}`, LOG_DEBUG);
@@ -204,7 +207,8 @@ define(
 
                     this.eventsBuffer.push({
                         evtType: EVT_REMOVED_ENTITY,
-                        entity: { id: entity.id }
+                        entity: { id: entity.id },
+                        frameId: (++The.frameEvtId)
                     });
                 });
             },
@@ -249,7 +253,8 @@ define(
             broadcast(evtID, args) {
                 this.eventsBuffer.push({
                     evtType: evtID,
-                    data: args
+                    data: args,
+                    frameId: (++The.frameEvtId)
                 });
             },
 

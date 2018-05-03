@@ -14,6 +14,16 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.requestsId        = 0;
         this.requests          = []; // Requests sent to server
 
+        // Don't process events until we begin initializing the server handler.
+        // NOTE: We override this in client/game, so just need to pass messages that take us as far as there
+        this.shouldQueueMessage     = function(evt){
+            if (evt.login || evt.newCharacter || evt.initialization) return false;
+            return true;
+        };
+
+        window.handledEvents       = new Array(10); // Array of events that have been passed to handleEvent (for debugging purposes)
+        window.handledEventsCursor = 0;
+
         // We could receive multiple related events in the same frame, but require them to be processed in order (eg.
         // NetSerialize a character's health going below 0, resulting in death, before receiving the death event). This
         // allows us to handle high priority events first, and then go through the remaining events afterwards. Its
@@ -45,6 +55,10 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                 this.handleEvent = (evt) => {
 
+                    // Push event to list of handled events (circular array)
+                    window.handledEventsCursor = (window.handledEventsCursor + 1) % window.handledEvents.length;
+                    window.handledEvents[window.handledEventsCursor] = evt;
+
                     // TODO: form server as an FSM, since we can expect newCharacter or login first; and then area
                     // initialization responses next, and then area related events. Move from one state of responses to
                     // the next
@@ -56,54 +70,36 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         else             this.onLoginFailed();
                     } else if (evt.initialization) {
                         this.onInitialization( evt );
+                    } else if (evt.evtType === EVT_END_OF_FRAME) {
+                        // All events that we've queued up this frame are ready to be processed
+                        if (this.queuedEvents.length > 0) {
+                            this.processQueuedEvents();
+                        }
                     } else if (evt.events) {
-                        const page = parseInt(evt.page, 10),
-                            buffer = JSON.parse(evt.events),
-                            events = buffer.events;
 
-                        // Reorder events so that high priority events are processed first
-                        for (let i = 0; i < events.length; ++i) {
-                            const event = JSON.parse(events[i]),
-                                evtType = event.evtType;
+                        // Pre-parse page events
+                        const pageEvents     = JSON.parse(evt.events),
+                            parsedPageEvents = [];
 
-                            if (this.highPriorityEvents.indexOf(evtType) > -1) {
-                                events.unshift(events[i]);
-                                events.splice(i + 1, 1);
-                            }
+                        for (let i = 0; i < pageEvents.events.length; ++i) {
+                            const pageEvent = JSON.parse(pageEvents.events[i]);
+                            parsedPageEvents.push(pageEvent);
                         }
 
-                        for (let i = 0; i < events.length; ++i) {
-                            const event = JSON.parse(events[i]),
-                                evtType = event.evtType;
+                        evt.page   = parseInt(evt.page, 10);
+                        evt.events = parsedPageEvents;
 
-                            if (evtType == EVT_ADDED_ENTITY) this.onEntityAdded( page, event.entity );
-                            else if (evtType == EVT_REMOVED_ENTITY) this.onEntityRemoved( page, event.entity );
-                            else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
-                            else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
-                            else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
-                            else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
-                            else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
-                            else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
-                            else {
-                                const dynamicHandler = this.handler(evtType);
-                                if (dynamicHandler) {
-                                    dynamicHandler.call(event, event.data);
-                                } else {
-                                    this.Log("Unknown event received from server", LOG_ERROR);
-                                    this.Log(evt, LOG_ERROR);
-                                }
-                            }
-                        }
+                        this.queueEvt(evt);
                     } else if (evt.zone) {
-                        this.onZone( evt.page, evt.pages, evt.pageList );
+                        this.queueEvt(evt);
                     } else if (evt.teleport) {
-                        this.onTeleported( evt.page, evt.tile );
+                        this.queueEvt(evt);
                     } else if (evt.zoneArea) {
-                        this.onLoadedArea( evt.area, evt.pages, evt.player );
+                        this.queueEvt(evt);
                     } else if (evt.respawn) {
-                        this.onRespawn( evt.area, evt.pages, evt.player );
+                        this.queueEvt(evt);
                     } else if (evt.id) {
-                        // INTENTIONALLY BLANK (success/fail response to request)
+                        // FIXME: Should this be queued? If so we'll need to tag a frameId on it
                         let event = null;
                         for (let j = 0; j < this.requestBuffer.archives.length; ++j) {
                             const archive = this.requestBuffer.archives[j];
@@ -123,6 +119,9 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             this.Log("Error finding event in which to respond", LOG_ERROR);
                             this.Log(evt, LOG_ERROR);
                         }
+                    } else if (evt.evtType === EVT_NETSERIALIZE_OWNER) {
+                        // Need to sort this into pageEvent
+                        this.queueEvt(evt);
                     } else {
                         const dynamicHandler = this.handler(evt.evtType);
                         if (dynamicHandler) {
@@ -147,6 +146,222 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     for (let i = 0; i < buffer; ++i) {
                         this.handleMessage(buffer[i]);
                     };
+                };
+
+                this.processQueuedEvents = () => {
+
+                    // Special Case Handling
+                    // Sort EVT_NETSERIALIZE_OWNER into its pageEvents
+                    // Unfortunately we can't send these along with the page since this is sent specifically to the
+                    // owner. So look for any NETSERIALIZE_OWNER events and sort them into pageEvents for the specific
+                    // page; if we haven't received any events for that page then just create one
+                    const netSerializeOwnerList = [];
+                    for (let i = 0; i < this.queuedEvents.length;) {
+                        const queuedEvent = this.queuedEvents[i];
+                        if (queuedEvent.evtType === EVT_NETSERIALIZE_OWNER) {
+                            this.queuedEvents.splice(i, 1);
+                            netSerializeOwnerList.push(queuedEvent);
+                            continue;
+                        }
+
+                        ++i;
+                    };
+
+                    for (let i = 0; i < netSerializeOwnerList.length; ++i) {
+                        // Find the pageEvents on the page where this netSerialize occurred
+                        const netSerialize = netSerializeOwnerList[i];
+                        let pageEvents = this.queuedEvents.find((queuedEvent) => queuedEvent.events && queuedEvent.page === netSerialize.data.page);
+
+                        if (!pageEvents) {
+                            pageEvents = {
+                                page: netSerialize.data.page,
+                                events: [],
+                                evtType: EVT_PAGE_EVENTS
+                            };
+                            this.queuedEvents.push(pageEvents);
+                        }
+
+                        pageEvents.events.push(netSerialize);
+                    }
+
+                    // Re-order all queued events
+                    const frameEvents = [],
+                        queuedEvents = this.queuedEvents;
+                    this.queuedEvents = [];
+                    queuedEvents.forEach((queuedEvent) => {
+
+                        if (queuedEvent.events) {
+
+                            // Page events
+                            const page = queuedEvent.page,
+                                events = queuedEvent.events;
+
+                            // Is this event from a stale page? We only want to process events from [0, evtCursor],
+                            // that's the point which we removed that page and no longer need it
+                            if (queuedEvent.evtCursor) {
+                                events = events.slice(0, queuedEvent.evtCursor);
+                            }
+
+                            // Reorder events in order w/ netSerialize event offsets
+                            const reorderedEvents   = [],
+                                netSerializeOffsets = [];
+                            for (let i = 0; i < events.length; ++i) {
+                                const event = events[i];
+
+                                if (event.evtType === EVT_NETSERIALIZE || event.evtType === EVT_NETSERIALIZE_OWNER) {
+
+                                    // NetSerialize could be split into parts; loop through serialize data and order onto
+                                    // entityNetSerialize as separate netSerialize events
+                                    const serialized = event.data.serialize;
+                                    const entityNetSerialize = [];
+                                    let offset = 0;
+                                    if (serialized[0] >= 0) {
+                                        entityNetSerialize[offset] = {
+                                            evtType: event.evtType,
+                                            data: {
+                                                serialize: [],
+                                                entityId: event.data.entityId,
+                                                page: event.data.page
+                                            }
+                                        };
+                                    }
+                                    for (let j = 0; j < serialized.length; ++j) {
+                                        if (serialized[j] < 0) {
+                                            // Offset by this amount
+                                            offset += serialized[j] * -1;
+                                            entityNetSerialize[offset] = {
+                                                evtType: event.evtType,
+                                                data: {
+                                                    serialize: [],
+                                                    entityId: event.data.entityId,
+                                                    page: event.data.page
+                                                }
+                                            };
+                                        } else {
+                                            entityNetSerialize[offset].data.serialize.push(serialized[j]);
+                                            entityNetSerialize[offset].data.serialize.push(serialized[++j]);
+                                        }
+                                    }
+
+                                    // Push each set of netSerializes onto global netSerializeOffsets
+                                    for (let j = 0; j < entityNetSerialize.length; ++j) {
+                                        if (!entityNetSerialize[j]) continue;
+                                        let netSerialize = entityNetSerialize[j];
+                                        if (!netSerializeOffsets[j]) netSerializeOffsets[j] = [];
+                                        netSerializeOffsets[j].push(netSerialize);
+
+                                        // This event happened earlier, we've passed it already. Splice it into
+                                        // reorderedEvents right now
+                                        if (j < i) {
+                                            reorderedEvents.splice(j, 0, netSerialize);
+                                        }
+                                    }
+                                } else {
+                                    reorderedEvents.push(event);
+                                }
+
+                                // Do we have any netSerialize events for the next order id? Push those before we get to the
+                                // next event
+                                if (netSerializeOffsets[i]) {
+                                    for (let j = 0; j < netSerializeOffsets[i].length; ++j) {
+                                        let netSerializesForOffset = netSerializeOffsets[i][j];
+                                        for (let k = 0; k < netSerializesForOffset.length; ++k) {
+                                            reorderedEvents.push(netSerializesForOffset[k]);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add remaining netSerializeOffsets
+                            for (let i = events.length; i < netSerializeOffsets.length; ++i) {
+                                if (!netSerializeOffsets[i]) continue;
+                                for (let j = 0; j < netSerializeOffsets[i].length; ++j) {
+                                    let netSerializesForOffset = netSerializeOffsets[i][j];
+                                    for (let k = 0; k < netSerializesForOffset.length; ++k) {
+                                        reorderedEvents.push(netSerializesForOffset[k]);
+                                    }
+                                }
+                            }
+
+                            // Order page events into frameEvents
+                            for (let i = 0; i < reorderedEvents.length; ++i) {
+                                let event      = reorderedEvents[i],
+                                    frameEvtId = event.frameId;
+
+                                let indexOfNextEvt = frameEvents.length;
+                                for (let j = 0; j < frameEvents.length; ++j) {
+                                    if (frameEvents[j].frameId > frameEvtId) {
+                                        indexOfNextEvt = j;
+                                        break;
+                                    }
+                                }
+
+                                event.page = page;
+                                frameEvents.splice(indexOfNextEvt, 0, {
+                                    frameId: event.frameId,
+                                    pageEvent: event
+                                });
+                            }
+                        } else {
+
+                            const frameEvtId = queuedEvent.frameId;
+                            let indexOfNextEvt = frameEvents.length;
+                            for (let j = 0; j < frameEvents.length; ++j) {
+                                if (frameEvents[j].frameId > frameEvtId) {
+                                    indexOfNextEvt = j;
+                                    break;
+                                }
+                            }
+
+                            frameEvents.splice(indexOfNextEvt, 0, queuedEvent);
+                        }
+                    });
+
+                    // Process all re-ordered events from this frame
+                    for (let i = 0; i < frameEvents.length; ++i) {
+                        const evt   = frameEvents[i];
+
+                        if (evt.pageEvent) {
+
+                            const event = evt.pageEvent,
+                                page    = event.page,
+                                evtType = event.evtType;
+
+                            if (evtType == EVT_ADDED_ENTITY) this.onEntityAdded( page, event.entity );
+                            else if (evtType == EVT_REMOVED_ENTITY) this.onEntityRemoved( page, event.entity );
+                            else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
+                            else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
+                            else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
+                            else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
+                            else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
+                            else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
+                            else {
+                                const dynamicHandler = this.handler(evtType);
+                                if (dynamicHandler) {
+                                    dynamicHandler.call(event, event.data);
+                                } else {
+                                    this.Log("Unknown event received from server", LOG_ERROR);
+                                    this.Log(event, LOG_ERROR);
+                                }
+                            }
+                        } else if (evt.zone) {
+                            this.onZone( evt.page, evt.pages, evt.pageList );
+                        } else if (evt.teleport) {
+                            this.onTeleported( evt.page, evt.tile );
+                        } else if (evt.zoneArea) {
+                            this.onLoadedArea( evt.area, evt.pages, evt.player );
+                        } else if (evt.respawn) {
+                            this.onRespawn( evt.area, evt.pages, evt.player );
+                        } else {
+                            assert(false, "Unexpected frame event type");
+                        }
+                    }
+                };
+
+                // These events will be appended to the next set of 
+                this.queuedEvents = []; // All queued events for this frame
+                this.queueEvt = (evt) => {
+                    this.queuedEvents.push(evt);
                 };
 
                 this.handleMessage = (msg) => {
@@ -210,7 +425,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityTeleport       = function(){};
         this.onTeleported           = function(){};
 
-        this.shouldQueueMessage     = function(){ return false; };
 
 
         this.login = (username, password) => {

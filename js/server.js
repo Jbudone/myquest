@@ -563,6 +563,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const stepTimer         = 100; // TODO: Is this the best step timer?
                             let lastTime            = now(),
                                 timeToBackupPlayers = Env.game.periodicBackupTime; // Time to backup the players? (done periodically)
+                            The.frameEvtId = 0;
                             const step = () => {
 
 
@@ -687,6 +688,33 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         }
                                     });
 
+                                    // Send pages to the player that he had in the last frame. This way the client can
+                                    // process any remaining events that happened in that page before they had left.
+                                    // This could be necessary for, say, NetSerialize that happened on that page, and
+                                    // then the character happened to zone with us so we need to load its changes
+                                    _.each(player.stalePages, (pageDetails) => {
+
+                                        const areaID = pageDetails.page.area.id,
+                                            pageID   = pageDetails.page.index;
+                                        if (eventsBuffer[areaID] && eventsBuffer[areaID][pageID]) {
+                                            client.send(JSON.stringify({
+                                                evtType: EVT_PAGE_EVENTS,
+                                                page: pageID,
+                                                events: eventsBuffer[areaID][pageID],
+                                                evtCursor: pageDetails.evtCursor
+                                            }));
+                                        }
+                                    });
+
+                                    player.stalePages = [];
+
+                                    // Need to tell the client that we've finished sending all of their page events
+                                    // over. This allows the user wait until the end of frame event is sent over before
+                                    // re-ordering and process all events in order
+                                    client.send(JSON.stringify({
+                                        evtType: EVT_END_OF_FRAME
+                                    }));
+
                                     // FIXME: find a better protocol for this.. need to send the player the last updates
                                     // from the page since they died, but need to immediately remove players pages
                                     // afterwards
@@ -698,6 +726,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 if (timeToBackupPlayers <= 0.0) {
                                     timeToBackupPlayers = Env.game.periodicBackupTime;
                                 }
+
+                                The.frameEvtId = 0;
                             };
 
                             step();

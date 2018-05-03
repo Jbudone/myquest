@@ -362,6 +362,8 @@ define(
                                     if (character.isPlayer) {
                                         character.entity.player.respawn();
                                     }
+
+                                    character.finishedRespawn();
                                 }
                             }
                         }

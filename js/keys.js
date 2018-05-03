@@ -99,6 +99,7 @@ define(function(){
 	addKey('EVT_REMOVED_ENTITY');
 	addKey('EVT_DISCONNECTED');
 	addKey('EVT_ZONE_OUT');
+	addKey('EVT_END_OF_FRAME');
 
 	addKey('EVT_DAMAGED');
 	addKey('EVT_REROUTING');
