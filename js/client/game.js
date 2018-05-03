@@ -595,7 +595,7 @@ define(
                             // NOTE: This includes if its our current path
                             moveToCancelledPosition = false;
                             if (!entity.hasHadPath({ id: event.path.id, flag: event.path.flag }) ||
-                                (entity.path.id === pathId && entity.path.flag === pathFlag)) {
+                                (entity.path && entity.path.id === pathId && entity.path.flag === pathFlag)) {
                                 // Either we haven't added this path yet (which means it was created/cancelled on the
                                 // server), or its our current path which has been cancelled. In either case this is new
                                 // information and we need to catch up to the server's current position
