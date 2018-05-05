@@ -334,15 +334,8 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         };
 
         const stareAwkwardlyAt = (path) => {
-            const watcher = chokidar.watch(path, {
-                persistent: true,
-                atomic: true,
-                awaitWriteFinish: true,
-                usePolling: true,
-                interval: 100
-            });
-            watcher.on('change', (path, stats) => {
-                console.log(`${chalk.yellow('>> ')} "${path}" changed.`);
+
+            let cb = (eventType, path) => {
 
                 const queued = {
                         path: path,
@@ -368,11 +361,40 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 }
 
                 processQueueItem(queued);
-            })
-            .on('error', error => console.log(`Watcher error: ${error}`))
-            .on('ready', () => console.log('Initial scan complete. Ready for changes'))
-            .on('raw', (event, path, details) => {
-                console.log('Raw event info:', event, path, details);
+            };
+
+            glob(path, {}, function (er, files) {
+                if (files) {
+                    for (let i = 0; i < files.length; ++i) {
+                        console.log(`Watching: ${chalk.blue(files[i])}`);
+                        beginWatch = (path) => {
+                            try {
+                                let watcher = fs.watch(path, {
+                                    persistent: true
+                                }, (eventType, filename) => {
+                                    //console.log(eventType);
+                                    if (eventType === "rename") {
+                                        return;
+                                    }
+                                    console.log(`${chalk.yellow('>> ')} ${chalk.blue(path)} changed: ${eventType}`);
+                                    watcher.close();
+                                    cb(eventType, path);
+                                    console.log(`Rewatching: ${chalk.blue(path)}`);
+                                    beginWatch(path);
+                                });
+                            } catch(e) {
+                                console.error(e);
+
+                                // Wait until file is back
+                                setTimeout(() => {
+                                    beginWatch(path);
+                                }, 100);
+                            }
+                        };
+
+                        beginWatch(files[i]);
+                    }
+                }
             });
         };
 
