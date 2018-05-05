@@ -196,6 +196,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 									};
 									Log("Loading script: "+script);
 									require(["scripts/"+script], function(component){
+                                        assert(component, "Couldn't find script component?");
 										--scriptsToLoad;
 										Log("Loaded script: "+this.file+" waiting on "+scriptsToLoad+" more..");
 										this.container[this.name] = component;
