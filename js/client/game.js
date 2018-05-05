@@ -473,6 +473,17 @@ define(
                             return;
                         }
 
+                        // Since we retain entities even after they leave our PVS, we could run into a situation where a
+                        // player leaves our PVS, disconnects, then connects back and enters our PVS again. In this case
+                        // they have a new movable ID, but should still have the same playerID
+                        if (addedEntity.playerID) {
+                            let stalePlayer = _.find(The.area.movables, (m) => m.playerID === addedEntity.playerID);
+                            if (stalePlayer !== undefined) {
+                                this.Log(`Removing Entity: ${stalePlayer.id}`, LOG_DEBUG);
+                                The.area.removeEntity(stalePlayer);
+                            }
+                        }
+
                         const entity = new Movable(addedEntity.spriteID, The.area.pages[page], { id: addedEntity.id });
 
                         // Copy over entity properties
@@ -488,6 +499,10 @@ define(
 
                         if (addedEntity.name) {
                             entity.name = addedEntity.name;
+                        }
+
+                        if (addedEntity.playerID) {
+                            entity.playerID = addedEntity.playerID;
                         }
 
                         // Add path if necessary
