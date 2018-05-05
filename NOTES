@@ -459,23 +459,23 @@ WORKING ON (was previously working on)
     - Add character template, buffs, etc. to autoreload
     - Validate JSON on startup: validate all JSON data files on startup to ensure we don't run into unexpected issues
 *   - Combat feel:
-        - enemy runs to you before you've reached them, so you are both out of place
-            Attacking enemy: Enemy should anticipate that you're about to attack them, and wait instead of aggro
-            Not attacking enemy: If you pass by an enemy and go into aggro range -- ???
-        - takes a while to autoattack enemy
+		- Running towards enemy, they start running towards you, then realize that you're in range and need to move back to center
+            - If we have a target who's moving towards us, then stand still OR only move to the next tile if we think we can make it there before they get there?  This helps with cases where they may not be attacking us, just walking within our aggro range
         - damage feels too late: you get hit at the same time that you kill the enemy?
         - Animation go back to first idle pos in between hits?
         - Animation: Can we anticipate attacks and begin anim early?
+		- Initial attack (anim issues):
+		  	- We receive attack events before entity finishes walking locally
+			  	- Could we queue anim? No because its repeating....although what if we stop the walk anim?   This may look weird that our health changes BEFORE the animation runs
+				- We could force the attack anim (higher priority), which would look like attacking while floating/moving
     - Reloading npcs:
         - We *CANNOT* cache values from old npcs, or npcs in general, otherwise we keep a stale npcs
         - brain/components/etc. of character need to have an initializeNPC routine (find a suitable name!) that runs on startup and when we reload NPCs
     - Add all media assets (tilesheets, spritesheets, sounds, images), maybe even all assets entirely? to a global assets list for quick lookup
 	- Look into media storage for git for dist/  (eg. git-lfs); worth it?
-    - ResourceBuilder integrate w/ Grunt
-    - Grunt cleanup output so its easier to see files/packages that actually changed
-    - Colour NPC names based off of their level difference
+*   - Colour NPC names based off of their level difference
     - Players need to start with some piece of armor (at least 1 AC) and already worn
-    - canLoseItems for level: cannot lose items < level 5
+*   - canLoseItems for level: cannot lose items < level 5
     - Character Template: run sequential commands (either server or client) -- to start out as level 1 and run /level_up  so that we don't have to create a character template for each level (accumulating stat gains for each level!);  /reload_level  to go back to level 1 and /level_up until we hit the same level? Otherwise we could have /reset_to_level 
     - Command: Set spawn point  (sets it to where you're standing if no coords given)
     - Command: God mode
@@ -495,9 +495,11 @@ WORKING ON (was previously working on)
 *   - Fix running on server vs. local (root directories, etc.)
 *   - BUG: avatars.json somehow messed up (bat/bunnyrat were swapped)
 *   - Fix: easy way to switch between environment testingLocal
-*   - BUG: cancelPath w/ no path (also happened for player when you're alive -- see screenshot in ~/Pictures)
+*   - BUG: cancelPath w/ no path (also happened for player when you're alive -- see screenshot in ~/Pictures) -- Should only be an issue for current player, but probably not an actual issue? (Just need to check if we don't currently have a path, and handle accordingly)
 *   - Setup server to automatically restart (new server instance) BUT leave the old one running for debugger? -- runserver can check processes to see how many node servers are running (likely paused) and start another one if possible; can current node process disconnect from bash script in some way to allow it to realize its disconnected? Otherwise do we need to use some communication medium, or even have the server touch a file when its either about to shutdown OR waiting for inspector
 *   - BUG: 2 users login next to each other, 1st user won't see 2nd user login
+			- Is this due to server having 2nd character already in game, sends 1st player all movables (including 2nd player), this while the 2nd player is somewhere in the process of disconnecting and loads in
+			- Possibly due to handling events before we've initialized our client (callbacks for EVT_REMOVED_ENTITY, etc.)
 *   - BUG: One user levels up, other user hears levelUp ding
 *   - BUG: One user waiting in page, other user continuously refreshes to load back in, at one point the 1st user witnesses two copies of the same 2nd player (2 separate entities!)
 *   - BUG: Form autofill doesn't work?
@@ -510,6 +512,35 @@ WORKING ON (was previously working on)
         - server: git pull js/ directory, possibly other directories, NOT tools/ ; update permissions ; run fuckingtaskrunner
         - web: same as above?
         - script to ssh into server + web and run the above deploy commands? watch for errors and halt if there's an issue
+*   - fuckingtaskrunner running out of memory....why?
+*	- BUG: Have a goblin chasing you while you /suicide while running, hit onEntityCancelledPath w/ no path on entity
+*	- FIXME: Netcode rework
+			-- CHECK: Dynamic Handler (outside of page): Is this a thing? If there's an evtid associated w/ it then queue for frame (not always necessary, eg. chat); player.registerHandler ==> wrap this in some way to add event if necessary
+			-- CHECK: requests -- Do these need to be queued?
+			-- CHECK: Zone out / respawn into a different page, where the page indices are the same where you were before; could this be an issue for handling events from stale pages? Stale pages could probably also send an area id
+			- Requests/DynamicHandlers need frameId
+			- BUG: Died (from buff deactivating -- 44dmg), handled EVT_DIED on character (removed self from area) then NETSERIALIZE for self (same area)
+			  	- Not sure if we handled respawn, but it didn't seem like it -- if we got respawn then maybe we respawned -> handled evt_died afterwards (stale page? bad cursor?) -> didn't receive EVT_ADD_ENTITY?
+				  1) Receive respawn (on same page)   (frameId: 5)
+				  2) Receive DeathSickness            (frameId: 6)
+				  3) Receive PageEvents:
+				  		- EVT_DAMAGED                 (frameId: 1)
+						- EVT_NETSERIALIZE            (frameId: 2)
+						- EVT_DIED                    (frameId: 3)
+						- EVT_REGENERATE              (frameId: 4)
+				  4) Receive FRAME_END
+
+				- NOTE: I *think* we're handling everything in order, just that we haven't created the character yet. Check where we're creating character, maybe its worth it to createCHaracter sooner? (on respawn)
+				  	- 1) Need to halt processingQueue part way through (after respawn/zone/etc.) (probably done already in client/game?); buffer remaining events, and process leftover queue; NOTE: Need to purge remaining stale page events that happen AFTER respawn/zone/etc.
+			- TODO: (later) ALL messages need to be handled in order, and possibly together. This includes zone/respawn stuff (ie. handle stale pages, then zone/respawn, then current page events starting from cursor when zoned/respawned there)
+			-- DOCS for NetCode stuff
+*	- BUG: Checking for inspector when already connected
+	- FIXME: Get rid of finishedRespawning (see scripts/game.js); need to add entity to page within respawned, or move that to part of respawning
+	- FIXME: Manually deleting a file doesn't trigger fuckingtaskrunner to rebuild on next init
+	- FIXME: Look into server/player.js changedPages -- if we add the same stale page multiple times; at least assert this or something
+	- Start smoke tests again & run continuously
+	  	- Fix bots
+		- Bots -> Inspector; kill other bots
 
 
 	- Browser Debugging Snippets
@@ -1243,6 +1274,7 @@ DB
 	* The component file is only loaded once, so cannot use SCRIPTINJECT (otherwise we hold onto stale vars and prolong their lifetime)
 	* Be careful with serializing/restoring extra information on client, since if the character dies we netRestore and lose all local data
 	* Make sure to unload
+	* firstTimeSetup override this if you expect some default values for new player/character
 
 ====== Functions
 

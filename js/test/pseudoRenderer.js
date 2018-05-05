@@ -28,6 +28,9 @@ define(['loggable'], function(Loggable){
 		this.setArea = function(area){ };
 
 		this.initialize = function(options){ };
+        this.step = function() { };
+        this.resume = function() { };
+        this.updatePages = function() { };
 
 		this.sheetFromGID = function(gid){ };
 

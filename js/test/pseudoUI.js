@@ -68,7 +68,10 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
 		this.fadeIn = function(){ };
 
+        this.updateUserLevel = function(){ };
 
+        this.getEffects = function(){ };
+        this.resume = function(){ };
 
 
 

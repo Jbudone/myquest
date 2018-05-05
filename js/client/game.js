@@ -1251,6 +1251,7 @@ define(
                         });
 
                         callbackWhenReady(() => {
+                            server.processQueuedEvents();
                             server.runBufferedMessages();
                         });
 

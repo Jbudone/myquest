@@ -67,9 +67,12 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         cluster   = require('cluster'),
         spawn     = require('child_process').spawn;
 
-var jsdom = require('jsdom').jsdom;
- var document = jsdom('<html></html>', {});
- var window = document.defaultView;
+var jsdom = require('jsdom');
+var { JSDOM } = jsdom;
+ var DOM = new JSDOM('<body></body>', {});
+ var window = DOM.window;
+ var document = window.document;
+ //var window = document.defaultView;
  const $ = require('jquery')(window);
     //const $ = require('jquery')(require("jsdom").jsdom().parentWindow);
 
@@ -116,7 +119,7 @@ var jsdom = require('jsdom').jsdom;
 
     const prepareForTesting = () => {
 
-        const testPath = 'data/tests/testFile.json';
+        const testPath = 'resources/tests/testFile.json';
 
         var activeBots = [],
             activeTest = null;
@@ -305,7 +308,7 @@ var jsdom = require('jsdom').jsdom;
                 console.log("Loading next test: " + test);
                 activeTest = test;
                 testRunning = true;
-                const Smoke = require('../data/tests/' + test);
+                const Smoke = require('../../resources/tests/' + test);
 
                 Smoke.onCompleted(() => {
 

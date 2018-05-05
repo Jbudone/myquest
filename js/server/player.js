@@ -343,6 +343,8 @@ define(
                                     y: movableState.position.tile.y }
                             }
                         };
+                        response.frameId = The.frameEvtId;
+
                         this.client.send(response.serialize());
                     }
                     return;
@@ -371,6 +373,7 @@ define(
                                 y: movableState.position.tile.y }
                         }
                         };
+                        response.frameId = The.frameEvtId;
                         this.client.send(response.serialize());
                     }
                     return;
@@ -394,6 +397,7 @@ define(
                     if (this.isConnected) {
                         const response = new Response(action.id);
                         response.success = true;
+                        response.frameId = The.frameEvtId;
                         this.client.send(response.serialize());
                     }
                 } else {
@@ -416,6 +420,7 @@ define(
                                     y: movableState.position.tile.y }
                             }
                         };
+                        response.frameId = The.frameEvtId;
                         this.client.send(response.serialize());
                     }
                 }
@@ -490,6 +495,7 @@ define(
                                 if (this.isConnected) {
                                     const response   = new Response(evt.id);
                                     response.success = false;
+                                    response.frameId = The.frameEvtId;
                                     this.client.send(response.serialize());
                                 }
                                 return;
@@ -504,7 +510,8 @@ define(
                                     playerID: this.movable.playerID,
                                     id: this.movable.id,
                                     name: this.movable.name,
-                                    _character: savedState.character
+                                    _character: savedState.character,
+                                    frameId: The.frameEvtId
                                 };
                                 response.player._character.init = true; // FIXME: Get rid of this! It would be nice to use netRestore instead (for netInitialize)
                                 this.client.send(response.serialize());
@@ -519,6 +526,7 @@ define(
                                 const response   = new Response(evt.id);
                                 response.success = false;
                                 response.reason  = err;
+                                response.frameId = The.frameEvtId;
                                 this.client.send(response.serialize());
                             }
                         })
@@ -545,7 +553,6 @@ define(
                                     tilesets: area.area.properties.tilesets
                                 },
                                 pages: {},
-                                frameId: The.frameEvtId
                             };
 
                         initialization.pages[page.index] = page.serialize(PAGE_SERIALIZE_BASE | PAGE_SERIALIZE_MOVABLES);
@@ -606,6 +613,7 @@ define(
                 if (this.isConnected) {
                     const response = new Response(id);
                     response.success = success;
+                    response.frameId = The.frameEvtId;
                     if (args) {
                         _.extend(response, args);
                     }

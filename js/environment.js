@@ -76,9 +76,9 @@ define(function(){
 		this.connection = {
 			local: {
                 port:1338,
-                testPort:1339,
+                testPort:1338,
 				websocket: 'ws://127.0.0.1:1338/',
-				websocketTest: 'ws://127.0.0.1:1339/',
+				websocketTest: 'ws://127.0.0.1:1338/',
 				http: (typeof location != "undefined" ? location.origin : 'http://myquest.local'), // NOTE: server doesn't need this
                 resources: 'dist/resources/data/resources.json',
                 resourcesTest: 'dist/resources/data/resources.json',

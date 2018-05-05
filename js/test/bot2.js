@@ -25,10 +25,29 @@ const exitingGame = () => {
 
 let botName = null;
 
+
+GLOBAL.DEBUGGER = (msg) => {
+    if (!msg) msg = 'Debug: ' + (new Error()).stack.split('\n')[2];
+    console.log(msg);
+    waitForInspector();
+};
+
+const waitForInspector = () => {
+
+    const inspector = require('inspector');
+    Log(chalk.red.bold("Waiting for inspector.."));
+    inspector.open(9229, "127.0.0.1", true); // port, host, block
+    debugger;
+};
+
 const errorInGame = (e) => {
 
     console.error("Error in game");
 
+    console.log(e);
+    if (e) {
+        waitForInspector();
+    }
 
     if (global['DumpLog']) DumpLog();
 
@@ -113,6 +132,11 @@ GLOBAL.prettyjson = prettyjson;
 GLOBAL.assert = assert;
 GLOBAL.WebSocket = WebSocket;
 GLOBAL.fs = fs;
+
+GLOBAL.localStorage = (new function(){
+    this.setItem = () => {};
+    this.getItem = () => undefined;
+}());
 
 const Bot = (new function(){
 
@@ -408,7 +432,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 Resources = (new Resources());
                                 window.Resources = Resources;
-                                Resources.initialize(['sheets', 'npcs', 'items', 'interactables', 'scripts']).then((assets) => {
+                                Resources.initialize(['media', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx', 'testing']).then((assets) => {
                                     loaded('resources');
                                 })
                                 .catch((e) => { errorInGame(e); });

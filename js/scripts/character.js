@@ -1122,7 +1122,13 @@ define(
                         const component      = this.charComponents[i],
                             componentName    = entity.npc.components[i],
                             restoreComponent = _character.components[componentName];
-                        component.netInitialize(restoreComponent);
+
+
+                        if (restoreComponent) {
+                            component.netInitialize(restoreComponent);
+                        } else {
+                            component.firstTimeSetup();
+                        }
                     }
 
                     this.initialized = true;
