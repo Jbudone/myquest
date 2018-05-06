@@ -7,7 +7,8 @@ const chokidar = require('chokidar'),
     chalk      = require('chalk');
 
 const Settings = {
-    cacheFile: 'fuckingtaskrunner.json'
+    cacheFile: 'fuckingtaskrunner.json',
+    dontWatch: false
 };
 
 //
@@ -36,6 +37,17 @@ const Settings = {
 //
 //
 
+
+// Process Server arguments
+for (let i=0; i<process.argv.length; ++i) {
+
+    const arg = process.argv[i];
+
+    if (arg === "--dont-watch") {
+        console.log("Only running once (no watching for changes)");
+        Settings.dontWatch = true;
+    }
+}
 
 
 // watch('js/**/*.js').then(lint).then(compile).then((file) => {
@@ -398,8 +410,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             });
         };
 
-        for (let i=0; i<paths.length; ++i) {
-            stareAwkwardlyAt(paths[i]);
+        if (!Settings.dontWatch) {
+            for (let i=0; i<paths.length; ++i) {
+                stareAwkwardlyAt(paths[i]);
+            }
         }
 
         // Find our entire list of files that are being watched
