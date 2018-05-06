@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# TODO
+#  - npm install/update? (what if we change packages.json?)
+#  - get rid of the rm dist/fuckingtaskrunner.json; this is unecessary
+#  - Check Dreamhost password correct before starting
+#  - Turn off server (w/out errors) before starting -- what if there's an inspector waiting though?
+#  - SCP once (seems login is incredibly slow, but actual copying is fast)
+
+printf "Enter the password for Dreamhost: "
+read -s passphrase
+
+
+ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.com << EOF
+  cd myquest
+
+  rm patchserver.out
+  git pull 2>patchserver.out
+
+  # Pull latest
+  if grep -q "error" "patchserver.out"; then
+    echo "ERROR ======"
+    cat patchserver.out
+    echo "============"
+    echo "Aborting Patch.."
+    exit
+  fi
+
+  # Update perms
+  sudo chmod -R 000 tools/
+  chmod +x build-scripts
+  chmod +x emailcrash
+  chmod +x runserver
+
+  # Build game scripts/resources
+  #rm -r dist
+  #rm fuckingtaskrunner.json
+  #mkdir dist
+  #mkdir dist/js
+  #mkdir dist/js/server
+  #mkdir dist/js/server/test
+  #mkdir dist/js/client
+  #mkdir dist/js/client/test
+  #mkdir dist/js/scripts
+  #mkdir dist/js/test
+  #mkdir dist/js/lib
+  node resourceBuilder.js
+  node fuckingtaskrunner.js --dont-watch
+
+  # SCP game to webserver
+  sshpass -p "$passphrase" scp -r dist/ jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
+  sshpass -p "$passphrase" scp -r node_modules/ jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
+  sshpass -p "$passphrase" scp index.html jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
+  sshpass -p "$passphrase" scp styles.css jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
+
+
+  echo "Finished patching"
+EOF

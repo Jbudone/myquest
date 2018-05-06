@@ -72,7 +72,7 @@ define(function(){
             }
 		};
 
-		var testingLocal = true;
+		var testingLocal = false;
 		this.connection = {
 			local: {
                 port:1338,
