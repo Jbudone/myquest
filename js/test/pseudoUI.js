@@ -72,6 +72,7 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
         this.getEffects = function(){ };
         this.resume = function(){ };
+        this.pause = function(){ };
 
 
 

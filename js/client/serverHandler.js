@@ -18,6 +18,27 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         // NOTE: We override this in client/game, so just need to pass messages that take us as far as there
         this.shouldQueueMessage     = function(evt){
             if (evt.login || evt.newCharacter || evt.initialization) return false;
+            
+            // Response to login/register? (would be a failed request)
+            if (evt.id) {
+
+                let req;
+                for (let j = 0; j < this.requestBuffer.archives.length; ++j) {
+                    const archive = this.requestBuffer.archives[j];
+                    for (let k = 0; k < archive.archive.length; ++k) {
+                        const storedEvent = archive.archive[k];
+                        if (storedEvent.id === evt.id) {
+                            req = storedEvent;
+                            break;
+                        }
+                    }
+                    if (req) break;
+                }
+
+                if (req.evtType === EVT_LOGIN) {
+                    return false;
+                }
+            }
             return true;
         };
 

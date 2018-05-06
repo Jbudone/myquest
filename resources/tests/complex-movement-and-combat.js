@@ -33,6 +33,7 @@ const start = () => {
                 this.bot = Test.addBot();
                 this.bot.on('message', (msg) => {
 
+                    console.log(msg);
                     if (msg.msg === 'ready') {
                         this.bot.send({
                             command: BOT_CONNECT,
