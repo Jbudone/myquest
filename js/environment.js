@@ -1,7 +1,7 @@
 
 define(function(){
 
-	var Environment=function(cfg){
+	var Environment=function(isServer){
 		this.server=false;
 		this.isBot=false;
         this.isTesting=false;
@@ -24,7 +24,7 @@ define(function(){
 		this.tileSize=16;
 		this.invTileSize = 1 / 16;
 		this.tileScale=2;
-		this.isServer=false;
+		this.isServer=!!isServer;
 
 		this.pageRealWidth  = this.pageWidth * this.tileSize;
 		this.pageRealHeight = this.pageHeight * this.tileSize;
