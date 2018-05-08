@@ -163,7 +163,7 @@ requirejs.config({
 
 
 // Load the main app module to start the app
-require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM,openpgp){
+require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp','client/chalk.polyfill'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM,openpgp,chalk){
 
 	// TODO: why aren't The or Env global?
     window['$']=$;
@@ -175,6 +175,7 @@ require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilitie
 	window['openpgp']=openpgp;
 	window['Promise']=Promise;
     window['global']=window; // Shared global variable between client/server
+    window['chalk']=chalk;
 
 	for(var util in Utils) {
 		window[util]=Utils[util];
