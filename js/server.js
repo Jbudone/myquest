@@ -176,8 +176,7 @@ GLOBAL.assert = assert;
 requirejs(['keys', 'environment'], (Keys, Environment) => {
 
     // Initialize our environment as the server
-    const Env = (new Environment());
-    Env.isServer = true;
+    const Env = (new Environment(true));
     GLOBAL.Env = Env;
 
 
