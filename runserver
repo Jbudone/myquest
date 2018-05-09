@@ -8,7 +8,7 @@ do
 	#nodejs --nouse-idle-notification --expose-gc --max-new-space-size=2048 --max-old-space-size=8192 dist/js/server.js
 	node --nouse-idle-notification --expose-gc dist/js/server.js
 
-	echo "Server Shutdown... restarting in 5 seconds"
+	echo "Server Shutdown... restarting in 20 seconds"
 	./emailcrash
-	sleep 5
+	sleep 20
 done

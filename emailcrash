@@ -8,4 +8,7 @@ echo " " >> emailFile
 echo " " >> emailFile
 echo " " >> emailFile
 tail -n 100 nohup.out >> emailFile
+echo " " >> emailFile
+echo " " >> emailFile
+tail -n 100 nohup.err >> emailFile
 sendmail Jbud@live.ca < emailFile

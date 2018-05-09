@@ -524,8 +524,8 @@ let processResources = (package) => {
                             distHash = fs.existsSync(asset.output) ? fileHash(asset.output) : "";
                         if (asset.processedHash !== distHash || asset.rawHash !== hash || Settings.forceRebuild) { // FIXME: Force rebuild
                             console.log(`Asset to process (hash has changed)! ${package.name}: ${asset.name}`);
-                            console.log("Output: " + asset.processedHash + " !== " + distHash + " ? ");
-                            console.log("Raw Asset: " + asset.rawHash + " !== " + hash + " ? ");
+                            console.log("Output: " + asset.processedHash + " !== " + distHash + " ?  (has the output file changed since last time?) ");
+                            console.log("Raw Asset: " + asset.rawHash + " !== " + hash + " ?  (has the source file changed?) ");
 
                             if (Settings.checkNeedsRebuild) {
                                 process.exit(2);

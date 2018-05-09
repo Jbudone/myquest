@@ -6,10 +6,14 @@
 #  - Check Dreamhost password correct before starting
 #  - Turn off server (w/out errors) before starting -- what if there's an inspector waiting though?
 #  - SCP once (seems login is incredibly slow, but actual copying is fast)
+#  - View initial server start log? Or some way to show that the server has successfully started?
 
 printf "Enter the password for Dreamhost: "
 read -s passphrase
 
+
+# Wtf???
+scp -i ~/home/awskeypair.pem -r dist/js/SCRIPTINJECT.js ec2-user@ec2-54-85-208-136.compute-1.amazonaws.com:~/myquest/dist/js/
 
 ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.com << EOF
   cd myquest
@@ -48,11 +52,12 @@ ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.c
   node fuckingtaskrunner.js --dont-watch
 
   # SCP game to webserver
-  sshpass -p "$passphrase" scp -r dist/ jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
-  sshpass -p "$passphrase" scp -r node_modules/ jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
-  sshpass -p "$passphrase" scp index.html jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
-  sshpass -p "$passphrase" scp styles.css jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
+  sshpass -p "$passphrase" scp -r ./{dist,node_modules,index.html,styles.css} jbudone@lunenburg.dreamhost.com:~/jbud.me/playground/myquest/
 
+  # Running server
+  sudo killall runserver
+  ps aux | grep -i node | awk '{ print $2 }' | xargs kill -9 $1
+  nohup ./runserver > nohup.out 2> nohup.err < /dev/null &
 
   echo "Finished patching"
 EOF
