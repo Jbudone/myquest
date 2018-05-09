@@ -433,6 +433,7 @@ define(
                     // ---------------------------------------------------------------------------------------------- //
 
                     server.shouldQueueMessage = (msg) => {
+                        if (server.processingQueuedEvents) return true;
                         if (!ready) {
                             const isLoadingMessage = msg.initialization || msg.zone || msg.zoneArea || msg.respawn;
                             return !isLoadingMessage;

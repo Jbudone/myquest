@@ -17,6 +17,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         // Don't process events until we begin initializing the server handler.
         // NOTE: We override this in client/game, so just need to pass messages that take us as far as there
         this.shouldQueueMessage     = function(evt){
+            if (this.processingQueuedEvents) return true;
             if (evt.login || evt.newCharacter || evt.initialization) return false;
             
             // Response to login/register? (would be a failed request)
@@ -44,6 +45,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
         window.handledEvents       = new Array(10); // Array of events that have been passed to handleEvent (for debugging purposes)
         window.handledEventsCursor = 0;
+        window.processingEvents    = [];
+        window.reorderedProcessingEvents = [];
 
         // We could receive multiple related events in the same frame, but require them to be processed in order (eg.
         // NetSerialize a character's health going below 0, resulting in death, before receiving the death event). This
@@ -94,7 +97,13 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     } else if (evt.evtType === EVT_END_OF_FRAME) {
                         // All events that we've queued up this frame are ready to be processed
                         if (this.queuedEvents.length > 0) {
+                            try {
                             this.processQueuedEvents();
+                            } catch(e) {
+                                console.error(e);
+                                debugger;
+                                throw e;
+                            }
                         }
                     } else if (evt.events) {
 
@@ -120,37 +129,12 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     } else if (evt.respawn) {
                         this.queueEvt(evt);
                     } else if (evt.id) {
-                        // FIXME: Should this be queued? If so we'll need to tag a frameId on it
-                        let event = null;
-                        for (let j = 0; j < this.requestBuffer.archives.length; ++j) {
-                            const archive = this.requestBuffer.archives[j];
-                            for (let k = 0; k < archive.archive.length; ++k) {
-                                const storedEvent = archive.archive[k];
-                                if (storedEvent.id === evt.id) {
-                                    event = storedEvent;
-                                    break;
-                                }
-                            }
-                            if (event) break;
-                        }
-
-                        if (event) {
-                            event.callback(evt);
-                        } else {
-                            this.Log("Error finding event in which to respond", LOG_ERROR);
-                            this.Log(evt, LOG_ERROR);
-                        }
+                        this.queueEvt(evt);
                     } else if (evt.evtType === EVT_NETSERIALIZE_OWNER) {
                         // Need to sort this into pageEvent
                         this.queueEvt(evt);
                     } else {
-                        const dynamicHandler = this.handler(evt.evtType);
-                        if (dynamicHandler) {
-                            dynamicHandler.call(evt, evt.data);
-                        } else {
-                            this.Log("Unknown event received from server", LOG_ERROR);
-                            this.Log(evt, LOG_ERROR);
-                        }
+                        this.queueEvt(evt);
                     }
                 };
 
@@ -162,14 +146,27 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                 this.runBufferedMessages = () => {
 
+                    assert(!this.processingQueuedEvents, "We're starting to handle buffered messages while still in the middle of processing events from a previous frame");
+
+                    // Handle all of our buffered messages. NOTE: We may have been buffering long enough that we've
+                    // received events across multiple frames. Therefore check return from handleMessage to see if we
+                    // should pause in our bufferedMessages execution
                     const buffer = this.bufferedMessages;
                     this.bufferedMessages = [];
-                    for (let i = 0; i < buffer; ++i) {
-                        this.handleMessage(buffer[i]);
+                    for (let i = 0; i < buffer.length; ++i) {
+                        this.handleMessage(buffer[i])
+
+                        // We've begun processing queued events, and haven't completed yet. Need to leave the remaining
+                        // buffered messages for later
+                        if (this.processingQueuedEvents) {
+                            break;
+                        }
                     };
                 };
 
                 this.processQueuedEvents = () => {
+
+                    this.processingQueuedEvents = true;
 
                     // Special Case Handling
                     // Sort EVT_NETSERIALIZE_OWNER into its pageEvents
@@ -209,13 +206,18 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     const frameEvents = [],
                         queuedEvents = this.queuedEvents;
                     this.queuedEvents = [];
+                    window.processingEvents = queuedEvents;
                     queuedEvents.forEach((queuedEvent) => {
+
+                        const isValidPage = (page) => {
+                            return The.area.pages.hasOwnProperty(page);
+                        };
 
                         if (queuedEvent.events) {
 
                             // Page events
-                            const page = queuedEvent.page,
-                                events = queuedEvent.events;
+                            const page = queuedEvent.page;
+                            let events = queuedEvent.events;
 
                             // Is this event from a stale page? We only want to process events from [0, evtCursor],
                             // that's the point which we removed that page and no longer need it
@@ -317,14 +319,21 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                     }
                                 }
 
+                                // We may not have a frameId if this was pushed in by a netSerialize
+                                if (!_.isFinite(event.frameId)) {
+                                    event.frameId = (indexOfNextEvt > 0 ? frameEvents[indexOfNextEvt - 1].frameId : 0);
+                                }
+
                                 event.page = page;
                                 frameEvents.splice(indexOfNextEvt, 0, {
                                     frameId: event.frameId,
-                                    pageEvent: event
+                                    pageEvent: event,
+                                    shouldHandle: isValidPage(page)
                                 });
                             }
                         } else {
 
+                            assert(_.isFinite(queuedEvent.frameId), "No frameId provided w/ event");
                             const frameEvtId = queuedEvent.frameId;
                             let indexOfNextEvt = frameEvents.length;
                             for (let j = 0; j < frameEvents.length; ++j) {
@@ -334,13 +343,17 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                 }
                             }
 
+                            queuedEvent.shouldHandle = isValidPage(queuedEvent.page);
                             frameEvents.splice(indexOfNextEvt, 0, queuedEvent);
                         }
                     });
 
                     // Process all re-ordered events from this frame
+                    window.reorderedProcessingEvents = frameEvents;
                     for (let i = 0; i < frameEvents.length; ++i) {
-                        const evt   = frameEvents[i];
+                        const evt = frameEvents[i];
+
+                        if (!evt.shouldHandle) continue;
 
                         if (evt.pageEvent) {
 
@@ -370,17 +383,76 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         } else if (evt.teleport) {
                             this.onTeleported( evt.page, evt.tile );
                         } else if (evt.zoneArea) {
+
                             this.onLoadedArea( evt.area, evt.pages, evt.player );
+
+                            // We can't continue processing the remaining events until we've finished
+                            // reloading scripts. We will continue processing afterwards
+                            this.queuedEvents = frameEvents.slice(i + 1);
+                            return;
+
                         } else if (evt.respawn) {
                             this.onRespawn( evt.area, evt.pages, evt.player );
+
+                            // We can't continue processing the remaining events until we've finished
+                            // respawning/reloading scripts. We will continue processing after respawn
+
+                            // NOTE: We've queued *ALL* events sent to us from the server, including those which are
+                            // unecessary. So long as we process events in order, and skip any events that aren't
+                            // relevant to us, then when we resume processing again we should automatically resume at
+                            // the correct point and start processing from the new pages as expected. There's no need to
+                            // filter events here or do anything special w/ queuedEvents to handle switching pages after
+                            // respawn
+                            //
+                            // NOTE: If this happens to take some time to respawn, and we receive events from subsequent
+                            // frames while paused in processing, those messages will be buffered (client/game buffers
+                            // when not ready)
+
+                            this.queuedEvents = frameEvents.slice(i + 1);
+
+                            return;
+                        } else if (evt.id) {
+                            let event = null;
+                            for (let j = 0; j < this.requestBuffer.archives.length; ++j) {
+                                const archive = this.requestBuffer.archives[j];
+                                for (let k = 0; k < archive.archive.length; ++k) {
+                                    const storedEvent = archive.archive[k];
+                                    if (storedEvent.id === evt.id) {
+                                        event = storedEvent;
+                                        break;
+                                    }
+                                }
+                                if (event) break;
+                            }
+
+                            if (event) {
+                                event.callback(evt);
+                            } else {
+                                this.Log("Error finding event in which to respond", LOG_ERROR);
+                                this.Log(evt, LOG_ERROR);
+                            }
                         } else {
-                            assert(false, "Unexpected frame event type");
+                            const dynamicHandler = this.handler(evt.evtType);
+                            if (dynamicHandler) {
+                                dynamicHandler.call(evt, evt.data);
+                            } else {
+                                this.Log("Unknown event received from server", LOG_ERROR);
+                                this.Log(evt, LOG_ERROR);
+                            }
                         }
                     }
+
+                    this.processingQueuedEvents = false;
                 };
 
                 // These events will be appended to the next set of 
                 this.queuedEvents = []; // All queued events for this frame
+
+                // We could be interrupted from processing the queue part way through (eg. respawning or zoning out, so
+                // we need to break to wait for scripts to reload before continuing), but in this case we don't want to
+                // process any more messages while we're still processing events from this frame. This flag helps with
+                // that
+                this.processingQueuedEvents = false;
                 this.queueEvt = (evt) => {
                     this.queuedEvents.push(evt);
                 };
