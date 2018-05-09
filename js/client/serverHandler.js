@@ -210,7 +210,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     queuedEvents.forEach((queuedEvent) => {
 
                         const isValidPage = (page) => {
-                            return The.area.pages.hasOwnProperty(page);
+                            return !_.isFinite(page) || The.area.pages.hasOwnProperty(page);
                         };
 
                         if (queuedEvent.events) {
