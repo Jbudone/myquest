@@ -343,7 +343,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                 }
                             }
 
-                            queuedEvent.shouldHandle = isValidPage(queuedEvent.page);
+                            queuedEvent.shouldHandle = queuedEvent.teleport || queuedEvent.zone || queuedEvent.zoneArea || queuedEvent.respawn || isValidPage(queuedEvent.page);
                             frameEvents.splice(indexOfNextEvt, 0, queuedEvent);
                         }
                     });
@@ -380,8 +380,18 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             }
                         } else if (evt.zone) {
                             this.onZone( evt.page, evt.pages, evt.pageList );
+
+                            this.queuedEvents = frameEvents.slice(i + 1);
+                            this.processQueuedEvents();
+                            return;
+
                         } else if (evt.teleport) {
                             this.onTeleported( evt.page, evt.tile );
+
+                            this.queuedEvents = frameEvents.slice(i + 1);
+                            this.processQueuedEvents();
+                            return;
+
                         } else if (evt.zoneArea) {
 
                             this.onLoadedArea( evt.area, evt.pages, evt.player );
