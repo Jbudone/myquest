@@ -328,7 +328,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                 frameEvents.splice(indexOfNextEvt, 0, {
                                     frameId: event.frameId,
                                     pageEvent: event,
-                                    shouldHandle: isValidPage(page)
+                                    shouldHandle: isValidPage(page),
+                                    page: page
                                 });
                             }
                         } else {
