@@ -288,9 +288,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                 if (netSerializeOffsets[i]) {
                                     for (let j = 0; j < netSerializeOffsets[i].length; ++j) {
                                         let netSerializesForOffset = netSerializeOffsets[i][j];
-                                        for (let k = 0; k < netSerializesForOffset.length; ++k) {
-                                            reorderedEvents.push(netSerializesForOffset[k]);
-                                        }
+                                        assert(!netSerializesForOffset.hasOwnProperty('length'), "Ohhh snap, I actually treated this as an array for a good reason");
+                                        reorderedEvents.push(netSerializesForOffset);
                                     }
                                 }
                             }
@@ -300,9 +299,8 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                                 if (!netSerializeOffsets[i]) continue;
                                 for (let j = 0; j < netSerializeOffsets[i].length; ++j) {
                                     let netSerializesForOffset = netSerializeOffsets[i][j];
-                                    for (let k = 0; k < netSerializesForOffset.length; ++k) {
-                                        reorderedEvents.push(netSerializesForOffset[k]);
-                                    }
+                                    assert(!netSerializesForOffset.hasOwnProperty('length'), "Ohhh snap, I actually treated this as an array for a good reason");
+                                    reorderedEvents.push(netSerializesForOffset);
                                 }
                             }
 
