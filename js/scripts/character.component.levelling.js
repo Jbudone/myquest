@@ -22,7 +22,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
         this.setLogGroup('Component');
         this.setLogPrefix(`Levelling: ${character.entity.id}`);
 
-        character.addProperty('level', 'level', this, 0, true, Env.isServer ? null : (oldLevel, newLevel) => {
+        character.addProperty('level', N_LEVEL, this, 0, true, Env.isServer ? null : (oldLevel, newLevel) => {
         
             const data = {
                     entityId: character.entity.id,
@@ -37,7 +37,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
             The.area.movables[data.entityId].character.doHook(UpdatedLevelEvt).post(data);
         });
 
-        character.addProperty('XP', 'XP', this, 0, true, Env.isServer ? null : (oldXP, newXP) => {
+        character.addProperty('XP', N_XP, this, 0, true, Env.isServer ? null : (oldXP, newXP) => {
 
             if (this.XP > this.achievedXP) {
                 this.achievedXP = this.XP;
