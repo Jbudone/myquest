@@ -377,9 +377,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
             glob(path, {}, function (er, files) {
                 if (files) {
-                    for (let i = 0; i < files.length; ++i) {
-                        console.log(`Watching: ${chalk.blue(files[i])}`);
-                        beginWatch = (path) => {
+                    files.forEach((file) => {
+                        console.log(`Watching: ${chalk.blue(file)}`);
+                        const beginWatch = (path) => {
                             try {
                                 let watcher = fs.watch(path, {
                                     persistent: true
@@ -404,8 +404,8 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                             }
                         };
 
-                        beginWatch(files[i]);
-                    }
+                        beginWatch(file);
+                    });
                 }
             });
         };
