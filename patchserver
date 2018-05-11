@@ -7,6 +7,7 @@
 #  - Turn off server (w/out errors) before starting -- what if there's an inspector waiting though?
 #  - SCP once (seems login is incredibly slow, but actual copying is fast)
 #  - View initial server start log? Or some way to show that the server has successfully started?
+#  - Fix killing node: scary to kill ALL node, we only want to kill server/resourceBuilder/fuckingtaskrunner?
 
 printf "Enter the password for Dreamhost: "
 read -s passphrase
@@ -32,9 +33,9 @@ ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.c
 
   # Update perms
   sudo chmod -R 000 tools/
-  chmod +x build-scripts
-  chmod +x emailcrash
-  chmod +x runserver
+  sudo chmod +x build-scripts
+  sudo chmod +x emailcrash
+  sudo chmod +x runserver
 
   # Build game scripts/resources
   #rm -r dist
@@ -56,7 +57,7 @@ ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.c
 
   # Running server
   sudo killall runserver
-  ps aux | grep -i node | awk '{ print $2 }' | xargs kill -9 $1
+  sudo ps aux | grep -i [n]ode | awk '{ print \$2 }' | xargs kill -9 \$1
   nohup ./runserver > nohup.out 2> nohup.err < /dev/null &
 
   echo "Finished patching"
