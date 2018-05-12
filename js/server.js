@@ -403,7 +403,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                     Log("Starting script manager..", LOG_INFO);
                                     delete Resources._scriptRes;
-                                    The.scriptmgr = new ScriptMgr();
+                                    The.scriptmgr = new ScriptMgr({});
 
                                     // TODO: Cleanup items-not-loaded technique for loading things..its weird and
                                     // unorthadox

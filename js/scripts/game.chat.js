@@ -92,7 +92,7 @@ define(['SCRIPTINJECT', 'scripts/commands'], (SCRIPTINJECT, Commands) => {
         };
 
         this.client = {
-            initialize() {
+            initialize(restoreSettings) {
                 this.Log("Chatter is for Client");
                 UI.hook('inputSubmit', _self).before((msg) => {
                     this.Log("Chatter[pre]: "+msg, LOG_DEBUG);
@@ -139,11 +139,18 @@ define(['SCRIPTINJECT', 'scripts/commands'], (SCRIPTINJECT, Commands) => {
 
                 _self.timeSinceLastMessage = now();
 
-                if (localStorage.getItem('autoadmin') === "true") {
-                    setTimeout(() => {
-                        const command = _self.transformMessage(`/admin 42`);
-                        _self.handleCommand(command);
-                    }, 2000);
+                if (restoreSettings.isAdmin) {
+                    console.log("You're already an admin, jackass!");
+                    let adminCmd = _.find(Commands, (c) => c.command === CMD_ADMIN);
+                    adminCmd.client.succeeded(this); // FIXME: This seems wrong, but probably not a better way to do this until we abstract the admin system
+                } else {
+
+                    if (localStorage.getItem('autoadmin') === "true") {
+                        setTimeout(() => {
+                            const command = _self.transformMessage(`/admin 42`);
+                            _self.handleCommand(command);
+                        }, 2000);
+                    }
                 }
             },
 
@@ -224,6 +231,10 @@ define(['SCRIPTINJECT', 'scripts/commands'], (SCRIPTINJECT, Commands) => {
             unload: () => {
                 if (UI) UI.unhook(_self);
                 if (server) server.handler(EVT_CHAT).unset();
+
+                return {
+                    isAdmin: this.admin
+                };
             }
         };
     };

@@ -98,7 +98,7 @@ define(
             this.createCharacter = (entity) => {
                 assert(!this.characters[entity.id], `Character already exists for entity (${entity.id})`);
                 const character = _script.addScript(new Character(this, entity));
-                _.last(_script.children).initialize(); // FIXME: this isn't the safest way to go..; NOTE: if game script is currently initializing, it will attempt to initialize all children afterwards; this child script will already have been initialized, and will not re-initialize the child
+                _.last(_script.children).initialize({}); // FIXME: this isn't the safest way to go..; NOTE: if game script is currently initializing, it will attempt to initialize all children afterwards; this child script will already have been initialized, and will not re-initialize the child
                 return character;
             };
 

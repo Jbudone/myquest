@@ -1577,8 +1577,9 @@ define(
                     this.Log("Reloading scripts..");
                     The.scripting.area = The.area;
 
+                    let unloadedSettings = {};
                     if (The.scriptmgr) {
-                        The.scriptmgr.unload();
+                        unloadedSettings = The.scriptmgr.unload();
                     }
 
                     let loading = 1; // TODO: Don't do this..
@@ -1587,7 +1588,7 @@ define(
 
                         Resources.loadScripts(Resources._scriptRes).then(() => {
 
-                            The.scriptmgr = new ScriptMgr();
+                            The.scriptmgr = new ScriptMgr(unloadedSettings);
 
                             // Load items
                             if ('items-not-loaded' in Resources.items) {

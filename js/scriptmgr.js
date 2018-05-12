@@ -1,6 +1,6 @@
 define(['loggable', 'eventful', 'script'], (Loggable, Eventful, Script) => {
 
-    const ScriptMgr = function() {
+    const ScriptMgr = function(restoreSettings) {
 
         extendClass(this).with(Eventful);
         extendClass(this).with(Loggable);
@@ -91,13 +91,14 @@ define(['loggable', 'eventful', 'script'], (Loggable, Eventful, Script) => {
         };
 
         this.unload = () => {
-            Base.unload();
-
+            const unloadSettings = Base.unload();
             this.unloadListener();
+
+            return unloadSettings;
         };
 
         // Startup
-        Base.initialize();
+        Base.initialize(restoreSettings);
     };
 
     return ScriptMgr;

@@ -215,19 +215,30 @@ define(['loggable'], (Loggable) => {
             delete script.client;
         };
 
-        this.initialize = () => {
+        this.initialize = (restoreSettings) => {
             // initialize this script
             if (this.initialized) return true;
             this.localizeScript(this._script);
             if (this._script.initialize) {
-                this._script.initialize.bind(this)();
+                let scriptRestoreSetting = {};
+                if (restoreSettings.script) {
+                    scriptRestoreSetting = restoreSettings.script;
+                }
+
+                this._script.initialize.bind(this)(scriptRestoreSetting);
             }
 
             for (const componentKey in this._script.components) {
                 const component = (new this._script.components[componentKey]());
+                component.scriptComponentName = componentKey; // FIXME: This sucks to manually put in, but its the only way to safely restore from the same component
                 this.localizeScript(component);
                 if (component.initialize) {
-                    const result = component.initialize.bind(this)();
+                    let componentRestoreSettings = {};
+                    if (restoreSettings.components && restoreSettings.components[componentKey]) {
+                        componentRestoreSettings = restoreSettings.components[componentKey];
+                    }
+
+                    const result = component.initialize.bind(this)(componentRestoreSettings);
                     if (result === false) return false;
                 }
                 this.components.push(component);
@@ -235,7 +246,12 @@ define(['loggable'], (Loggable) => {
 
             // initialize all child scripts
             for (let i = 0; i < this.children.length; ++i) {
-                const result = this.children[i].initialize();
+                let childRestoreSettings = {};
+                if (restoreSettings.children && restoreSettings.children[i]) {
+                    childRestoreSettings = restoreSettings.children[i];
+                }
+
+                const result = this.children[i].initialize(childRestoreSettings);
                 if (result === false) return false;
             }
 
@@ -248,25 +264,39 @@ define(['loggable'], (Loggable) => {
 
         this.unload = () => {
 
+            const unloadSettings = {
+                components: {},
+                children: [],
+                script: null
+            };
+
             for (let i = 0; i < this.components.length; ++i) {
                 const component = this.components[i];
+                let componentUnloadSettings = {};
                 if (component.unload) {
-                    component.unload();
+                    componentUnloadSettings = component.unload();
                 }
+
+                unloadSettings.components[component.scriptComponentName] = componentUnloadSettings;
             }
 
             for (let i = 0; i < this.children.length; ++i) {
-                this.children[i].unload();
+                const childUnloadSettings = this.children[i].unload();
+
+                unloadSettings.children.push(childUnloadSettings);
             }
 
             // TODO: unload subscriptions
 
             // TODO: unload script: hookable, eventful, dynamic
-
+            let scriptUnloadSettings = {};
             if (this._script.unload) {
-                this._script.unload();
+                scriptUnloadSettings = this._script.unload();
             }
+            unloadSettings.script = scriptUnloadSettings;
             //this.stopAllEventsAndListeners();
+
+            return unloadSettings;
         };
     };
 
