@@ -45,6 +45,12 @@ define(['loggable'], (Loggable) => {
                 bgStroke: '#669966',
                 lineDash: 4,
                 alpha: 0.8
+            },
+
+            movableHighlight: {
+                borderThickness: 1,
+                borderColor: 'yellow',
+                filter: 'saturate(160%) contrast(140%)'
             }
         };
 
@@ -625,13 +631,64 @@ define(['loggable'], (Loggable) => {
                     const globalX = movable.position.global.x,
                         globalY   = movable.position.global.y;
 
-                    this.ctxEntities.drawImage(
-                        movableSheet,
-                        movable.sprite.state.x, movable.sprite.state.y,
-                        movable.sprite.sprite_w, movable.sprite.sprite_h,
-                        scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
-                        movable.sprite.sprite_w, movable.sprite.sprite_h
-                    );
+                    const highlightMovable = this.ui.hoveringEntity === movable;
+                    if (highlightMovable) {
+
+						const scrapCanvas  = document.createElement('canvas'),
+							scrapCtx       = scrapCanvas.getContext('2d');
+
+						scrapCanvas.height = movable.sprite.sprite_w;
+						scrapCanvas.width  = movable.sprite.sprite_h;
+
+                        for (let dOffY = -1; dOffY <= 1; ++dOffY) {
+                            for (let dOffX = -1; dOffX <= 1; ++dOffX) {
+                                scrapCtx.drawImage(
+                                    movableSheet,
+                                    movable.sprite.state.x, movable.sprite.state.y,
+                                    movable.sprite.sprite_w, movable.sprite.sprite_h,
+                                    dOffX * this.settings.movableHighlight.borderThickness,
+                                    dOffY * this.settings.movableHighlight.borderThickness,
+                                    movable.sprite.sprite_w, movable.sprite.sprite_h
+                                );
+                            }
+                        }
+
+                        scrapCtx.globalCompositeOperation = "source-in";
+                        scrapCtx.fillStyle = this.settings.movableHighlight.borderColor;
+                        scrapCtx.fillRect(0, 0, scrapCanvas.width, scrapCanvas.height);
+
+						const scrapImg  = new Image();
+						scrapImg.src = scrapCanvas.toDataURL("image/png");
+
+                        this.ctxEntities.drawImage(
+                            scrapImg,
+                            0, 0,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h,
+                            scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h
+                        );
+
+                        this.ctxEntities.filter = this.settings.movableHighlight.filter;
+
+                        this.ctxEntities.drawImage(
+                            movableSheet,
+                            movable.sprite.state.x, movable.sprite.state.y,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h,
+                            scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h
+                        );
+
+                        this.ctxEntities.filter = 'none';
+                    } else {
+
+                        this.ctxEntities.drawImage(
+                            movableSheet,
+                            movable.sprite.state.x, movable.sprite.state.y,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h,
+                            scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
+                            movable.sprite.sprite_w, movable.sprite.sprite_h
+                        );
+                    }
 
                     // Draw debug pathfinding/position highlights
                     if (Env.renderer.drawBorders) {
