@@ -483,7 +483,7 @@ WORKING ON (was previously working on)
         - Could this script also report stats when obtaining level X
         - Should save changes from last run, and only report stats which differ (significantly?) from the last run (eg. only npcs that we've changed), or those which fail our expectations
         - Could run under Jasmine, or otherwise extend our smoke tests to allow unit tests
-    - Hover over items in inventory to see name/description/icon
+*   - Hover over items in inventory to see name/description/icon
     - BUG: Furry Gloves dropped on ground has different sprite than when in inventory
     - Fountain of healing
 *   - Determine how to upload media/etc.   (does http need /dist ? what do we upload from /resources ? do we upload /dist/resources manually ?)
@@ -523,6 +523,13 @@ WORKING ON (was previously working on)
         - Check if we have the commit locally first, otherwise tell the user we don't have that commit
         - Display actual error message
      - FIXME: serverHandler remove test assert
+*    - Entity dies: fade out (effects/filter) + animation; Idle animation
+*    - Entities roaming around
+     - BUG: Player hits max level and levels up again -- should stop gaining XP at max level
+*    - God Mode
+*    - Music not working initially
+*    - BUG: The AudioContext was not allowed to start. It must be resume (or created) after a user gesture on the page.
+*	 - FXMgr: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample/bank? limit to X number of sounds on an entity? etc.)
 
 
 
