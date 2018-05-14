@@ -1,1 +1,270 @@
-{"list":[{"name":"deathsickness","file":"icons/deathsickness.png","hash":"3083999804","output":"icons/deathsickness.webp","type":"image","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":"convert"},"rawHash":"1208976828"},{"name":"muted","file":"icons/muted.png","hash":"4119320735","output":"icons/muted.webp","type":"image","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":"convert"},"rawHash":"2898478865"},{"name":"unmuted","file":"icons/unmuted.png","hash":"3332572977","output":"icons/unmuted.webp","type":"image","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":"convert"},"rawHash":"1367544073"},{"name":"toolbelt","file":"icons/toolbelt.png","hash":"2473217640","output":"icons/toolbelt.webp","type":"image","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":"convert"},"rawHash":"1387729953"},{"name":"uiclick","file":"sounds/uiclick.mp3","hash":"3082204827","output":"sounds/uiclick.mp3","type":"sound","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":false},"rawHash":"3082204827"},{"name":"grunt","file":"sounds/grunt.mp3","hash":"1356048386","output":"sounds/grunt.mp3","type":"sound","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":false},"rawHash":"1356048386"},{"name":"rivervale","file":"sounds/rivervale.mp4","hash":"4147306895","output":"sounds/rivervale.mp4","type":"sound","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":false},"rawHash":"4147306895"},{"name":"levelDing","file":"sounds/dingLevelUp.aac","hash":"3344031795","output":"sounds/dingLevelUp.aac","type":"sound","options":{"cached":false,"encrypted":false,"packed":false,"preprocess":false},"rawHash":"3344031795"}]}
+{
+  "list": [
+    {
+      "name": "deathsickness",
+      "file": "icons/deathsickness.png",
+      "hash": "3972662581",
+      "output": "icons/deathsickness.webp",
+      "type": "image",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": "convert"
+      },
+      "rawHash": "1208976828"
+    },
+    {
+      "name": "muted",
+      "file": "icons/muted.png",
+      "hash": "4119320735",
+      "output": "icons/muted.webp",
+      "type": "image",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": "convert"
+      },
+      "rawHash": "2898478865"
+    },
+    {
+      "name": "unmuted",
+      "file": "icons/unmuted.png",
+      "hash": "3332572977",
+      "output": "icons/unmuted.webp",
+      "type": "image",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": "convert"
+      },
+      "rawHash": "1367544073"
+    },
+    {
+      "name": "toolbelt",
+      "file": "icons/toolbelt.png",
+      "hash": "735720452",
+      "output": "icons/toolbelt.webp",
+      "type": "image",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": "convert"
+      },
+      "rawHash": "1387729953"
+    },
+    {
+      "name": "uiclick",
+      "file": "sounds/uiclick.mp3",
+      "hash": "3082204827",
+      "output": "sounds/uiclick.mp3",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "rawHash": "3082204827"
+    },
+    {
+      "name": "grunt",
+      "file": "sounds/grunt.mp3",
+      "hash": "1356048386",
+      "output": "sounds/grunt.mp3",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "rawHash": "1356048386"
+    },
+    {
+      "name": "rivervale",
+      "file": "sounds/rivervale.mp4",
+      "hash": "4147306895",
+      "output": "sounds/rivervale.mp4",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "rawHash": "4147306895"
+    },
+    {
+      "name": "levelDing",
+      "file": "sounds/dingLevelUp.aac",
+      "hash": "3344031795",
+      "output": "sounds/dingLevelUp.aac",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "rawHash": "3344031795"
+    },
+    {
+      "name": "batAtk",
+      "file": "sounds/bat.ogg",
+      "output": "sounds/bat.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "927056311",
+      "rawHash": "927056311"
+    },
+    {
+      "name": "hit",
+      "file": "sounds/hit.ogg",
+      "output": "sounds/hit.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4169345409",
+      "rawHash": "4169345409"
+    },
+    {
+      "name": "snakeAtk1",
+      "file": "sounds/snake.atk1.ogg",
+      "output": "sounds/snake.atk1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "1867498405",
+      "rawHash": "1867498405"
+    },
+    {
+      "name": "snakeAtk2",
+      "file": "sounds/snake.atk2.ogg",
+      "output": "sounds/snake.atk2.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2444444727",
+      "rawHash": "2444444727"
+    },
+    {
+      "name": "snakeAtk3",
+      "file": "sounds/snake.atk3.ogg",
+      "output": "sounds/snake.atk3.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2626344829",
+      "rawHash": "2626344829"
+    },
+    {
+      "name": "snakeAtk4",
+      "file": "sounds/snake.atk4.ogg",
+      "output": "sounds/snake.atk4.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4229515234",
+      "rawHash": "4229515234"
+    },
+    {
+      "name": "snakeAtk5",
+      "file": "sounds/snake.atk5.ogg",
+      "output": "sounds/snake.atk5.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4166687839",
+      "rawHash": "4166687839"
+    },
+    {
+      "name": "snakeAtk6",
+      "file": "sounds/snake.atk6.ogg",
+      "output": "sounds/snake.atk6.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "3029642445",
+      "rawHash": "3029642445"
+    },
+    {
+      "name": "snakeHit1",
+      "file": "sounds/snake.hit1.ogg",
+      "output": "sounds/snake.hit1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "1269775984",
+      "rawHash": "1269775984"
+    },
+    {
+      "name": "snakeHit2",
+      "file": "sounds/snake.hit2.ogg",
+      "output": "sounds/snake.hit2.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4130557787",
+      "rawHash": "4130557787"
+    },
+    {
+      "name": "snakeHit3",
+      "file": "sounds/snake.hit3.ogg",
+      "output": "sounds/snake.hit3.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2326486305",
+      "rawHash": "2326486305"
+    }
+  ]
+}

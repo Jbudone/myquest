@@ -1,1 +1,19 @@
-{"areas":{"main":{"file":"maps/map-intro","hash":"2161788392","rawHash":"2161788392"},"home":{"file":"maps/home","hash":"2338295838","rawHash":"2338295838"},"largemap":{"file":"maps/largemap","hash":"2493398777","rawHash":"2493398777"}}}
+{
+  "areas": {
+    "main": {
+      "file": "maps/map-intro",
+      "hash": "2161788392",
+      "rawHash": "2161788392"
+    },
+    "home": {
+      "file": "maps/home",
+      "hash": "2338295838",
+      "rawHash": "2338295838"
+    },
+    "largemap": {
+      "file": "maps/largemap",
+      "hash": "2493398777",
+      "rawHash": "2493398777"
+    }
+  }
+}

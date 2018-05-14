@@ -16,11 +16,11 @@
 
     "sfx": {
         "samples": {
-            "playerHitA": {
+            "playerAtkA": {
                 "sound": "grunt",
                 "gain": 0.5
             },
-            "playerHitB": {
+            "playerAtkB": {
                 "sound": "grunt"
             },
 			"uiClick": {
@@ -32,12 +32,54 @@
 			},
             "levelDing": {
 				"sound": "levelDing"
+            },
+            "batAtk": {
+                "sound": "batAtk"
+            },
+            "snakeAtk1": {
+                "sound": "snakeAtk1"
+            },
+            "snakeAtk2": {
+                "sound": "snakeAtk2"
+            },
+            "snakeAtk3": {
+                "sound": "snakeAtk3"
+            },
+            "snakeAtk4": {
+                "sound": "snakeAtk4"
+            },
+            "snakeAtk5": {
+                "sound": "snakeAtk5"
+            },
+            "snakeAtk6": {
+                "sound": "snakeAtk6"
+            },
+            "snakeHit1": {
+                "sound": "snakeHit1"
+            },
+            "snakeHit2": {
+                "sound": "snakeHit2"
+            },
+            "snakeHit3": {
+                "sound": "snakeHit3"
+            },
+            "hit": {
+                "sound": "hit"
             }
         },
 
         "banks": {
-            "playerHit": {
-                "samples": ["playerHitA", "playerHitB"]
+            "playerAtk": {
+                "samples": ["playerAtkA", "playerAtkB"]
+            },
+            "batAtk": {
+                "samples": ["batAtk"]
+            },
+            "snakeAtk": {
+                "samples": ["snakeAtk1", "snakeAtk2", "snakeAtk3", "snakeAtk4", "snakeAtk5", "snakeAtk6"]
+            },
+            "snakeHit": {
+                "samples": ["snakeHit1", "snakeHit2", "snakeHit3"]
             },
 			"uiClick": {
 				"samples": ["uiClick"]
@@ -54,9 +96,36 @@
     "events": {
         "attacked.player": {
             "region": "world",
-            "bank": "playerHit",
+            "bank": "playerAtk",
             "conditions": {
                 "timeoutOnSample": 1000,
+                "limitSamples": 1
+            }
+        },
+
+        "attacked.bat": {
+            "region": "world",
+            "bank": "batAtk",
+            "conditions": {
+                "timeoutOnSample": 1000,
+                "limitSamples": 1
+            }
+        },
+
+        "attacked.snake": {
+            "region": "world",
+            "bank": "snakeAtk",
+            "conditions": {
+                "timeoutOnSample": 1000,
+                "limitSamples": 1
+            }
+        },
+
+        "damaged.snake": {
+            "region": "world",
+            "bank": "snakeHit",
+            "conditions": {
+                "timeoutOnSample": 3000,
                 "limitSamples": 1
             }
         },

@@ -1,1 +1,94 @@
-{"media":{"file":"media.json","options":{},"hash":"2502254029","rawHash":"2502254029"},"sheets":{"file":"sheets.json","options":{},"hash":"1754722935","rawHash":"1754722935"},"avatars":{"file":"avatars.json","options":{},"hash":"851374449","rawHash":"851374449"},"npcs":{"file":"npcs.json","options":{"reloadable":true},"hash":"654902178","rawHash":"654902178"},"world":{"file":"world.json","options":{},"hash":"1259220299","rawHash":"1259220299"},"items":{"file":"items.json","options":{},"hash":"2260947775","rawHash":"2260947775"},"buffs":{"file":"buffs.json","options":{},"hash":"3571710822","rawHash":"3571710822"},"interactables":{"file":"interactables.json","options":{},"hash":"2785452308","rawHash":"2785452308"},"quests":{"file":"quests.json","options":{},"hash":"2717189238","rawHash":"2717189238"},"interactions":{"file":"interactions.json","options":{},"hash":"1783647825","rawHash":"1783647825"},"scripts":{"file":"scripts.json","options":{},"hash":"472457648","rawHash":"472457648"},"components":{"file":"components.json","options":{},"hash":"3414485473","rawHash":"3414485473"},"rules":{"file":"rules.json","options":{},"hash":"2540685469","rawHash":"2540685469"},"fx":{"file":"fx.json","options":{},"hash":"3287709885","rawHash":"3287709885"},"testing":{"file":"testing.json","options":{},"hash":"2394746794","rawHash":"2394746794"}}
+{
+  "media": {
+    "file": "media.json",
+    "options": {},
+    "hash": "3321305254",
+    "rawHash": "3321305254"
+  },
+  "sheets": {
+    "file": "sheets.json",
+    "options": {},
+    "hash": "1313118285",
+    "rawHash": "1313118285"
+  },
+  "avatars": {
+    "file": "avatars.json",
+    "options": {},
+    "hash": "851374449",
+    "rawHash": "851374449"
+  },
+  "npcs": {
+    "file": "npcs.json",
+    "options": {
+      "reloadable": true
+    },
+    "hash": "654902178",
+    "rawHash": "654902178"
+  },
+  "world": {
+    "file": "world.json",
+    "options": {},
+    "hash": "662720711",
+    "rawHash": "662720711"
+  },
+  "items": {
+    "file": "items.json",
+    "options": {},
+    "hash": "2260947775",
+    "rawHash": "2260947775"
+  },
+  "buffs": {
+    "file": "buffs.json",
+    "options": {},
+    "hash": "3571710822",
+    "rawHash": "3571710822"
+  },
+  "interactables": {
+    "file": "interactables.json",
+    "options": {},
+    "hash": "2785452308",
+    "rawHash": "2785452308"
+  },
+  "quests": {
+    "file": "quests.json",
+    "options": {},
+    "hash": "2717189238",
+    "rawHash": "2717189238"
+  },
+  "interactions": {
+    "file": "interactions.json",
+    "options": {},
+    "hash": "1783647825",
+    "rawHash": "1783647825"
+  },
+  "scripts": {
+    "file": "scripts.json",
+    "options": {},
+    "hash": "472457648",
+    "rawHash": "472457648"
+  },
+  "components": {
+    "file": "components.json",
+    "options": {},
+    "hash": "3414485473",
+    "rawHash": "3414485473"
+  },
+  "rules": {
+    "file": "rules.json",
+    "options": {},
+    "hash": "2540685469",
+    "rawHash": "2540685469"
+  },
+  "fx": {
+    "file": "fx.json",
+    "options": {},
+    "hash": "4281523735",
+    "rawHash": "4281523735"
+  },
+  "testing": {
+    "file": "testing.json",
+    "options": {},
+    "hash": "2394746794",
+    "rawHash": "2394746794"
+  }
+}
