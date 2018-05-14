@@ -644,7 +644,7 @@ let processResources = (package) => {
                     console.log("Saving package changes: " + package.name + " ==> " + package.file);
 
                     // Save package JSON (save .data)
-                    const prettyCache = JSON.stringify(package.data); // TODO Prettify cache json?
+                    const prettyCache = JSON.stringify(package.data, null, 2); // TODO Prettify cache json?
                     fs.writeFile(package.file, prettyCache, (err, bufferData) => {
                         if (err) {
                             console.error(err);
