@@ -449,14 +449,7 @@ define(
                 let i = this.pagesList.length - 1;
                 do {
                     const page = this.pagesList[i];
-
                     page.step(time);
-
-                    const pageEvents = page.fetchEventsBuffer();
-
-                    if (pageEvents) {
-                        eventsBuffer[page.index] = pageEvents;
-                    }
                 } while (--i >= 0);
 
                 this.handlePendingEvents(); // events from pages
@@ -466,6 +459,19 @@ define(
                     dynamicHandler.call(time - this.lastUpdated);
                 }
                 this.lastUpdated = time;
+
+                // NOTE: We could add events in one page after processing another page (eg. movable in page A updates,
+                // zones into page B). So its important we process all pages, and then fetch their events buffers
+                // afterwards
+                i = this.pagesList.length - 1;
+                do {
+                    const page = this.pagesList[i];
+                    const pageEvents = page.fetchEventsBuffer();
+
+                    if (pageEvents) {
+                        eventsBuffer[page.index] = pageEvents;
+                    }
+                } while (--i >= 0);
 
                 return eventsBuffer;
             },
