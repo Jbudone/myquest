@@ -308,7 +308,6 @@ WORKING ON (was previously working on)
     - Bake Spritesheet: Add / Modify sheets.json (option)
     - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
 	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
-    - game.chat player zones out (or respawns), loses admin commands (locally only?)
 	- /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
 	- ctrl+c kill not working; or resulting in bug in errorReport
 	- /teleport to another area
@@ -505,6 +504,50 @@ WORKING ON (was previously working on)
 *   - BUG: Form autofill doesn't work?
 *   - FIX: Client errorReport sent to server; server all errors (server + clients) emailed to me; server pops into inspector -- errorReport and email to me w/ message of inspector waiting (or just email that inspector is waiting if no user input w/in X time)
     - fuckingtaskrunner running out of memory....why?
+    - Try node native fs.watch rather than chokidar?    OR    signal -USR1 to hook in and see what files its watching and why it isn't triggering
+    - Server: a `killserver` script to sniff out running servers and signal kill them, including runserver script
+    - Server: runserver: auto run in background w/out having to nohup
+    - Easier to deploy patches:
+        - server: git pull js/ directory, possibly other directories, NOT tools/ ; update permissions ; run fuckingtaskrunner
+        - web: same as above?
+        - script to ssh into server + web and run the above deploy commands? watch for errors and halt if there's an issue
+*   - fuckingtaskrunner running out of memory....why?
+*	- BUG: Have a goblin chasing you while you /suicide while running, hit onEntityCancelledPath w/ no path on entity
+*	- FIXME: Netcode rework
+			-- CHECK: Dynamic Handler (outside of page): Is this a thing? If there's an evtid associated w/ it then queue for frame (not always necessary, eg. chat); player.registerHandler ==> wrap this in some way to add event if necessary
+			-- CHECK: requests -- Do these need to be queued?
+			-- CHECK: Zone out / respawn into a different page, where the page indices are the same where you were before; could this be an issue for handling events from stale pages? Stale pages could probably also send an area id
+			- Requests/DynamicHandlers need frameId
+			- BUG: Died (from buff deactivating -- 44dmg), handled EVT_DIED on character (removed self from area) then NETSERIALIZE for self (same area)
+			  	- Not sure if we handled respawn, but it didn't seem like it -- if we got respawn then maybe we respawned -> handled evt_died afterwards (stale page? bad cursor?) -> didn't receive EVT_ADD_ENTITY?
+				  1) Receive respawn (on same page)   (frameId: 5)
+				  2) Receive DeathSickness            (frameId: 6)
+				  3) Receive PageEvents:
+				  		- EVT_DAMAGED                 (frameId: 1)
+						- EVT_NETSERIALIZE            (frameId: 2)
+						- EVT_DIED                    (frameId: 3)
+						- EVT_REGENERATE              (frameId: 4)
+				  4) Receive FRAME_END
+
+				- NOTE: I *think* we're handling everything in order, just that we haven't created the character yet. Check where we're creating character, maybe its worth it to createCHaracter sooner? (on respawn)
+				  	- 1) Need to halt processingQueue part way through (after respawn/zone/etc.) (probably done already in client/game?); buffer remaining events, and process leftover queue; NOTE: Need to purge remaining stale page events that happen AFTER respawn/zone/etc.
+			- TODO: (later) ALL messages need to be handled in order, and possibly together. This includes zone/respawn stuff (ie. handle stale pages, then zone/respawn, then current page events starting from cursor when zoned/respawned there)
+			  	1) Respawn: use frameEvt on client to purge remaining pageEvents
+				2) Respawn should include page events cursor; NOTE: if we're purging the same page events that we're loading again, we can splice out the events between frameEvt and cursorPoint
+					- Can we get away w/ marking all events after frameEvt invalid?
+					  	- NOTE: We probably want this for teleport/zone-out as well
+				3) Respawn is received BEFORE pageEvents, but processed in the same queue; so we probably receive pageEvents from new pages that we haven't loaded yet. Need to check for unexpected pages and store them somewhere else until we reach an event that makes them valid (eg. zone, respawn, teleport). In case we receive multiple events (eg. respawn -> immediately teleport from cleric bringing you back) that change our pages unexpectedly, its probably better to do this during processing time rather than before
+					- 1) Process some page shiz
+					  2) Process respawn
+					      - new pages: look through queued msg list (NOTE: these haven't been added to frameEvents because unexpected page); add events from this frameEvt point forwards
+						  - old pages: go through frameEvents and remove anything from page from this point forwards
+					  3) Process some more page shiz
+					  4) Process teleport
+					  	  - old pages: go through frameEvents, remove events from this point forwards
+					      - new pages: (NOTE: Possibly ones we had just removed from respawn) go through queued msg list (still held here) and add back necessary events from this point
+					  5) Process more events
+
+			-- DOCS for NetCode stuff
 *	- BUG: Checking for inspector when already connected
 	- FIXME: Get rid of finishedRespawning (see scripts/game.js); need to add entity to page within respawned, or move that to part of respawning
 	- FIXME: Manually deleting a file doesn't trigger fuckingtaskrunner to rebuild on next init
@@ -530,8 +573,15 @@ WORKING ON (was previously working on)
 *    - Music not working initially
 *    - BUG: The AudioContext was not allowed to start. It must be resume (or created) after a user gesture on the page.
 *	 - FXMgr: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample/bank? limit to X number of sounds on an entity? etc.)
+	 - FIXME: renderer movable highlight: creates new canvas/ctx every time; we could easily cache multiple of these (most recently used) and simply re-use the same cached images
+	 - BUG: Pathing error:
+	   		Path: [West 1, ...] first recalibrates;    Local recalibration:  [West 2, North, ...]    so we recalibrate horizontally to the 
+			Local state: {74, 69}   (1187, 1104)
+			Path state:  {74, 68}   (1185, 1088)
 
-
+			Want recalibration:   3 west, 16 north, 1 east -> 1 west == 0
+	 - CHECK: We ALWAYS flush ALL events from everywhere in the same frame (no dynamic handlers after flush before end of frame)
+	 - CHECK: Pathfinding fix works and fixes all cases
 
 
 	- Browser Debugging Snippets
