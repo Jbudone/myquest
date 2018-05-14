@@ -284,13 +284,22 @@ define(
                     // Are we already standing on the path start tile
                     let tileDiffX = pathState.position.tile.x - state.position.tile.x,
                         tileDiffY = pathState.position.tile.y - state.position.tile.y;
+
+                    const onX   = state.position.global.x % Env.tileSize     === 0,
+                        onY     = state.position.global.y % Env.tileSize     === 0,
+                        pathOnX = pathState.position.global.x % Env.tileSize === 0,
+                        pathOnY = pathState.position.global.y % Env.tileSize === 0;
                     // TODO: We could also consider differences < 2 (eg. path start is slightly more to the east, which
                     // means they were clearly on their way to the next tile over which would have been a distance of 1)
+                    //
+                    // NOTE: We could have a situation where we're off the center of the tile, the path start is off the
+                    // center of the tile, so we can't go through this method (or otherwise need to revise it)
                     if
                     (
                         Math.abs(tileDiffX) <= 1 &&
                         Math.abs(tileDiffY) <= 1 &&
-                        (tileDiffY === 0 || tileDiffX === 0)
+                        (tileDiffY === 0 || tileDiffX === 0) &&
+                        ((onX ^ pathOnX) || tileDiffY === 0) && ((onY ^ pathOnY) || tileDiffX === 0)
                     ) {
 
                         // Simply walk to global path position
@@ -317,8 +326,6 @@ define(
 
 
                         // Player Position -> Center of Tile
-                        const onX = state.position.global.x % Env.tileSize === 0,
-                            onY = state.position.global.y % Env.tileSize === 0;
 
                         if (!onX) {
 
