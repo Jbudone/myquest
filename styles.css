@@ -372,6 +372,20 @@ h3 {
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#9a291e', endColorstr='#ca2320',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
 
 }
+
+.movable-class-difficult .movable-name {
+	color: #790069;
+}
+
+.movable-class-equal .movable-name {
+	color: #FFF;
+}
+
+.movable-class-easy .movable-name {
+	color: yellow;
+}
+
+
 .bubble-ui {
     position: absolute;
     pointer-events: none;

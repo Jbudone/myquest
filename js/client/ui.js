@@ -152,8 +152,26 @@ define(
                         this.hidden = false;
                     };
 
+                    // Movable Class
+                    // This is stuff like difficulty rating (eg. lower/higher level? player? boss? attackable?)
+                    this.updateMovableClass = function(userLevel){
+
+                        const myLevel = movable.isPlayer ? movable.character.level : movable.npc.level;
+
+                        if (!myLevel) return; // We may not have initialized your level yet
+
+                        // FIXME: Take more into consideration -- player? attackable? boss? Level ranges
+                        if (myLevel > userLevel) {
+                            this.ui.addClass('movable-class-difficult');
+                        } else if (myLevel == userLevel) {
+                            this.ui.addClass('movable-class-equal');
+                        } else {
+                            this.ui.addClass('movable-class-easy');
+                        }
+                    };
+
                     this.ui = $('<div/>')
-                        .addClass('movable-ui');
+                        .addClass('movable-ui')
                     this.ui_name = $('<div/>')
                         .addClass('movable-name')
                         .text( movable.name || movable.spriteID )
@@ -168,6 +186,7 @@ define(
                     this.health = null;
                     this.maxHealth = null;
                     this.hidden = false;
+                    this.movableClass = '';
 
 
                     $('#movable-uis').append( this.ui );
@@ -768,6 +787,13 @@ define(
                     this.listenTo(this.curPage, EVT_REMOVED_ENTITY, (page, entity) => {
                         this.detachMovable(entity);
                     });
+                }
+            };
+
+            this.updateUserLevel = (myLevel) => {
+                for (const movableID in this.movables) {
+                    const movableDetails = this.movables[movableID];
+                    if (movableDetails.attached) movableDetails.ui.updateMovableClass(myLevel);
                 }
             };
 

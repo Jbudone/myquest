@@ -247,6 +247,8 @@ define(['loggable', 'component'], (Loggable, Component) => {
                             UI.postMessage("Just catching up to my old level..");
                         }
                     }
+
+                    The.UI.updateUserLevel(this.level);
                 });
             },
 
