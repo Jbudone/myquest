@@ -142,7 +142,7 @@ define(['SCRIPTINJECT', 'scripts/commands'], (SCRIPTINJECT, Commands) => {
                 if (restoreSettings.isAdmin) {
                     console.log("You're already an admin, jackass!");
                     let adminCmd = _.find(Commands, (c) => c.command === CMD_ADMIN);
-                    adminCmd.client.succeeded(this); // FIXME: This seems wrong, but probably not a better way to do this until we abstract the admin system
+                    adminCmd.client.succeeded(_self); // FIXME: This seems wrong, but probably not a better way to do this until we abstract the admin system
                 } else {
 
                     if (localStorage.getItem('autoadmin') === "true") {
