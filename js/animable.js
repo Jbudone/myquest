@@ -14,6 +14,7 @@ define(['sprite'], (Sprite) => {
         this.lastStep   = 0;
         this.spriteStep = 0;
         this.speed      = 100;
+        this.curDirection = null;
 
         this.animate = (spriteID, repeat) => {
             if (Env.isServer) return;
@@ -37,6 +38,8 @@ define(['sprite'], (Sprite) => {
             else if (direction === SOUTH) dir = "down";
             else if (direction === WEST)  dir = "left";
             else if (direction === EAST)  dir = "right";
+
+            this.curDirection = dir;
 
             if (this.animations[spriteID+'_'+dir]) {
                 this.animate(spriteID+'_'+dir, repeat);
@@ -75,6 +78,18 @@ define(['sprite'], (Sprite) => {
                     this.state.x = this.spriteStep * this.state.w;
 
                     this.lastStep = time;
+                }
+            } else {
+                const randStart = 20000 * Math.random();
+                if (time - this.lastStep >= randStart) {
+
+                    if (!this.curDirection) {
+                        this.curDirection = 'right';
+                    }
+
+                    if (this.animations['idle_'+this.curDirection]) {
+                        this.animate('idle_'+this.curDirection, false);
+                    }
                 }
             }
         };

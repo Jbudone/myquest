@@ -419,10 +419,10 @@ define(
                             walk.started = true;
                             this.direction = direction;
                             if (!Env.isServer) {
-                                     if (direction==EAST)       this.sprite.animate('walk_right', true);
-                                else if (direction==WEST)       this.sprite.animate('walk_left', true);
-                                else if (direction==SOUTH)      this.sprite.animate('walk_down', true);
-                                else if (direction==NORTH)      this.sprite.animate('walk_up', true);
+                                     if (direction==EAST)  { this.sprite.animate('walk_right', true); this.sprite.curDirection = 'right'; }
+                                else if (direction==WEST)  { this.sprite.animate('walk_left', true);  this.sprite.curDirection = 'left'; }
+                                else if (direction==SOUTH) { this.sprite.animate('walk_down', true);  this.sprite.curDirection = 'down'; }
+                                else if (direction==NORTH) { this.sprite.animate('walk_up', true);    this.sprite.curDirection = 'up'; }
                             }
 
                             this.triggerEvent(EVT_PREPARING_WALK, walk);
