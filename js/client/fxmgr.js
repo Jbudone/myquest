@@ -24,7 +24,8 @@ define(['loggable'], (Loggable) => {
             };
         };
 
-        const audioContext = new AudioContext();
+        let audioContext = new AudioContext();
+        this.audioContext = audioContext;
 
         // NOTE: It would be awesome to have a pool of inactive audio buffer sources, then recycle those. The problem is
         // that buffers are immutable after being set for the first time, so essentially they're one-off nodes. Would be
@@ -346,6 +347,21 @@ define(['loggable'], (Loggable) => {
                     success();
                 });
             });
+        };
+
+        this.step = (time) => {
+
+            // We may have not successfully started the audio context; if not then we needed to wait for user input
+            // before we could resume. Attempt to resume now
+            //
+            // Error: The AudioContext was not allowed to start. It must be resume (or created) after a user gesture on the page. https://goo.gl/7K7WLu
+            if (SoundSys.audioContext.state === 'suspended') {
+                SoundSys.audioContext.resume();
+
+                if (SoundSys.audioContext.state !== 'suspended') {
+                    this.setVolume( this.settings.volume );
+                }
+            }
         };
     });
 
