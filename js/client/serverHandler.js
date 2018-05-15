@@ -48,12 +48,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         window.processingEvents    = [];
         window.reorderedProcessingEvents = [];
 
-        // We could receive multiple related events in the same frame, but require them to be processed in order (eg.
-        // NetSerialize a character's health going below 0, resulting in death, before receiving the death event). This
-        // allows us to handle high priority events first, and then go through the remaining events afterwards. Its
-        // unfortunate to do things this way, but currently not viable to reorder those events/broadcasts on the server
-        this.highPriorityEvents = [ EVT_NETSERIALIZE ];
-
         this.connect = (link) => {
 
             this.requestBuffer.pushArchive();
@@ -305,22 +299,27 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             }
 
                             // Order page events into frameEvents
-                            for (let i = 0; i < reorderedEvents.length; ++i) {
+                            for (let i = 0, curFrameId = 0; i < reorderedEvents.length; ++i) {
                                 let event      = reorderedEvents[i],
                                     frameEvtId = event.frameId;
 
-                                let indexOfNextEvt = frameEvents.length;
-                                for (let j = 0; j < frameEvents.length; ++j) {
-                                    if (frameEvents[j].frameId > frameEvtId) {
-                                        indexOfNextEvt = j;
-                                        break;
+
+                                // Where should we place this in the frameEvents? (just before the next frameId)
+                                let indexOfNextEvt;
+                                if (!_.isFinite(event.frameId)) {
+                                    // We may not have a frameId if this was pushed in by a netSerialize
+                                    event.frameId = curFrameId;
+                                } else {
+                                    indexOfNextEvt = frameEvents.length;
+                                    for (let j = 0; j < frameEvents.length; ++j) {
+                                        if (frameEvents[j].frameId > frameEvtId) {
+                                            indexOfNextEvt = j;
+                                            break;
+                                        }
                                     }
                                 }
 
-                                // We may not have a frameId if this was pushed in by a netSerialize
-                                if (!_.isFinite(event.frameId)) {
-                                    event.frameId = (indexOfNextEvt > 0 ? frameEvents[indexOfNextEvt - 1].frameId : 0);
-                                }
+                                curFrameId = event.frameId;
 
                                 event.page = page;
                                 frameEvents.splice(indexOfNextEvt, 0, {
