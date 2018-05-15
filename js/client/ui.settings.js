@@ -21,6 +21,8 @@ define(['loggable'], (Loggable) => {
 
             if (this.settings.muted) {
                 FX.setVolume(0.0);
+            } else {
+                FX.setVolume(1.0);
             }
         };
 

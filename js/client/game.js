@@ -362,6 +362,8 @@ define(
                             // Step UI
                             The.UI.step(time);
 
+                            FX.step(time);
+
                             // Update again
                             setTimeout(gameLoop, gameLoopSpeed);
                             Profiler.profileEnd('gameStep');
