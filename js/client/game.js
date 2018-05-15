@@ -1396,8 +1396,8 @@ define(
 
                             if (movable.npc.killable) {
                                 if (movable.playerID) continue;
-                                if (inRange(mouse.canvasX, px, px + Env.tileSize) &&
-                                    inRange(mouse.canvasY, py, py + Env.tileSize)) {
+                                if (inRange(mouse.canvasX, px, px + movable.sprite.sprite_w / (2 * Env.tileScale)) &&
+                                    inRange(mouse.canvasY, py - movable.sprite.sprite_h / Env.tileScale + Env.tileSize, py + Env.tileSize)) {
 
                                     // Hovering movable
                                     ui.hoveringEntity = movable;
