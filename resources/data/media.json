@@ -99,6 +99,20 @@
       "rawHash": "4147306895"
     },
     {
+      "name": "chipschallenge",
+      "file": "sounds/chipschallenge.m4a",
+      "hash": "2165471939",
+      "output": "sounds/chipschallenge.m4a",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "rawHash": "2165471939"
+    },
+    {
       "name": "levelDing",
       "file": "sounds/dingLevelUp.aac",
       "hash": "3344031795",

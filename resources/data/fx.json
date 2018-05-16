@@ -1,7 +1,8 @@
 {
     "regions": {
         "world": {
-            "gain": 1.0
+            "gain": 1.0,
+			"fadeBetweenSamples": true
         },
 
 		"ui": {
@@ -28,7 +29,11 @@
 			},
 			"bgMusic": {
 				"sound": "rivervale",
-				"gain": 0.0
+				"gain": 1.0
+			},
+			"bgMusic2": {
+				"sound": "chipschallenge",
+				"gain": 1.0
 			},
             "levelDing": {
 				"sound": "levelDing"
@@ -85,7 +90,7 @@
 				"samples": ["uiClick"]
 			},
 			"bgMusic": {
-				"samples": ["bgMusic"]
+				"samples": ["bgMusic", "bgMusic2"]
 			},
             "levelDing": {
 				"samples": ["levelDing"]
