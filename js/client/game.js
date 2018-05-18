@@ -1109,6 +1109,9 @@ define(
 
                         deadEntity.character.die(advocate);
 
+                        deadEntity.character = null;
+                        deadEntity.sprite.idle();
+                        The.renderer.addRagdoll(deadEntity);
                     };
 
                     // TODO: We should abstract this to UI

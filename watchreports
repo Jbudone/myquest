@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+inotifywait -m reports -e create | while read path action file; do
+    echo "$file changed in $path: $action"
+
+    echo "Subject: New Error Report" > emailErrorReport
+    echo "Hello Master" >> emailErrorReport
+    echo "It appears the game has crashed, and a new error report was generated.. When you have a moment out of your busy lifestyle, please look into this." >> emailErrorReport
+    echo "Error report: $path$file " >> emailErrorReport
+    echo " " >> emailErrorReport
+    echo " " >> emailErrorReport
+    echo " " >> emailErrorReport
+    cat "$path$file" >> emailErrorReport
+    sendmail Jbud@live.ca < emailErrorReport
+done
+
+

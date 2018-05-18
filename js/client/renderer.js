@@ -31,6 +31,7 @@ define(['loggable'], (Loggable) => {
         this.tilesheets           = null;
 
         this.projectiles          = [];
+        this.ragdolls             = [];
 
         this.settings  = {
             lineWidth: 3,
@@ -51,6 +52,11 @@ define(['loggable'], (Loggable) => {
                 borderThickness: 1,
                 borderColor: 'yellow',
                 filter: 'saturate(160%) contrast(140%)'
+            },
+
+            ragdoll: {
+                life: 2000,
+                filter: (t) => `opacity(${100 * t / 2000}%)`
             }
         };
 
@@ -139,6 +145,17 @@ define(['loggable'], (Loggable) => {
                 if (projectile.timeToDie <= 0) {
                     this.projectiles.splice(i, 1);
                 }
+            }
+
+            for (let i = this.ragdolls.length - 1; i >= 0; --i) {
+                const ragdoll = this.ragdolls[i];
+                ragdoll.timeToDie -= delta;
+
+                if (ragdoll.timeToDie <= 0) {
+                    this.ragdolls.splice(i, 1);
+                }
+
+                ragdoll.entity.step(time);
             }
         };
 
@@ -713,6 +730,33 @@ define(['loggable'], (Loggable) => {
                 });
             });
 
+            // Draw Ragdolls
+            {
+                for (let i = 0; i < this.ragdolls.length; ++i) {
+                    const ragdoll = this.ragdolls[i],
+                        entity = ragdoll.entity,
+                        movableSheet = entity.sprite.sheet.image,
+                        scale        = Env.tileScale,
+                        offsetY      = The.camera.globalOffsetY,
+                        offsetX      = The.camera.globalOffsetX,
+                        movableOffX  = entity.sprite.sprite_w / 2,
+                        movableOffY  = entity.sprite.sprite_h / 2;
+
+                    const globalX = entity.position.global.x,
+                        globalY   = entity.position.global.y;
+
+                    this.ctxEntities.filter = this.settings.ragdoll.filter(ragdoll.timeToDie);
+                    this.ctxEntities.drawImage(
+                        movableSheet,
+                        entity.sprite.state.x, entity.sprite.state.y,
+                        entity.sprite.sprite_w, entity.sprite.sprite_h,
+                        scale * (globalX - offsetX + Env.tileSize / 2) - movableOffX, scale * (globalY + offsetY) - movableOffY,
+                        entity.sprite.sprite_w, entity.sprite.sprite_h
+                    );
+                    this.ctxEntities.filter = 'none';
+                }
+            }
+
             // Draw Projectiles
             {
                 for (let i = 0; i < this.projectiles.length; ++i) {
@@ -925,6 +969,15 @@ define(['loggable'], (Loggable) => {
                 from: fromPos,
                 to: toPos,
                 spriteGID: spriteGID
+            });
+        };
+
+        this.addRagdoll = function(entity) {
+
+            entity.sprite.dirAnimate('die');
+            this.ragdolls.push({
+                entity: entity,
+                timeToDie: this.settings.ragdoll.life
             });
         };
     };

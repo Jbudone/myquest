@@ -33,7 +33,7 @@ define(['sprite'], (Sprite) => {
         this.dirAnimate = (spriteID, direction, repeat) => {
             if (Env.isServer || Env.isTesting || Env.isBot) return;
 
-            let dir = "up";
+            let dir = this.curDirection || "up";
                  if (direction === NORTH) dir = "up";
             else if (direction === SOUTH) dir = "down";
             else if (direction === WEST)  dir = "left";

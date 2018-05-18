@@ -140,6 +140,8 @@ define(
 
             this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback, ownerOnly) => {
 
+                assert(_.isFinite(propKey), `Passed bad property key: ${propKey} for property ${propName}`);
+
                 if (!obj.props) {
                     Object.defineProperty(obj, 'props', {
                         enumerable: false,
@@ -609,6 +611,53 @@ define(
                         if (this.isPlayer) {
                             this.flushNetUpdate(true);
                         }
+                    }
+
+                    // Long step (things we don't need to update very often)
+                    if (this.delta > 16000) {
+
+                        if (Env.isServer) {
+                            if (!this.state) {
+                                // Wandering around
+
+                                // FIXME:
+                                //  - Find a point nearby w/ a path that isn't long (not over a cliff where we have to walk all the way around)
+                                //  - Add path there
+                                //  - Can we use slower walking speed?
+                                //  - Only need to do this if there's a player nearby that can witness this (in PVS of player)
+
+                                if (Math.random() < 0.1) {
+
+
+                                    // Find an open, nearby tile
+                                    const filterOpenTiles = (tile) => {
+                                        const localCoords = area.localFromGlobalCoordinates(tile.x, tile.y),
+                                            distFromPos   = Math.abs(tile.x - curTile.x) + Math.abs(tile.y - curTile.y);
+                                        return (localCoords.page && distFromPos >= 2);
+                                    };
+
+
+                                    const respawn  = this.respawnPoint,
+                                        sourceTile = new Tile(respawn.tile.x, respawn.tile.y),
+                                        area       = this.entity.page.area,
+                                        curTile    = new Tile(this.entity.position.tile.x, this.entity.position.tile.y),
+                                        openTiles  = area.findOpenTilesAbout(sourceTile, 25, filterOpenTiles, 1000);
+
+                                    if (openTiles.length > 0) {
+                                        const openTileIdx = Math.floor(Math.random() * (openTiles.length - 1)),
+                                            openTile      = openTiles[openTileIdx];
+
+                                        this.brain.instincts.movement.goToTile(openTile, 0).then(() => {
+                                            this.standGuard();
+                                        });
+                                    }
+
+
+                                }
+                            }
+                        }
+
+                        this.delta = 0;
                     }
                 });
             };

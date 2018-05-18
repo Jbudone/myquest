@@ -999,7 +999,7 @@ define(
                 return (sprite && sprite.shootable);
             };
 
-            this.findOpenTilesAbout = (tile, count, _filter, maxIteration = 40) => {
+            this.findOpenTilesAbout = (tile, maxCount, _filter, maxIteration = 40) => {
                 let found     = 0,
                     iteration = 0;
 
@@ -1040,7 +1040,7 @@ define(
                     ++iteration;
 
                     foundOpenTiles.push(new Tile(tile.x, tile.y));
-                    if (found >= count || iteration >= maxIteration) {
+                    if (found >= maxCount || iteration >= maxIteration) {
                         return foundOpenTiles;
                     }
                 }
@@ -1072,7 +1072,7 @@ define(
                         ++iteration;
 
                         foundOpenTiles.push(new Tile(tileIter.x, tileIter.y));
-                        if (found >= count || iteration >= maxIteration) {
+                        if (found >= maxCount || iteration >= maxIteration) {
                             return foundOpenTiles;
                         }
                     }
@@ -1087,12 +1087,12 @@ define(
                             tileIter.y += phase.dir.y;
 
                             // Is this tile open?
+                            ++iteration;
                             if (this.isTileOpen(tileIter) && filter(tileIter)) {
                                 ++found;
-                                ++iteration;
 
                                 foundOpenTiles.push(new Tile(tileIter.x, tileIter.y));
-                                if (found >= count || iteration >= maxIteration) {
+                                if (found >= maxCount || iteration >= maxIteration) {
                                     return foundOpenTiles;
                                 }
                             }
