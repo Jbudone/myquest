@@ -56,6 +56,35 @@
         }
 
     },
+    {
+		"id": "PersistentPoison",
+        "base": "statbuff",
+        "args": {
+            "stats": [
+                {
+                    "type": "CUR_ADD",
+                    "stat": "health",
+                    "amount": -2,
+                    "permanent": true
+                }
+            ],
+            "options": {
+                "duration": 30000,
+                "tick": {
+                    "time": 1000,
+                    "repeatedActivate": true
+                }
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Temporary Damage",
+                "description": "Ouch!"
+            }
+        }
+
+    },
 	{
 		"id": "KingBadBuff",
         "base": "statbuff",

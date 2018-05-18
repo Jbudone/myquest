@@ -60,5 +60,22 @@
         },
         "types": [ "PICKUP", "WIELD_LEFTHAND" ],
         "stack": 1
+    },
+    {
+        "id": "itm_badassdagger",
+        "base": "weapon",
+        "args": {
+            "dmg": 1,
+            "lvl": 1,
+            "effects": [
+                {
+                    "type": "buff",
+                    "buffres": "PersistentPoison",
+                    "chance": 1.0
+                }
+            ]
+        },
+        "types": [ "PICKUP", "WIELD_LEFTHAND" ],
+        "stack": 1
     }
 ]}
