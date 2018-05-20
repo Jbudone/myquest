@@ -80,7 +80,7 @@ define(['loggable'], function(Loggable){
             //let spawnArea = 'main';
             //let spawnPosition = { x: 53, y: 60 };
             let spawnArea = 'largemap';
-            let spawnPosition = { x: 774, y: 333 };
+            let spawnPosition = { x: 846, y: 277 };
 
             // FIXME: Only allow this on test, and need to double check valid spawn
             if (overrideSpawn) {

@@ -1109,6 +1109,8 @@ define(
 
                         deadEntity.character.die(advocate);
 
+                        FX.event('died', entity);
+
                         deadEntity.character = null;
                         deadEntity.sprite.idle();
                         The.renderer.addRagdoll(deadEntity);

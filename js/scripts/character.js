@@ -617,7 +617,7 @@ define(
                     if (this.delta > 16000) {
 
                         if (Env.isServer) {
-                            if (!this.state) {
+                            if (!this.state && !this.isPlayer) {
                                 // Wandering around
 
                                 // FIXME:

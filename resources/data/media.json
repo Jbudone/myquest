@@ -279,6 +279,272 @@
       },
       "hash": "2326486305",
       "rawHash": "2326486305"
+    },
+    {
+      "name": "bunnyratAtk1",
+      "file": "sounds/bunnyrat.atk1.ogg",
+      "output": "sounds/bunnyrat.atk1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2694727920",
+      "rawHash": "2694727920"
+    },
+    {
+      "name": "bunnyratAtk2",
+      "file": "sounds/bunnyrat.atk2.ogg",
+      "output": "sounds/bunnyrat.atk2.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "1006975986",
+      "rawHash": "1006975986"
+    },
+    {
+      "name": "bunnyratAtk3",
+      "file": "sounds/bunnyrat.atk3.ogg",
+      "output": "sounds/bunnyrat.atk3.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "574492328",
+      "rawHash": "574492328"
+    },
+    {
+      "name": "bunnyratAtk4",
+      "file": "sounds/bunnyrat.atk4.ogg",
+      "output": "sounds/bunnyrat.atk4.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "3290893536",
+      "rawHash": "3290893536"
+    },
+    {
+      "name": "bunnyratAtk5",
+      "file": "sounds/bunnyrat.atk5.ogg",
+      "output": "sounds/bunnyrat.atk5.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "1495413869",
+      "rawHash": "1495413869"
+    },
+    {
+      "name": "bunnyratAtk6",
+      "file": "sounds/bunnyrat.atk6.ogg",
+      "output": "sounds/bunnyrat.atk6.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2639900849",
+      "rawHash": "2639900849"
+    },
+    {
+      "name": "bunnyratAtk7",
+      "file": "sounds/bunnyrat.atk7.ogg",
+      "output": "sounds/bunnyrat.atk7.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2725232214",
+      "rawHash": "2725232214"
+    },
+    {
+      "name": "bunnyratAtk8",
+      "file": "sounds/bunnyrat.atk8.ogg",
+      "output": "sounds/bunnyrat.atk8.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "3143771697",
+      "rawHash": "3143771697"
+    },
+    {
+      "name": "bunnyratAtk9",
+      "file": "sounds/bunnyrat.atk9.ogg",
+      "output": "sounds/bunnyrat.atk9.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "289785480",
+      "rawHash": "289785480"
+    },
+    {
+      "name": "bunnyratAtk10",
+      "file": "sounds/bunnyrat.atk10.ogg",
+      "output": "sounds/bunnyrat.atk10.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "667542988",
+      "rawHash": "667542988"
+    },
+    {
+      "name": "bunnyratAtk11",
+      "file": "sounds/bunnyrat.atk11.ogg",
+      "output": "sounds/bunnyrat.atk11.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2416601119",
+      "rawHash": "2416601119"
+    },
+    {
+      "name": "bunnyratAtk12",
+      "file": "sounds/bunnyrat.atk12.ogg",
+      "output": "sounds/bunnyrat.atk12.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2623943513",
+      "rawHash": "2623943513"
+    },
+    {
+      "name": "bunnyratHit1",
+      "file": "sounds/bunnyrat.hit1.ogg",
+      "output": "sounds/bunnyrat.hit1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2341698930",
+      "rawHash": "2341698930"
+    },
+    {
+      "name": "bunnyratHit2",
+      "file": "sounds/bunnyrat.hit2.ogg",
+      "output": "sounds/bunnyrat.hit2.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "3713747354",
+      "rawHash": "3713747354"
+    },
+    {
+      "name": "bunnyratHit3",
+      "file": "sounds/bunnyrat.hit3.ogg",
+      "output": "sounds/bunnyrat.hit3.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2560992715",
+      "rawHash": "2560992715"
+    },
+    {
+      "name": "bunnyratHit4",
+      "file": "sounds/bunnyrat.hit4.ogg",
+      "output": "sounds/bunnyrat.hit4.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4072723510",
+      "rawHash": "4072723510"
+    },
+    {
+      "name": "bunnyratHit5",
+      "file": "sounds/bunnyrat.hit5.ogg",
+      "output": "sounds/bunnyrat.hit5.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "4084314405",
+      "rawHash": "4084314405"
+    },
+    {
+      "name": "bunnyratDeath1",
+      "file": "sounds/bunnyrat.death1.ogg",
+      "output": "sounds/bunnyrat.death1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "2338953139",
+      "rawHash": "2338953139"
+    },
+    {
+      "name": "bunnyratGrowl1",
+      "file": "sounds/bunnyrat.growl1.ogg",
+      "output": "sounds/bunnyrat.growl1.ogg",
+      "type": "sound",
+      "options": {
+        "cached": false,
+        "encrypted": false,
+        "packed": false,
+        "preprocess": false
+      },
+      "hash": "774351727",
+      "rawHash": "774351727"
     }
   ]
 }

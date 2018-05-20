@@ -140,7 +140,7 @@ define(['loggable'], (Loggable) => {
 
             let ctxName = "";
             if (ctx instanceof Movable) {
-                ctxName = ctx.npc.name;
+                ctxName = ctx.npc.type;
             }
 
             let refinedEvent = `${evt}.${ctxName}`;

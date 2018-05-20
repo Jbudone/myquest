@@ -2,8 +2,8 @@
   "media": {
     "file": "media.json",
     "options": {},
-    "hash": "2988555471",
-    "rawHash": "2988555471"
+    "hash": "2047815880",
+    "rawHash": "2047815880"
   },
   "sheets": {
     "file": "sheets.json",
@@ -22,8 +22,8 @@
     "options": {
       "reloadable": true
     },
-    "hash": "654902178",
-    "rawHash": "654902178"
+    "hash": "1658063828",
+    "rawHash": "1658063828"
   },
   "world": {
     "file": "world.json",
@@ -82,8 +82,8 @@
   "fx": {
     "file": "fx.json",
     "options": {},
-    "hash": "4181463211",
-    "rawHash": "4181463211"
+    "hash": "3275214999",
+    "rawHash": "3275214999"
   },
   "testing": {
     "file": "testing.json",

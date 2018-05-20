@@ -36,7 +36,7 @@ define(function(){
 		};
 
 		this.renderer = {
-			drawBorders: true, // Draws page/entity borders (useful for debugging)
+			drawBorders: false, // Draws page/entity borders (useful for debugging)
 
             // Use bg pooled pages by copying their image data into a single bg canvas
             // If this is false then have all active pooled pages as visible, and simply move them around in place of the bg canvas (ie. multiple canvases for bg)

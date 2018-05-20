@@ -10,7 +10,7 @@
 		},
 
 		"bg": {
-			"gain": 0.8,
+			"gain": 0.7,
 			"fadeBetweenSamples": true
 		}
     },
@@ -68,6 +68,25 @@
             "snakeHit3": {
                 "sound": "snakeHit3"
             },
+            "bunnyratAtk1": { "sound": "bunnyratAtk1" },
+            "bunnyratAtk2": { "sound": "bunnyratAtk2" },
+            "bunnyratAtk3": { "sound": "bunnyratAtk3" },
+            "bunnyratAtk4": { "sound": "bunnyratAtk4" },
+            "bunnyratAtk5": { "sound": "bunnyratAtk5" },
+            "bunnyratAtk6": { "sound": "bunnyratAtk6" },
+            "bunnyratAtk7": { "sound": "bunnyratAtk7" },
+            "bunnyratAtk8": { "sound": "bunnyratAtk8" },
+            "bunnyratAtk9": { "sound": "bunnyratAtk9" },
+            "bunnyratAtk10": { "sound": "bunnyratAtk10" },
+            "bunnyratAtk11": { "sound": "bunnyratAtk11" },
+            "bunnyratAtk12": { "sound": "bunnyratAtk12" },
+            "bunnyratHit1": { "sound": "bunnyratHit1" },
+            "bunnyratHit2": { "sound": "bunnyratHit2" },
+            "bunnyratHit3": { "sound": "bunnyratHit3" },
+            "bunnyratHit4": { "sound": "bunnyratHit4" },
+            "bunnyratHit5": { "sound": "bunnyratHit5" },
+            "bunnyratDeath1": { "sound": "bunnyratDeath1" },
+            "bunnyratGrowl1": { "sound": "bunnyratGrowl1" },
             "hit": {
                 "sound": "hit"
             }
@@ -85,6 +104,24 @@
             },
             "snakeHit": {
                 "samples": ["snakeHit1", "snakeHit2", "snakeHit3"]
+            },
+            "bunnyratAtk1": {
+                "samples": ["bunnyratGrowl1", "bunnyratAtk3", "bunnyratAtk8", "bunnyratAtk9", "bunnyratAtk11", "bunnyratAtk12"]
+            },
+            "bunnyratAtk2": {
+                "samples": ["bunnyratAtk2"]
+            },
+            "bunnyratAtk3": {
+                "samples": ["bunnyratAtk4", "bunnyratAtk5", "bunnyratAtk6", "bunnyratAtk7"]
+            },
+            "bunnyratHit1": {
+                "samples": ["bunnyratHit1"]
+            },
+            "bunnyratHit2": {
+                "samples": ["bunnyratHit2", "bunnyratHit3", "bunnyratHit4", "bunnyratHit5"]
+            },
+            "bunnyratDie": {
+                "samples": ["bunnyratDeath1"]
             },
 			"uiClick": {
 				"samples": ["uiClick"]
@@ -129,6 +166,24 @@
         "damaged.snake": {
             "region": "world",
             "bank": "snakeHit",
+            "conditions": {
+                "timeoutOnSample": 3000,
+                "limitSamples": 1
+            }
+        },
+
+        "attacked.bunnyrat": {
+            "region": "world",
+            "bank": "bunnyratAtk1",
+            "conditions": {
+                "timeoutOnSample": 3000,
+                "limitSamples": 1
+            }
+        },
+
+        "died.bunnyrat": {
+            "region": "world",
+            "bank": "bunnyratDie",
             "conditions": {
                 "timeoutOnSample": 3000,
                 "limitSamples": 1
