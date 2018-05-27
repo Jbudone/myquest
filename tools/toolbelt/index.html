@@ -1,0 +1,62 @@
+<html>
+    <head>
+		<title>Toolbelt</title>
+
+		<link rel="stylesheet" type="text/css" href="style.css">
+
+		<script type="text/javascript" src="/js/lib/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="/js/lib/underscore-min.js"></script>
+		<script src="js/main.js"></script>
+		<script src="js/resourcemgr.js"></script>
+		<script src="js/interactionmgr.js"></script>
+
+		<script src="js/modTilesheet.js"></script>
+
+		<!-- Bootstrap -->
+		<!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        -->
+
+    </head>
+    <body>
+        <div id='workingWindow'>
+        
+            <div id="ModTilesheet" class="module">
+
+                <canvas id='tilesheetCanvas'>
+                </canvas>
+
+                <div id="tilesheetControls" class="controls">
+
+                    <div id="tilesheetActionList">
+                        <a href="#" id="tilesheetBtnCollision" class="tilesheetAction">Collision</a>
+                        <a href="#" id="tilesheetBtnFloating" class="tilesheetAction">Floating</a>
+                        <a href="#" id="tilesheetBtnShootable" class="tilesheetAction">Action</a>
+                        <a href="#" id="tilesheetBtnObject" class="tilesheetAction">Object</a>
+                        <a href="#" id="tilesheetBtnExtract" class="tilesheetAction">Extract</a>
+                    </div>
+
+
+                    <div id="tilesheetName"></div>
+                    <div id="tilesheetImage"></div>
+
+                    <div id="tilesheetObjects"></div>
+
+                    <div id="tilesheetExtractions">
+                        <span id="tilesheetExtractionsTitle">Extractions</span>
+                        <div class="tilesheetGroup">
+                            <span class="tilesheetGroupName">Extract Group</span>
+                            <span class="tilesheetGroupSheet">SheetId</span>
+                        </div>
+                    </div>
+
+                    <a id="tilesheetSave" href="#">Save</a>
+                </div>
+
+            </div>
+        
+        </div>
+        <div id='resourceMgr'></div>
+    </body>
+</html>
