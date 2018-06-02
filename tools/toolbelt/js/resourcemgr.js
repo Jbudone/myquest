@@ -69,7 +69,7 @@ const ResourceMgr = (new function(){
             const resEl = $('<a/>')
                             .attr('href', '#')
                             .addClass('resource')
-                            .text(resDetails.data.image)
+                            .text(resDetails.data.image || resDetails.data.output)
                             .click(() => {
                                 const resType = resDetails.resType;
                                 this.onSelectResource(resDetails);

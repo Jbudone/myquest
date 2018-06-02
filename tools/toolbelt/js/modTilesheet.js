@@ -195,7 +195,14 @@ const ModTilesheet = (function(containerEl){
 
             this.redraw();
         };
-        resImg.src = `/resources/${resource.image}`;
+
+        if (resource.image) {
+            resImg.src = `/resources/${resource.image}`;
+        } else if (resource.output) {
+            resImg.src = `/dist/resources/${resource.output}`;
+        } else {
+            throw Error("No source found for resource!");
+        }
 
         $('#tilesheetName').text(resource.id);
         $('#tilesheetImage').text(resource.image);
