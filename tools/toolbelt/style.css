@@ -88,6 +88,10 @@ body {
     font-weight: bold;
 }
 
+#tilesheetVirtualCanvas {
+    display: none;
+}
+
 /************************************/
 /*      Resource Mgr      */
 

@@ -248,13 +248,15 @@ const packageRoutines = {
                     const generatedSheet = generatedSheets[sheet.id];
                     generatedSheet.exists = true;
                     generatedSheet.list = sheet.dependencies;
+                    generatedSheet.sprites = sheet.sprites;
+                    generatedSheet.dirty = sheet.dirty;
                 }
             });
 
             // Mark generated sheets as dirty if lists differ
             _.forEach(generatedSheets, (sheet, sheetId) => {
 
-                if (sheet.currentList.length === sheet.list.length) {
+                if (sheet.list && sheet.currentList && (sheet.currentList.length === sheet.list.length)) {
                     for (let i = 0; i < sheet.currentList.length; ++i) {
                         const newAsset = sheet.currentList[i],
                             oldAsset   = sheet.list.find((a) => a.assetId === newAsset.assetId);
@@ -273,6 +275,7 @@ const packageRoutines = {
                         const tilesheet = data.tilesheets.list.find((tilesheet) => tilesheet.id === sheetId);
                         tilesheet.dirty = true;
                         tilesheet.newDependencies = sheet.currentList;
+                        tilesheet.sprites = sheet.sprites;
                     } else {
                         data.tilesheets.list.push({
                             id: sheetId,
@@ -374,6 +377,7 @@ const packageRoutines = {
                 sheet.sprites = asset.sprites;
                 sheet.columns = asset.columns;
                 sheet.rows = asset.rows;
+                sheet.spriteGroups = asset.spriteGroups;
 
                 delete sheet.dirty;
                 delete sheet.newDependencies;
@@ -994,13 +998,15 @@ const processGeneratedTilesheet = (package) => {
         let spritesToExtract = [],
             yOffset = 0,
             genMaxX = 0,
-            genMaxY = 0;
+            genMaxY = 0,
+            spriteGroups = [];
         newDependencies.forEach((dependency) => {
 
             const source = dependency.asset.image,
                 columns = parseInt(dependency.asset.columns, 10),
                 rows = parseInt(dependency.asset.rows, 10),
-                tilesize = parseInt(dependency.asset.tilesize, 10);
+                tilesize = parseInt(dependency.asset.tilesize, 10),
+                spriteIslands = [];
 
             let minY = Number.MAX_SAFE_INTEGER, 
                 minX = Number.MAX_SAFE_INTEGER, 
@@ -1017,13 +1023,18 @@ const processGeneratedTilesheet = (package) => {
                 maxX = Math.max(minX, x);
             });
 
-            debugger;
-
             dependency.sprites.forEach((sprite) => {
                 let x = sprite % columns,
                     y = Math.floor(sprite / columns),
-                    dstX = (x - minX) * package.tilesize,
-                    dstY = (y - minY + yOffset) * package.tilesize;
+                    dstX = (x - minX),
+                    dstY = (y - minY + yOffset);
+
+                const existingSprite = oldSprites.find((s) => s.source === source && s.sprite === sprite);
+
+                if (existingSprite) {
+                    dstX = existingSprite.dstX / package.tilesize;
+                    dstY = existingSprite.dstY / package.tilesize;
+                }
 
                 spritesToExtract.push({
                     source,
@@ -1031,13 +1042,61 @@ const processGeneratedTilesheet = (package) => {
                     srcY: y * tilesize,
                     srcW: tilesize,
                     srcH: tilesize,
-                    dstX, dstY
+                    dstX: dstX * package.tilesize,
+                    dstY: dstY * package.tilesize
                 });
 
                 package.sprites.push({
                     source, sprite,
-                    dstX, dstY
+                    dstX: dstX * package.tilesize,
+                    dstY: dstY * package.tilesize
                 });
+
+                // Check sprite islands to see if this sprite is touching any other sprite islands. This way we can keep
+                // track of groups of sprites that should stick together
+                let touchingSpriteIslands = [];
+                spriteIslands.forEach((island) => {
+                    // Sprite touching any other sprites in this island?
+                    for (let i = 0; i < island.length; ++i) {
+                        const islandSprite = island[i];
+                        if
+                        (
+                            _.inRange(x, islandSprite.x - 1, islandSprite.x + 2) &&
+                            _.inRange(y, islandSprite.y - 1, islandSprite.y + 2)
+                        )
+                        {
+                            touchingSpriteIslands.push(island);
+                            break;
+                        }
+                    }
+                });
+
+                if (touchingSpriteIslands.length === 0) {
+                    // Starting a new island w/ this sprite
+                    spriteIslands.push([{
+                        sprite, x, y, dstX, dstY
+                    }]);
+                } else {
+                    // Add sprite to first island, and merge the islands since they're each connected via this sprite
+                    touchingSpriteIslands[0].push({
+                        sprite, x, y, dstX, dstY
+                    });
+
+                    // Merge other islands to the first one, and remove the other islands
+                    for (let i = 1; i < touchingSpriteIslands.length; ++i) {
+                        touchingSpriteIslands[i].forEach((island) => {
+                            touchingSpriteIslands[0] = touchingSpriteIslands[0].concat(island);
+                        });
+
+                        // Remove island from list
+                        for (let j = 0; j < spriteIslands.length; ++j) {
+                            if (touchingSpriteIslands[i] === spriteIslands[j]) {
+                                spriteIslands.splice(j, 1);
+                                break;
+                            }
+                        }
+                    }
+                }
             });
 
             yOffset += (maxY - minY + 1);
@@ -1047,6 +1106,12 @@ const processGeneratedTilesheet = (package) => {
             package.dependencies.push({
                 assetId: dependency.asset.id,
                 sprites: dependency.sprites
+            });
+
+            spriteIslands.forEach((spriteIsland) => {
+                spriteGroups.push({
+                    spriteIsland
+                });
             });
         });
 
@@ -1058,6 +1123,7 @@ const processGeneratedTilesheet = (package) => {
 
         package.columns = genMaxX;
         package.rows = genMaxY;
+        package.spriteGroups = spriteGroups;
 
         // convert \( resources/sprites/tilesheet.png -crop 16x16+0+64 -repage +0+0 \) \( resources/sprites/tilesheet.png -crop 16x16+72+64 -repage +32+16 \) -background none -layers merge autogen.png
         let convertCmd = "convert ",

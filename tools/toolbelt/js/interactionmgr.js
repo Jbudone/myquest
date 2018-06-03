@@ -3,7 +3,11 @@ const InteractionMgr = (new function(){
 
     this.canvasEl = null;
 
-    let interactables = [];
+    let interactables = [],
+        dragging = {
+            interactions: [],
+            mouseDownPos: null
+        };
 
     const hoveringInteractables = [];
     const hittingInteractable = (worldPt, interactable) => {
@@ -69,6 +73,17 @@ const InteractionMgr = (new function(){
             }
         }
 
+        // Draging interaction
+        if (dragging.interactions.length > 0) {
+            const draggedDist = {
+                x: worldPt.x - dragging.mouseDownPos.x,
+                y: worldPt.y - dragging.mouseDownPos.y
+            };
+            dragging.interactions.forEach((interaction) => {
+                interaction.onDrag(draggedDist);
+            });
+        }
+
         // Hover In new interactions
         newHitInteractions.forEach((hitInteraction) => {
             hitInteraction.onHoverIn();
@@ -94,9 +109,44 @@ const InteractionMgr = (new function(){
             }
         });
 
-        hitInteractions.forEach((hitInteraction) => {
-            hitInteraction.onClick();
+        if (dragging.interactions.length > 0) {
+
+            // Stop dragging interactions
+            dragging.interactions.forEach((interaction) => {
+                interaction.onEndDrag();
+            });
+            dragging.interactions = [];
+        } else {
+
+            // Otherwise handle as a click event
+            hitInteractions.forEach((hitInteraction) => {
+                hitInteraction.onClick();
+            });
+        }
+    };
+
+    const onMouseDown = (evt) => {
+
+        const worldPt = mouseToCanvasCoords(evt);
+
+        // What interactables have we hit?
+        const hitInteractions = [];
+        hoveringInteractables.forEach((interactable) => {
+            if (hittingInteractable(worldPt, interactable)) {
+                hitInteractions.push(interactable);
+            }
         });
+
+        // Dragging interactions
+        if (evt.ctrlKey) {
+            hitInteractions.forEach((hitInteraction) => {
+                if (hitInteraction.canDrag) {
+                    hitInteraction.onBeginDrag();
+                    dragging.interactions.push(hitInteraction);
+                }
+                dragging.mouseDownPos = worldPt;
+            });
+        }
     };
 
 
@@ -105,6 +155,7 @@ const InteractionMgr = (new function(){
 
         canvasEl.addEventListener('mousemove', onMouseMove);
         canvasEl.addEventListener('mouseup', onMouseUp);
+        canvasEl.addEventListener('mousedown', onMouseDown);
     };
 
     this.unload = () => {
@@ -113,6 +164,7 @@ const InteractionMgr = (new function(){
 
         this.canvasEl.removeEventListener('mousemove', onMouseMove);
         this.canvasEl.removeEventListener('mouseup', onMouseUp);
+        this.canvasEl.removeEventListener('mousedown', onMouseDown);
     };
 
     let entityId = 0;
@@ -122,18 +174,32 @@ const InteractionMgr = (new function(){
             x, y, w, h,
             id: (++entityId),
 
+            canDrag: false,
+
             onHoverIn: () => {},
             onHoverOut: () => {},
-            onClick: () => {}
+            onClick: () => {},
+            onBeginDrag: () => {},
+            onEndDrag: () => {},
+            onDrag: () => {}
         };
 
-        const setCallbacks = {
-            onHoverIn: (cb) => { interaction.onHoverIn = cb; return setCallbacks; },
-            onHoverOut: (cb) => { interaction.onHoverOut = cb; return setCallbacks; },
-            onClick: (cb) => { interaction.onClick = cb; return setCallbacks; }
+        const interactionFunctions = {
+
+            // Callbacks
+            onHoverIn: (cb) => { interaction.onHoverIn = cb; return interactionFunctions; },
+            onHoverOut: (cb) => { interaction.onHoverOut = cb; return interactionFunctions; },
+            onClick: (cb) => { interaction.onClick = cb; return interactionFunctions; },
+            onDrag: (cb) => { interaction.onDrag = cb; return interactionFunctions; },
+            onBeginDrag: (cb) => { interaction.onBeginDrag = cb; return interactionFunctions; },
+            onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
+
+            // Functions
+            setCanDrag: (canDrag) => { interaction.canDrag = true; return interactionFunctions; },
+            move: (x, y) => { interaction.x = x; interaction.y = y; return interactionFunctions; }
         };
 
         interactables.push(interaction);
-        return setCallbacks;
+        return interactionFunctions;
     };
 });
