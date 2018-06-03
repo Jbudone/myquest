@@ -37,11 +37,13 @@
 //                      Probably best to have post-processing per-extraction group for dependency. Just copies sheet's
 //                      postprocessing initially, and can be edited
 //
+//                  - Trigger ResourceBuilder on save? Or fuckingtaskrunner to auto run it?
 //                  - Update maps
 //                  - Update other things???  (eg. icons, items, etc.) -- may be better to disallow this for now,
 //                  - Fix removing sprites from dependency (remove collision/etc. too?)
 //                  - Update objects on translating sprite groups
 //                  - Disable extraction from generated sheet
+//                  - Check works in map editor + updates; check works in game
 //              
 //          - Save changes: reload everything?
 //          - Add new tilesheet:  Add New,  show blank canvas, drag/drop to add tilesheet

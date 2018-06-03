@@ -62,7 +62,7 @@ const ModTilesheet = (function(containerEl){
         const groupEl = $('<div/>')
                             .addClass('tilesheetGroup');
         extractGroups[groupId] = {
-            sheetId: null,
+            sheetId,
             list: [],
             el: null
         };
