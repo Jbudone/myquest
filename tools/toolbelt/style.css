@@ -10,6 +10,19 @@ body {
 }
 
 /************************************/
+/*      Editor      */
+
+.tilesheetAction {
+    height: 40px;
+    width: 40px;
+}
+
+.tilesheetActionImg {
+    max-height: 100%;
+    max-width: 100%;
+}
+
+/************************************/
 /*      Modules      */
 
 .module {
@@ -34,7 +47,7 @@ body {
     background: #FEFEFF;
     border-radius: 6px;
     margin: 20px;
-    padding: 10px;
+    padding: 4px;
 }
 
 #tilesheetControls.pendingChanges {
@@ -48,8 +61,8 @@ body {
 .tilesheetAction {
     min-width: 20px;
     min-height: 20px;
-    margin: 4px;
-    padding: 3px;
+    margin: 0px;
+    padding: 2px;
     display: block;
     background: #0F0;
     border: 1px solid #000;
@@ -62,6 +75,7 @@ body {
 
 .tilesheetAction:hover {
     font-weight: bold;
+    background: #00F;
 }
 
 .tilesheetObject {
