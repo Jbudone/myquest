@@ -164,7 +164,8 @@ const packageRoutines = {
         "updateAsset": (data, assetName, asset) => {
             data[assetName].hash = asset.processedHash;
             data[assetName].rawHash = asset.hash;
-        }
+        },
+        "finalize": (package) => { }
     },
 
 
@@ -195,7 +196,9 @@ const packageRoutines = {
             let media = data.list.find((media) => media.name === assetName);
             media.hash = asset.processedHash;
             media.rawHash = asset.hash;
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"sheets": {
         "prepare": (data) => {
@@ -393,6 +396,18 @@ const packageRoutines = {
             sheet.rawHash = asset.hash;
 
             console.log(sheet);
+        },
+        "finalize": (package) => {
+
+            // Update GID for tilesheets
+            let gidCursor = 0;
+            package.data.tilesheets.list.forEach((tilesheet) => {
+                const totalTiles = parseInt(tilesheet.rows, 10) * parseInt(tilesheet.columns, 10);
+                tilesheet.gid.first = gidCursor;
+                gidCursor += totalTiles - 1;
+                tilesheet.gid.last = gidCursor;
+                ++gidCursor;
+            });
         }
     },
 	"avatars": {
@@ -405,7 +420,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"npcs": {
         "prepare": (data) => data,
@@ -417,7 +434,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"world": {
         "prepare": (data) => {},
@@ -445,7 +464,9 @@ const packageRoutines = {
             let area = data.areas[assetName];
             area.hash = asset.processedHash;
             area.rawHash = asset.hash;
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"items": {
         "prepare": (data) => {},
@@ -457,7 +478,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"buffs": {
         "prepare": (data) => {},
@@ -469,7 +492,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"interactables": {
         "prepare": (data) => {},
@@ -481,7 +506,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "quests": {
         "prepare": (data) => {},
@@ -493,7 +520,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "interactions": {
         "prepare": (data) => {},
@@ -505,7 +534,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
 	"scripts": {
         "prepare": (data) => {},
@@ -517,7 +548,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "components": {
         "prepare": (data) => {},
@@ -529,7 +562,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "rules": {
         "prepare": (data) => {},
@@ -541,7 +576,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "fx": {
         "prepare": (data) => {},
@@ -553,7 +590,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     },
     "testing": {
         "prepare": (data) => {},
@@ -565,7 +604,9 @@ const packageRoutines = {
         },
         "updateAsset": (data, assetName, asset) => {
 
-        }
+        },
+        "finalize": (package) => { }
+
     }
 };
 
@@ -835,6 +876,10 @@ let processResources = (package) => {
                         success();
                         return;
                     }
+
+                    // Finalize any changes in the package
+                    const packageRoutine = packageRoutines[package.name];
+                    packageRoutine.finalize(package);
 
                     console.log("Saving package changes: " + package.name + " ==> " + package.file);
 
