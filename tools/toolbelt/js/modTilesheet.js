@@ -348,6 +348,12 @@ const ModTilesheet = (function(containerEl){
 
             if (resource.data.extracts) {
                 _.forEach(resource.data.extracts, (o, e) => {
+
+                    const sheetId = resource.data.extractGroups[o].sheetId;
+                    if (!extractGroups[o]) {
+                        addExtractGroup(o, sheetId);
+                    }
+
                     addEntityExtraction(e, o);
                 });
             }
