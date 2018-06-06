@@ -18,9 +18,11 @@ scp -i ~/home/awskeypair.pem -r dist/js/SCRIPTINJECT.js ec2-user@ec2-54-85-208-1
 
 ssh -i ~/home/awskeypair.pem -t ec2-user@ec2-54-85-208-136.compute-1.amazonaws.com << EOF
   cd myquest
+  git checkout -- .
 
   # Kill existing server
-  sudo killall runserver
+  sudo ps aux | grep -i [w]atchreports | awk '{ print \$2 }' | xargs kill -9 \$1
+  sudo ps aux | grep -i [r]unserver | awk '{ print \$2 }' | xargs kill -9 \$1
   sudo ps aux | grep -i [n]ode | awk '{ print \$2 }' | xargs kill -9 \$1
 
   rm patchserver.out
