@@ -376,7 +376,8 @@ const ModTilesheet = (function(containerEl){
             throw Error("No source found for resource!");
         }
 
-        $('#tilesheetName').text(resource.id);
+        $('#tilesheetName').val(resource.id);
+        $('#tilesheetDescription').val(resource.description || "");
         $('#tilesheetImage').text(resource.image);
     };
 
@@ -529,8 +530,8 @@ const ModTilesheet = (function(containerEl){
         for (let y = 0; y < resImg.height; y += tilesize) {
             for (let x = 0; x < resImg.width; x += tilesize) {
 
-                const gridLineWidth = 2,
-                    gridAlpha       = 0.4;
+                const gridLineWidth = 1,
+                    gridAlpha       = 0.1;
                 canvasCtx.globalAlpha = gridAlpha;
                 canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), tilesize + (gridLineWidth/2), tilesize + (gridLineWidth/2));
             }
@@ -616,6 +617,12 @@ const ModTilesheet = (function(containerEl){
                 resource.spriteGroups.push(newSpriteGroup);
                 resource.dirty = true;
             });
+
+            const description = $('#tilesheetDescription').val();
+            delete resource.description;
+            if (description) {
+                resource.description = description;
+            }
 
             console.log(sprites);
             console.log(spriteGroups);

@@ -3,6 +3,7 @@ body {
     display: flex;
     justify-content: stretch;
     margin: 10px 10px;
+    background: #181818;
 }
 
 #workingWindow {
@@ -12,14 +13,14 @@ body {
 /************************************/
 /*      Editor      */
 
-.tilesheetAction {
-    height: 40px;
-    width: 40px;
-}
-
 .tilesheetActionImg {
     max-height: 100%;
     max-width: 100%;
+    filter: brightness(10);
+}
+
+.tilesheetFieldContainer {
+    margin: 6px;
 }
 
 /************************************/
@@ -41,13 +42,14 @@ body {
 }
 
 #tilesheetControls {
-    width: 200px;
-    height: 200px;
-    border: thin solid black;
-    background: #FEFEFF;
+    width: 240px;
+    min-height: 200px;
+    border: thin solid #6b6b6b;
+    background: #282828;
     border-radius: 6px;
     margin: 20px;
     padding: 4px;
+    color: #FFF;
 }
 
 #tilesheetControls.pendingChanges {
@@ -56,6 +58,7 @@ body {
 
 #tilesheetActionList {
     display: flex;
+    justify-content: space-evenly;
 }
 
 .tilesheetAction {
@@ -64,18 +67,22 @@ body {
     margin: 0px;
     padding: 2px;
     display: block;
-    background: #0F0;
-    border: 1px solid #000;
+    background: #232323;
+    border: 1px solid #707070;
 	text-decoration: none;
+
+    height: 30px;
+    width: 30px;
+    border-radius: 4px;
 }
 
 .tilesheetAction.active {
-    background: #0A0;
+    background: #888;
 }
 
 .tilesheetAction:hover {
     font-weight: bold;
-    background: #00F;
+    background: #888;
 }
 
 .tilesheetObject {
@@ -86,10 +93,37 @@ body {
 #tilesheetSave {
     display: block;
     font-weight: bold;
+    text-align: center;
+    font-size: 36px;
+    text-decoration: none;
+    color: #FF0;
+}
+
+#tilesheetSave:hover {
+    color: #0FF;
 }
 
 #tilesheetVirtualCanvas {
     display: none;
+}
+
+.fieldText {
+    background: #232323;
+    border: thin solid #000;
+    border-radius: 2px;
+    padding: 2px;
+    color: #FFF;
+    font-family: Georgia, Times, Times New Roman, serif;
+    font-size: 16px;
+    max-width: 100%;
+}
+
+.fieldSep {
+    height: 1px;
+    border-top: thin solid #383838;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
 }
 
 /************************************/

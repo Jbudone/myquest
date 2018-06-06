@@ -26,7 +26,7 @@
 //                  - Extract: on click button add new or select first extraction group
 //              - Meta data: comments/etc.
 //              - Change settings colours when there's unsaved changes (diff changes from last saved changes, so if we
-//              undo our last change it doesn't show as needing to save)
+//                  undo our last change it doesn't show as needing to save)
 //
 //          - Add/Remove collision/shoot-through/floating/extract
 //          - Save changes
@@ -40,14 +40,14 @@
 //                  - Trigger ResourceBuilder on save? Or fuckingtaskrunner to auto run it?
 //                  - Update maps
 //                  - Update other things???  (eg. icons, items, etc.) -- may be better to disallow this for now,
-//                  - Fix removing sprites from dependency (remove collision/etc. too?)
 //                  - Update objects on translating sprite groups
 //                  - Disable extraction from generated sheet
 //                  - Check works in map editor + updates; check works in game
 //              
+//          - Move sprite group, doesn't show that save is needed
 //          - Save changes: reload everything?
 //          - Add new tilesheet:  Add New,  show blank canvas, drag/drop to add tilesheet
-//          - Sheets gid
+//          - Indicate save was successful
 //      - Data editor (buffs, npcs, etc.)
 //      - Map editor
 //      - Resource viewer
