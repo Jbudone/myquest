@@ -18,18 +18,10 @@
 //      - Spritesheet Editor
 //      - Tilesheet Editor
 //          - Show settings/data
-//              - Name, image
-//              - Tilesize? w/h  (how does this work in game?)
 //              - List: Objects, Extractions
-//              - Buttons: Collision, shoot through, floating, extract, object
-//                  - Object: on click tile add a new object, on hover tile highlight object
-//                  - Extract: on click button add new or select first extraction group
-//              - Meta data: comments/etc.
 //              - Change settings colours when there's unsaved changes (diff changes from last saved changes, so if we
 //                  undo our last change it doesn't show as needing to save)
 //
-//          - Add/Remove collision/shoot-through/floating/extract
-//          - Save changes
 //          - Extract sprites
 //                  - If auto-generated asset now has an empty list, remove the output image, throw error if maps
 //                      depend on image, and remove from sheets
@@ -46,12 +38,10 @@
 //              
 //          - Move sprite group, doesn't show that save is needed
 //          - Save changes: reload everything?
-//          - Indicate save was successful
 //      - Data editor (buffs, npcs, etc.)
 //      - Map editor
 //      - Resource viewer
 //          - Searching, filtering
-//          - Save changes to opened resource
 
 const Modules = {};
 
@@ -119,6 +109,10 @@ $(document).ready(() => {
                 encrypted: false,
                 packed: false,
                 preprocess: false
+            },
+            gid: {
+                first: 0,
+                last: 0
             }
         };
 
