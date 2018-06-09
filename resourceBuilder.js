@@ -24,7 +24,9 @@ const util          = require('util'),
     crypto          = require('crypto'),
     openpgp         = require('openpgp'),
     exec            = require('child_process').exec,
-    execSync        = require('child_process').execSync;
+    execSync        = require('child_process').execSync,
+    xml2js          = require('xml2js');
+
 
 const Settings = {
     forceRebuild: false,
@@ -168,7 +170,6 @@ const packageRoutines = {
         "finalize": (package) => { }
     },
 
-
     "media": {
         "prepare": (data) => {},
         "read": (data) => {
@@ -198,7 +199,6 @@ const packageRoutines = {
             media.rawHash = asset.hash;
         },
         "finalize": (package) => { }
-
     },
 	"sheets": {
         "prepare": (data) => {
@@ -253,6 +253,8 @@ const packageRoutines = {
                     generatedSheet.list = sheet.dependencies;
                     generatedSheet.sprites = sheet.sprites;
                     generatedSheet.dirty = sheet.dirty;
+                    generatedSheet.columns = sheet.columns;
+                    generatedSheet.rows = sheet.rows;
                 }
             });
 
@@ -324,7 +326,9 @@ const packageRoutines = {
                         newDependencies: sheet.newDependencies,
                         sprites: sheet.sprites,
                         tilesize: sheet.tilesize,
-                        sheetType: 'generatedTilesheet'
+                        sheetType: 'generatedTilesheet',
+                        columns: sheet.columns,
+                        rows: sheet.rows
                     });
 
                     return;
@@ -422,7 +426,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
 	"npcs": {
         "prepare": (data) => data,
@@ -436,7 +439,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
 	"world": {
         "prepare": (data) => {},
@@ -466,7 +468,6 @@ const packageRoutines = {
             area.rawHash = asset.hash;
         },
         "finalize": (package) => { }
-
     },
 	"items": {
         "prepare": (data) => {},
@@ -480,7 +481,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
 	"buffs": {
         "prepare": (data) => {},
@@ -494,7 +494,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
 	"interactables": {
         "prepare": (data) => {},
@@ -508,7 +507,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "quests": {
         "prepare": (data) => {},
@@ -522,7 +520,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "interactions": {
         "prepare": (data) => {},
@@ -536,7 +533,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
 	"scripts": {
         "prepare": (data) => {},
@@ -550,7 +546,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "components": {
         "prepare": (data) => {},
@@ -564,7 +559,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "rules": {
         "prepare": (data) => {},
@@ -578,7 +572,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "fx": {
         "prepare": (data) => {},
@@ -592,7 +585,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     },
     "testing": {
         "prepare": (data) => {},
@@ -606,7 +598,6 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-
     }
 };
 
@@ -1035,7 +1026,10 @@ const processGeneratedTilesheet = (package) => {
         const oldDependencies = package.dependencies,
             newDependencies   = package.newDependencies;
 
+        // FIXME: Package sprites are being overwritten in toolbelt; need to save a copy of sprites: package.oldSprites
+        // and use those here
         const oldSprites = package.sprites;
+        debugger;
 
         package.dependencies = [];
         package.sprites = [];
@@ -1166,8 +1160,37 @@ const processGeneratedTilesheet = (package) => {
         console.log(`  Sprites:`);
         console.log(spritesToExtract);
 
-        package.columns = genMaxX;
-        package.rows = genMaxY;
+        console.log(oldDependencies);
+        console.log(oldSprites);
+        console.log(package.dependencies);
+        console.log(package.sprites);
+
+        const newColumns = genMaxX,
+            newRows = genMaxY;
+
+        const spriteTranslations = {},
+            tilesize   = parseInt(package.tilesize, 10),
+            oldColumns = parseInt(package.columns, 10),
+            oldRows    = parseInt(package.rows, 10);
+        oldSprites.forEach((sprite) => {
+            const newSpriteInfo = package.sprites.find((s) => s.sprite === sprite.sprite && s.source === sprite.source),
+                oldSpriteX = sprite.dstX / tilesize,
+                oldSpriteY = sprite.dstY / tilesize,
+                oldSprite  = oldSpriteY * oldColumns + oldSpriteX;
+
+            if (newSpriteInfo) {
+                const newSpriteX = newSpriteInfo.dstX / tilesize,
+                    newSpriteY   = newSpriteInfo.dstY / tilesize,
+                    newSprite    = newSpriteY * newColumns + newSpriteX;
+
+                spriteTranslations[oldSprite] = newSprite;
+            } else {
+                spriteTranslations[oldSprite] = null; // Deleted
+            }
+        });
+
+        package.columns = newColumns;
+        package.rows = newRows;
         package.spriteGroups = spriteGroups;
 
         // convert \( resources/sprites/tilesheet.png -crop 16x16+0+64 -repage +0+0 \) \( resources/sprites/tilesheet.png -crop 16x16+72+64 -repage +32+16 \) -background none -layers merge autogen.png
@@ -1190,7 +1213,109 @@ const processGeneratedTilesheet = (package) => {
                 return;
             }
 
-            success();
+
+            // Tilesheets are saved as .tsx files; find the .tsx file that refers to this tilesheet
+            //const matchingTsxBuf = execSync(`grep -ir -H '${package.output}' resources/maps/\*.tsx | awk -F: '{ print $1 }' | xargs`),
+            //    tilesetTsx = matchingTsxBuf.toString('utf8');
+
+
+            // Update maps referencing this tilesheet
+            // FIXME: We can simply store used tilesets in world/area json and read from there rather than having to
+            // open and parse the entire fucking source file
+            const parseString = xml2js.parseString,
+                XmlBuilder    = xml2js.Builder;
+                waitingOnMaps = [],
+                worldAsset    = Resources.assets.find((a) => a.name === 'world');
+            _.forEach(worldAsset.data.areas, (area) => {
+
+                updateMapPromise = new Promise((success, fail) => {
+
+                    // Fetch map from the source file (XML format)
+                    fs.readFile(`resources/${area.file}.tmx`, (err, bufferData) => {
+                        if (err) {
+                            failed(err);
+                            return;
+                        }
+
+                        // Parse XML
+                        parseString(bufferData.toString(), (err, result) => {
+                            if (err) {
+                                failed(err);
+                                return;
+                            }
+
+                            // Are any of the tilesets referencing this tileset?
+                            const refTileset = result.map.tileset.find((tileset) => tileset.image && tileset.image[0].$.source.indexOf(package.output) > -1);
+
+                            // Tileset not used in this map? Then finished w/ this one
+                            if (!refTileset) {
+                                success();
+                                return;
+                            }
+
+
+                            // Go through each layer find any sprites that
+                            const tilesetGid = parseInt(refTileset.$.firstgid, 10),
+                                tilesetLastGid = parseInt(refTileset.$.tilecount, 10) + tilesetGid;
+
+                            let updatedMap = false;
+                            result.map.layer.forEach((layer) => {
+                                const layerData = layer.data[0]._,
+                                    layerDataSplit = layerData.split(',').map((g) => parseInt(g, 10));
+
+                                let foundTilesetInLayer = false;
+                                for (let i = 0; i < layerDataSplit.length; ++i) {
+                                    const g = layerDataSplit[i];
+                                    if (g >= tilesetGid && g <= tilesetLastGid) {
+                                        foundTilesetInLayer = true;
+
+                                        const localSprite = g - tilesetGid,
+                                            translatedSprite = spriteTranslations[localSprite];
+
+                                        console.log(`Found tileset in area: ${area.file} - ${g} : ${localSprite} -> ${translatedSprite}`);
+                                    }
+                                }
+
+                                if (foundTilesetInLayer) {
+                                    layer.data[0]._ = '\n' + layerDataSplit.join(',') + '\n';
+                                    updatedMap = true;
+                                }
+                            });
+
+
+                            // Build revised XML back into XML string and save changes
+                            if (updatedMap) {
+
+                                const builder  = new XmlBuilder({
+                                        xmldec: {
+                                            'version': '1.0',
+                                            'encoding': 'UTF-8',
+                                            'standalone': null
+                                        }
+                                    }),
+                                    revisedXml = builder.buildObject(result);
+
+                                fs.writeFile(`resources/${area.file}.tmx`, revisedXml, (err) => {
+                                    if (err) {
+                                        failed(err);
+                                        return;
+                                    }
+
+                                    success();
+                                });
+                            } else {
+                                success();
+                            }
+                        })
+                    });
+                });
+
+                waitingOnMaps.push(updateMapPromise);
+            });
+
+            Promise.all(waitingOnMaps).then(() => {
+                success();
+            });
         });
 
 
