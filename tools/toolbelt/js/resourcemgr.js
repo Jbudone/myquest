@@ -97,6 +97,8 @@ const ResourceMgr = (new function(){
                 //finishedSaving();
                 // FIXME
                 console.log("Finished saving");
+
+                $('#tilesheetControls').removeClass('pendingChanges');
             }
         });
     };
