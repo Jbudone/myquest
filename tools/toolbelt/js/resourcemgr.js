@@ -21,7 +21,7 @@ const ResourceMgr = (new function(){
     this.initialize = () => {
 
         // Add resource viewer element
-        this.resourceMgrEl = $('#resourceMgr');
+        this.resourceMgrListEl = $('#resourceMgrList');
 
         // Load all resources
         return new Promise((success, fail) => {
@@ -75,7 +75,7 @@ const ResourceMgr = (new function(){
                                 this.onSelectResource(resDetails);
                                 return false;
                             });
-            this.resourceMgrEl.append(resEl);
+            this.resourceMgrListEl.append(resEl);
         });
         console.log(allResources);
     };

@@ -40,6 +40,10 @@ const ModTilesheet = (function(containerEl){
 
     let extractGroups = {};
 
+    const Settings = {
+        drawGrid: false
+    };
+
     const addObjectEntity = (obj, id) => {
 
         const objectEl = $('<a/>')
@@ -135,28 +139,27 @@ const ModTilesheet = (function(containerEl){
         }
     };
 
-    this.load = (_resource) => {
+    this.reloadProperties = () => {
 
-        resource = _resource;
+        $('#tilesheetName').val(resource.id);
+        $('#tilesheetDescription').val(resource.description || "");
+        $('#tilesheetImage').text(resource.image);
 
+        $('#tilesheetTilesize').val(parseInt(resource.tilesize, 10));
+        $('#tilesheetTilesizeValue').val(resource.tilesize);
 
-        if (resource.generated) {
-            spriteGroups = [];
-            sprites = [];
-            resource.sprites.forEach((sprite) => {
-                sprites.push({
-                    source: sprite.source,
-                    sprite: sprite.sprite,
-                    dstX: sprite.dstX,
-                    dstY: sprite.dstY,
-                    newDstX: sprite.dstX,
-                    newDstY: sprite.dstY,
-                    spriteGroup: null
-                });
-            });
-        }
+        $('#tilesheetColumns').val(parseInt(resource.columns, 10));
+        $('#tilesheetColumnsValue').val(resource.columns);
 
-        InteractionMgr.load(canvasEl);
+        $('#tilesheetRows').val(parseInt(resource.rows, 10));
+        $('#tilesheetRowsValue').val(resource.rows);
+    };
+
+    this.reloadImage = (_reloadOptions) => {
+
+        const reloadOptions = _.defaults(_reloadOptions || {}, {
+            setResSize: false
+        });
 
         // Draw image
         resImg = new Image();
@@ -173,8 +176,15 @@ const ModTilesheet = (function(containerEl){
             $(virtualCanvasEl).width(resImg.width);
             $(virtualCanvasEl).height(resImg.height);
 
-            // Add grid interaction
             const tilesize = parseInt(resource.tilesize, 10);
+            if (reloadOptions.setResSize) {
+                resource.columns = resImg.width / tilesize;
+                resource.rows = resImg.height / tilesize;
+
+                this.reloadProperties();
+            }
+
+            // Add grid interaction
             for (let y = 0; y < resImg.height; y += tilesize) {
                 for (let x = 0; x < resImg.width; x += tilesize) {
 
@@ -375,10 +385,32 @@ const ModTilesheet = (function(containerEl){
         } else {
             throw Error("No source found for resource!");
         }
+    };
 
-        $('#tilesheetName').val(resource.id);
-        $('#tilesheetDescription').val(resource.description || "");
-        $('#tilesheetImage').text(resource.image);
+    this.load = (_resource) => {
+
+        resource = _resource;
+
+        if (resource.generated) {
+            spriteGroups = [];
+            sprites = [];
+            resource.sprites.forEach((sprite) => {
+                sprites.push({
+                    source: sprite.source,
+                    sprite: sprite.sprite,
+                    dstX: sprite.dstX,
+                    dstY: sprite.dstY,
+                    newDstX: sprite.dstX,
+                    newDstY: sprite.dstY,
+                    spriteGroup: null
+                });
+            });
+        }
+
+        InteractionMgr.load(canvasEl);
+
+        this.reloadImage();
+        this.reloadProperties();
     };
 
     this.updateSpritePositions = (sprites) => {
@@ -451,6 +483,10 @@ const ModTilesheet = (function(containerEl){
         InteractionMgr.unload();
 
         this.onSave = () => {};
+    };
+
+    this.clearCanvas = () => {
+        canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
     };
 
     this.redraw = () => {
@@ -526,17 +562,19 @@ const ModTilesheet = (function(containerEl){
 
 
         // Draw Grid
-        canvasCtx.save();
-        for (let y = 0; y < resImg.height; y += tilesize) {
-            for (let x = 0; x < resImg.width; x += tilesize) {
+        if (Settings.drawGrid) {
+            canvasCtx.save();
+            for (let y = 0; y < (resource.rows * tilesize); y += tilesize) {
+                for (let x = 0; x < (resource.columns * tilesize); x += tilesize) {
 
-                const gridLineWidth = 1,
-                    gridAlpha       = 0.1;
-                canvasCtx.globalAlpha = gridAlpha;
-                canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), tilesize + (gridLineWidth/2), tilesize + (gridLineWidth/2));
+                    const gridLineWidth = 1,
+                        gridAlpha       = 0.1;
+                    canvasCtx.globalAlpha = gridAlpha;
+                    canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), tilesize + (gridLineWidth/2), tilesize + (gridLineWidth/2));
+                }
             }
+            canvasCtx.restore();
         }
-        canvasCtx.restore();
     };
 
     this.step = (time) => {
@@ -544,6 +582,17 @@ const ModTilesheet = (function(containerEl){
             this.redraw();
 
         }
+    };
+
+    this.createNew = (_resource) => {
+
+        resource = _resource;
+
+        this.clearCanvas();
+        this.reloadProperties();
+        InteractionMgr.load(canvasEl);
+
+        this.flagPendingChanges();
     };
 
     this.initialize = () => {
@@ -618,14 +667,17 @@ const ModTilesheet = (function(containerEl){
                 resource.dirty = true;
             });
 
-            const description = $('#tilesheetDescription').val();
-            delete resource.description;
-            if (description) {
-                resource.description = description;
-            }
-
             console.log(sprites);
             console.log(spriteGroups);
+        }
+
+        const sheetId = $('#tilesheetName').val();
+        resource.id = sheetId;
+
+        const description = $('#tilesheetDescription').val();
+        delete resource.description;
+        if (description) {
+            resource.description = description;
         }
 
         this.onSave();
@@ -688,4 +740,95 @@ const ModTilesheet = (function(containerEl){
         this.save();
         return false;
     });
+
+	$('#tilesheetTilesize')[0].min = 8;
+	$('#tilesheetTilesize')[0].max = 256;
+	$('#tilesheetTilesize')[0].oninput = () => {
+		const newTilesize = parseInt($('#tilesheetTilesize')[0].value);
+        $('#tilesheetTilesizeValue').val(newTilesize);
+
+        resource.tilesize = newTilesize;
+	};
+    $('#tilesheetTilesizeValue')[0].oninput = () => {
+		const newTilesize = parseInt($('#tilesheetTilesizeValue')[0].value);
+
+        if ($('#tilesheetTilesize').val() !== newTilesize) {
+            $('#tilesheetTilesize').val(newTilesize);
+            resource.tilesize = newTilesize;
+        }
+    };
+
+
+	$('#tilesheetColumns')[0].min = 1;
+	$('#tilesheetColumns')[0].max = 64;
+	$('#tilesheetColumns')[0].oninput = () => {
+		const newColumns = parseInt($('#tilesheetColumns')[0].value);
+        $('#tilesheetColumnsValue').val(newColumns);
+
+        resource.columns = newColumns;
+	};
+    $('#tilesheetColumnsValue')[0].oninput = () => {
+		const newColumns = parseInt($('#tilesheetColumnsValue')[0].value);
+
+        if ($('#tilesheetColumns').val() !== newColumns) {
+            $('#tilesheetColumns').val(newColumns);
+            resource.columns = newColumns;
+        }
+    };
+
+	$('#tilesheetRows')[0].min = 1;
+	$('#tilesheetRows')[0].max = 64;
+	$('#tilesheetRows')[0].oninput = () => {
+		const newRows = parseInt($('#tilesheetRows')[0].value);
+        $('#tilesheetRowsValue').val(newRows);
+
+        resource.rows = newRows;
+	};
+    $('#tilesheetRowsValue')[0].oninput = () => {
+		const newRows = parseInt($('#tilesheetRowsValue')[0].value);
+
+        if ($('#tilesheetRows').val() !== newRows) {
+            $('#tilesheetRows').val(newRows);
+            resource.rows = newRows;
+        }
+    };
+
+    $('#tilesheetShowgrid')[0].onchange = () => {
+		const showGrid = $('#tilesheetShowgrid')[0].checked;
+        Settings.drawGrid = showGrid;
+	};
+
+
+    canvasEl.ondragover = () => {
+        $(canvasEl).addClass('hover');
+        return false;
+    };
+
+    canvasEl.ondragleave  = () => {
+        $(canvasEl).removeClass('hover');
+        return false;
+    };
+
+	canvasEl.ondrop     = (e) => {
+		e.preventDefault();
+
+        $(canvasEl).removeClass('hover');
+
+		const file = e.dataTransfer.files[0],
+			isTilesheet = (file.type.indexOf('image') >= 0);
+
+        if (!isTilesheet) {
+            console.error("Not an image!");
+            return false;
+        }
+
+        const predictedFilepath = 'sprites/' + file.name;
+        resource.image = predictedFilepath;
+        resource.output = predictedFilepath;
+        this.reloadImage({
+            setResSize: true
+        });
+
+        return false;
+	};
 });

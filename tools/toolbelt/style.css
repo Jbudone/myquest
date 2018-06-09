@@ -103,6 +103,14 @@ body {
     color: #0FF;
 }
 
+#tilesheetCanvas {
+
+}
+
+#tilesheetCanvas.hover {
+    background-color: #F00;
+}
+
 #tilesheetVirtualCanvas {
     display: none;
 }
@@ -126,6 +134,27 @@ body {
     border-right: none;
 }
 
+.formRange {
+    width: 60px;
+}
+
+.flexFormField {
+	display: flex;
+	justify-content: space-between;
+}
+
+.formLabelValue {
+    background: #232323;
+    border: thin solid #000;
+    border-radius: 2px;
+    padding: 2px;
+    color: #FFF;
+    font-family: Georgia, Times, Times New Roman, serif;
+    font-size: 16px;
+    display: inline;
+    width: 60px;
+}
+
 /************************************/
 /*      Resource Mgr      */
 
@@ -142,5 +171,14 @@ body {
 }
 
 #resourceMgr .resource:hover {
+    font-weight: bold;
+}
+
+.resourceMgrAddNew {
+    text-decoration: none;
+    color: #8FF;
+}
+
+.resourceMgrAddNew:hover {
     font-weight: bold;
 }

@@ -46,7 +46,6 @@
 //              
 //          - Move sprite group, doesn't show that save is needed
 //          - Save changes: reload everything?
-//          - Add new tilesheet:  Add New,  show blank canvas, drag/drop to add tilesheet
 //          - Indicate save was successful
 //      - Data editor (buffs, npcs, etc.)
 //      - Map editor
@@ -67,14 +66,11 @@ $(document).ready(() => {
     let workingWindowEl = $('#workingWindow');
     Modules.tilesheet = new ModTilesheet( $('#ModTilesheet') );
 
-    ResourceMgr.onSelectResource = (resDetails) => {
-
-        const resType = resDetails.resType,
-            res = resDetails.data;
+    const setActiveModule = (moduleType) => {
 
         let module = null;
-        if (resType === 'tilesheet') {
-            module = Modules[resType];
+        if (moduleType === 'tilesheet') {
+            module = Modules[moduleType];
         }
 
         // Need to unload the currently loading module?
@@ -91,12 +87,51 @@ $(document).ready(() => {
         }
 
         currentModule = module;
-        module.load(res);
+    };
 
-        module.onSave = () => {
+    ResourceMgr.onSelectResource = (resDetails) => {
+
+        const resType = resDetails.resType,
+            res = resDetails.data;
+
+        setActiveModule(resType);
+        currentModule.load(res);
+        currentModule.onSave = () => {
             ResourceMgr.saveResource(resDetails.resParent);
         };
     };
+
+    $('#resourceMgrAddTilesheet').click(() => {
+
+        setActiveModule('tilesheet');
+
+        const res = {
+            id: "newTilesheet",
+            image: null,
+            output: null,
+            columns: 0,
+            tilesize: 16,
+            rows: 0,
+            sheet_offset: { x: 0, y: 0 },
+            data: {},
+            options: {
+                cached: false,
+                encrypted: false,
+                packed: false,
+                preprocess: false
+            }
+        };
+
+        ResourceMgr.data['sheets'].data.tilesheets.list.push(res);
+
+        currentModule.createNew(res);
+
+        currentModule.onSave = () => {
+            ResourceMgr.saveResource(ResourceMgr.data['sheets']);
+        };
+        
+        return false;
+    });
 
     let step = (delta) => {
 

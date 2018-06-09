@@ -69,12 +69,44 @@
                         </div>
                     </div>
 
+                    <div class="tilesheetFieldContainer">
+                        <span class="formLabel">Show Grid: </span>
+                        <input type="checkbox" id="tilesheetShowgrid" class="right" />
+                        <div class="flexFormField">
+                            <span class="formLabel">Tilesize: </span>
+                            <input type="range" id="tilesheetTilesize" class="formRange" value="16" />
+                            <input type="text" class="formLabelValue" id="tilesheetTilesizeValue" value="16" />
+                        </div>
+
+                        <br/>
+
+                        <div class="flexFormField">
+                            <span class="formLabel">Columns: </span>
+                            <input type="range" id="tilesheetColumns" class="formRange" value="1" />
+                            <input type="text" class="formLabelValue" id="tilesheetColumnsValue" value="1" />
+                        </div>
+
+                        <br/>
+
+                        <div class="flexFormField">
+                            <span class="formLabel">Rows: </span>
+                            <input type="range" id="tilesheetRows" class="formRange" value="1" />
+                            <input type="text" class="formLabelValue" id="tilesheetRowsValue" value="1" />
+                        </div>
+                    </div>
+
                     <a id="tilesheetSave" href="#">Save</a>
                 </div>
 
             </div>
         
         </div>
-        <div id='resourceMgr'></div>
+        <div id='resourceMgr'>
+            <div id='resourceMgrActions'>
+                <a href="#" id='resourceMgrAddTilesheet' class='resourceMgrAddNew'>New Tilesheet</a>
+            </div>
+            <hr/>
+            <div id='resourceMgrList'></div>
+        </div>
     </body>
 </html>
