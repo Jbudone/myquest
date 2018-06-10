@@ -329,7 +329,8 @@ const packageRoutines = {
                         tilesize: sheet.tilesize,
                         sheetType: 'generatedTilesheet',
                         columns: sheet.columns,
-                        rows: sheet.rows
+                        rows: sheet.rows,
+                        data: sheet.data
                     });
 
                     return;
@@ -1027,12 +1028,8 @@ const processGeneratedTilesheet = (package) => {
         const oldDependencies = package.dependencies,
             newDependencies   = package.newDependencies;
 
-        // FIXME: Package sprites are being overwritten in toolbelt; need to save a copy of sprites: package.oldSprites
-        // and use those here
         const oldSprites = package.oldSprites,
             modifiedSprites = package.sprites;
-
-        debugger;
 
         package.dependencies = [];
         package.sprites = [];
@@ -1055,6 +1052,7 @@ const processGeneratedTilesheet = (package) => {
                 maxY = 0,
                 maxX = 0;
 
+            // min/max bounds for sprites from dependency sheet
             dependency.sprites.forEach((sprite) => {
                 let x = sprite % columns,
                     y = Math.floor(sprite / columns);
@@ -1168,13 +1166,55 @@ const processGeneratedTilesheet = (package) => {
         console.log(package.dependencies);
         console.log(package.sprites);
 
-        const newColumns = genMaxX,
-            newRows = genMaxY;
+
+        // Go through all sprites and find the min/max positions to determine our newColumns/newRows boundaries.
+        // NOTE: genMaxX/Y are specific to the dependency positions, however this may have changed from the generated
+        // sheet itself via. translating sprite islands
+        // NOTE: This is important for when imagemagick automatically resizes the image to be more compact
+        let minDstX = Number.MAX_SAFE_INTEGER, 
+            minDstY = Number.MAX_SAFE_INTEGER, 
+            maxDstX = 0,
+            maxDstY = 0;
+
+
+        const tilesize = parseInt(package.tilesize, 10);
+
+        package.sprites.forEach((sprite) => {
+            let x = sprite.dstX / tilesize,
+                y = sprite.dstY / tilesize;
+
+            minDstY = Math.min(minDstY, y);
+            minDstX = Math.min(minDstX, x);
+            maxDstY = Math.max(maxDstY, y);
+            maxDstX = Math.max(maxDstX, x);
+        });
+        
+
+        const newColumns = maxDstX - minDstX + 1,
+            newRows = maxDstY - minDstY + 1;
+
 
         const spriteTranslations = {},
-            tilesize   = parseInt(package.tilesize, 10),
             oldColumns = parseInt(package.columns, 10),
             oldRows    = parseInt(package.rows, 10);
+
+        // Need to update our spriteIslands and data sprite id's
+        const boundsHaveChanged = (oldColumns !== newColumns || oldRows !== newRows);
+        if (boundsHaveChanged) {
+
+            for (let i = 0; i < package.sprites.length; ++i) {
+                package.sprites[i].dstX -= minDstX * tilesize;
+                package.sprites[i].dstY -= minDstY * tilesize;
+            }
+
+            // Translate sprite in spriteIsland
+            spriteGroups.forEach((sg) => {
+                sg.spriteIsland.forEach((s) => {
+                    s.dstX -= minDstX;
+                    s.dstY -= minDstY;
+                });
+            });
+        }
 
         if (oldSprites) {
             oldSprites.forEach((sprite) => {
@@ -1189,15 +1229,36 @@ const processGeneratedTilesheet = (package) => {
                         newSprite    = newSpriteY * newColumns + newSpriteX;
 
                     spriteTranslations[oldSprite] = newSprite;
+
                 } else {
                     spriteTranslations[oldSprite] = null; // Deleted
                 }
             });
-        }
 
-        // Need to update our spriteIslands and data sprite id's
-        if (oldColumns !== newColumns) {
-            debugger;
+            // Translate data: collisions/floating/shootable
+            for (let i = 0; i < package.data.collisions.length; ++i) {
+                const untranslatedSprite = package.data.collisions[i],
+                    oldY = parseInt(untranslatedSprite / oldColumns, 10),
+                    oldX = untranslatedSprite % oldColumns;
+
+                package.data.collisions[i] = (oldY - minDstY) * newColumns + (oldX - minDstX);
+            }
+
+            for (let i = 0; i < package.data.floating.length; ++i) {
+                const untranslatedSprite = package.data.floating[i],
+                    oldY = parseInt(untranslatedSprite / oldColumns, 10),
+                    oldX = untranslatedSprite % oldColumns;
+
+                package.data.floating[i] = (oldY - minDstY) * newColumns + (oldX - minDstX);
+            }
+
+            for (let i = 0; i < package.data.shootable.length; ++i) {
+                const untranslatedSprite = package.data.shootable[i],
+                    oldY = parseInt(untranslatedSprite / oldColumns, 10),
+                    oldX = untranslatedSprite % oldColumns;
+
+                package.data.shootable[i] = (oldY - minDstY) * newColumns + (oldX - minDstX);
+            }
         }
 
         package.columns = newColumns;
