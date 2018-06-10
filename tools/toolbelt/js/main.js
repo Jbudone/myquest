@@ -29,6 +29,10 @@
 //                      Probably best to have post-processing per-extraction group for dependency. Just copies sheet's
 //                      postprocessing initially, and can be edited
 //
+//                  - FIXME: Translating sprite island and changing minX/minY causes issues; changing columns is an
+//                      issue?  -- If oldColumns != newColumns, probably need to also go through oldSprites for sprite
+//                      islands/collisions/etc. and update oldSprite -> newSprite pos  ( % columns)
+//
 //                  - Trigger ResourceBuilder on save? Or fuckingtaskrunner to auto run it?
 //                  - Update maps
 //                  - Update other things???  (eg. icons, items, etc.) -- may be better to disallow this for now,

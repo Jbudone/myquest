@@ -324,6 +324,7 @@ const packageRoutines = {
                         output: 'dist/resources/' + sheet.output,
                         dependencies: sheet.dependencies,
                         newDependencies: sheet.newDependencies,
+                        oldSprites: sheet.oldSprites,
                         sprites: sheet.sprites,
                         tilesize: sheet.tilesize,
                         sheetType: 'generatedTilesheet',
@@ -1028,7 +1029,9 @@ const processGeneratedTilesheet = (package) => {
 
         // FIXME: Package sprites are being overwritten in toolbelt; need to save a copy of sprites: package.oldSprites
         // and use those here
-        const oldSprites = package.sprites;
+        const oldSprites = package.oldSprites,
+            modifiedSprites = package.sprites;
+
         debugger;
 
         package.dependencies = [];
@@ -1058,8 +1061,8 @@ const processGeneratedTilesheet = (package) => {
 
                 minY = Math.min(minY, y);
                 minX = Math.min(minX, x);
-                maxY = Math.max(minY, y);
-                maxX = Math.max(minX, x);
+                maxY = Math.max(maxY, y);
+                maxX = Math.max(maxX, x);
             });
 
             dependency.sprites.forEach((sprite) => {
@@ -1068,7 +1071,7 @@ const processGeneratedTilesheet = (package) => {
                     dstX = (x - minX),
                     dstY = (y - minY + yOffset);
 
-                const existingSprite = oldSprites.find((s) => s.source === source && s.sprite === sprite);
+                const existingSprite = modifiedSprites.find((s) => s.source === source && s.sprite === sprite);
 
                 if (existingSprite) {
                     dstX = existingSprite.dstX / package.tilesize;
@@ -1172,22 +1175,30 @@ const processGeneratedTilesheet = (package) => {
             tilesize   = parseInt(package.tilesize, 10),
             oldColumns = parseInt(package.columns, 10),
             oldRows    = parseInt(package.rows, 10);
-        oldSprites.forEach((sprite) => {
-            const newSpriteInfo = package.sprites.find((s) => s.sprite === sprite.sprite && s.source === sprite.source),
-                oldSpriteX = sprite.dstX / tilesize,
-                oldSpriteY = sprite.dstY / tilesize,
-                oldSprite  = oldSpriteY * oldColumns + oldSpriteX;
 
-            if (newSpriteInfo) {
-                const newSpriteX = newSpriteInfo.dstX / tilesize,
-                    newSpriteY   = newSpriteInfo.dstY / tilesize,
-                    newSprite    = newSpriteY * newColumns + newSpriteX;
+        if (oldSprites) {
+            oldSprites.forEach((sprite) => {
+                const newSpriteInfo = package.sprites.find((s) => s.sprite === sprite.sprite && s.source === sprite.source),
+                    oldSpriteX = sprite.dstX / tilesize,
+                    oldSpriteY = sprite.dstY / tilesize,
+                    oldSprite  = oldSpriteY * oldColumns + oldSpriteX;
 
-                spriteTranslations[oldSprite] = newSprite;
-            } else {
-                spriteTranslations[oldSprite] = null; // Deleted
-            }
-        });
+                if (newSpriteInfo) {
+                    const newSpriteX = newSpriteInfo.dstX / tilesize,
+                        newSpriteY   = newSpriteInfo.dstY / tilesize,
+                        newSprite    = newSpriteY * newColumns + newSpriteX;
+
+                    spriteTranslations[oldSprite] = newSprite;
+                } else {
+                    spriteTranslations[oldSprite] = null; // Deleted
+                }
+            });
+        }
+
+        // Need to update our spriteIslands and data sprite id's
+        if (oldColumns !== newColumns) {
+            debugger;
+        }
 
         package.columns = newColumns;
         package.rows = newRows;
@@ -1269,10 +1280,17 @@ const processGeneratedTilesheet = (package) => {
                                     if (g >= tilesetGid && g <= tilesetLastGid) {
                                         foundTilesetInLayer = true;
 
-                                        const localSprite = g - tilesetGid,
-                                            translatedSprite = spriteTranslations[localSprite];
+                                        const localSprite = g - tilesetGid;
+                                        let translatedSprite = spriteTranslations[localSprite];
 
-                                        console.log(`Found tileset in area: ${area.file} - ${g} : ${localSprite} -> ${translatedSprite}`);
+                                        let translated = true;
+                                        if (translatedSprite === undefined) {
+                                            translated = false;
+                                            translatedSprite = localSprite; // Hasn't moved? No sprite here?
+                                        }
+
+                                        console.log(`Found tileset in area: ${area.file}: ${g} - ${tilesetGid} == ${localSprite} : ${localSprite} -> ${translatedSprite}  (translated: ${translatedSprite - localSprite}) ==> ${tilesetGid + translatedSprite}   ${ translated ? "" : "SPRITE NOT FOUND!" }`);
+                                        layerDataSplit[i] = tilesetGid + translatedSprite;
                                     }
                                 }
 

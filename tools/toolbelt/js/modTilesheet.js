@@ -633,6 +633,9 @@ const ModTilesheet = (function(containerEl){
             const tilesize = parseInt(resource.tilesize, 10);
 
             // Copy over sprites, spriteGroups
+            // NOTE: Need to save oldSprites for resourceBuilder to translate external assets (eg. maps) from old sprite
+            // positions to new positions
+            resource.oldSprites = resource.sprites;
             resource.sprites = [];
             sprites.forEach((sprite) => {
                 resource.sprites.push({
