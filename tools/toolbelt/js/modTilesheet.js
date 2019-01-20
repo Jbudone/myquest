@@ -166,7 +166,7 @@ const ModTilesheet = (function(containerEl){
         const generatedFromImagesChk = $('#tilesheetGenerateFromImages').prop('checked');
 
         if (resource.generated !== generatedFromImagesChk) {
-            $('#tilesheetGenerateFromImages').prop('checked', resource.generated);
+            $('#tilesheetGenerateFromImages').prop('checked', resource.generated === true);
             //$('#tilesheetGenerateFromImages').trigger('change'); // NOTE: Do not trigger change, otherwise we can't
             //distinguish between a load and new tilesheet, where in the new case we would delete sprites and start
             //fresh
@@ -1194,6 +1194,10 @@ const ModTilesheet = (function(containerEl){
 
         _.forEach(entities.objects, (obj) => {
             $(obj.el).remove();
+        });
+
+        _.forEach(entities.extracts, (ext) => {
+            $(ext.el).remove();
         });
 
         entities.collision = [];
