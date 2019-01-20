@@ -51,8 +51,6 @@ body {
     margin: 20px;
     padding: 4px;
     color: #FFF;
-    grid-column: 2;
-    grid-row: 1 / 3;
 }
 
 #tilesheetControls.pendingChanges {
@@ -111,7 +109,6 @@ body {
 }
 
 #tilesheetCanvas {
-    grid-column: 1 / 2;
     grid-row: 2;
 }
 
@@ -173,6 +170,14 @@ body {
 
 /*      Tilesheet Folder Hierarchy      */
 
+#tilesheetLeftContainer {
+    grid-column: 1 / 2;
+}
+
+#tilesheetRightContainer {
+    grid-column: 2 / 2;
+}
+
 #tilesheetFolderHierarchyContainer {
     min-height: 200px;
     border: thin solid #6b6b6b;
@@ -181,7 +186,6 @@ body {
     margin: 20px;
     padding: 4px;
     color: #FFF;
-    grid-column: 1 / 2;
     grid-row: 1;
 }
 
@@ -242,14 +246,12 @@ body {
 #tilesheetFolderHierarchyImageCtrlImgSrc {
     border: #111 2px solid;
     border-radius: 4px;
-    grid-column: 1 / 2;
     max-width: 100%;
 }
 
 #tilesheetFolderHierarchyImageCtrlImgPreview {
     border: #111 2px solid;
     border-radius: 4px;
-    grid-column: 2 / 2;
     max-width: 100%;
 }
 
