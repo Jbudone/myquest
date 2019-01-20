@@ -37,12 +37,13 @@ body {
 /*      Tilesheet      */
 
 #ModTilesheet {
-    display: flex;
+    display: grid;
     justify-content: space-between;
+    grid-gap: 10px;
+    grid-template-columns: 75% 25%;
 }
 
 #tilesheetControls {
-    width: 240px;
     min-height: 200px;
     border: thin solid #6b6b6b;
     background: #282828;
@@ -50,6 +51,8 @@ body {
     margin: 20px;
     padding: 4px;
     color: #FFF;
+    grid-column: 2;
+    grid-row: 1 / 3;
 }
 
 #tilesheetControls.pendingChanges {
@@ -108,7 +111,8 @@ body {
 }
 
 #tilesheetCanvas {
-
+    grid-column: 1 / 2;
+    grid-row: 2;
 }
 
 #tilesheetCanvas.hover {
@@ -159,6 +163,96 @@ body {
     width: 60px;
 }
 
+#tilesheetGeneratedFromImagesContainer {
+    display: none;
+}
+
+#tilesheetControls.generated > #tilesheetGeneratedFromImagesContainer {
+    display: block;
+}
+
+/*      Tilesheet Folder Hierarchy      */
+
+#tilesheetFolderHierarchyContainer {
+    min-height: 200px;
+    border: thin solid #6b6b6b;
+    background: #282828;
+    border-radius: 6px;
+    margin: 20px;
+    padding: 4px;
+    color: #FFF;
+    grid-column: 1 / 2;
+    grid-row: 1;
+}
+
+/* Hide all subfolders if the parent folder isn't opened */
+.folderHierarchyFolder > .folderHierarchyFile {
+    display: none;
+}
+
+.folderHierarchyFolder.open > .folderHierarchyFile {
+    display: block;
+}
+
+.folderHierarchyFile {
+    margin-left: 16px;
+}
+
+.folderHierarchyImage > #tilesheetFolderHierarchyImageCtrl {
+    display: none;
+}
+
+.folderHierarchyImage.open > #tilesheetFolderHierarchyImageCtrl {
+    display: block;
+}
+
+.folderHierarchyImage.open > .folderHierarchyImageName {
+    color: #FFF;
+    text-decoration: none;
+}
+
+#tilesheetFolderHierarchyImageCtrl {
+    margin-left: 24px;
+}
+
+.tilesheetFolderHierarchyImageCtrlText {
+    background: #232323;
+    border: thin solid #000;
+    border-radius: 2px;
+    padding: 2px;
+    color: #FFF;
+    font-family: Georgia, Times, Times New Roman, serif;
+    font-size: 16px;
+    display: inline;
+    width: 60px;
+}
+
+#tilesheetFolderHierarchyImageCtrlImgProcess {
+    width: 512px;
+    color: #FFF;
+}
+
+#tilesheetFolderHierarchyImageCtrlContainerPreview {
+    display: grid;
+    justify-content: space-between;
+    grid-gap: 10px;
+    grid-template-columns: 40% 40%;
+}
+
+#tilesheetFolderHierarchyImageCtrlImgSrc {
+    border: #111 2px solid;
+    border-radius: 4px;
+    grid-column: 1 / 2;
+    max-width: 100%;
+}
+
+#tilesheetFolderHierarchyImageCtrlImgPreview {
+    border: #111 2px solid;
+    border-radius: 4px;
+    grid-column: 2 / 2;
+    max-width: 100%;
+}
+
 /************************************/
 /*      Resource Mgr      */
 
@@ -186,3 +280,12 @@ body {
 .resourceMgrAddNew:hover {
     font-weight: bold;
 }
+
+
+/************************************/
+/*      Utilities      */
+
+.hidden {
+    display: none;
+}
+

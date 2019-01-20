@@ -281,6 +281,12 @@ const packageRoutines = {
                         tilesheet.dirty = true;
                         tilesheet.newDependencies = sheet.currentList;
                         tilesheet.sprites = sheet.sprites;
+
+                        // This may be an image-based dep generated tilesheet, so already exists but output wasn't setup
+                        if (!tilesheet.output) {
+                            tilesheet.output = `sprites/${sheetId}.png`;
+                        }
+
                     } else {
                         data.tilesheets.list.push({
                             id: sheetId,
@@ -1026,7 +1032,7 @@ const processGeneratedTilesheet = (package) => {
         console.log(package);
 
         const oldDependencies = package.dependencies,
-            newDependencies   = package.newDependencies;
+            newDependencies   = package.newDependencies || [];
 
         const oldSprites = package.oldSprites,
             modifiedSprites = package.sprites;
@@ -1155,6 +1161,81 @@ const processGeneratedTilesheet = (package) => {
             });
         });
 
+        // Append to package.sprites for image based deps
+        // Should have a different newDependencies list to process as opposed to checking oldDeps here
+        oldDependencies.forEach((dependency) => {
+            if (!dependency.imageSrc) return;
+            package.dependencies.push(dependency);
+
+            const relSource = "../" + dependency.previewSrc;
+
+            // Does relSource exist? If not then we need to create it first
+            if (!fs.existsSync(dependency.previewSrc)) {
+                const processedOutput = execSync(`convert ${dependency.imageSrc} ${dependency.processing} ${dependency.previewSrc}`);
+                console.log(processedOutput.toString('utf8'));
+            }
+
+            let minY = Number.MAX_SAFE_INTEGER, 
+                minX = Number.MAX_SAFE_INTEGER, 
+                maxY = 0,
+                maxX = 0;
+
+            const spriteIsland = [];
+            modifiedSprites.forEach((sprite) => {
+                if (sprite.source !== dependency.imageSrc) return;
+
+                package.sprites.push({
+                    source: sprite.source,
+                    sprite: -1,
+                    dstX: sprite.dstX,
+                    dstY: sprite.dstY,
+                    srcX: sprite.srcX,
+                    srcY: sprite.srcY
+                });
+
+                let x = sprite.srcX,
+                    y = sprite.srcY;
+
+                minY = Math.min(minY, y);
+                minX = Math.min(minX, x);
+                maxY = Math.max(maxY, y);
+                maxX = Math.max(maxX, x);
+
+                let srcX = Math.floor(x / package.tilesize),
+                    srcY = Math.floor(y / package.tilesize),
+                    dstX = Math.floor(sprite.dstX / package.tilesize),
+                    dstY = Math.floor(sprite.dstY / package.tilesize);
+
+                // Each dependency is an island
+                spriteIsland.push({
+                    sprite: sprite.source,
+                    srcX, srcY,
+                    dstX, dstY
+                });
+
+                // FIXME: We should only ever need to extract the entire image, not each individual sprite
+                // Have an imagesToExtract list which are treated different than spritesToExtract
+                spritesToExtract.push({
+                    source: relSource,
+                    srcX: x,
+                    srcY: y,
+                    srcW: package.tilesize,
+                    srcH: package.tilesize,
+                    dstX: sprite.dstX,
+                    dstY: sprite.dstY
+                });
+
+            });
+
+            genMaxY += (maxY - minY + 1);
+            genMaxX = Math.max(genMaxX, maxX - minX + 1);
+
+            spriteGroups.push({
+                spriteIsland
+            });
+        });
+
+
         console.log("Generated tilesheet:");
         console.log(`  Width: ${package.tilesize * genMaxX}`);
         console.log(`  Height: ${package.tilesize * genMaxY}`);
@@ -1281,10 +1362,18 @@ const processGeneratedTilesheet = (package) => {
         exec(convertCmd, (err, stdout, stderr) => {
             if (err) {
                 console.error(`Error generating tilesheet ${package.id}`);
+                console.error(err);
+                console.error(stdout);
+                console.error(stderr);
                 fail();
                 return;
             }
 
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // FIXME: Map shits expensive
+            success();
+            return;
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             // Tilesheets are saved as .tsx files; find the .tsx file that refers to this tilesheet
             //const matchingTsxBuf = execSync(`grep -ir -H '${package.output}' resources/maps/\*.tsx | awk -F: '{ print $1 }' | xargs`),

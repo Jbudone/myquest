@@ -69,7 +69,7 @@ const ResourceMgr = (new function(){
             const resEl = $('<a/>')
                             .attr('href', '#')
                             .addClass('resource')
-                            .text(resDetails.data.image || resDetails.data.output)
+                            .text(resDetails.data.image || resDetails.data.output || resDetails.data.id)
                             .click(() => {
                                 const resType = resDetails.resType;
                                 this.onSelectResource(resDetails);
@@ -100,6 +100,46 @@ const ResourceMgr = (new function(){
 
                 $('#tilesheetControls').removeClass('pendingChanges');
             }
+        });
+    };
+
+    this.rawImages = [];
+    this.fetchRawImages = () => {
+        return new Promise((succeeded, failed) => {
+            $.post('fs.php', { request: "fetchImages" }, (data) => {
+                const json = JSON.parse(data),
+                    success = !!json.success;
+
+                if (success) {
+                    this.rawImages = json.data.split(' ');
+
+                    const directoriedImages = {};
+                    this.rawImages.forEach((image) => {
+                        const path = image.split('/');
+
+                        let curDir = directoriedImages;
+                        for (let i = 0; i < path.length; ++i) {
+                            if (!curDir[path[i]]) {
+
+                                if (i === (path.length - 1)) {
+                                    curDir[path[i]] = {
+                                        image: true,
+                                        pathTo: image
+                                    };
+                                } else {
+                                    curDir[path[i]] = {};
+                                }
+                            }
+
+                            curDir = curDir[path[i]];
+                        }
+                    });
+
+                    succeeded(directoriedImages);
+                } else {
+                    failed();
+                }
+            });
         });
     };
 

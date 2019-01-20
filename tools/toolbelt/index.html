@@ -24,6 +24,83 @@
         
             <div id="ModTilesheet" class="module">
 
+                <div id="tilesheetFolderHierarchyContainer" class="hidden"> 
+
+                    <div id="tilesheetFolderHierarchy">
+
+                        <div class="folderHierarchyFolder folderHierarchyFile level1">
+                            <a href="#" class="folderHierarchyExpandFolder">></a>
+                            <a href="#" class="folderHierarchyFolderName">Folder</a>
+
+                            <div class="folderHierarchyFolder folderHierarchyFile  level2">
+                                <a href="#" class="folderHierarchyExpandFolder">></a>
+                                <a href="#" class="folderHierarchyFolderName">Folder</a>
+                            </div>
+
+                            <div class="folderHierarchyFolder folderHierarchyFile level2">
+                                <a href="#" class="folderHierarchyExpandFolder">></a>
+                                <a href="#" class="folderHierarchyFolderName">Folder</a>
+
+                                <div class="folderHierarchyFolder folderHierarchyFile level3">
+                                    <a href="#" class="folderHierarchyExpandFolder">></a>
+                                    <a href="#" class="folderHierarchyFolderName">Folder</a>
+                                </div>
+
+                                <div class="folderHierarchyImage folderHierarchyFile level3">
+                                    <a href="#" class="folderHierarchyExpandImage">></a>
+                                    <a href="#" class="folderHierarchyImageName">Image</a>
+                                </div>
+
+                                <div class="folderHierarchyImage folderHierarchyFile level3">
+                                    <a href="#" class="folderHierarchyExpandImage">></a>
+                                    <a href="#" class="folderHierarchyImageName">Image</a>
+                                </div>
+                            </div>
+
+                            <div class="folderHierarchyFolder folderHierarchyFile level2">
+                                <a href="#" class="folderHierarchyExpandFolder">></a>
+                                <a href="#" class="folderHierarchyFolderName">Folder</a>
+                            </div>
+                        </div>
+
+                        <div class="folderHierarchyFolder folderHierarchyFile level1">
+                            <a href="#" class="folderHierarchyExpandFolder">></a>
+                            <a href="#" class="folderHierarchyFolderName">Folder</a>
+                        </div>
+
+                        <div class="folderHierarchyFolder folderHierarchyFile level1">
+                            <a href="#" class="folderHierarchyExpandFolder">></a>
+                            <a href="#" class="folderHierarchyFolderName">Folder</a>
+                        </div>
+
+
+                        <div class="folderHierarchyImage folderHierarchyFile level1">
+                            <a href="#" class="folderHierarchyExpandImage">></a>
+                            <a href="#" class="folderHierarchyImageName">Image</a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="tilesheetFolderHierarchyImageCtrl" class="hidden">
+                    <div class="tilesheetFolderHierarchyImageCtrlContainer">
+                        <span>Image Size: </span>
+                        <input type="text" placeholder="width" val="128" disabled id="tilesheetFolderHierarchyImageCtrlImgSrcW" class="tilesheetFolderHierarchyImageCtrlText" />
+                        <input type="text" placeholder="height" val="64" disabled id="tilesheetFolderHierarchyImageCtrlImgSrcH" class="tilesheetFolderHierarchyImageCtrlText" />
+
+                        <span> --&gt; </span>
+                        <input type="text" placeholder="width" val="width" id="tilesheetFolderHierarchyImageCtrlImgDstW" class="tilesheetFolderHierarchyImageCtrlText" />
+                        <input type="text" placeholder="height" val="height" id="tilesheetFolderHierarchyImageCtrlImgDstH" class="tilesheetFolderHierarchyImageCtrlText" />
+                    </div>
+                    <div class="tilesheetFolderHierarchyImageCtrlContainer">
+                        <input type="text" placeholder=" -filter box -scale 20% -scale 500% -posterize 7" id="tilesheetFolderHierarchyImageCtrlImgProcess" class="tilesheetFolderHierarchyImageCtrlText" />
+                    </div>
+                    <div class="tilesheetFolderHierarchyImageCtrlContainer" id="tilesheetFolderHierarchyImageCtrlContainerPreview">
+                        <img src="" id="tilesheetFolderHierarchyImageCtrlImgSrc" />
+                        <img src="" id="tilesheetFolderHierarchyImageCtrlImgPreview" />
+                    </div>
+                </div>
+
                 <canvas id='tilesheetCanvas'>
                 </canvas>
 
@@ -67,6 +144,11 @@
                                 <span class="tilesheetGroupSheet">SheetId</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div id="tilesheetGeneratedFromImagesContainer" class="tilesheetFieldContainer">
+                        <span class="formLabel">Generate from Images: </span>
+                        <input type="checkbox" id="tilesheetGenerateFromImages" class="right" />
                     </div>
 
                     <div class="tilesheetFieldContainer">
