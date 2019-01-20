@@ -1192,6 +1192,10 @@ const ModTilesheet = (function(containerEl){
         imgReady = false;
         resource = null;
 
+        _.forEach(entities.objects, (obj) => {
+            $(obj.el).remove();
+        });
+
         entities.collision = [];
         entities.floating  = [];
         entities.shootable = [];
