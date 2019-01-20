@@ -1436,50 +1436,46 @@ const ModTilesheet = (function(containerEl){
 
     // First time initialization
     this.reloadFolderHierarchy();
-    $('#tilesheetBtnCollision').click(() => {
-        console.log("Clicked collision");
-        activeAction = ACTION_COLLISION;
 
-        if (activeActionEl) activeActionEl.removeClass('active');
-        activeActionEl = $('#tilesheetBtnCollision');
+    const clickedActionBtn = (evt) => {
+        const el      = $(evt.currentTarget),
+            action    = el.data('action'),
+            oldAction = activeAction;
+        activeAction = action;
+
+        if (activeActionEl) {
+            activeActionEl.removeClass('active');
+            if (activeAction === oldAction) {
+                activeActionEl = null;
+                activeAction = null;
+                return;
+            }
+        }
+        activeActionEl = el;
         activeActionEl.addClass('active');
-    });
+    };
 
-    $('#tilesheetBtnFloating').click(() => {
-        console.log("Clicked floating");
-        activeAction = ACTION_FLOATING;
+    // First time initialization
+    this.reloadFolderHierarchy();
+    $('#tilesheetBtnCollision')
+        .click(clickedActionBtn)
+        .data('action', ACTION_COLLISION);
 
-        if (activeActionEl) activeActionEl.removeClass('active');
-        activeActionEl = $('#tilesheetBtnFloating');
-        activeActionEl.addClass('active');
-    });
+    $('#tilesheetBtnFloating')
+        .click(clickedActionBtn)
+        .data('action', ACTION_FLOATING);
 
-    $('#tilesheetBtnShootable').click(() => {
-        console.log("Clicked shootable");
-        activeAction = ACTION_SHOOTABLE;
+    $('#tilesheetBtnShootable')
+        .click(clickedActionBtn)
+        .data('action', ACTION_SHOOTABLE);
 
-        if (activeActionEl) activeActionEl.removeClass('active');
-        activeActionEl = $('#tilesheetBtnShootable');
-        activeActionEl.addClass('active');
-    });
+    $('#tilesheetBtnObject')
+        .click(clickedActionBtn)
+        .data('action', ACTION_OBJECT);
 
-    $('#tilesheetBtnObject').click(() => {
-        console.log("Clicked object");
-        activeAction = ACTION_OBJECT;
-
-        if (activeActionEl) activeActionEl.removeClass('active');
-        activeActionEl = $('#tilesheetBtnObject');
-        activeActionEl.addClass('active');
-    });
-
-    $('#tilesheetBtnExtract').click(() => {
-        console.log("Clicked extract");
-        activeAction = ACTION_EXTRACT;
-
-        if (activeActionEl) activeActionEl.removeClass('active');
-        activeActionEl = $('#tilesheetBtnExtract');
-        activeActionEl.addClass('active');
-    });
+    $('#tilesheetBtnExtract')
+        .click(clickedActionBtn)
+        .data('action', ACTION_EXTRACT);
 
     $('#tilesheetSave').click(() => {
         this.save();
