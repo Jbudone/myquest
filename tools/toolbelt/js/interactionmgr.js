@@ -34,11 +34,14 @@ const InteractionMgr = (new function(){
         //console.log(evt.offsetY);
         const worldPt = mouseToCanvasCoords(evt);
 
+        let couldDrag = false;
+
         // What interactables have we hit?
         const hitInteractions = [];
         interactables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                if (interactable.canDrag) couldDrag = true;
             }
         });
 
@@ -95,6 +98,12 @@ const InteractionMgr = (new function(){
         oldHitInteractions.forEach((hitInteraction) => {
             hitInteraction.onHoverOut();
         });
+
+        if (couldDrag && evt.ctrlKey) {
+            $(this.canvasEl).addClass('interactionGrab');
+        } else {
+            $(this.canvasEl).removeClass('interactionGrab');
+        }
     };
 
     const onMouseUp = (evt) => {
@@ -114,6 +123,8 @@ const InteractionMgr = (new function(){
             // Stop dragging interactions
             dragging.interactions.forEach((interaction) => {
                 interaction.onEndDrag();
+
+                $(this.canvasEl).removeClass('interactionGrabbing');
             });
             dragging.interactions = [];
         } else {
@@ -143,9 +154,24 @@ const InteractionMgr = (new function(){
                 if (hitInteraction.canDrag) {
                     hitInteraction.onBeginDrag();
                     dragging.interactions.push(hitInteraction);
+
+                    $(this.canvasEl).addClass('interactionGrabbing');
                 }
                 dragging.mouseDownPos = worldPt;
             });
+        }
+    };
+
+    const onKeyUp = (evt) => {
+        if (!evt.ctrlKey) {
+            $(this.canvasEl).removeClass('interactionGrab');
+        }
+    };
+
+    const onKeyDown = (evt) => {
+        let couldDrag = hoveringInteractables.find((int) => int.canDrag) !== undefined;
+        if (couldDrag && evt.ctrlKey) {
+            $(this.canvasEl).addClass('interactionGrab');
         }
     };
 
@@ -156,6 +182,10 @@ const InteractionMgr = (new function(){
         canvasEl.addEventListener('mousemove', onMouseMove);
         canvasEl.addEventListener('mouseup', onMouseUp);
         canvasEl.addEventListener('mousedown', onMouseDown);
+
+        // FIXME: Couldn't get this to work off canvasEl
+        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('keydown', onKeyDown);
     };
 
     this.unload = () => {
@@ -165,6 +195,10 @@ const InteractionMgr = (new function(){
         this.canvasEl.removeEventListener('mousemove', onMouseMove);
         this.canvasEl.removeEventListener('mouseup', onMouseUp);
         this.canvasEl.removeEventListener('mousedown', onMouseDown);
+
+        // FIXME
+        window.removeEventListener('keyup', onKeyUp);
+        window.removeEventListener('keydown', onKeyDown);
     };
 
     let entityId = 0;

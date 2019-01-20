@@ -110,10 +110,21 @@ body {
 
 #tilesheetCanvas {
     grid-row: 2;
+	border: thin solid #000;
 }
 
 #tilesheetCanvas.hover {
     background-color: #F00;
+}
+
+#tilesheetCanvas.interactionGrab {
+	cursor: grab;
+}
+
+#tilesheetCanvas.interactionGrabbing {
+	cursor: grabbing;
+	background-color: #111;
+	border-color: #FF5;
 }
 
 #tilesheetVirtualCanvas {
