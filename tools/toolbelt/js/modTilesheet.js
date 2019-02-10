@@ -1205,6 +1205,9 @@ const ModTilesheet = (function(containerEl){
                 });
                 this.reloadProperties();
             });
+        } else {
+            this.reloadImage();
+            this.reloadProperties();
         }
     };
 
