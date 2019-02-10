@@ -953,7 +953,8 @@ const ModTilesheet = (function(containerEl){
     this.reloadImage = (_reloadOptions) => {
 
         const reloadOptions = _.defaults(_reloadOptions || {}, {
-            setResSize: false
+            setResSize: false,
+            redrawVirtualCanvas: false
         });
 
         // Draw image
@@ -1079,6 +1080,10 @@ const ModTilesheet = (function(containerEl){
             virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
 
             this.redraw();
+
+            if (reloadOptions.redrawVirtualCanvas) {
+                this.redrawVirtualCanvas();
+            }
         };
 
         if (resource.image) {
@@ -1185,9 +1190,22 @@ const ModTilesheet = (function(containerEl){
             });
         }
 
-        this.reloadImage();
-        this.reloadProperties();
+        if (resource.dirty && resource.generated) {
+            // loadImageDependency for each dep, then redrawVirtualCanvas
 
+            const loadingList = [];
+            dependencies.forEach((dep) => {
+                loadingList.push(loadImageDependency(dep));
+            });
+
+            Promise.all(loadingList).then(() => {
+                // FIXME: What if we unload before this has loaded?
+                this.reloadImage({
+                    redrawVirtualCanvas: resource.dirty
+                });
+                this.reloadProperties();
+            });
+        }
     };
 
     this.addInteractableSpriteGroup = (spriteGroup) => {
