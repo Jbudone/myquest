@@ -255,20 +255,42 @@ const packageRoutines = {
                     generatedSheet.dirty = sheet.dirty;
                     generatedSheet.columns = sheet.columns;
                     generatedSheet.rows = sheet.rows;
+
+                    // Image dependencies are separate from extraction groups, but still go on the currentList
+                    sheet.dependencies.forEach((dep) => {
+                        if (dep.imageSrc) {
+                            if (!generatedSheet.currentList) generatedSheet.currentList = [];
+                            generatedSheet.currentList.push(dep);
+                        }
+                    });
                 }
             });
 
             // Mark generated sheets as dirty if lists differ
             _.forEach(generatedSheets, (sheet, sheetId) => {
 
-                if (sheet.list && sheet.currentList && (sheet.currentList.length === sheet.list.length)) {
+                if (!sheet.dirty && sheet.list && sheet.currentList && (sheet.currentList.length === sheet.list.length)) {
                     for (let i = 0; i < sheet.currentList.length; ++i) {
-                        const newAsset = sheet.currentList[i],
-                            oldAsset   = sheet.list.find((a) => a.assetId === newAsset.assetId);
 
-                        if (!oldAsset || !_.isEqual(newAsset.sprites, oldAsset.sprites)) {
-                            sheet.dirty = true;
-                            break;
+
+                        const item = sheet.currentList[i];
+                        if (item.imageSrc) {
+                            // Image dependency
+                            // Has the image changed?
+                            const imageSrcHash = item.imageSrcHash; // FIXME
+                            if (imageSrcHash !== item.imageSrcHash) {
+                                sheet.dirty = true;
+                            }
+                        } else {
+                            // Extraction group
+                            // Have any of the assets changed amongst this group?
+                            const newAsset = item,
+                                oldAsset   = sheet.list.find((a) => a.assetId === newAsset.assetId);
+
+                            if (!oldAsset || !_.isEqual(newAsset.sprites, oldAsset.sprites)) {
+                                sheet.dirty = true;
+                                break;
+                            }
                         }
                     }
                 } else {
@@ -332,6 +354,7 @@ const packageRoutines = {
                         newDependencies: sheet.newDependencies,
                         oldSprites: sheet.oldSprites,
                         sprites: sheet.sprites,
+                        spriteGroups: sheet.spriteGroups,
                         tilesize: sheet.tilesize,
                         sheetType: 'generatedTilesheet',
                         columns: sheet.columns,
@@ -1037,15 +1060,31 @@ const processGeneratedTilesheet = (package) => {
         const oldSprites = package.oldSprites,
             modifiedSprites = package.sprites;
 
+        const oldSpriteGroups = package.spriteGroups;
+
         package.dependencies = [];
         package.sprites = [];
 
         let spritesToExtract = [],
+            imagesToExtract = [],
             yOffset = 0,
             genMaxX = 0,
             genMaxY = 0,
             spriteGroups = [];
-        newDependencies.forEach((dependency) => {
+
+        const extractionDeps = [],
+            imageDeps = [];
+
+        newDependencies.forEach((dep) => {
+            if (dep.imageSrc) {
+                imageDeps.push(dep);
+            } else {
+                extractionDeps.push(dep);
+            }
+        });
+
+        
+        extractionDeps.forEach((dependency) => {
 
             const source = dependency.asset.image,
                 columns = parseInt(dependency.asset.columns, 10),
@@ -1154,6 +1193,7 @@ const processGeneratedTilesheet = (package) => {
                 sprites: dependency.sprites
             });
 
+            debugger; // FIXME: We want to copy spriteGroup over
             spriteIslands.forEach((spriteIsland) => {
                 spriteGroups.push({
                     spriteIsland
@@ -1162,10 +1202,10 @@ const processGeneratedTilesheet = (package) => {
         });
 
         // Append to package.sprites for image based deps
-        // Should have a different newDependencies list to process as opposed to checking oldDeps here
-        oldDependencies.forEach((dependency) => {
-            if (!dependency.imageSrc) return;
+        imageDeps.forEach((dependency) => {
             package.dependencies.push(dependency);
+
+            const spriteGroup = oldSpriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dependency.imageSrc);
 
             const relSource = "../" + dependency.previewSrc;
 
@@ -1180,58 +1220,23 @@ const processGeneratedTilesheet = (package) => {
                 maxY = 0,
                 maxX = 0;
 
-            const spriteIsland = [];
-            modifiedSprites.forEach((sprite) => {
-                if (sprite.source !== dependency.imageSrc) return;
-
-                package.sprites.push({
-                    source: sprite.source,
-                    sprite: -1,
-                    dstX: sprite.dstX,
-                    dstY: sprite.dstY,
-                    srcX: sprite.srcX,
-                    srcY: sprite.srcY
-                });
-
-                let x = sprite.srcX,
-                    y = sprite.srcY;
-
-                minY = Math.min(minY, y);
-                minX = Math.min(minX, x);
-                maxY = Math.max(maxY, y);
-                maxX = Math.max(maxX, x);
-
-                let srcX = Math.floor(x / package.tilesize),
-                    srcY = Math.floor(y / package.tilesize),
-                    dstX = Math.floor(sprite.dstX / package.tilesize),
-                    dstY = Math.floor(sprite.dstY / package.tilesize);
-
-                // Each dependency is an island
-                spriteIsland.push({
-                    sprite: sprite.source,
-                    srcX, srcY,
-                    dstX, dstY
-                });
-
-                // FIXME: We should only ever need to extract the entire image, not each individual sprite
-                // Have an imagesToExtract list which are treated different than spritesToExtract
-                spritesToExtract.push({
-                    source: relSource,
-                    srcX: x,
-                    srcY: y,
-                    srcW: package.tilesize,
-                    srcH: package.tilesize,
-                    dstX: sprite.dstX,
-                    dstY: sprite.dstY
-                });
-
+            imagesToExtract.push({
+                source: relSource,
+                dstX: spriteGroup.dstX, 
+                dstY: spriteGroup.dstY,
             });
+
 
             genMaxY += (maxY - minY + 1);
             genMaxX = Math.max(genMaxX, maxX - minX + 1);
 
+
             spriteGroups.push({
-                spriteIsland
+                imageSrc: spriteGroup.imageSrc,
+                dstX: spriteGroup.dstX,
+                dstY: spriteGroup.dstY,
+                width: spriteGroup.width,
+                height: spriteGroup.height
             });
         });
 
@@ -1241,6 +1246,8 @@ const processGeneratedTilesheet = (package) => {
         console.log(`  Height: ${package.tilesize * genMaxY}`);
         console.log(`  Sprites:`);
         console.log(spritesToExtract);
+        console.log(`  Images:`);
+        console.log(imagesToExtract);
 
         console.log(oldDependencies);
         console.log(oldSprites);
@@ -1269,6 +1276,18 @@ const processGeneratedTilesheet = (package) => {
             maxDstY = Math.max(maxDstY, y);
             maxDstX = Math.max(maxDstX, x);
         });
+
+        spriteGroups.forEach((spriteGroup) => {
+            if (spriteGroup.imageSrc) {
+                let x = spriteGroup.dstX,
+                    y = spriteGroup.dstY;
+
+                minDstY = Math.min(minDstY, y);
+                minDstX = Math.min(minDstX, x);
+                maxDstY = Math.max(maxDstY, y);
+                maxDstX = Math.max(maxDstX, x);
+            }
+        });
         
 
         const newColumns = maxDstX - minDstX + 1,
@@ -1290,10 +1309,16 @@ const processGeneratedTilesheet = (package) => {
 
             // Translate sprite in spriteIsland
             spriteGroups.forEach((sg) => {
-                sg.spriteIsland.forEach((s) => {
-                    s.dstX -= minDstX;
-                    s.dstY -= minDstY;
-                });
+
+                if (sg.spriteIsland) {
+                    sg.spriteIsland.forEach((s) => {
+                        s.dstX -= minDstX;
+                        s.dstY -= minDstY;
+                    });
+                } else {
+                    sg.dstX -= minDstX;
+                    sg.dstY -= minDstY;
+                }
             });
         }
 
@@ -1354,6 +1379,12 @@ const processGeneratedTilesheet = (package) => {
             curX = sprite.dstX; // FIXME: I think we can get away w/ just using dst?
             curY = sprite.dstY;
             convertCmd += `\\( resources/${sprite.source} -crop ${sprite.srcW}x${sprite.srcH}+${sprite.srcX}+${sprite.srcY}  -filter box -resize ${package.tilesize}x${package.tilesize} -repage ${curX >= 0 ? '+' : '-'}${curX}${curY >= 0 ? '+' : '-'}${curY} \\) `;
+        });
+
+        imagesToExtract.forEach((img) => {
+            const dstX = img.dstX,
+                dstY = img.dstY;
+            convertCmd += `\\( resources/${img.source} -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} \\) `;
         });
 
         convertCmd += `-background none -layers merge ${package.output}`;

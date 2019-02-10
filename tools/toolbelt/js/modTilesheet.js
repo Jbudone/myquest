@@ -1,12 +1,71 @@
 
 const ModTilesheet = (function(containerEl){
 
-    let resImg       = null,
-        canvasEl     = $('#tilesheetCanvas')[0],
-        canvasCtx    = canvasEl.getContext('2d'),
-        resource     = null,
-        sprites      = null,
-        spriteGroups = null;
+    let resImg         = null,
+        canvasEl       = $('#tilesheetCanvas')[0],
+        canvasCtx      = canvasEl.getContext('2d'),
+        resource       = null,
+        loadedResource = null,
+        sprites        = null,
+        spriteGroups   = null,
+        dependencies   = null;
+
+    /*
+        resource: {
+            ...,
+            dependencies: [
+                {
+                    // Image Based Dependency
+                    imageSrc, previewSrc,
+                    processing
+                },
+                {
+                    // Extraction Based Dependency
+                    assetId: "tiles",
+                    sprites: [17, 18, ...]
+                }
+            ],
+
+            // Sprite Groups:
+            // Used for storing information about how we're using dependencies in the tilesheet
+            // NOTE: We could have multiple spriteGroups per dependency (eg. multiple extractions, or the same image
+            // processed to different appearances)
+            spriteGroups: [
+                {
+                    // Image Based Sprite Group
+                    imageSrc
+                    dstX, dstY,          // real coordinates
+                    width, height
+                },
+                {
+                    // Extraction Sprite Group
+                    assetId: "tiles",
+
+                    // Island used to store a group of sprites that are connected together
+                    spriteIsland: [
+                        {
+                            sprite: 17,
+                            x, y,        // real coordinates
+                            dstX, dstY
+                        },
+                        ...
+                    ]
+                }
+            ],
+
+            // Sprites:
+            // Not stored in resource, this is an intermediate storage of sprites 
+            sprites: [
+                sprite: 17,  // -1 for image-based sprite
+                x, y,        // relative coordinates
+                dstX, dstY
+            ]
+
+        }
+     */
+
+
+
 
     // Virtual Canvas
     // In some cases we may manipulate the canvas (move around groups of sprites in generated spritesheets); to do this
@@ -183,7 +242,7 @@ const ModTilesheet = (function(containerEl){
         if (resource.generated) {
             // Select files from folder hierarchy
             $('.folderHierarchyImage').each((idx, fileEl) => {
-                const fileIsDep = (resource.dependencies.find((dep) => dep.imageSrc === $(fileEl).data('file').pathTo)) !== undefined;
+                const fileIsDep = (dependencies.find((dep) => dep.imageSrc === $(fileEl).data('file').pathTo)) !== undefined;
                 $('.folderHierarchyIncludeImage', fileEl).prop('checked', fileIsDep);
             });
         }
@@ -436,7 +495,7 @@ const ModTilesheet = (function(containerEl){
                             }
 
                             // Its possible we're still loading the image and adding it as a dependency
-                            dependency = resource.dependencies.find((d) => d.imageSrc === file.pathTo);
+                            dependency = dependencies.find((d) => d.imageSrc === file.pathTo);
                             if (!dependency) {
                                 return false;
                             }
@@ -475,10 +534,10 @@ const ModTilesheet = (function(containerEl){
                         let isOpen = $(fileEl).hasClass('open');
                         triggerExpandFile();
 
-                        const indexOf = resource.dependencies.findIndex((d) => d.imageSrc === file.pathTo);
+                        const indexOf = dependencies.findIndex((d) => d.imageSrc === file.pathTo);
                         if (indexOf >= 0) {
-                            const dep = resource.dependencies[indexOf];
-                            resource.dependencies.splice(indexOf, 1);
+                            const dep = dependencies[indexOf];
+                            dependencies.splice(indexOf, 1);
                             unloadDependencyInTilesheet(dep);
                         }
                     } else {
@@ -492,7 +551,7 @@ const ModTilesheet = (function(containerEl){
                                 processing: ''
                             };
 
-                            resource.dependencies.push(dep);
+                            dependencies.push(dep);
 
                             loadImageDependency(dep).then(() => {
                                 reloadDependencyInTilesheet(dep);
@@ -570,7 +629,7 @@ const ModTilesheet = (function(containerEl){
         //  Redraw tilesheet from dependencies
 
         const tilesW = Math.ceil(dependency.previewImg.width / resource.tilesize),
-            tilesH   = Math.ceil(dependency.previewImg.height / resource.tilesize);
+              tilesH = Math.ceil(dependency.previewImg.height / resource.tilesize);
         let tilesheetW = Math.max(resource.columns, tilesW),
             tilesheetH = Math.max(resource.rows, tilesH);
 
@@ -582,12 +641,10 @@ const ModTilesheet = (function(containerEl){
         //          - resource.sprites[0].source image, .sprite -1
         //          - resource.spriteGroups[0].spriteIsland[0].sprite -1, .image src??
         //          - resource.spriteGroups[0].imageSrc ?
-        let spriteGroup = spriteGroups.find((spriteGroup) => spriteGroup[0].sprite.source === dependency.imageSrc);
+        let spriteGroup = spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dependency.imageSrc);
         if (!spriteGroup) {
             // FIXME: Add spriteGroup? Maybe not we could just check if spriteGroup null during collision checks
-            //spriteGroups.push({
-            //    sprite: 
-            //});
+            // NOTE: This will hit if the dep has just been added (eg. added image dep)
         }
         // 1) Go through every translation in order starting about currentPos
         const potentialTranslations = [];
@@ -595,8 +652,9 @@ const ModTilesheet = (function(containerEl){
         // Find our current starting position for the sprite island
         let desiredPosition;
         if (spriteGroup) {
-            desiredPosition = { x: spriteGroup[0].sprite.newDstX, y: spriteGroup[0].sprite.newDstY };
-            spriteGroup.forEach((sprite) => {
+            desiredPosition = { x: spriteGroup.newDstX, y: spriteGroup.newDstY };
+            sprites.forEach((sprite) => {
+                if (sprite.spriteGroup !== spriteGroup) return;
                 if (sprite.newDstY <= desiredPosition.y && sprite.newDstX <= desiredPosition.x) {
                     desiredPosition.x = sprite.newDstX;
                     desiredPosition.y = sprite.newDstY;
@@ -647,8 +705,11 @@ const ModTilesheet = (function(containerEl){
             return true;
         };
 
-        let augmentedSpriteGroup = [],
-            newSprites = [];
+        let augmentedSpriteGroup = {
+                imageSrc: dependency.imageSrc,
+                width: dependency.previewImg.width,
+                height: dependency.previewImg.height
+            }, newSprites = [];
         for (let y = 0; y < tilesH; ++y) {
             for (let x = 0; x < tilesW; ++x) {
                 newSprites.push({
@@ -663,8 +724,6 @@ const ModTilesheet = (function(containerEl){
                     sprite: -1,
                     spriteGroup: augmentedSpriteGroup
                 });
-
-                augmentedSpriteGroup.push({ sprite: newSprites[newSprites.length - 1] });
             }
         }
 
@@ -673,8 +732,8 @@ const ModTilesheet = (function(containerEl){
         let wasAcceptable = false;
         for (let i = 0; i < potentialTranslations.length; ++i) {
             let isAcceptable = true;
-            for (let j = 0; j < augmentedSpriteGroup.length; ++j) {
-                if (!isAcceptableTranslation(augmentedSpriteGroup[j].sprite, potentialTranslations[i])) {
+            for (let j = 0; j < newSprites.length; ++j) {
+                if (!isAcceptableTranslation(newSprites[j], potentialTranslations[i])) {
                     isAcceptable = false;
                     break;
                 }
@@ -687,8 +746,8 @@ const ModTilesheet = (function(containerEl){
 
                 // Translate sprite to new position
                 const spritesToUpdate = [];
-                for (let j = 0; j < augmentedSpriteGroup.length; ++j) {
-                    const sprite = augmentedSpriteGroup[j].sprite;
+                for (let j = 0; j < newSprites.length; ++j) {
+                    const sprite = newSprites[j];
                         //prevPos  = {
                         //    x: sprite.newDstX,
                         //    y: sprite.newDstY
@@ -724,17 +783,48 @@ const ModTilesheet = (function(containerEl){
         // 3) Abstract collision checks (also done elsewhere)
         // 4) None? Extend tilesheet width to max desired width, and no bounds for height, then go from top to bottom to test
         // 5) Add/modify dep in tilesheet
-        let existingDep = resource.dependencies.find((dep) => dep.imageSrc === dependency.imageSrc);
+        let minX = newSprites[0].dstX,
+            minY = newSprites[0].dstY;
+
+        newSprites.forEach((sprite) => {
+            minX = Math.min(sprite.dstX, minX);
+            minY = Math.min(sprite.dstY, minY);
+        });
+
+        augmentedSpriteGroup.dstX = minX;
+        augmentedSpriteGroup.dstY = minY;
+        augmentedSpriteGroup.newDstX = minX;
+        augmentedSpriteGroup.newDstY = minY;
+
+
+        let existingDep = dependencies.find((dep) => dep.imageSrc === dependency.imageSrc);
         if (!existingDep) {
-            resource.dependencies.push({
+            dependencies.push({
                 imageSrc: dependency.imageSrc
                 // FIXME: More shit here
             });
+            debugger; // Why did we hit here while reloading a dep??
+        } else {
+            // We've moved the spriteGroup from the dep. If the dep is an image then the entire image is a single
+            // spriteGroup, and we have no need to store the spriteGroup. But if we don't store the spriteGroup then we
+            // need to store dstX/dstY on the dep itself. Find the top-left most sprite and set the dep dstX/dstY to
+            // that here
+            if (existingDep.imageSrc) {
+                existingDep.dstX = minX;
+                existingDep.dstY = minY;
+            }
         }
 
         // 6) Add sprites, delete old sprites (in case size has changed this is much easier); modify spriteGroup to reference new sprites
         if (spriteGroup) {
             // We previously had a sprite group, find each sprite and remove it from sprites
+            sprites.forEach((sprite) => {
+                if (sprite.spriteGroup === spriteGroup) {
+                    sprite.interactable.remove();
+                    sprite.interactable = null;
+                }
+            });
+
             sprites = sprites.filter((sprite) => sprite.spriteGroup !== spriteGroup);
             spriteGroups.splice(spriteGroups.indexOf(spriteGroup), 1);
         }
@@ -743,6 +833,8 @@ const ModTilesheet = (function(containerEl){
         newSprites.forEach((sprite) => {
             sprites.push(sprite);
         });
+
+        this.addInteractableSpriteGroup(augmentedSpriteGroup);
         
 
         // 7) Redraw/updateSpritePositions?
@@ -756,16 +848,13 @@ const ModTilesheet = (function(containerEl){
             // FIXME: May need to resize virtual canvas if tilesheet size changes
             virtualCanvasCtx.clearRect(0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
 
-            resource.dependencies.forEach((dep) => {
+            dependencies.forEach((dep) => {
 
-                const depGroup = spriteGroups.find((spriteGroup) => spriteGroup[0].sprite.source === dep.imageSrc),
-                    position   = { x: depGroup[0].sprite.newDstX, y: depGroup[0].sprite.newDstY };
-                depGroup.forEach((sprite) => {
-                    if (sprite.sprite.newDstY <= position.y && sprite.sprite.newDstX <= position.x) {
-                        position.x = sprite.sprite.newDstX;
-                        position.y = sprite.sprite.newDstY;
-                    }
-                });
+                const depGroup = spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc);
+
+                if (!depGroup) debugger; // FIXME: Could we still be in the process of loading dependencies? If so then change this to a return
+
+                const position   = { x: depGroup.newDstX, y: depGroup.newDstY };
 
                 // TODO: Error shows up when calling drawImage w/ previewImgBitmap and previewImg, but it still works
                 // anyways. I can't tell what's wrong, but it works for now so low priority
@@ -773,14 +862,6 @@ const ModTilesheet = (function(containerEl){
                     dstY   = position.y;
                 virtualCanvasCtx.drawImage(dep.previewImgBitmap, 0, 0, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight, dstX, dstY, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight);
             });
-            //sprites.forEach((sprite) => {
-            //    const tilesize = parseInt(resource.tilesize, 10),
-            //        srcX = sprite.dstX,
-            //        srcY = sprite.dstY,
-            //        dstX = sprite.newDstX,
-            //        dstY = sprite.newDstY;
-            //    virtualCanvasCtx.drawImage(resImg, srcX, srcY, tilesize, tilesize, dstX, dstY, tilesize, tilesize);
-            //});
 
             virtualCanvasImg  = new Image();
             virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
@@ -825,10 +906,17 @@ const ModTilesheet = (function(containerEl){
 
     const unloadDependencyInTilesheet = (dependency) => {
         
-        let spriteGroup = spriteGroups.find((spriteGroup) => spriteGroup[0].sprite.source === dependency.imageSrc);
+        let spriteGroup = spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dependency.imageSrc);
 
         if (spriteGroup) {
             // We previously had a sprite group, find each sprite and remove it from sprites
+            sprites.forEach((sprite) => {
+                if (sprite.spriteGroup === spriteGroup) {
+                    sprite.interactable.remove();
+                    sprite.interactable = null;
+                }
+            });
+
             sprites = sprites.filter((sprite) => sprite.spriteGroup !== spriteGroup);
             spriteGroups.splice(spriteGroups.indexOf(spriteGroup), 1);
         }
@@ -838,20 +926,25 @@ const ModTilesheet = (function(containerEl){
             // FIXME: May need to resize virtual canvas if tilesheet size changes
             virtualCanvasCtx.clearRect(0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
 
-            resource.dependencies.forEach((dep) => {
+            dependencies.forEach((dep) => {
 
-                const depGroup = spriteGroups.find((spriteGroup) => spriteGroup[0].sprite.source === dep.imageSrc),
-                    position   = { x: depGroup[0].sprite.newDstX, y: depGroup[0].sprite.newDstY };
-                depGroup.forEach((sprite) => {
-                    if (sprite.sprite.newDstY <= position.y && sprite.sprite.newDstX <= position.x) {
-                        position.x = sprite.sprite.newDstX;
-                        position.y = sprite.sprite.newDstY;
-                    }
-                });
+                const depGroup = spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc);
 
-                const dstX = position.x,
-                    dstY   = position.y;
-                virtualCanvasCtx.drawImage(dep.previewImgBitmap, 0, 0, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight, dstX, dstY, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight);
+                if (!depGroup) debugger; // FIXME: Need to fix this for extractions
+                //    position   = { x: depGroup[0].sprite.newDstX, y: depGroup[0].sprite.newDstY };
+                //depGroup.forEach((sprite) => {
+                //    if (sprite.sprite.newDstY <= position.y && sprite.sprite.newDstX <= position.x) {
+                //        position.x = sprite.sprite.newDstX;
+                //        position.y = sprite.sprite.newDstY;
+                //    }
+                //});
+
+                //const dstX = position.x,
+                //    dstY   = position.y;
+                //virtualCanvasCtx.drawImage(dep.previewImgBitmap, 0, 0, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight, dstX, dstY, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight);
+
+
+                virtualCanvasCtx.drawImage(dep.previewImgBitmap, 0, 0, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight, depGroup.dstX, depGroup.dstY, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight);
             });
             //sprites.forEach((sprite) => {
             //    const tilesize = parseInt(resource.tilesize, 10),
@@ -926,131 +1019,39 @@ const ModTilesheet = (function(containerEl){
 
             // Generated tilesheets: Add sprite groups/island interaction
             if (resource.generated) {
-                resource.spriteGroups.forEach((spriteGroup) => {
+                spriteGroups.forEach((spriteGroup) => {
 
-                    let augmentedSpriteGroup = [];
-                    spriteGroup.spriteIsland.forEach((sprite) => {
+                    // Is the group based off an extraction or image dep?
+                    if (spriteGroup.spriteIsland) {
+                        // Extracted sprites from another tilesheet
+                        let augmentedSpriteGroup = [];
+                        spriteGroup.spriteIsland.forEach((sprite) => {
 
-                        let spritesSprite = null; 
-                        for (let i = 0; i < sprites.length; ++i) {
-                            if
-                            (
-                                (sprite.dstX * tilesize) === sprites[i].dstX && 
-                                (sprite.dstY * tilesize) === sprites[i].dstY
-                            )
-                            {
-                                sprites[i].spriteGroup = spriteGroup;
-                                augmentedSpriteGroup.push({
-                                    sprite: sprites[i]
-                                });
-                                spritesSprite = sprites[i];
-                                break;
+                            let spritesSprite = null; 
+                            for (let i = 0; i < sprites.length; ++i) {
+                                if
+                                (
+                                    (sprite.dstX * tilesize) === sprites[i].dstX && 
+                                    (sprite.dstY * tilesize) === sprites[i].dstY
+                                )
+                                {
+                                    sprites[i].spriteGroup = spriteGroup;
+                                    augmentedSpriteGroup.push({
+                                        sprite: sprites[i]
+                                    });
+                                    spritesSprite = sprites[i];
+                                    break;
+                                }
                             }
-                        }
 
-                        const entity = {
-                            x: sprite.dstX * tilesize,
-                            y: sprite.dstY * tilesize,
-                            w: tilesize,
-                            h: tilesize
-                        };
-                        const interactable = InteractionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
-                                        .onHoverIn(() => {
-                                            highlightedIslands.push(augmentedSpriteGroup);
-                                        })
-                                        .onHoverOut(() => {
-                                            for (let i = 0; i < highlightedIslands.length; ++i) {
-                                                if (highlightedIslands[i] === augmentedSpriteGroup) {
-                                                    highlightedIslands.splice(i, 1);
-                                                    break;
-                                                }
-                                            }
-                                        })
-                                        .setCanDrag(true)
-                                        .onBeginDrag(() => {
-                                            for (let j = 0; j < augmentedSpriteGroup.length; ++j) {
-                                                const sprite = augmentedSpriteGroup[j].sprite;
-                                                sprite.dragStartX = sprite.newDstX;
-                                                sprite.dragStartY = sprite.newDstY;
-                                            }
-                                        })
-                                        .onDrag((dist) => {
+                            this.addInteractableSpriteGroup(spriteGroup);
+                        });
+                        spriteGroups.push(augmentedSpriteGroup);
+                        debugger; // On load we already added this spriteGroup, do we really need to go through this route?
+                    } else {
 
-                                            // FIXME: Potential area that we could translate sprites to. This could
-                                            // make it feel smoother/natural when its colliding w/ other sprites and
-                                            // can't translate to the exact position that you specified
-                                            const potentialTranslations = [{
-                                                x: Math.floor(Math.abs(dist.x / tilesize)) * (dist.x < 0 ? -1 : 1),
-                                                y: Math.floor(Math.abs(dist.y / tilesize)) * (dist.y < 0 ? -1 : 1)
-                                            }];
-
-                                            if (potentialTranslations[0].x === 0 && potentialTranslations[0].y === 0) return;
-
-
-                                            // FIXME: Should setup a collision bitmask over each row for quicker
-                                            // collision detection; then update collisions on sprite moved
-                                            const isAcceptableTranslation = (sprite, translation) => {
-                                                const x = (sprite.dragStartX / tilesize) + translation.x,
-                                                    y = (sprite.dragStartY / tilesize) + translation.y;
-
-                                                if (x < 0 || x >= resource.columns || y < 0 || y >= resource.rows) {
-                                                    return false;
-                                                }
-
-                                                for (let i = 0; i < sprites.length; ++i) {
-                                                    const existingSprite = sprites[i];
-                                                    if (existingSprite.spriteGroup === sprite.spriteGroup) continue;
-
-                                                    if (existingSprite.newDstX === (x * tilesize) && existingSprite.newDstY === (y * tilesize)) {
-                                                        return false;
-                                                    }
-                                                }
-                                                return true;
-                                            };
-
-                                            // Go through each sprite and see if the translation is okay for it (won't
-                                            // collide w/ anything)
-                                            for (let i = 0; i < potentialTranslations.length; ++i) {
-                                                let isAcceptable = true;
-                                                for (let j = 0; j < augmentedSpriteGroup.length; ++j) {
-                                                    if (!isAcceptableTranslation(augmentedSpriteGroup[j].sprite, potentialTranslations[i])) {
-                                                        isAcceptable = false;
-                                                        break;
-                                                    }
-                                                }
-
-                                                // Acceptable translation?
-                                                if (isAcceptable) {
-
-                                                    // Translate sprite to new position
-                                                    const spritesToUpdate = [];
-                                                    for (let j = 0; j < augmentedSpriteGroup.length; ++j) {
-                                                        const sprite = augmentedSpriteGroup[j].sprite,
-                                                            prevPos  = {
-                                                                x: sprite.newDstX,
-                                                                y: sprite.newDstY
-                                                            };
-                                                        sprite.newDstX = sprite.dragStartX + potentialTranslations[i].x * tilesize;
-                                                        sprite.newDstY = sprite.dragStartY + potentialTranslations[i].y * tilesize;
-
-                                                        spritesToUpdate.push({
-                                                            sprite, prevPos
-                                                        });
-                                                    }
-
-                                                    this.updateSpritePositions(spritesToUpdate);
-                                                    this.redrawVirtualCanvas();
-                                                    break;
-                                                }
-                                            }
-                                        })
-                                        .onEndDrag(() => {
-                                            //console.log("END DRAGGING");
-                                        });
-
-                                    if (spritesSprite) spritesSprite.interactable = interactable;
-                    });
-                    spriteGroups.push(augmentedSpriteGroup);
+                        this.addInteractableSpriteGroup(spriteGroup);
+                    }
                 });
             }
 
@@ -1107,28 +1108,235 @@ const ModTilesheet = (function(containerEl){
     this.load = (_resource) => {
 
         resource = _resource;
+        loadedResource = _.cloneDeep(_resource);
+
+        InteractionMgr.load(canvasEl);
 
         if (resource.generated) {
             spriteGroups = [];
             sprites = [];
-            resource.sprites.forEach((sprite) => {
-                sprites.push({
-                    source: sprite.source,
-                    sprite: sprite.sprite,
-                    dstX: sprite.dstX,
-                    dstY: sprite.dstY,
-                    newDstX: sprite.dstX,
-                    newDstY: sprite.dstY,
-                    spriteGroup: null
-                });
+
+            // Flatten spriteGroups -> sprites
+            resource.spriteGroups.forEach((_spriteGroup) => {
+
+                const spriteGroup = {};
+                spriteGroups.push(spriteGroup);
+
+                // Load sprites from spriteGroups based off spriteIsland (for extractions from another tilesheet) or
+                // image (for image deps)
+                if (_spriteGroup.spriteIsland) {
+
+                    spriteGroup.spriteIsland = [];
+                    _spriteGroup.spriteIsland.forEach((sprite) => {
+
+                        // Copy sprite
+                        sprites.push({
+                            sprite: sprite.sprite,
+                            x: sprite.x,
+                            y: sprite.y,
+                            dstX: sprite.dstX,
+                            dstY: sprite.dstY,
+                            newDstX: sprite.dstX,
+                            newDstY: sprite.dstY,
+                            spriteGroup: spriteGroup
+                        });
+                    });
+
+                    spriteGroup.assetId = _spriteGroup.assetId;
+                } else {
+
+                    spriteGroup.imageSrc = _spriteGroup.imageSrc;
+                    spriteGroup.dstX = _spriteGroup.dstX;
+                    spriteGroup.dstY = _spriteGroup.dstY;
+                    spriteGroup.newDstX = _spriteGroup.dstX;
+                    spriteGroup.newDstY = _spriteGroup.dstY;
+                    spriteGroup.width = _spriteGroup.width;
+                    spriteGroup.height = _spriteGroup.height;
+
+                    // Build sprites from image
+                    const tilesH = Math.ceil(_spriteGroup.height / resource.tilesize),
+                        tilesW = Math.ceil(_spriteGroup.width / resource.tilesize),
+                        dstX = _spriteGroup.dstX,
+                        dstY = _spriteGroup.dstY;
+
+                    for (let y = 0; y < tilesH; ++y) {
+                        for (let x = 0; x < tilesW; ++x) {
+                            sprites.push({
+                                sprite: -1,
+                                x: x * resource.tilesize,
+                                y: y * resource.tilesize,
+                                dstX: dstX + x * resource.tilesize,
+                                dstY: dstY + y * resource.tilesize,
+                                newDstX: dstX + x * resource.tilesize,
+                                newDstY: dstY + y * resource.tilesize,
+                                spriteGroup: spriteGroup
+                            });
+                        }
+                    }
+                }
+            });
+
+            // Load images from image based deps
+            dependencies = [];
+            resource.dependencies.forEach((_dep) => {
+
+                const dep = {};
+                if (_dep.imageSrc) {
+                    dep.imageSrc   = _dep.imageSrc;
+                    dep.previewSrc = _dep.previewSrc;
+                    dep.processing = _dep.processing;
+                    dep.width      = _dep.width;
+                    dep.height     = _dep.height;
+                } else {
+                    dep.assetId    = _dep.assetId;
+                    dep.sprites    = _.clone(_dep.sprites);
+                }
+
+                dependencies.push(dep);
+
+                if (!dep.imageSrc) return;
+
+                // Need to loadImageDependency in order to build previewImg (in case it doesn't exist), and draw virtual
+                // canvas of img
+                loadImageDependency(dep).then(() => { });
             });
         }
-
-        InteractionMgr.load(canvasEl);
 
         this.reloadImage();
         this.reloadProperties();
 
+    };
+
+    this.addInteractableSpriteGroup = (spriteGroup) => {
+
+        const tilesize = parseInt(resource.tilesize, 10),
+            spritesInGroup = sprites.filter((sprite) => sprite.spriteGroup === spriteGroup);
+
+        let topLeftSprite = null;
+        spritesInGroup.forEach((sprite) => {
+
+            // Find our top-left most sprite
+            if (!topLeftSprite) {
+                topLeftSprite = sprite;
+            } else {
+                if
+                (
+                    sprite.dstY <= topLeftSprite.dstY &&
+                    sprite.dstX <= topLeftSprite.dstX
+                )
+                {
+                    topLeftSprite = sprite;
+                }
+            }
+
+            const entity = {
+                x: sprite.dstX,
+                y: sprite.dstY,
+                w: tilesize,
+                h: tilesize
+            };
+            const interactable = InteractionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
+                .onHoverIn(() => {
+                    highlightedIslands.push({
+                        spriteGroup: spriteGroup,
+                        sprites: spritesInGroup
+                    });
+                })
+                .onHoverOut(() => {
+                    for (let i = 0; i < highlightedIslands.length; ++i) {
+                        if (highlightedIslands[i].spriteGroup === spriteGroup) {
+                            highlightedIslands.splice(i, 1);
+                            break;
+                        }
+                    }
+                })
+                .setCanDrag(true)
+                .onBeginDrag(() => {
+                    for (let j = 0; j < spritesInGroup.length; ++j) {
+                        const sprite = spritesInGroup[j];
+                        sprite.dragStartX = sprite.newDstX;
+                        sprite.dragStartY = sprite.newDstY;
+                    }
+                })
+                .onDrag((dist) => {
+
+                    // FIXME: Potential area that we could translate sprites to. This could
+                    // make it feel smoother/natural when its colliding w/ other sprites and
+                    // can't translate to the exact position that you specified
+                    const potentialTranslations = [{
+                        x: Math.floor(Math.abs(dist.x / tilesize)) * (dist.x < 0 ? -1 : 1),
+                        y: Math.floor(Math.abs(dist.y / tilesize)) * (dist.y < 0 ? -1 : 1)
+                    }];
+
+                    if (potentialTranslations[0].x === 0 && potentialTranslations[0].y === 0) return;
+
+
+                    // FIXME: Should setup a collision bitmask over each row for quicker
+                    // collision detection; then update collisions on sprite moved
+                    const isAcceptableTranslation = (sprite, translation) => {
+                        const x = (sprite.dragStartX / tilesize) + translation.x,
+                            y = (sprite.dragStartY / tilesize) + translation.y;
+
+                        if (x < 0 || x >= resource.columns || y < 0 || y >= resource.rows) {
+                            return false;
+                        }
+
+                        for (let i = 0; i < sprites.length; ++i) {
+                            const existingSprite = sprites[i];
+                            if (existingSprite.spriteGroup === sprite.spriteGroup) continue;
+
+                            if (existingSprite.newDstX === (x * tilesize) && existingSprite.newDstY === (y * tilesize)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    };
+
+                    // Go through each sprite and see if the translation is okay for it (won't
+                    // collide w/ anything)
+                    for (let i = 0; i < potentialTranslations.length; ++i) {
+                        let isAcceptable = true;
+                        for (let j = 0; j < spritesInGroup.length; ++j) {
+                            if (!isAcceptableTranslation(spritesInGroup[j], potentialTranslations[i])) {
+                                isAcceptable = false;
+                                break;
+                            }
+                        }
+
+                        // Acceptable translation?
+                        if (isAcceptable) {
+
+                            // Translate sprite to new position
+                            const spritesToUpdate = [];
+                            for (let j = 0; j < spritesInGroup.length; ++j) {
+                                const sprite = spritesInGroup[j],
+                                    prevPos  = {
+                                        x: sprite.newDstX,
+                                        y: sprite.newDstY
+                                    };
+                                    sprite.newDstX = sprite.dragStartX + potentialTranslations[i].x * tilesize;
+                                    sprite.newDstY = sprite.dragStartY + potentialTranslations[i].y * tilesize;
+
+                                    spritesToUpdate.push({
+                                        sprite, prevPos
+                                    });
+                            }
+
+                            spriteGroup.newDstX = topLeftSprite.newDstX;
+                            spriteGroup.newDstY = topLeftSprite.newDstY;
+
+                            this.updateSpritePositions(spritesToUpdate);
+                            this.redrawVirtualCanvas();
+                            break;
+                        }
+                    }
+                })
+                .onEndDrag(() => {
+                    //console.log("END DRAGGING");
+                });
+
+            sprite.interactable = interactable;
+        });
     };
 
     this.updateSpritePositions = (sprites) => {
@@ -1175,13 +1383,29 @@ const ModTilesheet = (function(containerEl){
     this.redrawVirtualCanvas = () => {
 
         virtualCanvasCtx.clearRect(0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
-        sprites.forEach((sprite) => {
-            const tilesize = parseInt(resource.tilesize, 10),
-                srcX = sprite.dstX,
-                srcY = sprite.dstY,
-                dstX = sprite.newDstX,
-                dstY = sprite.newDstY;
-            virtualCanvasCtx.drawImage(resImg, srcX, srcY, tilesize, tilesize, dstX, dstY, tilesize, tilesize);
+        //sprites.forEach((sprite) => {
+        //    const tilesize = parseInt(resource.tilesize, 10),
+        //        srcX = sprite.dstX,
+        //        srcY = sprite.dstY,
+        //        dstX = sprite.newDstX,
+        //        dstY = sprite.newDstY;
+        //    virtualCanvasCtx.drawImage(resImg, srcX, srcY, tilesize, tilesize, dstX, dstY, tilesize, tilesize);
+        //});
+
+        spriteGroups.forEach((spriteGroup) => {
+            if (spriteGroup.spriteIsland) {
+                debugger; // FIXME: need to copy the above for spriteIslands: draw each individual sprtie
+            } else {
+
+                const dep = dependencies.find((dep) => dep.imageSrc === spriteGroup.imageSrc);
+                const resImg = dep.previewImgBitmap;
+
+                const width = spriteGroup.width,
+                    height = spriteGroup.height,
+                    dstX = spriteGroup.newDstX,
+                    dstY = spriteGroup.newDstY;
+                virtualCanvasCtx.drawImage(resImg, 0, 0, width, height, dstX, dstY, width, height);
+            }
         });
 
         virtualCanvasImg  = new Image();
@@ -1191,6 +1415,7 @@ const ModTilesheet = (function(containerEl){
     this.unload = () => {
         imgReady = false;
         resource = null;
+        loadedResource = null;
 
         _.forEach(entities.objects, (obj) => {
             $(obj.el).remove();
@@ -1232,10 +1457,10 @@ const ModTilesheet = (function(containerEl){
         // Draw highlighted islands
         for (let i = 0; i < highlightedIslands.length; ++i) {
 
-            const island = highlightedIslands[i],
+            const island = highlightedIslands[i].sprites,
                 tilesize = 16;
             for (let j = 0; j < island.length; ++j) {
-                const highlight = island[j].sprite;
+                const highlight = island[j];
                 canvasCtx.save();
                 canvasCtx.fillStyle = '#00F';
                 canvasCtx.globalAlpha = 0.4;
@@ -1312,6 +1537,7 @@ const ModTilesheet = (function(containerEl){
     this.createNew = (_resource) => {
 
         resource = _resource;
+        loadedResource = _.cloneDeep(_resource);
 
         this.clearCanvas();
         this.reloadProperties();
@@ -1364,6 +1590,9 @@ const ModTilesheet = (function(containerEl){
             resource.sprites = [];
             sprites.forEach((sprite) => {
 
+                // We don't want to include sprites from imageSrc, only the image dep spriteGroup
+                if (sprite.spriteGroup.imageSrc) return;
+
                 const _sprite = {
                     source: sprite.source,
                     dstX: sprite.newDstX,
@@ -1382,15 +1611,22 @@ const ModTilesheet = (function(containerEl){
             resource.spriteGroups = [];
             spriteGroups.forEach((spriteGroup) => {
 
-                const newSpriteGroup = {
-                    spriteIsland: []
-                };
+                const newSpriteGroup = {};
 
-                spriteGroup.forEach((sprite) => {
+                if (spriteGroup.imageSrc) {
 
-                    // FIXME: ...seriously?
-                    if (sprite.sprite.spriteGroup.spriteIsland) {
-                        const _sprite = sprite.sprite.spriteGroup.spriteIsland.find((s) => s.sprite === sprite.sprite.sprite)
+                    newSpriteGroup.imageSrc = spriteGroup.imageSrc;
+                    newSpriteGroup.dstX = spriteGroup.newDstX;
+                    newSpriteGroup.dstY = spriteGroup.newDstY;
+                    newSpriteGroup.width = spriteGroup.width;
+                    newSpriteGroup.height = spriteGroup.height;
+                } else {
+
+                    newSpriteGroup.assetId = spriteGroup.assetId;
+                    newSpriteGroup.spriteIsland = [];
+                    spriteGroup.forEach((sprite) => {
+
+                        let _sprite = sprite.sprite.spriteGroup.spriteIsland.find((s) => s.sprite === sprite.sprite.sprite)
                         newSpriteGroup.spriteIsland.push({
                             sprite: _sprite.sprite,
                             x: _sprite.x,
@@ -1398,22 +1634,60 @@ const ModTilesheet = (function(containerEl){
                             dstX: sprite.sprite.newDstX / tilesize, // NOTE: Need updated pos
                             dstY: sprite.sprite.newDstY / tilesize
                         });
-                    } else {
-                        const _sprite = sprite.sprite;
-                        newSpriteGroup.spriteIsland.push({
-                            sprite: -1,
-                            imageSrc: _sprite.source,
-                            x: _sprite.srcX,
-                            y: _sprite.srcY,
-                            dstX: sprite.sprite.newDstX / tilesize, // NOTE: Need updated pos
-                            dstY: sprite.sprite.newDstY / tilesize
-                        });
-                    }
-                });
+                    });
+                }
 
                 resource.spriteGroups.push(newSpriteGroup);
-                resource.dirty = true;
             });
+
+            // FIXME: Do we need to compare loadedResource.spriteGroups === resource.spriteGroups to flag resource.dirty?
+
+            // Have any of the dependencies been modified?
+            if (loadedResource.dependencies) {
+                resource.dependencies = [];
+                dependencies.forEach((dep) => {
+                    const oldDep = loadedResource.dependencies.find((oldDep) => oldDep.imageSrc === dep.imageSrc),
+                        saveDep = {};
+
+                    if (dep.imageSrc) {
+                        saveDep.imageSrc   = dep.imageSrc;
+                        saveDep.previewSrc = dep.previewSrc;
+                        saveDep.processing = dep.processing;
+                        saveDep.width      = dep.width;
+                        saveDep.height     = dep.height;
+                    } else {
+                        debugger; // FIXME: I bet we can't clone sprites like this
+                        saveDep.assetId    = dep.assetId;
+                        saveDep.sprites    = _.clone(dep.sprites);
+                    }
+
+                    resource.dependencies.push(saveDep);
+
+                    // Was this dependency here already?
+                    if (!oldDep) {
+                        resource.dirty = true;
+                        return;
+                    }
+                    const spriteGroup = resource.spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc),
+                        oldSpriteGroup = loadedResource.spriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
+
+                    // Image based dep?
+                    if (dep.imageSrc) {
+
+                        // Has processing changed?
+                        if (dep.processing !== oldDep.processing) {
+                            resource.dirty = true;
+                        }
+                    }
+
+                    // Sprite Group moved?
+                    if (spriteGroup.dstX !== oldSpriteGroup.dstX || spriteGroup.dstY !== oldSpriteGroup.dstY) {
+                        resource.dirty = true;
+                    }
+                });
+            } else {
+                resource.dirty = true;
+            }
 
             console.log(sprites);
             console.log(spriteGroups);
@@ -1427,6 +1701,11 @@ const ModTilesheet = (function(containerEl){
         if (description) {
             resource.description = description;
         }
+
+        // TODO: It would be better to wait for a reply on save to confirm the save was successful
+        // Otherwise what happens if we continue to save this w/out having rebuilt it, or vice versa we keep rebuilding
+        // each time we save. Need to reload on rebuild or somethnig
+        //loadedResource = _.cloneDeep(resource);
 
         this.onSave();
     };
@@ -1549,12 +1828,12 @@ const ModTilesheet = (function(containerEl){
 
         if (generateFromImages) {
             $('#tilesheetFolderHierarchyContainer').removeClass('hidden');
-            resource.dependencies = [];
+            dependencies = [];
             spriteGroups = [];
             sprites = [];
         } else {
             $('#tilesheetFolderHierarchyContainer').addClass('hidden');
-            delete resource.dependencies;
+            dependencies = null;
             spriteGroups = null;
             sprites = null;
         }

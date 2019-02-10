@@ -230,7 +230,8 @@ const InteractionMgr = (new function(){
 
             // Functions
             setCanDrag: (canDrag) => { interaction.canDrag = true; return interactionFunctions; },
-            move: (x, y) => { interaction.x = x; interaction.y = y; return interactionFunctions; }
+            move: (x, y) => { interaction.x = x; interaction.y = y; return interactionFunctions; },
+            remove: () => { const idx = interactables.findIndex((ent) => ent === interaction); interactables.splice(idx, 1); }
         };
 
         interactables.push(interaction);
