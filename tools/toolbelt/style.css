@@ -201,6 +201,23 @@ body {
 }
 
 /* Hide all subfolders if the parent folder isn't opened */
+.folderHierarchyFolder > .folderList {
+    display: none;
+}
+
+.folderHierarchyFolder > .fileList {
+    display: none;
+}
+
+.folderHierarchyFolder.open > .folderList {
+    display: block;
+}
+
+.folderHierarchyFolder.open > .fileList {
+    display: block;
+}
+
+
 .folderHierarchyFolder > .folderHierarchyFile {
     display: none;
 }

@@ -111,7 +111,7 @@ const ResourceMgr = (new function(){
                     success = !!json.success;
 
                 if (success) {
-                    this.rawImages = json.data.split(' ');
+                    this.rawImages = json.data.split('###SEP###');
 
                     const directoriedImages = {};
                     this.rawImages.forEach((image) => {

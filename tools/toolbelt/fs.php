@@ -24,7 +24,7 @@ if ($request == "save") {
 
     ob_start();
     //passthru("find /resources/sprites -iname '*.png'");
-    passthru("find ../../resources/sprites -iname '*.png' | sed 's/^..\/..\///g' | xargs");
+    passthru("find ../../resources/sprites -iname '*.png' | sed 's/^..\/..\///g' | xargs --delimiter='\\\\n' | perl -p -e 's/\n/###SEP###/'");
     $fileListing = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()
 
@@ -89,7 +89,7 @@ if ($request == "save") {
         mkdir("../../$imagePath", 0777);
     }
     
-    $runCmd = "rm ../../$imagePath/$imageBasename* ; convert ../../$imageSrc  $imageProcess ../../$imageOutput";
+    $runCmd = "rm \"../../$imagePath/$imageBasename*\" ; convert \"../../$imageSrc\"  $imageProcess \"../../$imageOutput\"";
     passthru($runCmd);
     $results = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()

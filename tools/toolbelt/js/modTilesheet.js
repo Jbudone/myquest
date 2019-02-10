@@ -266,7 +266,7 @@ const ModTilesheet = (function(containerEl){
                 previewSrc  = dependency.imageSrc;
             } else {
                 processHash = dependency.processing.split('').reduce((accum, val)    => (((accum << 5) - accum) + val.charCodeAt(0)) | 0, 0);
-                previewPath = `${pathToImage}temp`;
+                previewPath = `resources/sprites/temp`; // FIXME: Should store temp path in some settings
                 previewSrc  = `${previewPath}/${imageBasename}--${processHash}.png`;
             }
 
@@ -574,7 +574,16 @@ const ModTilesheet = (function(containerEl){
                             .addClass('folderHierarchyFolderName')
                             .text(fileName)
                             .click(triggerExpandFile)
+                    )
+                    .append(
+                        $('<div/>')
+                            .addClass('folderList')
+                    )
+                    .append(
+                        $('<div/>')
+                            .addClass('fileList')
                     );
+
                 } else {
                     fileEl.addClass('folderHierarchyImage')
                     .data('file', file)
@@ -603,10 +612,11 @@ const ModTilesheet = (function(containerEl){
                 _.forEach(files, (file, fileName) => {
                     let fileEl = buildElementForFile(file, fileName, !file.image, level);
                     if (!file.image) {
+                        fileEl.appendTo( $('> .folderList', parentFolderEl) );
                         addFiles(fileEl, file, level + 1);
+                    } else {
+                        fileEl.appendTo( $('> .fileList', parentFolderEl) );
                     }
-
-                    fileEl.appendTo(parentFolderEl);
                 });
             };
 
