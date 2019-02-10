@@ -1278,25 +1278,28 @@ const processGeneratedTilesheet = (package) => {
 
             minDstY = Math.min(minDstY, y);
             minDstX = Math.min(minDstX, x);
-            maxDstY = Math.max(maxDstY, y);
-            maxDstX = Math.max(maxDstX, x);
+            maxDstY = Math.max(maxDstY, y + 1);
+            maxDstX = Math.max(maxDstX, x + 1);
         });
 
         spriteGroups.forEach((spriteGroup) => {
             if (spriteGroup.imageSrc) {
-                let x = spriteGroup.dstX,
-                    y = spriteGroup.dstY;
+                const width = Math.ceil(spriteGroup.width / tilesize),
+                    height = Math.ceil(spriteGroup.height / tilesize),
+                    x = spriteGroup.dstX / tilesize,
+                    y = spriteGroup.dstY / tilesize;
 
                 minDstY = Math.min(minDstY, y);
                 minDstX = Math.min(minDstX, x);
-                maxDstY = Math.max(maxDstY, y);
-                maxDstX = Math.max(maxDstX, x);
+                maxDstY = Math.max(maxDstY, y + height);
+                maxDstX = Math.max(maxDstX, x + width);
             }
         });
+
         
 
-        const newColumns = maxDstX - minDstX + 1,
-            newRows = maxDstY - minDstY + 1;
+        const newColumns = maxDstX - minDstX,
+            newRows = maxDstY - minDstY;
 
 
         const spriteTranslations = {},
