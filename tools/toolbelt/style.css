@@ -217,15 +217,6 @@ body {
     display: block;
 }
 
-
-.folderHierarchyFolder > .folderHierarchyFile {
-    display: none;
-}
-
-.folderHierarchyFolder.open > .folderHierarchyFile {
-    display: block;
-}
-
 .folderHierarchyFile {
     margin-left: 16px;
 }
