@@ -443,12 +443,8 @@ const ModTilesheet = (function(containerEl){
             imgProcEl.val(dependency.processing);
 
             imgSrcEl.attr('src', `../../${file.pathTo}`);
-            imgSrcEl.one("load", function() {
-                imgSrcHEl.val(imgSrcEl[0].naturalHeight);
-                imgSrcWEl.val(imgSrcEl[0].naturalWidth);
-                imgDstHEl.val(dependency.height);
-                imgDstWEl.val(dependency.width);
-            }).each(function() {
+            imgSrcEl.one("load", function() {})
+            .each(function() {
                 if(this.complete) $(this).load();
             });
 
@@ -546,8 +542,6 @@ const ModTilesheet = (function(containerEl){
                         resImg.onload = () => {
                             const dep = {
                                 imageSrc: file.pathTo,
-                                width: resImg.width,
-                                height: resImg.height,
                                 processing: ''
                             };
 
@@ -804,15 +798,6 @@ const ModTilesheet = (function(containerEl){
                 // FIXME: More shit here
             });
             debugger; // Why did we hit here while reloading a dep??
-        } else {
-            // We've moved the spriteGroup from the dep. If the dep is an image then the entire image is a single
-            // spriteGroup, and we have no need to store the spriteGroup. But if we don't store the spriteGroup then we
-            // need to store dstX/dstY on the dep itself. Find the top-left most sprite and set the dep dstX/dstY to
-            // that here
-            if (existingDep.imageSrc) {
-                existingDep.dstX = minX;
-                existingDep.dstY = minY;
-            }
         }
 
         // 6) Add sprites, delete old sprites (in case size has changed this is much easier); modify spriteGroup to reference new sprites
@@ -1185,8 +1170,6 @@ const ModTilesheet = (function(containerEl){
                     dep.imageSrc   = _dep.imageSrc;
                     dep.previewSrc = _dep.previewSrc;
                     dep.processing = _dep.processing;
-                    dep.width      = _dep.width;
-                    dep.height     = _dep.height;
                 } else {
                     dep.assetId    = _dep.assetId;
                     dep.sprites    = _.clone(_dep.sprites);
@@ -1653,8 +1636,6 @@ const ModTilesheet = (function(containerEl){
                         saveDep.imageSrc   = dep.imageSrc;
                         saveDep.previewSrc = dep.previewSrc;
                         saveDep.processing = dep.processing;
-                        saveDep.width      = dep.width;
-                        saveDep.height     = dep.height;
                     } else {
                         debugger; // FIXME: I bet we can't clone sprites like this
                         saveDep.assetId    = dep.assetId;

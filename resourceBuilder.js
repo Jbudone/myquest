@@ -419,6 +419,11 @@ const packageRoutines = {
 
                 delete sheet.dirty;
                 delete sheet.newDependencies;
+                delete sheet.oldSprites;
+
+                if (sheet.sprites && sheet.sprites.length === 0) {
+                    delete sheet.sprites;
+                }
 
                 console.log(sheet);
                 return;
