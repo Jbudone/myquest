@@ -1666,49 +1666,48 @@ const ModTilesheet = (function(containerEl){
             // FIXME: Do we need to compare loadedResource.spriteGroups === resource.spriteGroups to flag resource.dirty?
 
             // Have any of the dependencies been modified?
-            if (loadedResource.dependencies) {
-                resource.dependencies = [];
-                dependencies.forEach((dep) => {
-                    const oldDep = loadedResource.dependencies.find((oldDep) => oldDep.imageSrc === dep.imageSrc),
-                        saveDep = {};
+            resource.dependencies = [];
+            dependencies.forEach((dep) => {
+                let oldDep = null;
+                if (loadedResource.dependencies) {
+                    oldDep = loadedResource.dependencies.find((oldDep) => oldDep.imageSrc === dep.imageSrc),
+                }
+                let saveDep = {};
 
-                    if (dep.imageSrc) {
-                        saveDep.imageSrc   = dep.imageSrc;
-                        saveDep.previewSrc = dep.previewSrc;
-                        saveDep.processing = dep.processing;
-                    } else {
-                        debugger; // FIXME: I bet we can't clone sprites like this
-                        saveDep.assetId    = dep.assetId;
-                        saveDep.sprites    = _.clone(dep.sprites);
-                    }
+                if (dep.imageSrc) {
+                    saveDep.imageSrc   = dep.imageSrc;
+                    saveDep.previewSrc = dep.previewSrc;
+                    saveDep.processing = dep.processing;
+                } else {
+                    debugger; // FIXME: I bet we can't clone sprites like this
+                    saveDep.assetId    = dep.assetId;
+                    saveDep.sprites    = _.clone(dep.sprites);
+                }
 
-                    resource.dependencies.push(saveDep);
+                resource.dependencies.push(saveDep);
 
-                    // Was this dependency here already?
-                    if (!oldDep) {
-                        resource.dirty = true;
-                        return;
-                    }
-                    const spriteGroup = resource.spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc),
-                        oldSpriteGroup = loadedResource.spriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
+                // Was this dependency here already?
+                if (!oldDep) {
+                    resource.dirty = true;
+                    return;
+                }
+                const spriteGroup = resource.spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc),
+                    oldSpriteGroup = loadedResource.spriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
 
-                    // Image based dep?
-                    if (dep.imageSrc) {
+                // Image based dep?
+                if (dep.imageSrc) {
 
-                        // Has processing changed?
-                        if (dep.processing !== oldDep.processing) {
-                            resource.dirty = true;
-                        }
-                    }
-
-                    // Sprite Group moved?
-                    if (spriteGroup.dstX !== oldSpriteGroup.dstX || spriteGroup.dstY !== oldSpriteGroup.dstY) {
+                    // Has processing changed?
+                    if (dep.processing !== oldDep.processing) {
                         resource.dirty = true;
                     }
-                });
-            } else {
-                resource.dirty = true;
-            }
+                }
+
+                // Sprite Group moved?
+                if (spriteGroup.dstX !== oldSpriteGroup.dstX || spriteGroup.dstY !== oldSpriteGroup.dstY) {
+                    resource.dirty = true;
+                }
+            });
 
             console.log(sprites);
             console.log(spriteGroups);
