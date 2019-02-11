@@ -282,21 +282,27 @@ const ModTilesheet = (function(containerEl){
                 $.post('fs.php', { request: "processImage", imageSrc: dep.imageSrc, process: dep.processing, outputPath: previewPath, basename: imageBasename, output: previewSrc }, (data) => {
 
                     console.log(data);
-                    //json = JSON.parse(data);
+                    let json = JSON.parse(data);
                     //updateImagePreview(previewSrc);
+
+                    // If we have any output its probably just from the error
+                    if (!json.success) {
+                        failed(json);
+                        return;
+                    }
 
                     dep.previewSrc = previewSrc;
 
                     const createBitmap = () => {
                         createImageBitmap(dep.previewImg).then((resp) => {
                             dep.previewImgBitmap = resp;
-                            succeeded(data);
+                            succeeded(json);
                         });
                     };
 
                     dep.previewImg = new Image();
-                    dep.previewImg.onload = () => createBitmap();// succeeded(data);
-                    dep.previewImg.onerror = () => failed();
+                    dep.previewImg.onload = () => createBitmap();
+                    dep.previewImg.onerror = () => failed(json);
                     dep.previewImg.src = `../../${previewSrc}`;
                 });
             });
@@ -398,6 +404,9 @@ const ModTilesheet = (function(containerEl){
                 loadImageDependency(dependency).then(() => {
                     updateImagePreview(dependency.previewSrc);
                     reloadDependencyInTilesheet(dependency);
+                    imgProcEl.removeClass('error');
+                }).catch((err) => {
+                    imgProcEl.addClass('error');
                 });
 
                 /*

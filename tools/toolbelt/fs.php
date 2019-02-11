@@ -89,7 +89,7 @@ if ($request == "save") {
         mkdir("../../$imagePath", 0777);
     }
     
-    $runCmd = "rm \"../../$imagePath/$imageBasename*\" ; convert \"../../$imageSrc\"  $imageProcess \"../../$imageOutput\"";
+    $runCmd = "rm \"../../$imagePath/$imageBasename*\" 2>/dev/null ; convert \"../../$imageSrc\"  $imageProcess \"../../$imageOutput\" 2>&1";
     passthru($runCmd);
     $results = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()
@@ -98,7 +98,13 @@ if ($request == "save") {
     $_SESSION['processingImage'] = NULL;
     session_write_close();
 
-    echo '{ "success": true, "results": "'.$results.'", "ranCmd": "'.$runCmd.'" }';
+    echo json_encode(
+        array(
+            'success' => file_exists("../../$imageOutput"),
+            'results' => $results,
+            'ranCmd' => $runCmd
+        )
+    );
     exit;
 } else if ($request === "cancelProcessImage") {
     // Explicitly cancel a previously established process

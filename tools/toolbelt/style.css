@@ -255,11 +255,39 @@ body {
     color: #FFF;
 }
 
+#tilesheetFolderHierarchyImageCtrlImgProcess.error {
+	border: 1px solid #F00;
+
+	-webkit-animation-name: shake;
+	animation-name: shake;
+    animation-duration: 0.4s;
+    animation-fill-mode: both;
+}
+
+@keyframes shake {
+	0%, 100% {
+		-webkit-transform: translateZ(0);
+		transform: translateZ(0);
+	}
+
+	15%, 45%, 75% {
+		-webkit-transform: translate3d(-10px,0,0);
+		transform: translate3d(-10px,0,0);
+	}
+
+	30%, 60%, 90% {
+		-webkit-transform: translate3d(10px,0,0);
+		transform: translate3d(10px,0,0);
+	}
+}
+
+
 #tilesheetFolderHierarchyImageCtrlContainerPreview {
     display: grid;
     justify-content: space-between;
     grid-gap: 10px;
     grid-template-columns: 40% 40%;
+	margin-top: 10px;
 }
 
 #tilesheetFolderHierarchyImageCtrlImgSrc {
