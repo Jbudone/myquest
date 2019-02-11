@@ -1670,10 +1670,10 @@ const ModTilesheet = (function(containerEl){
             dependencies.forEach((dep) => {
                 let oldDep = null;
                 if (loadedResource.dependencies) {
-                    oldDep = loadedResource.dependencies.find((oldDep) => oldDep.imageSrc === dep.imageSrc),
+                    oldDep = loadedResource.dependencies.find((oldDep) => oldDep.imageSrc === dep.imageSrc);
                 }
-                let saveDep = {};
 
+                let saveDep = {};
                 if (dep.imageSrc) {
                     saveDep.imageSrc   = dep.imageSrc;
                     saveDep.previewSrc = dep.previewSrc;
