@@ -1716,6 +1716,10 @@ const ModTilesheet = (function(containerEl){
         const sheetId = $('#tilesheetName').val();
         resource.id = sheetId;
 
+        if (resource.generated) {
+            resource.output = `sprites/${resource.id}`;
+        }
+
         const description = $('#tilesheetDescription').val();
         delete resource.description;
         if (description) {
