@@ -1031,7 +1031,7 @@ const processImage = (package) => {
                 if (package.options.preprocess === "convert") {
 
                     createDirectoriesFor(package.output);
-                    exec(`convert ${package.file} ${package.output}`, (err, stdout, stderr) => {
+                    exec(`convert "${package.file}" "${package.output}"`, (err, stdout, stderr) => {
 
                         if (err) {
                             // node couldn't execute the command
@@ -1216,7 +1216,7 @@ const processGeneratedTilesheet = (package) => {
 
             // Does relSource exist? If not then we need to create it first
             if (!fs.existsSync(dependency.previewSrc)) {
-                const processedOutput = execSync(`convert ${dependency.imageSrc} ${dependency.processing} ${dependency.previewSrc}`);
+                const processedOutput = execSync(`convert "${dependency.imageSrc}" ${dependency.processing} "${dependency.previewSrc}"`);
                 console.log(processedOutput.toString('utf8'));
             }
 
@@ -1386,16 +1386,16 @@ const processGeneratedTilesheet = (package) => {
         spritesToExtract.forEach((sprite) => {
             curX = sprite.dstX; // FIXME: I think we can get away w/ just using dst?
             curY = sprite.dstY;
-            convertCmd += `\\( resources/${sprite.source} -crop ${sprite.srcW}x${sprite.srcH}+${sprite.srcX}+${sprite.srcY}  -filter box -resize ${package.tilesize}x${package.tilesize} -repage ${curX >= 0 ? '+' : '-'}${curX}${curY >= 0 ? '+' : '-'}${curY} \\) `;
+            convertCmd += `\\( "resources/${sprite.source}" -crop ${sprite.srcW}x${sprite.srcH}+${sprite.srcX}+${sprite.srcY}  -filter box -resize ${package.tilesize}x${package.tilesize} -repage ${curX >= 0 ? '+' : '-'}${curX}${curY >= 0 ? '+' : '-'}${curY} \\) `;
         });
 
         imagesToExtract.forEach((img) => {
             const dstX = img.dstX,
                 dstY = img.dstY;
-            convertCmd += `\\( resources/${img.source} -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} \\) `;
+            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} \\) `;
         });
 
-        convertCmd += `-background none -layers merge ${package.output}`;
+        convertCmd += `-background none -layers merge "${package.output}"`;
         console.log(convertCmd);
 
         exec(convertCmd, (err, stdout, stderr) => {
