@@ -484,34 +484,28 @@ const ModTilesheet = (function(containerEl){
 
             const buildElementForFile = (file, fileName, isFolder, level) => {
 
-                const triggerExpandFile = () => {
+                const openFile = () => {
 
-
-                    let dependency;
                     let isOpen = $(fileEl).hasClass('open');
-                    isOpen = !isOpen;
-                    if (isOpen) {
+                    if (isOpen) return;
 
-                        // If we aren't including the image then we shouldn't allow the file to be expanded
-                        if (!isFolder) {
-                            let includeImage = $('.folderHierarchyIncludeImage', fileEl)[0].checked;
-                            if (!includeImage) {
-                                return false;
-                            }
-
-                            // Its possible we're still loading the image and adding it as a dependency
-                            dependency = dependencies.find((d) => d.imageSrc === file.pathTo);
-                            if (!dependency) {
-                                return false;
-                            }
+                    // If we aren't including the image then we shouldn't allow the file to be expanded
+                    if (!isFolder) {
+                        let includeImage = $('.folderHierarchyIncludeImage', fileEl)[0].checked;
+                        if (!includeImage) {
+                            return false;
                         }
 
-                        fileEl.addClass('open');
-                    } else {
-                        fileEl.removeClass('open');
+                        // Its possible we're still loading the image and adding it as a dependency
+                        dependency = dependencies.find((d) => d.imageSrc === file.pathTo);
+                        if (!dependency) {
+                            return false;
+                        }
                     }
 
-                    if (isOpen && !isFolder) {
+                    fileEl.addClass('open');
+
+                    if (!isFolder) {
                         // We're opening an image
 
                         // We already have another image open; close that first
@@ -525,6 +519,28 @@ const ModTilesheet = (function(containerEl){
                         this.loadFileInImageControls(file, dependency);
                     } else if (selectedImageEl) {
                         selectedImageEl = null;
+                    }
+                };
+
+                const closeFile = () => {
+                    let isOpen = $(fileEl).hasClass('open');
+                    if (!isOpen) return;
+
+                    fileEl.removeClass('open');
+
+                    if (selectedImageEl) {
+                        selectedImageEl = null;
+                    }
+                };
+
+                const triggerExpandFile = () => {
+
+                    let isOpen = $(fileEl).hasClass('open');
+                    isOpen = !isOpen;
+                    if (isOpen) {
+                        openFile();
+                    } else {
+                        closeFile();
                     }
 
                     return false;
@@ -570,6 +586,10 @@ const ModTilesheet = (function(containerEl){
 
                 if (isFolder) {
                     fileEl.addClass('folderHierarchyFolder')
+                    .data('controls', {
+                        openFile: () => { openFile(); },
+                        closeFile: () => { closeFile(); },
+                    })
                     .append(
                         $('<a/>')
                             .attr('href', '#')
@@ -596,6 +616,10 @@ const ModTilesheet = (function(containerEl){
                 } else {
                     fileEl.addClass('folderHierarchyImage')
                     .data('file', file)
+                    .data('controls', {
+                        openFile: () => { openFile(); },
+                        closeFile: () => { closeFile(); },
+                    })
                     .append(
                         $('<input/>')
                             .attr('type', 'checkbox')
@@ -1356,6 +1380,30 @@ const ModTilesheet = (function(containerEl){
                 })
                 .onEndDrag(() => {
                     //console.log("END DRAGGING");
+                })
+                .onDblClick(() => {
+                    console.log("Double clicking spriteGroup");
+
+                    console.log(sprite);
+                    const dep = dependencies.find((dep) => dep.imageSrc === spriteGroup.imageSrc);
+
+                    // Find this file dep in folder view and expand the image
+                    $('.folderHierarchyImage').each((idx, fileEl) => {
+                        if (dep.imageSrc === $(fileEl).data('file').pathTo)
+                        {
+                            $(fileEl).data('controls').openFile();
+                            console.log("Expanding dependency");
+
+                            // Open folders that lead up to this dep
+                            $(fileEl).parents('.folderHierarchyFolder').each((idx, folderEl) => {
+                                $(folderEl).data('controls').openFile();
+                            });
+
+                            // Scroll in to focus for this image
+                            const scrollTo = $(fileEl).position().top - 30;
+                            $('#tilesheetFolderHierarchyContainer').scrollTop(scrollTo);
+                        }
+                    });
                 });
 
             sprite.interactable = interactable;

@@ -198,6 +198,9 @@ body {
     padding: 4px;
     color: #FFF;
     grid-row: 1;
+
+    height: 200px;
+    overflow-y: scroll;
 }
 
 /* Hide all subfolders if the parent folder isn't opened */

@@ -9,6 +9,8 @@ const InteractionMgr = (new function(){
             mouseDownPos: null
         };
 
+    let lastMouseDown = (new Date()).getTime();
+
     const hoveringInteractables = [];
     const hittingInteractable = (worldPt, interactable) => {
 
@@ -160,6 +162,29 @@ const InteractionMgr = (new function(){
                 dragging.mouseDownPos = worldPt;
             });
         }
+
+        const now = (new Date()).getTime(),
+            timeSinceLastClick = now - lastMouseDown;
+        if (timeSinceLastClick < 150) {
+            onMouseDblClick(hitInteractions, evt);
+        } else {
+            lastMouseDown = now;
+        }
+        
+    };
+
+    const onMouseDblClick = (hitInteractions, evt) => {
+
+        if (evt.ctrlKey) {
+            return;
+        }
+
+        // Are we hitting any spriteGroups?
+        hitInteractions.forEach((hitInteraction) => {
+            if (hitInteraction.canDblClick) {
+                hitInteraction.onDblClick();
+            }
+        });
     };
 
     const onKeyUp = (evt) => {
@@ -209,13 +234,15 @@ const InteractionMgr = (new function(){
             id: (++entityId),
 
             canDrag: false,
+            canDblClick: false,
 
             onHoverIn: () => {},
             onHoverOut: () => {},
             onClick: () => {},
             onBeginDrag: () => {},
             onEndDrag: () => {},
-            onDrag: () => {}
+            onDrag: () => {},
+            onDblClick: () => {}
         };
 
         const interactionFunctions = {
@@ -224,6 +251,7 @@ const InteractionMgr = (new function(){
             onHoverIn: (cb) => { interaction.onHoverIn = cb; return interactionFunctions; },
             onHoverOut: (cb) => { interaction.onHoverOut = cb; return interactionFunctions; },
             onClick: (cb) => { interaction.onClick = cb; return interactionFunctions; },
+            onDblClick: (cb) => { interaction.onDblClick = cb; interaction.canDblClick = !!cb; return interactionFunctions; },
             onDrag: (cb) => { interaction.onDrag = cb; return interactionFunctions; },
             onBeginDrag: (cb) => { interaction.onBeginDrag = cb; return interactionFunctions; },
             onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
