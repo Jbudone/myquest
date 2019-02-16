@@ -50,9 +50,20 @@ for (let i=0; i<process.argv.length; ++i) {
 
     if (arg === "--package") {
         const filterPackage = process.argv[++i];
-        console.log("Filtering package: " + filterPackage);
+        console.log(`Filtering package: "${filterPackage}"`);
         Settings.filterPackage = filterPackage;
     }
+
+    if (arg === "--asset") {
+        const filterAsset = process.argv[++i];
+        console.log(`Filtering asset: "${filterAsset}"`);
+        Settings.filterAsset = filterAsset;
+    }
+}
+
+if (Settings.filterAsset && !Settings.filterPackage) {
+    console.error("Attempting to filter by asset, but didn't specifiy --package to filter");
+    process.exit(1);
 }
 
 // Prepare openpgp stuff
@@ -754,25 +765,30 @@ let processResources = (package) => {
                             hash = null,
                             distHash = null;
 
-                        if (Settings.forceRebuild) {
-                            console.log(`Asset to process: ${package.name}: ${asset.name}`);
-                            rebuildAsset = true;
-                        } else if (asset.generated) {
+                        // Is this asset being filtered out?
+                        const assetFilteredOut = Settings.filterAsset !== asset.name;
 
-                            // Generated assets need dirty flag explicitly set
-                            if (asset.dirty) {
-                                console.log(`Asset to process (dirty): ${package.name}: ${asset.name}`);
+                        if (!assetFilteredOut) {
+                            if (Settings.forceRebuild) {
+                                console.log(`Asset to process: ${package.name}: ${asset.name}`);
                                 rebuildAsset = true;
-                            }
-                        } else {
-                            hash     = fileHash(asset.file);
-                            distHash = fs.existsSync(asset.output) ? fileHash(asset.output) : "";
+                            } else if (asset.generated) {
 
-                            if (asset.processedHash !== distHash || asset.rawHash !== hash) {
-                                console.log(`Asset to process (hash has changed)! ${package.name}: ${asset.name}`);
-                                console.log("Output: " + asset.processedHash + " !== " + distHash + " ?  (has the output file changed since last time?) ");
-                                console.log("Raw Asset: " + asset.rawHash + " !== " + hash + " ?  (has the source file changed?) ");
-                                rebuildAsset = true;
+                                // Generated assets need dirty flag explicitly set
+                                if (asset.dirty) {
+                                    console.log(`Asset to process (dirty): ${package.name}: ${asset.name}`);
+                                    rebuildAsset = true;
+                                }
+                            } else {
+                                hash     = fileHash(asset.file);
+                                distHash = fs.existsSync(asset.output) ? fileHash(asset.output) : "";
+
+                                if (asset.processedHash !== distHash || asset.rawHash !== hash) {
+                                    console.log(`Asset to process (hash has changed)! ${package.name}: ${asset.name}`);
+                                    console.log("Output: " + asset.processedHash + " !== " + distHash + " ?  (has the output file changed since last time?) ");
+                                    console.log("Raw Asset: " + asset.rawHash + " !== " + hash + " ?  (has the source file changed?) ");
+                                    rebuildAsset = true;
+                                }
                             }
                         }
 
