@@ -122,6 +122,46 @@ if ($request == "save") {
 
     $_SESSION['processingImage'] = NULL;
     echo '{ "success": true, "results": "'.$results.'" }';
+} else if ($request === "rebuildAsset") {
+    // Invoke ResourceBuilder to rebuild a particular asset
+
+    session_start();
+
+    // Are we currently in the process of rebuilding an asset from another pid?
+    if ($_SESSION['rebuildingAsset'] !== NULL) {
+        $rebuildingAssetPid = $_SESSION['rebuildingAsset'];
+
+        echo json_encode(
+            array(
+                "success" => false,
+                "results" => "still processing asset from another pid"
+            )
+        );
+        exit;
+    }
+
+    $_SESSION['rebuildingAsset'] = getmypid();
+    session_write_close();
+
+    ob_start();
+    $assetId = $_POST['assetId'];
+	$packageId = $_POST['packageId'];
+    $runCmd = "cd ../../ ; node resourceBuilder.js --package $packageId --asset $assetId 2>&1";
+    passthru($runCmd);
+    $results = ob_get_contents();
+    ob_end_clean(); //Use this instead of ob_flush()
+
+    session_start();
+    $_SESSION['rebuildingAsset'] = NULL;
+    session_write_close();
+
+    echo json_encode(
+        array(
+            'success' => true,
+            'results' => $results,
+            'ranCmd' => $runCmd
+        )
+    );
 }
 
 

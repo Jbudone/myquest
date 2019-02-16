@@ -86,8 +86,38 @@ $(document).ready(() => {
 
         setActiveModule(resType);
         currentModule.load(res);
-        currentModule.onSave = () => {
-            ResourceMgr.saveResource(resDetails.resParent);
+        currentModule.onSave = (id) => {
+            ResourceMgr.saveResource(resDetails.resParent, id).then(() => {
+
+                // Rebuild resource after savign
+                // NOTE: The reason we want to reload after save as opposed to before next save is because we may update
+                // the map, and we need to set oldSprites as sprites (as opposed to old-old sprites)
+                ResourceMgr.rebuildResource(resDetails.resParentKey, id).then((data) => {
+
+                    console.log("Rebuild resource");
+                    console.log(data);
+
+                    ResourceMgr.reload().then(() => {
+                        ResourceMgr.buildElements();
+
+                        let newRes = ResourceMgr.allResources.find((_resDetails) => {
+                            if (_resDetails.resType === resType && _resDetails.resParentKey === resDetails.resParentKey) {
+                                if (_resDetails.data.id === res.id) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        });
+
+                        ResourceMgr.onSelectResource(newRes);
+                    });
+                }).catch(() => {
+                    console.error("Could not rebuild resource");
+                });
+            }).catch(() => {
+                console.error("Could not save resource");
+            });
         };
     };
 
@@ -120,8 +150,8 @@ $(document).ready(() => {
 
         currentModule.createNew(res);
 
-        currentModule.onSave = () => {
-            ResourceMgr.saveResource(ResourceMgr.data['sheets']);
+        currentModule.onSave = (id) => {
+            return ResourceMgr.saveResource(ResourceMgr.data['sheets'], id);
         };
         
         return false;

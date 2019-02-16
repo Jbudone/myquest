@@ -18,10 +18,16 @@ const ResourceMgr = (new function(){
     };
 
     this.data = null;
+    this.allResources = null;
     this.initialize = () => {
 
         // Add resource viewer element
         this.resourceMgrListEl = $('#resourceMgrList');
+
+        return this.reload();
+    };
+
+    this.reload = () => {
 
         // Load all resources
         return new Promise((success, fail) => {
@@ -50,7 +56,7 @@ const ResourceMgr = (new function(){
 
     this.buildElements = () => {
 
-        const allResources = [];
+        this.allResources = [];
         _.forEach(this.data, (resource, resourceKey) => {
             const childResources = resource.funcs.findResources(resource.data);
 
@@ -61,11 +67,12 @@ const ResourceMgr = (new function(){
                     resParent: resource,
                     resParentKey: resourceKey
                 };
-                allResources.push(resDetails);
+                this.allResources.push(resDetails);
             });
         });
 
-        allResources.forEach((resDetails) => {
+        this.resourceMgrListEl.empty();
+        this.allResources.forEach((resDetails) => {
             const resEl = $('<a/>')
                             .attr('href', '#')
                             .addClass('resource')
@@ -77,29 +84,47 @@ const ResourceMgr = (new function(){
                             });
             this.resourceMgrListEl.append(resEl);
         });
-        console.log(allResources);
+        console.log(this.allResources);
     };
 
     this.saveResource = (resParent) => {
-        console.log(this.data);
-        console.log(resParent);
+        return new Promise((succeeded, failed) => {
+            console.log(this.data);
+            console.log(resParent);
 
-        const data = JSON.stringify(resParent.data, null, 2),
-            file   = `../../resources/data/${resParent.file}`;
+            const data = JSON.stringify(resParent.data, null, 2),
+                file   = `../../resources/data/${resParent.file}`;
 
-        $.post('fs.php', { request: "save", data, file }, function(data){
-            const json  = JSON.parse(data),
-                success = !!json.success;
-            console.log('saved sheets: '+(success?'true':'false'));
-            console.log(json);
+            $.post('fs.php', { request: "save", data, file }, function(data){
+                const json  = JSON.parse(data),
+                    success = !!json.success;
+                console.log('saved sheets: '+(success?'true':'false'));
+                console.log(json);
 
-            if (success) {
-                //finishedSaving();
-                // FIXME
-                console.log("Finished saving");
+                if (success) {
+                    //finishedSaving();
+                    // FIXME
+                    console.log("Finished saving");
 
-                $('#tilesheetControls').removeClass('pendingChanges');
-            }
+                    $('#tilesheetControls').removeClass('pendingChanges');
+                    succeeded(json);
+                } else {
+                    failed(json);
+                }
+            });
+        });
+    };
+
+    this.rebuildResource = (packageId, assetId) => {
+        return new Promise((succeeded, failed) => {
+            $.post('fs.php', { request: "rebuildAsset", packageId: packageId, assetId: assetId }, function(data){
+                const json = JSON.parse(data);
+                if (json.success) {
+                    succeeded(json);
+                } else {
+                    failed(json);
+                }
+            });
         });
     };
 

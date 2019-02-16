@@ -1731,7 +1731,7 @@ const ModTilesheet = (function(containerEl){
         // each time we save. Need to reload on rebuild or somethnig
         //loadedResource = _.cloneDeep(resource);
 
-        this.onSave();
+        this.onSave(resource.id);
     };
 
     this.flagPendingChanges = () => {
