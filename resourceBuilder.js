@@ -762,11 +762,11 @@ let processResources = (package) => {
                         // Process asset if the hash has changed
                         // NOTE: We need to get the hash here, in case we've changed the asset somewhere along the way to here
                         let rebuildAsset = false,
-                            hash = null,
-                            distHash = null;
+                            hash         = null,
+                            distHash     = null;
 
                         // Is this asset being filtered out?
-                        const assetFilteredOut = Settings.filterAsset !== asset.name;
+                        const assetFilteredOut = Settings.filterAsset && (Settings.filterAsset !== asset.name);
 
                         if (!assetFilteredOut) {
                             if (Settings.forceRebuild) {
