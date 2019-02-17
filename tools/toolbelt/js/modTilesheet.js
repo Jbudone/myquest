@@ -1801,6 +1801,21 @@ const ModTilesheet = (function(containerEl){
         const sheetId = $('#tilesheetName').val();
         resource.id = sheetId;
 
+        // Does this sheetId already exist?
+        for (let i = 0; i < ResourceMgr.allResources.length; ++i) {
+            const otherRes = ResourceMgr.allResources[i];
+
+            // NOTE: If we ever can't trust the current resource against allResources[res] then we could just check if
+            // there's two copies of the same id in allResources, if so then we know that the id isn't unique
+            if (otherRes.data === resource) return;
+            if (otherRes.resType !== 'tilesheet') return;
+
+            if (otherRes.data.id === resource.id) {
+                ConsoleMgr.log("We're already using this id elsewhere!", LOG_ERROR);
+                return false;
+            }
+        }
+
         if (resource.generated) {
             resource.output = `sprites/${resource.id}`;
         }

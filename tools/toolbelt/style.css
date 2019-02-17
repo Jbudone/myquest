@@ -359,6 +359,7 @@ body {
 }
 
 #consoleWindow.open > #consoleWindowContents {
+	min-height: 200px;
 	max-height: 200px;
 
 	transition-property: all;
