@@ -161,6 +161,8 @@ $(document).ready(() => {
 
     let step = (delta) => {
 
+        ConsoleMgr.step(delta);
+
         if (currentModule) {
             if (currentModule.step) currentModule.step(delta);
         }

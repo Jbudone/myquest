@@ -351,6 +351,7 @@ body {
 }
 
 #consoleWindow > #consoleWindowContents {
+	min-height: 0px;
 	max-height: 0px;
 
 	transition-property: all;
