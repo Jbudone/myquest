@@ -333,6 +333,69 @@ body {
     font-weight: bold;
 }
 
+/************************************/
+/*      Console Window      */
+
+#consoleWindow {
+    position: absolute;
+    width: 100%;
+    left: 0px;
+    top: 0px;
+    border-bottom: 2px solid #000;
+    background: #191c22de;
+}
+
+#consoleWindowContents {
+    margin: 4px;
+	overflow-y: scroll;
+}
+
+#consoleWindow > #consoleWindowContents {
+	max-height: 0px;
+
+	transition-property: all;
+	transition-duration: .5s;
+	transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+}
+
+#consoleWindow.open > #consoleWindowContents {
+	max-height: 200px;
+
+	transition-property: all;
+	transition-duration: 1s;
+	transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+}
+
+#consoleWindowBottom {
+	text-align: center;
+    margin-bottom: -10px;
+    position: absolute;
+    left: 50%;
+    background: #FFF;
+}
+
+#consoleWindowClose {
+	text-decoration: none;
+	color: #044;
+	font-weight: bold;
+}
+
+.consoleLogGroup {
+	margin: 8px;
+}
+
+.consoleLog {
+	display: block;
+
+    font-family: Rockwell, "Courier Bold", Courier, Georgia, Times, "Times New Roman", serif;
+    font-size: 14px;
+    color: #95c8ff;
+    line-height: 14px;
+}
+
+.consoleLogError {
+	color: #F00;
+}
 
 /************************************/
 /*      Utilities      */

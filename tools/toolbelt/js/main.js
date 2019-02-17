@@ -49,6 +49,8 @@ let currentModule = null;
 
 $(document).ready(() => {
 
+    ConsoleMgr.initialize();
+
     ResourceMgr.initialize().then(() => {
         ResourceMgr.buildElements();
     });
