@@ -81,7 +81,8 @@ const ModTilesheet = (function(containerEl){
         pendingChanges = false;
 
     let highlights = [],
-        highlightedIslands = [];
+        highlightedIslands = [],
+        borderedIsland = null;
 
     let activeAction = null,
         activeActionEl = null;
@@ -1304,6 +1305,8 @@ const ModTilesheet = (function(containerEl){
                         sprite.dragStartX = sprite.newDstX;
                         sprite.dragStartY = sprite.newDstY;
                     }
+
+                    borderedIsland = spriteGroup;
                 })
                 .onDrag((dist) => {
 
@@ -1379,7 +1382,7 @@ const ModTilesheet = (function(containerEl){
                     }
                 })
                 .onEndDrag(() => {
-                    //console.log("END DRAGGING");
+                    borderedIsland = null;
                 })
                 .onDblClick(() => {
                     console.log("Double clicking spriteGroup");
@@ -1584,7 +1587,7 @@ const ModTilesheet = (function(containerEl){
 
 
         // Draw Grid
-        if (Settings.drawGrid) {
+        if (Settings.drawGrid || borderedIsland) {
             canvasCtx.save();
             for (let y = 0; y < (resource.rows * tilesize); y += tilesize) {
                 for (let x = 0; x < (resource.columns * tilesize); x += tilesize) {
@@ -1595,6 +1598,40 @@ const ModTilesheet = (function(containerEl){
                     canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), tilesize + (gridLineWidth/2), tilesize + (gridLineWidth/2));
                 }
             }
+            canvasCtx.restore();
+        }
+
+
+        // Border islands
+        if (borderedIsland) {
+            spriteGroups.forEach((spriteGroup) => {
+                if (spriteGroup === borderedIsland) return;
+
+                // Draw border for spriteGroup
+                canvasCtx.save();
+                const gridLineWidth = 1,
+                    gridAlpha       = 0.1,
+                    x               = spriteGroup.newDstX,
+                    y               = spriteGroup.newDstY,
+                    width           = spriteGroup.width,
+                    height          = spriteGroup.height;
+                canvasCtx.globalAlpha = 1.0;
+                canvasCtx.strokeStyle = '#FF0000';
+                canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), width + (gridLineWidth/2), height + (gridLineWidth/2));
+                canvasCtx.restore();
+            });
+
+            // Draw border for borderedIsland
+            canvasCtx.save();
+            const gridLineWidth = 2,
+                gridAlpha       = 0.1,
+                x               = borderedIsland.newDstX,
+                y               = borderedIsland.newDstY,
+                width           = borderedIsland.width,
+                height          = borderedIsland.height;
+            canvasCtx.globalAlpha = 1.0;
+            canvasCtx.strokeStyle = '#FFFF00';
+            canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), width + (gridLineWidth/2), height + (gridLineWidth/2));
             canvasCtx.restore();
         }
     };
