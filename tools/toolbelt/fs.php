@@ -12,7 +12,7 @@ if ($request == "save") {
     if ($success) {
         echo '{ "success": true }';
     } else {
-        echo '{ "success": false, "data": '.$postReq.' }';
+        echo '{ "success": false, "results": '.$postReq.' }';
     }
 
     exit;
@@ -90,7 +90,7 @@ if ($request == "save") {
     }
     
     $runCmd = "rm \"../../$imagePath/$imageBasename*\" 2>/dev/null ; convert \"../../$imageSrc\"  $imageProcess \"../../$imageOutput\" 2>&1";
-    passthru($runCmd);
+    passthru($runCmd, $err);
     $results = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()
 
@@ -147,7 +147,7 @@ if ($request == "save") {
     $assetId = $_POST['assetId'];
 	$packageId = $_POST['packageId'];
     $runCmd = "cd ../../ ; node resourceBuilder.js --package $packageId --asset $assetId 2>&1";
-    passthru($runCmd);
+    passthru($runCmd, $err);
     $results = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()
 
@@ -155,9 +155,15 @@ if ($request == "save") {
     $_SESSION['rebuildingAsset'] = NULL;
     session_write_close();
 
+    $cmdSuccess = false;
+    if ($err === 0) {
+        $cmdSuccess = true;
+    }
+
     echo json_encode(
         array(
-            'success' => true,
+            'success' => $cmdSuccess,
+            'exitCode' => $err,
             'results' => $results,
             'ranCmd' => $runCmd
         )

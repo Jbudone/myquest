@@ -89,38 +89,44 @@ $(document).ready(() => {
         setActiveModule(resType);
         currentModule.load(res);
         currentModule.onSave = (id) => {
-            ResourceMgr.saveResource(resDetails.resParent, id).then(() => {
+            return new Promise((succeeded, failed) => {
+                ResourceMgr.saveResource(resDetails.resParent, id).then(() => {
 
-                // Rebuild resource after savign
-                // NOTE: The reason we want to reload after save as opposed to before next save is because we may update
-                // the map, and we need to set oldSprites as sprites (as opposed to old-old sprites)
-                ResourceMgr.rebuildResource(resDetails.resParentKey, id).then((data) => {
+                    // Rebuild resource after savign
+                    // NOTE: The reason we want to reload after save as opposed to before next save is because we may update
+                    // the map, and we need to set oldSprites as sprites (as opposed to old-old sprites)
+                    ResourceMgr.rebuildResource(resDetails.resParentKey, id).then((data) => {
 
-                    console.log("Rebuild resource");
-                    console.log(data);
+                        console.log("Rebuild resource");
+                        console.log(data);
 
-                    ResourceMgr.reload().then(() => {
-                        ResourceMgr.buildElements();
+                        ResourceMgr.reload().then(() => {
+                            ResourceMgr.buildElements();
 
-                        let newRes = ResourceMgr.allResources.find((_resDetails) => {
-                            if (_resDetails.resType === resType && _resDetails.resParentKey === resDetails.resParentKey) {
-                                if (_resDetails.data.id === res.id) {
-                                    return true;
+                            let newRes = ResourceMgr.allResources.find((_resDetails) => {
+                                if (_resDetails.resType === resType && _resDetails.resParentKey === resDetails.resParentKey) {
+                                    if (_resDetails.data.id === res.id) {
+                                        return true;
+                                    }
                                 }
-                            }
 
-                            return false;
+                                return false;
+                            });
+
+                            succeeded(data);
+                            ResourceMgr.onSelectResource(newRes);
                         });
-
-                        ResourceMgr.onSelectResource(newRes);
+                    }).catch((data) => {
+                        failed(data);
+                        console.error("Could not rebuild resource");
                     });
-                }).catch(() => {
-                    console.error("Could not rebuild resource");
+                }).catch((data) => {
+                    failed(data);
+                    console.error("Could not save resource");
                 });
-            }).catch(() => {
-                console.error("Could not save resource");
             });
         };
+
     };
 
     $('#resourceMgrAddTilesheet').click(() => {

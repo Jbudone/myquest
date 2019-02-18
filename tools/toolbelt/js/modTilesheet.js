@@ -407,6 +407,9 @@ const ModTilesheet = (function(containerEl){
                     reloadDependencyInTilesheet(dependency);
                     imgProcEl.removeClass('error');
                 }).catch((err) => {
+                    ConsoleMgr.log(`Error converting image`, LOG_ERROR);
+                    ConsoleMgr.log(err.results, LOG_ERROR);
+
                     imgProcEl.addClass('error');
                 });
 
@@ -468,6 +471,13 @@ const ModTilesheet = (function(containerEl){
             loadImageDependency(dependency).then(() => {
                 updateImagePreview(dependency.previewSrc);
                 reloadDependencyInTilesheet(dependency);
+                imgProcEl.removeClass('error');
+            }).catch((err) => {
+                // NOTE: Our previously saved process isn't working
+                ConsoleMgr.log(`Error converting image`, LOG_ERROR);
+                ConsoleMgr.log(err.results, LOG_ERROR);
+
+                imgProcEl.addClass('error');
             });
             //const { previewSrc } = getImagePreviewDetails(dependency);
             //updateImagePreview(previewSrc);
@@ -1385,9 +1395,7 @@ const ModTilesheet = (function(containerEl){
                     borderedIsland = null;
                 })
                 .onDblClick(() => {
-                    console.log("Double clicking spriteGroup");
 
-                    console.log(sprite);
                     const dep = dependencies.find((dep) => dep.imageSrc === spriteGroup.imageSrc);
 
                     // Find this file dep in folder view and expand the image
@@ -1395,7 +1403,6 @@ const ModTilesheet = (function(containerEl){
                         if (dep.imageSrc === $(fileEl).data('file').pathTo)
                         {
                             $(fileEl).data('controls').openFile();
-                            console.log("Expanding dependency");
 
                             // Open folders that lead up to this dep
                             $(fileEl).parents('.folderHierarchyFolder').each((idx, folderEl) => {
@@ -1807,8 +1814,8 @@ const ModTilesheet = (function(containerEl){
 
             // NOTE: If we ever can't trust the current resource against allResources[res] then we could just check if
             // there's two copies of the same id in allResources, if so then we know that the id isn't unique
-            if (otherRes.data === resource) return;
-            if (otherRes.resType !== 'tilesheet') return;
+            if (otherRes.data === resource) continue;
+            if (otherRes.resType !== 'tilesheet') continue;
 
             if (otherRes.data.id === resource.id) {
                 ConsoleMgr.log("We're already using this id elsewhere!", LOG_ERROR);
@@ -1831,7 +1838,14 @@ const ModTilesheet = (function(containerEl){
         // each time we save. Need to reload on rebuild or somethnig
         //loadedResource = _.cloneDeep(resource);
 
-        this.onSave(resource.id);
+        this.onSave(resource.id).then((data) => {
+            ConsoleMgr.log(`Successfully saved ${resource.id}`);
+            ConsoleMgr.log(data.results);
+        }).catch((data) => {
+            console.log(data);
+            ConsoleMgr.log(`Error saving ${resource.id}`, LOG_ERROR);
+            ConsoleMgr.log(data.results, LOG_ERROR);
+        });
     };
 
     this.flagPendingChanges = () => {

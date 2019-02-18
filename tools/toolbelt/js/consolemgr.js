@@ -17,6 +17,8 @@ const ConsoleMgr = (new function(){
         $('#consoleWindowClose').text('Open');
     };
 
+    let mouseHovering = false;
+
     this.initialize = () => {
 
         this.consoleEl = $('#consoleWindowContents');
@@ -36,6 +38,12 @@ const ConsoleMgr = (new function(){
             popOpenTimer = -1;
 
             return false;
+        });
+        
+        this.consoleWindowEl.hover(() => {
+            mouseHovering = true;
+        }, () => {
+            mouseHovering = false;
         });
     };
 
@@ -65,6 +73,14 @@ const ConsoleMgr = (new function(){
 
     this.log = (text, options) => {
 
+        let splitText = text.split('\n');
+        if (splitText.length > 1) {
+            splitText.forEach((log) => {
+                this.log(log, options);
+            });
+            return;
+        }
+
         const logEl = $('<span/>')
                             .addClass('consoleLog')
                             .text(text);
@@ -84,8 +100,14 @@ const ConsoleMgr = (new function(){
         }
 
         // Pop open if the console isn't already opened
-        this.open();
-        popOpenTimer = 800000;
+        let isOpen = this.consoleWindowEl.hasClass('open');
+        if (!isOpen) {
+            this.open();
+            popOpenTimer = 800000;
+        }
+
+        // Scroll to bottom
+        this.consoleWindowEl.scrollTop( this.consoleWindowEl[0].scrollHeight )
     };
 
     this.step = (delta) => {
@@ -93,7 +115,9 @@ const ConsoleMgr = (new function(){
         if (popOpenTimer >= 0) {
             popOpenTimer -= delta;
 
-            if (popOpenTimer < 0) {
+            if (mouseHovering && popOpenTimer < 0) {
+                popOpenTimer = 0;
+            } else if (popOpenTimer < 0) {
                 popOpenTimer = -1;
 
                 this.close();

@@ -345,6 +345,10 @@ body {
     background: #191c22de;
 }
 
+#consoleWindow:hover {
+    background: #191c22ff;
+}
+
 #consoleWindowContents {
     margin: 4px;
 	overflow-y: scroll;
