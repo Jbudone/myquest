@@ -1620,8 +1620,8 @@ const ModTilesheet = (function(containerEl){
                     gridAlpha       = 0.1,
                     x               = spriteGroup.newDstX,
                     y               = spriteGroup.newDstY,
-                    width           = spriteGroup.width,
-                    height          = spriteGroup.height;
+                    width           = tilesize * Math.ceil(spriteGroup.width / tilesize),
+                    height          = tilesize * Math.ceil(spriteGroup.height / tilesize);
                 canvasCtx.globalAlpha = 1.0;
                 canvasCtx.strokeStyle = '#FF0000';
                 canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), width + (gridLineWidth/2), height + (gridLineWidth/2));
@@ -1634,8 +1634,8 @@ const ModTilesheet = (function(containerEl){
                 gridAlpha       = 0.1,
                 x               = borderedIsland.newDstX,
                 y               = borderedIsland.newDstY,
-                width           = borderedIsland.width,
-                height          = borderedIsland.height;
+                width           = tilesize * Math.ceil(borderedIsland.width / tilesize),
+                height          = tilesize * Math.ceil(borderedIsland.height / tilesize);
             canvasCtx.globalAlpha = 1.0;
             canvasCtx.strokeStyle = '#FFFF00';
             canvasCtx.strokeRect(x - (gridLineWidth/2), y - (gridLineWidth/2), width + (gridLineWidth/2), height + (gridLineWidth/2));
@@ -1723,6 +1723,7 @@ const ModTilesheet = (function(containerEl){
                 resource.sprites.push(_sprite);
             });
 
+            const oldSpriteGroups = loadedResource.spriteGroups;
             resource.spriteGroups = [];
             spriteGroups.forEach((spriteGroup) => {
 
@@ -1735,6 +1736,32 @@ const ModTilesheet = (function(containerEl){
                     newSpriteGroup.dstY = spriteGroup.newDstY;
                     newSpriteGroup.width = spriteGroup.width;
                     newSpriteGroup.height = spriteGroup.height;
+
+                    // Find old spriteGroup, compare against this one
+                    const oldSpriteGroup = oldSpriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
+                    if (oldSpriteGroup) {
+
+                        if
+                        (
+                            oldSpriteGroup.dstX !== newSpriteGroup.dstX ||
+                            oldSpriteGroup.dstY !== newSpriteGroup.dstY ||
+                            oldSpriteGroup.width !== newSpriteGroup.width ||
+                            oldSpriteGroup.height !== newSpriteGroup.height
+                        )
+                        {
+                            newSpriteGroup.oldSpriteGroup = {
+                                dstX: oldSpriteGroup.dstX,
+                                dstY: oldSpriteGroup.dstY,
+                                width: oldSpriteGroup.width,
+                                height: oldSpriteGroup.height
+                            };
+
+                            resource.dirty = true;
+                        }
+                    } else {
+                        resource.dirty = true;
+                    }
+
                 } else {
 
                     newSpriteGroup.assetId = spriteGroup.assetId;
@@ -1754,8 +1781,6 @@ const ModTilesheet = (function(containerEl){
 
                 resource.spriteGroups.push(newSpriteGroup);
             });
-
-            // FIXME: Do we need to compare loadedResource.spriteGroups === resource.spriteGroups to flag resource.dirty?
 
             // Have any of the dependencies been modified?
             resource.dependencies = [];
@@ -1783,8 +1808,6 @@ const ModTilesheet = (function(containerEl){
                     resource.dirty = true;
                     return;
                 }
-                const spriteGroup = resource.spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc),
-                    oldSpriteGroup = loadedResource.spriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
 
                 // Image based dep?
                 if (dep.imageSrc) {
@@ -1793,11 +1816,6 @@ const ModTilesheet = (function(containerEl){
                     if (dep.processing !== oldDep.processing) {
                         resource.dirty = true;
                     }
-                }
-
-                // Sprite Group moved?
-                if (spriteGroup.dstX !== oldSpriteGroup.dstX || spriteGroup.dstY !== oldSpriteGroup.dstY) {
-                    resource.dirty = true;
                 }
             });
 

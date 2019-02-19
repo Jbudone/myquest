@@ -432,6 +432,13 @@ const packageRoutines = {
                 delete sheet.newDependencies;
                 delete sheet.oldSprites;
 
+                // NOTE: This part may not be necessary because we create spriteGroup again
+                //sheet.spriteGroups.forEach((spriteGroup) => {
+                //    if (spriteGroup.oldSpriteGroup) {
+                //        delete spriteGroup.oldSpriteGroup;
+                //    }
+                //});
+
                 if (sheet.sprites && sheet.sprites.length === 0) {
                     delete sheet.sprites;
                 }
@@ -730,15 +737,20 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
             fs.copyFile(Resources.file, output, (err) => {
 
                 if (err) {
+                    console.error("Error copying package to output");
                     console.error(err);
-                    return;
+                    process.exit(1);
                 }
 
                 console.log("Saved resources to " + output);
             });
+        }).catch((err) => {
+            console.error("Error saving packages");
+            process.exit(1);
         });
     }, () => {
         console.error("There was an error reading from Resources");
+        process.exit(1);
     });
 });
 
@@ -901,6 +913,8 @@ let processResources = (package) => {
                     let bothPromises = new Promise((success, fail) => {
                         processResources(asset).then(processAsset).then(() => {
                             success();
+                        }, (err) => {
+                            fail(err);
                         });
                     });
                     processingAssetsPromises.push(bothPromises);
@@ -937,6 +951,9 @@ let processResources = (package) => {
                         console.log("Saved to " + package.file);
                         success();
                     });
+                }).catch((err) => {
+                    console.error("Fail in processing assets");
+                    fail(err);
                 });
             } else {
                 success();
@@ -1222,6 +1239,8 @@ const processGeneratedTilesheet = (package) => {
             });
         });
 
+        const spriteGroupsToTranslate = [];
+
         // Append to package.sprites for image based deps
         imageDeps.forEach((dependency) => {
             package.dependencies.push(dependency);
@@ -1259,6 +1278,13 @@ const processGeneratedTilesheet = (package) => {
                 width: spriteGroup.width,
                 height: spriteGroup.height
             });
+
+
+            // If the spriteGroup has been modified (moved? scaled?) we need to translate individual sprites in the
+            // spriteGroup (in the map and such)
+            if (spriteGroup.oldSpriteGroup) {
+                spriteGroupsToTranslate.push(spriteGroup);
+            }
         });
 
 
@@ -1346,6 +1372,33 @@ const processGeneratedTilesheet = (package) => {
             });
         }
 
+        spriteGroupsToTranslate.forEach((spriteGroup) => {
+
+            // FIXME: If package.tilesize changes then we need to take that into consideration
+            if (spriteGroup.oldSpriteGroup) {
+
+                const tw    = Math.ceil(spriteGroup.width / package.tilesize),
+                    th      = Math.ceil(spriteGroup.height / package.tilesize),
+                    twOld   = Math.ceil(spriteGroup.oldSpriteGroup.width / package.tilesize),
+                    thOld   = Math.ceil(spriteGroup.oldSpriteGroup.height / package.tilesize),
+                    dstX    = spriteGroup.dstX / package.tilesize,
+                    dstY    = spriteGroup.dstX / package.tilesize,
+                    dstXOld = spriteGroup.oldSpriteGroup.dstX / package.tilesize,
+                    dstYOld = spriteGroup.oldSpriteGroup.dstY / package.tilesize;
+
+                spriteTranslations[oldSprite] = 0;
+
+                // FIXME:
+                //  - Add to spriteTranslations (each individual sprite oldPos -> newPos)
+                //  - Add deleted sprites to spriteTranslations (eg. scaling) (oldPos -> null)
+                //  - Add newSprites as neighbours to oldSprites (oldSprite[north] -> newSprite) -- map finds sprite in
+                //  this list, then looks 1 up and if the sprite is empty use this new sprite. We MAY need to include
+                //  the entire spriteGroup in case the sprite above is NOT empty, then see if the sprite is apart of a
+                //  different spriteGroup, and if so then either delete that spriteGroup instance off the map, or shift
+                //  it slightly until it fits
+            }
+        });
+
         if (oldSprites) {
             oldSprites.forEach((sprite) => {
                 const newSpriteInfo = package.sprites.find((s) => s.sprite === sprite.sprite && s.source === sprite.source),
@@ -1364,6 +1417,9 @@ const processGeneratedTilesheet = (package) => {
                     spriteTranslations[oldSprite] = null; // Deleted
                 }
             });
+        }
+
+        if (boundsHaveChanged) {
 
             // Translate data: collisions/floating/shootable
             for (let i = 0; i < package.data.collisions.length; ++i) {
