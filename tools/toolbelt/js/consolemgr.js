@@ -1,5 +1,6 @@
 
-const LOG_ERROR = 1 << 0;
+const LOG_ERROR = 1 << 0,
+    LOG_DONTLOGTOCONSOLE = 1 << 1;
 
 const ConsoleMgr = (new function(){
 
@@ -39,6 +40,13 @@ const ConsoleMgr = (new function(){
 
             return false;
         });
+
+        $('#consoleWindowClear').click(() => {
+
+            this.consoleEl.empty();
+
+            return false;
+        });
         
         this.consoleWindowEl.hover(() => {
             mouseHovering = true;
@@ -73,10 +81,18 @@ const ConsoleMgr = (new function(){
 
     this.log = (text, options) => {
 
+        if (!(options & LOG_DONTLOGTOCONSOLE)) {
+            if (options & LOG_ERROR) {
+                console.error(text);
+            } else {
+                console.log(text);
+            }
+        }
+
         let splitText = text.split('\n');
         if (splitText.length > 1) {
             splitText.forEach((log) => {
-                this.log(log, options);
+                this.log(log, options | LOG_DONTLOGTOCONSOLE);
             });
             return;
         }
@@ -87,9 +103,6 @@ const ConsoleMgr = (new function(){
 
         if (options & LOG_ERROR) {
             logEl.addClass('consoleLogError');
-            console.error(text);
-        } else {
-            console.log(text);
         }
 
         
