@@ -533,8 +533,6 @@ const ModTilesheet = (function(containerEl){
                         folderHierarchyImageCtrlEl.detach().appendTo(fileEl).removeClass('hidden');
 
                         this.loadFileInImageControls(file, dependency);
-                    } else if (selectedImageEl) {
-                        selectedImageEl = null;
                     }
                 };
 
@@ -1418,7 +1416,10 @@ const ModTilesheet = (function(containerEl){
                             });
 
                             // Scroll in to focus for this image
-                            const scrollTo = $(fileEl).position().top - 30;
+                            const curScrollTop = $('#tilesheetFolderHierarchyContainer').scrollTop(),
+                                scrollToRel    = $(fileEl).position().top,
+                                scrollTo       = curScrollTop + scrollToRel - 30;
+
                             $('#tilesheetFolderHierarchyContainer').scrollTop(scrollTo);
                         }
                     });
