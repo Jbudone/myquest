@@ -209,7 +209,7 @@ const TaskProcess = function() {
 };
 
 let fileHash = (file) => {
-    let hash = execSync('cksum ' + file + ' | awk \'{printf \"%s\", $1}\' ');
+    let hash = execSync('cksum "' + file + '" | awk \'{printf \"%s\", $1}\' ');
     return hash.toString('utf8');
 };
 
