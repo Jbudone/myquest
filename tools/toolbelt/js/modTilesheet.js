@@ -301,10 +301,11 @@ const ModTilesheet = (function(containerEl){
                         });
                     };
 
+                    const now = Date.now();
                     dep.previewImg = new Image();
                     dep.previewImg.onload = () => createBitmap();
                     dep.previewImg.onerror = () => failed(json);
-                    dep.previewImg.src = `../../${previewSrc}`;
+                    dep.previewImg.src = `../../${previewSrc}?${now}`;
                 });
             });
         };
@@ -351,14 +352,18 @@ const ModTilesheet = (function(containerEl){
                         createImageBitmap(dep.previewImg).then((resp) => {
                             dep.previewImgBitmap = resp;
                             succeeded();
+                        }).catch((err) => {
+                            console.error(err);
+                            failed(err);
                         });
                     };
 
 
+                    const now = Date.now();
                     dep.previewImg = new Image();
                     dep.previewImg.onload = () => createBitmap();//succeeded();
                     dep.previewImg.onerror = () => failed();
-                    dep.previewImg.src = `../../${dep.imageSrc}`;
+                    dep.previewImg.src = `../../${dep.imageSrc}?${now}`;
                     return;
                 }
 
@@ -587,7 +592,9 @@ const ModTilesheet = (function(containerEl){
                                 reloadDependencyInTilesheet(dep);
                             });
                         };
-                        resImg.src = `../../${file.pathTo}`;
+
+                        const now = Date.now();
+                        resImg.src = `../../${file.pathTo}?${now}`;
                     }
                 };
 
@@ -1140,10 +1147,11 @@ const ModTilesheet = (function(containerEl){
             }
         };
 
+        const now = Date.now();
         if (resource.image) {
-            resImg.src = `/resources/${resource.image}`;
+            resImg.src = `/resources/${resource.image}?${now}`;
         } else if (resource.output) {
-            resImg.src = `/dist/resources/${resource.output}`;
+            resImg.src = `/dist/resources/${resource.output}?${now}`;
         } else {
             throw Error("No source found for resource!");
         }
@@ -1738,7 +1746,11 @@ const ModTilesheet = (function(containerEl){
                     newSpriteGroup.height = spriteGroup.height;
 
                     // Find old spriteGroup, compare against this one
-                    const oldSpriteGroup = oldSpriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
+                    let oldSpriteGroup;
+                    if (oldSpriteGroups) {
+                        oldSpriteGroup = oldSpriteGroups.find((oldSpriteGroup) => oldSpriteGroup.imageSrc === spriteGroup.imageSrc);
+                    }
+
                     if (oldSpriteGroup) {
 
                         if
@@ -1842,7 +1854,7 @@ const ModTilesheet = (function(containerEl){
         }
 
         if (resource.generated) {
-            resource.output = `sprites/${resource.id}`;
+            resource.output = `sprites/${resource.id}.png`;
         }
 
         const description = $('#tilesheetDescription').val();
@@ -1862,7 +1874,14 @@ const ModTilesheet = (function(containerEl){
         }).catch((data) => {
             console.log(data);
             ConsoleMgr.log(`Error saving ${resource.id}`, LOG_ERROR);
-            ConsoleMgr.log(data.results, LOG_ERROR);
+
+            if (data.results) {
+                if (data.results.data) {
+                    ConsoleMgr.log(data.results.data, LOG_ERROR);
+                } else {
+                    ConsoleMgr.log(data.results, LOG_ERROR);
+                }
+            }
         });
     };
 
