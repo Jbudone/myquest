@@ -81,6 +81,12 @@ const ConsoleMgr = (new function(){
 
     this.log = (text, options) => {
 
+        if (!text) {
+            console.error("No log provided");
+            debugger;
+            return;
+        }
+
         if (!(options & LOG_DONTLOGTOCONSOLE)) {
             if (options & LOG_ERROR) {
                 console.error(text);
@@ -92,6 +98,7 @@ const ConsoleMgr = (new function(){
         let splitText = text.split('\n');
         if (splitText.length > 1) {
             splitText.forEach((log) => {
+                if (!log) log = " ";
                 this.log(log, options | LOG_DONTLOGTOCONSOLE);
             });
             return;
