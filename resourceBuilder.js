@@ -144,20 +144,10 @@ const packageRoutines = {
         "prepare": (data) => {},
         "read": (data) => {
             const assets = [];
-            let packageData = data;
-            if (Settings.filterPackage) {
-                packageData = {};
-                const package = data[Settings.filterPackage];
-                if (!package) {
-                    console.error("Could not find package: " + Settings.filterPackage + "!");
-                    process.exit(1);
-                }
 
-                packageData[Settings.filterPackage] = package;
-            }
+            _.forEach(data, (packageDetails, packageName) => {
 
-            _.forEach(packageData, (packageDetails, packageName) => {
-                assets.push({
+                const package = {
                     name: packageName,
                     file: 'resources/data/' + packageDetails.file,
                     output: 'dist/resources/data/' + packageDetails.file,
@@ -165,7 +155,13 @@ const packageRoutines = {
                     rawHash: packageDetails.rawHash,
                     processedHash: packageDetails.hash,
                     options: packageDetails.options
-                });
+                };
+
+                if (Settings.filterPackage) {
+                    package.skipProcess = (Settings.filterPackage !== packageName);
+                }
+
+                assets.push(package);
             });
 
             return assets;
@@ -707,6 +703,10 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
                     assets: assets
                 }; 
 
+                if (packageDetails.skipProcess) {
+                    package.skipProcess = true;
+                }
+
                 packages.push(package);
                 success();
             }).catch((e) => {
@@ -734,6 +734,7 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
             console.log("Successfully saved packages");
 
             const output = 'dist/' + Resources.file;
+            unlink(output);
             fs.copyFile(Resources.file, output, (err) => {
 
                 if (err) {
@@ -742,6 +743,7 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
                     process.exit(1);
                 }
 
+                fs.chmodSync(output, 0777);
                 console.log("Saved resources to " + output);
             });
         }).catch((err) => {
@@ -759,6 +761,11 @@ readPackage('resources', 'resources/data/resources.json').then((details) => {
 // Any differing hashes will be processed to dist
 let processResources = (package) => {
     return new Promise((success, fail) => {
+
+        if (package.skipProcess) {
+            success();
+            return;
+        }
 
         // Need to process assets in here?
         // This package may or may not contain assets (NOTE: It could be an asset itself without any assets yet).
@@ -841,6 +848,7 @@ let processResources = (package) => {
                             } else if (asset.type === "data") {
 
                                 createDirectoriesFor(asset.output);
+                                unlink(asset.output);
                                 fs.copyFile(asset.file, asset.output, (err) => {
 
                                     if (err) {
@@ -856,11 +864,13 @@ let processResources = (package) => {
                                     const packageRoutine = packageRoutines[package.name],
                                         assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
 
+                                    fs.chmodSync(asset.output, 0777);
                                     success();
                                 });
                             } else if (asset.type === "sound") {
 
                                 createDirectoriesFor(asset.output);
+                                unlink(asset.output);
                                 fs.copyFile(asset.file, asset.output, (err) => {
 
                                     if (err) {
@@ -875,11 +885,13 @@ let processResources = (package) => {
                                     const packageRoutine = packageRoutines[package.name],
                                         assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
 
+                                    fs.chmodSync(asset.output, 0777);
                                     success();
                                 });
                             } else if (asset.type === "map") {
 
                                 createDirectoriesFor(asset.output);
+                                unlink(asset.output);
                                 fs.copyFile(asset.file, asset.output, (err) => {
 
                                     if (err) {
@@ -894,6 +906,7 @@ let processResources = (package) => {
                                     const packageRoutine = packageRoutines[package.name],
                                         assets           = packageRoutine.updateAsset(package.data, asset.name, asset);
 
+                                    fs.chmodSync(asset.output, 0777);
                                     success();
                                 });
                             } else {
@@ -942,12 +955,16 @@ let processResources = (package) => {
 
                     // Save package JSON (save .data)
                     const prettyCache = JSON.stringify(package.data, null, 2); // TODO Prettify cache json?
-                    fs.writeFile(package.file, prettyCache, (err, bufferData) => {
+                    unlink(package.file);
+                    fs.writeFile(package.file, prettyCache, {
+                        mode: 0777
+                    }, (err, bufferData) => {
                         if (err) {
                             console.error(err);
                             return;
                         }
 
+                        fs.chmodSync(package.file, 0777);
                         console.log("Saved to " + package.file);
                         success();
                     });
@@ -976,6 +993,12 @@ let readResourcesPromise = new Promise((success, fail) => {
         success(data);
     });
 });
+
+const unlink = (path) => {
+    try {
+        fs.unlinkSync(path);
+    } catch(e) { }
+};
 
 const createDirectoriesFor = (dest) => {
 
@@ -1029,10 +1052,13 @@ const processImage = (package) => {
                 readyToWritePromise.then((writeBuffer) => {
 
                     createDirectoriesFor(package.output);
+                    unlink(package.output);
                     fs.writeFile(package.output, writeBuffer, {
                         encoding: 'binary',
-                        flag: 'w'
+                        flag: 'w',
+                        mode: 0777
                     }, (err) => {
+                        fs.chmodSync(package.output, 0777);
                         console.log(`Wrote/Encrypted ${package.output}`);
                         success();
                     });
@@ -1048,6 +1074,7 @@ const processImage = (package) => {
             if (!package.options.preprocess) {
                 console.log(`Copying raw asset ${package.file} -> ${package.output}`);
                 createDirectoriesFor(package.output);
+                unlink(package.output);
                 fs.copyFile(package.file, package.output, (err) => {
 
                     if (err) {
@@ -1056,6 +1083,7 @@ const processImage = (package) => {
                         return;
                     }
 
+                    fs.chmodSync(package.output, 0777);
                     success();
                 });
             } else {
@@ -1064,6 +1092,7 @@ const processImage = (package) => {
                 if (package.options.preprocess === "convert") {
 
                     createDirectoriesFor(package.output);
+                    unlink(package.output);
                     exec(`convert "${package.file}" "${package.output}"`, (err, stdout, stderr) => {
 
                         if (err) {
@@ -1251,6 +1280,7 @@ const processGeneratedTilesheet = (package) => {
 
             // Does relSource exist? If not then we need to create it first
             if (!fs.existsSync(dependency.previewSrc)) {
+                unlink(dependency.previewSrc);
                 const processedOutput = execSync(`convert "${dependency.imageSrc}" ${dependency.processing} "${dependency.previewSrc}"`);
                 console.log(processedOutput.toString('utf8'));
             }
@@ -1344,9 +1374,11 @@ const processGeneratedTilesheet = (package) => {
             newRows = maxDstY - minDstY;
 
 
-        const spriteTranslations = {},
-            oldColumns = parseInt(package.columns, 10),
-            oldRows    = parseInt(package.rows, 10);
+        const spriteTranslations             = {},
+              extendedSpriteGroups           = [],
+              spriteGroupExtensionBoundaries = {}, // The right/bottom edges of a spriteGroup, so that we can point to the extendedSpriteGroup and append sprites
+              oldColumns                     = parseInt(package.columns, 10),
+              oldRows                        = parseInt(package.rows, 10);
 
         // Need to update our spriteIslands and data sprite id's
         const boundsHaveChanged = (oldColumns !== newColumns || oldRows !== newRows);
@@ -1375,27 +1407,73 @@ const processGeneratedTilesheet = (package) => {
         spriteGroupsToTranslate.forEach((spriteGroup) => {
 
             // FIXME: If package.tilesize changes then we need to take that into consideration
-            if (spriteGroup.oldSpriteGroup) {
+            const tw    = Math.ceil(spriteGroup.width / package.tilesize),
+                th      = Math.ceil(spriteGroup.height / package.tilesize),
+                twOld   = Math.ceil(spriteGroup.oldSpriteGroup.width / package.tilesize),
+                thOld   = Math.ceil(spriteGroup.oldSpriteGroup.height / package.tilesize),
+                dstX    = spriteGroup.dstX / package.tilesize,
+                dstY    = spriteGroup.dstY / package.tilesize,
+                dstXOld = spriteGroup.oldSpriteGroup.dstX / package.tilesize,
+                dstYOld = spriteGroup.oldSpriteGroup.dstY / package.tilesize;
 
-                const tw    = Math.ceil(spriteGroup.width / package.tilesize),
-                    th      = Math.ceil(spriteGroup.height / package.tilesize),
-                    twOld   = Math.ceil(spriteGroup.oldSpriteGroup.width / package.tilesize),
-                    thOld   = Math.ceil(spriteGroup.oldSpriteGroup.height / package.tilesize),
-                    dstX    = spriteGroup.dstX / package.tilesize,
-                    dstY    = spriteGroup.dstX / package.tilesize,
-                    dstXOld = spriteGroup.oldSpriteGroup.dstX / package.tilesize,
-                    dstYOld = spriteGroup.oldSpriteGroup.dstY / package.tilesize;
+            // Translate oldSprites -> newSprites
+            for (let y = 0; y < thOld; ++y) {
+                for (let x = 0; x < twOld; ++x) {
 
-                spriteTranslations[oldSprite] = 0;
+                    const oldSprite = (dstYOld + y) * oldColumns + (dstXOld + x);
 
-                // FIXME:
-                //  - Add to spriteTranslations (each individual sprite oldPos -> newPos)
-                //  - Add deleted sprites to spriteTranslations (eg. scaling) (oldPos -> null)
-                //  - Add newSprites as neighbours to oldSprites (oldSprite[north] -> newSprite) -- map finds sprite in
-                //  this list, then looks 1 up and if the sprite is empty use this new sprite. We MAY need to include
-                //  the entire spriteGroup in case the sprite above is NOT empty, then see if the sprite is apart of a
-                //  different spriteGroup, and if so then either delete that spriteGroup instance off the map, or shift
-                //  it slightly until it fits
+                    // Have we scaled the spriteGroup to smaller than before? We may have removed some sprites then,
+                    // check that the newSprite position still belongs w/in the bounds of our spriteGroup
+                    let newSprite = null;
+                    if (y < th && x < tw) {
+                        newSprite = (dstY + y) * newColumns + (dstX + x);
+                    }
+
+                    spriteTranslations[oldSprite] = newSprite;
+                }
+            }
+
+            console.log("Translations:");
+            console.log(spriteGroup);
+            console.log(spriteTranslations);
+
+
+            // Loop through extended boundaries (y/x starts from twOld and thOld), then introduce new
+            // sprites
+            // NOTE: We may have scaled AND moved the spriteGroup, so we need to search from local coordinates
+            let extendedSpriteGroup = null;
+            for (let y = 0; y < th; ++y) {
+                for (let x = 0; x < tw; ++x) {
+
+                    // If this sprite is w/in the boundaries of the old spriteGroup then its not a new sprite
+                    //if (y < thOld && x < twOld) continue;
+
+                    if (!extendedSpriteGroup) {
+                        extendedSpriteGroup = {
+                            newSprites: {}, // Local pos
+                            width: tw,
+                            height: th,
+                            oldWidth: twOld,
+                            oldHeight: thOld
+                        }
+
+                        extendedSpriteGroups.push(extendedSpriteGroup);
+                    }
+
+                    const localPos = y * tw + x,
+                        sheetPos = (dstY + y) * newColumns + (dstX + x);
+                    extendedSpriteGroup.newSprites[localPos] = sheetPos;
+                }
+            }
+
+            // Find the boundaries of the spriteGroup (old sprite bottom/right boundaries)
+            if (extendedSpriteGroup) {
+
+                // NOTE: We only need the topleft boundary, since that's the first boundary point that we'll hit
+                const oldSprite = dstYOld * oldColumns + dstXOld;
+                spriteGroupExtensionBoundaries[oldSprite] = {
+                    extendedSpriteGroup: extendedSpriteGroup
+                };
             }
         });
 
@@ -1470,6 +1548,13 @@ const processGeneratedTilesheet = (package) => {
         convertCmd += `-background none -layers merge "${package.output}"`;
         console.log(convertCmd);
 
+
+        let needToUpdateMap = false;
+        if (!_.isEmpty(spriteTranslations) || !_.isEmpty(spriteGroupExtensionBoundaries)) {
+            needToUpdateMap = true;
+        }
+
+        unlink(package.output);
         exec(convertCmd, (err, stdout, stderr) => {
             if (err) {
                 console.error(`Error generating tilesheet ${package.id}`);
@@ -1482,8 +1567,10 @@ const processGeneratedTilesheet = (package) => {
 
             // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             // FIXME: Map shits expensive
-            success();
-            return;
+            if (!needToUpdateMap) {
+                success();
+                return;
+            }
             // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             // Tilesheets are saved as .tsx files; find the .tsx file that refers to this tilesheet
@@ -1500,7 +1587,7 @@ const processGeneratedTilesheet = (package) => {
                 worldAsset    = Resources.assets.find((a) => a.name === 'world');
             _.forEach(worldAsset.data.areas, (area) => {
 
-                updateMapPromise = new Promise((success, fail) => {
+                updateMapPromise = new Promise((success, failed) => {
 
                     // Fetch map from the source file (XML format)
                     fs.readFile(`resources/${area.file}.tmx`, (err, bufferData) => {
@@ -1533,25 +1620,135 @@ const processGeneratedTilesheet = (package) => {
                             let updatedMap = false;
                             result.map.layer.forEach((layer) => {
                                 const layerData = layer.data[0]._,
+                                    layerWidth = parseInt(layer.$.width, 10),
+                                    layerHeight = parseInt(layer.$.height, 10),
                                     layerDataSplit = layerData.split(',').map((g) => parseInt(g, 10));
 
                                 let foundTilesetInLayer = false;
                                 for (let i = 0; i < layerDataSplit.length; ++i) {
                                     const g = layerDataSplit[i];
+
+                                    // A trick to flag that we've already processed this sprite (from scaled
+                                    // spriteGroups). Just negate this sprite and continue to the next
+                                    if (g < 0) {
+                                        layerDataSplit[i] *= -1;
+                                        continue;
+                                    }
+
                                     if (g >= tilesetGid && g <= tilesetLastGid) {
                                         foundTilesetInLayer = true;
 
-                                        const localSprite = g - tilesetGid;
-                                        let translatedSprite = spriteTranslations[localSprite];
+                                        const boundarySprite = spriteGroupExtensionBoundaries[g - tilesetGid];
 
-                                        let translated = true;
-                                        if (translatedSprite === undefined) {
-                                            translated = false;
-                                            translatedSprite = localSprite; // Hasn't moved? No sprite here?
+                                        // Does the sprite have a new neighbour due to scaling the spriteGroup? We want
+                                        // to add new neighbours here
+                                        // NOTE: We must do this before translation, in case we've also moved the
+                                        // spriteGroup
+                                        if (boundarySprite) {
+
+                                            console.log(`Found boundary edge of extended spriteGroup here`);
+
+                                            const extendedSpriteGroup = boundarySprite.extendedSpriteGroup,
+                                                updatedSprites = [];
+
+                                            const mapY = Math.floor(i / layerWidth),
+                                                mapX = (i % layerWidth);
+                                            let collision = false;
+                                            for (let localY = 0; localY < extendedSpriteGroup.height; ++localY) {
+                                                for (let localX = 0; localX < extendedSpriteGroup.width; ++localX) {
+
+                                                    // Old sprites from spriteGroup: need to check for translation
+                                                    const isOldSprite = localY < extendedSpriteGroup.oldHeight && localX < extendedSpriteGroup.oldWidth;
+
+
+                                                    // Extended sprite: will use new sheetPos
+                                                    const mapPos = (localY + mapY) * layerWidth + (localX + mapX),
+                                                        localPos = localY * extendedSpriteGroup.width + localX,
+                                                        sheetPos = extendedSpriteGroup.newSprites[localPos];
+
+
+                                                    if (!isOldSprite)
+                                                    {
+                                                        // Is there a collision here?
+                                                        if (layerDataSplit[mapPos]) collision = true;
+
+                                                        if (mapPos >= layerDataSplit.length) {
+                                                            // The spriteGroup has been extended beyond the bounds of the
+                                                            // map. Need to remove
+                                                            collision = true;
+                                                        }
+
+                                                        if (collision) break;
+
+                                                        console.log(`Extending sprite at pos ${mapPos}: ${sheetPos}`);
+                                                        updatedSprites.push(mapPos);
+                                                    }
+
+
+                                                    // Since we're updating this from topleft -> botright, we will end
+                                                    // up coming across these sprites again. In order to prevent any
+                                                    // issues w/ updating the sprite twice, we can simply set it as a
+                                                    // negative number and use that as a flag to indicate that we've
+                                                    // already touched this. Then we just need to negate it again and
+                                                    // continue on. This will work for all sprites except the topleft
+                                                    // one
+                                                    layerDataSplit[mapPos] = -1 * (tilesetGid + sheetPos);
+
+                                                }
+
+                                                if (collision) break;
+                                            }
+
+
+                                            // Collision? Clear spriteGroup from map
+                                            if (collision) {
+                                                console.log(`Collision on spriteGroup. Removing spriteGroup`);
+
+                                                // Revert updated sprites
+                                                updatedSprites.forEach((sprite) => {
+                                                    layerDataSplit[sprite] = 0;
+                                                });
+
+                                                // Clear old region of spriteGroup
+                                                // FIXME: Check if this sprite is part of the spriteGroup, just in case
+                                                // we intentionally only had the partial spriteGroup
+                                                for (let localY = 0; localY < extendedSpriteGroup.oldHeight; ++localY) {
+                                                    for (let localX = 0; localX < extendedSpriteGroup.oldWidth; ++localX) {
+
+                                                        const mapPos = (localY + mapY) * layerWidth + (localX + mapX);
+                                                        layerDataSplit[mapPos] = 0;
+
+                                                    }
+                                                }
+                                            } else {
+                                                const topleftPos = mapY * layerWidth + mapX;
+                                                layerDataSplit[topleftPos] *= -1;
+                                            }
+                                        } else {
+
+                                            // Not a boundary group. Has this sprite been translated?
+                                            const localSprite = layerDataSplit[i] - tilesetGid;
+                                            let translatedSprite = spriteTranslations[localSprite];
+
+                                            let translated = true;
+                                            if (translatedSprite === undefined) {
+                                                translated = false;
+                                                translatedSprite = localSprite; // Hasn't moved? No sprite here?
+
+                                            } else if (translatedSprite === null) {
+                                                translated = false;
+                                                translatedSprite = null;
+
+                                                console.log(`Removing old sprite`);
+                                                layerDataSplit[i] = 0;
+                                                continue;
+                                            } else {
+                                                console.log(`Found tileset in area: ${area.file}: ${g} - ${tilesetGid} == ${localSprite} : ${localSprite} -> ${translatedSprite}  (translated: ${translatedSprite - localSprite}) ==> ${tilesetGid + translatedSprite}   ${ translated ? "" : "SPRITE NOT FOUND!" }`);
+                                            }
+
+                                            //console.log(`Found tileset in area: ${area.file}: ${g} - ${tilesetGid} == ${localSprite} : ${localSprite} -> ${translatedSprite}  (translated: ${translatedSprite - localSprite}) ==> ${tilesetGid + translatedSprite}   ${ translated ? "" : "SPRITE NOT FOUND!" }`);
+                                            layerDataSplit[i] = tilesetGid + translatedSprite;
                                         }
-
-                                        console.log(`Found tileset in area: ${area.file}: ${g} - ${tilesetGid} == ${localSprite} : ${localSprite} -> ${translatedSprite}  (translated: ${translatedSprite - localSprite}) ==> ${tilesetGid + translatedSprite}   ${ translated ? "" : "SPRITE NOT FOUND!" }`);
-                                        layerDataSplit[i] = tilesetGid + translatedSprite;
                                     }
                                 }
 
@@ -1574,12 +1771,18 @@ const processGeneratedTilesheet = (package) => {
                                     }),
                                     revisedXml = builder.buildObject(result);
 
-                                fs.writeFile(`resources/${area.file}.tmx`, revisedXml, (err) => {
+                                unlink(`resources/${area.file}.tmx`);
+                                fs.writeFile(`resources/${area.file}.tmx`, revisedXml, {
+                                    mode: 0777
+                                }, (err) => {
                                     if (err) {
+                                        console.error("Failed to write map");
+                                        console.error(err);
                                         failed(err);
                                         return;
                                     }
 
+                                    fs.chmodSync(`resources/${area.file}.tmx`, 0777);
                                     success();
                                 });
                             } else {
@@ -1594,6 +1797,8 @@ const processGeneratedTilesheet = (package) => {
 
             Promise.all(waitingOnMaps).then(() => {
                 success();
+            }).catch((err) => {
+                fail(err);
             });
         });
 
