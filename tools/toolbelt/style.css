@@ -57,6 +57,10 @@ body {
     border: 4px solid #FF0;
 }
 
+#tilesheetControls.dirtyOnLoad {
+    border: 4px solid #F00;
+}
+
 #tilesheetActionList {
     display: flex;
     justify-content: space-evenly;
@@ -104,6 +108,10 @@ body {
     color: #FF0;
 }
 
+.dirtyOnLoad #tilesheetSave {
+    color: #F00;
+}
+
 #tilesheetSave:hover {
     color: #0FF;
 }
@@ -125,6 +133,10 @@ body {
 	cursor: grabbing;
 	background-color: #111;
 	border-color: #FF5;
+}
+
+#ModTilesheet.dirtyOnLoad #tilesheetCanvas {
+	border: 2px solid #F00;
 }
 
 #tilesheetVirtualCanvas {
@@ -402,6 +414,32 @@ body {
 
 .consoleLogError {
 	color: #F00;
+}
+
+/************************************/
+/*      Save Overlay      */
+
+#saveOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0px;
+    top: 0px;
+    background: #FFF5;
+
+	display: none;
+}
+
+#saveOverlay.active {
+	display: block;
+}
+
+#saveIconContainer {
+	left: 50%;
+    position: relative;
+    top: 50%;
+    width: 50px;
+    height: 50px;
 }
 
 /************************************/

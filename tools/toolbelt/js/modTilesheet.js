@@ -8,7 +8,10 @@ const ModTilesheet = (function(containerEl){
         loadedResource = null,
         sprites        = null,
         spriteGroups   = null,
-        dependencies   = null;
+        dependencies   = null,
+        dirtyOnLoad    = false; // Was the sheet loaded and already dirty? If so we can't allow saving it until its rebuilt
+
+
 
     /*
         resource: {
@@ -198,7 +201,8 @@ const ModTilesheet = (function(containerEl){
                 }
             }
 
-            this.flagPendingChanges();
+            pendingChanges = true;
+            this.updatePendingChanges();
         }
     };
 
@@ -245,6 +249,11 @@ const ModTilesheet = (function(containerEl){
             $('.folderHierarchyImage').each((idx, fileEl) => {
                 const fileIsDep = (dependencies.find((dep) => dep.imageSrc === $(fileEl).data('file').pathTo)) !== undefined;
                 $('.folderHierarchyIncludeImage', fileEl).prop('checked', fileIsDep);
+                $(fileEl).data('controls').closeFile();
+            });
+
+            $('.folderHierarchyFolder').each((idx, fileEl) => {
+                $(fileEl).data('controls').closeFile();
             });
         }
     };
@@ -349,19 +358,32 @@ const ModTilesheet = (function(containerEl){
                     dep.previewSrc = dep.imageSrc;
 
                     const createBitmap = () => {
+
+                        setTimeout(() => {
+
+                        if (dep.previewImg.width === 0) {
+                            // An issue w/ the image
+                            console.error(`Error loading image: ${dep.imageSrc}`);
+                            failed();
+                            return;
+                        }
+
                         createImageBitmap(dep.previewImg).then((resp) => {
                             dep.previewImgBitmap = resp;
                             succeeded();
                         }).catch((err) => {
+                            console.error(`Error creating image bitmap for: ${dep.imageSrc}`);
                             console.error(err);
                             failed(err);
                         });
+
+                        }, 100);
                     };
 
 
                     const now = Date.now();
                     dep.previewImg = new Image();
-                    dep.previewImg.onload = () => createBitmap();//succeeded();
+                    dep.previewImg.onload = () => createBitmap();
                     dep.previewImg.onerror = () => failed();
                     dep.previewImg.src = `../../${dep.imageSrc}?${now}`;
                     return;
@@ -1159,6 +1181,7 @@ const ModTilesheet = (function(containerEl){
 
         resource = _resource;
         loadedResource = _.cloneDeep(_resource);
+        dirtyOnLoad = false;
 
         InteractionMgr.load(canvasEl);
 
@@ -1246,7 +1269,10 @@ const ModTilesheet = (function(containerEl){
 
                 // Need to loadImageDependency in order to build previewImg (in case it doesn't exist), and draw virtual
                 // canvas of img
-                loadImageDependency(dep).then(() => { });
+                loadImageDependency(dep).then(() => { }).catch((err) => {
+                    console.error("Could not loadImageDependency");
+                    console.error(err);
+                });
             });
         }
 
@@ -1265,10 +1291,16 @@ const ModTilesheet = (function(containerEl){
                 });
                 this.reloadProperties();
             });
+
+            dirtyOnLoad = true;
         } else {
             this.reloadImage();
             this.reloadProperties();
         }
+
+        pendingChanges = dirtyOnLoad;
+        this.updateDirtyOnLoad();
+        this.updatePendingChanges();
     };
 
     this.addInteractableSpriteGroup = (spriteGroup) => {
@@ -1314,7 +1346,7 @@ const ModTilesheet = (function(containerEl){
                         }
                     }
                 })
-                .setCanDrag(true)
+                .setCanDrag(!dirtyOnLoad)
                 .onBeginDrag(() => {
                     for (let j = 0; j < spritesInGroup.length; ++j) {
                         const sprite = spritesInGroup[j];
@@ -1468,6 +1500,9 @@ const ModTilesheet = (function(containerEl){
             entities[updateGroupKey] = [];
             translatedGroup.forEach((item) => { entities[updateGroupKey].push(item.newItem); });
         });
+
+        pendingChanges = true;
+        this.updatePendingChanges();
     };
 
     this.redrawVirtualCanvas = () => {
@@ -1667,7 +1702,10 @@ const ModTilesheet = (function(containerEl){
         this.reloadProperties();
         InteractionMgr.load(canvasEl);
 
-        this.flagPendingChanges();
+        dirtyOnLoad = false;
+        pendingChanges = true;
+        this.updateDirtyOnLoad();
+        this.updatePendingChanges();
     };
 
     this.initialize = () => {
@@ -1680,6 +1718,11 @@ const ModTilesheet = (function(containerEl){
 
     this.onSave = () => {};
     this.save = () => {
+
+        if (dirtyOnLoad) {
+            ConsoleMgr.log(`Error saving sheet that's already dirty`, LOG_ERROR);
+            return false;
+        }
 
         // Copy over changes
         resource.data.collisions = entities.collision;
@@ -1886,11 +1929,42 @@ const ModTilesheet = (function(containerEl){
         });
     };
 
-    this.flagPendingChanges = () => {
+    this.updateDirtyOnLoad = () => {
 
-        $('#tilesheetControls').addClass('pendingChanges');
+        const wasDirtyOnLoad = $('#tilesheetControls').hasClass('dirtyOnLoad');
 
-        pendingChanges = true;
+        // Has dirtyOnLoad changed?
+        if (wasDirtyOnLoad === dirtyOnLoad) {
+            return;
+        }
+
+        if (dirtyOnLoad) {
+            $('#tilesheetControls').addClass('dirtyOnLoad');
+            $('#ModTilesheet').addClass('dirtyOnLoad');
+            $('#tilesheetFolderHierarchyImageCtrlImgProcess').attr('disabled', true);
+        } else {
+            $('#tilesheetControls').removeClass('dirtyOnLoad');
+            $('#ModTilesheet').removeClass('dirtyOnLoad');
+            $('#tilesheetFolderHierarchyImageCtrlImgProcess').attr('disabled', false);
+        }
+    };
+
+    this.updatePendingChanges = () => {
+
+        const hadPendingChanges = $('#tilesheetControls').hasClass('pendingChanges');
+
+        // Has dirtyOnLoad changed?
+        if (hadPendingChanges === pendingChanges) {
+            return;
+        }
+
+        if (pendingChanges) {
+            $('#tilesheetControls').addClass('pendingChanges');
+            $('#ModTilesheet').addClass('pendingChanges');
+        } else {
+            $('#tilesheetControls').removeClass('pendingChanges');
+            $('#ModTilesheet').removeClass('pendingChanges');
+        }
     };
 
     // First time initialization

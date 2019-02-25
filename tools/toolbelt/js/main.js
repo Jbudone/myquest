@@ -58,6 +58,8 @@ $(document).ready(() => {
     let workingWindowEl = $('#workingWindow');
     Modules.tilesheet = new ModTilesheet( $('#ModTilesheet') );
 
+    let isSaving = false;
+
     const setActiveModule = (moduleType) => {
 
         let module = null;
@@ -89,8 +91,19 @@ $(document).ready(() => {
         setActiveModule(resType);
         currentModule.load(res);
         currentModule.onSave = (id) => {
+
+            if (isSaving) return false;
+            isSaving = true;
+            $('#saveOverlay').addClass('active');
+
             return new Promise((succeeded, failed) => {
                 ResourceMgr.saveResource(resDetails.resParent, id).then(() => {
+
+                    // FIXME: Unable to rebuild because of perms
+                    //succeeded({
+                    //    results: "Skipping rebuild until we can get perms fixed"
+                    //});
+                    //return;
 
                     // Rebuild resource after savign
                     // NOTE: The reason we want to reload after save as opposed to before next save is because we may update
@@ -113,16 +126,31 @@ $(document).ready(() => {
                                 return false;
                             });
 
+                            isSaving = false;
+                            $('#saveOverlay').removeClass('active');
+
                             succeeded(data);
                             ResourceMgr.onSelectResource(newRes);
+                        }).catch((data) => {
+                            console.error("Could not reload resourcemgr");
+                            isSaving = false;
+                            $('#saveOverlay').removeClass('active');
+
+                            failed(data);
                         });
                     }).catch((data) => {
-                        failed(data);
                         console.error("Could not rebuild resource");
+                        isSaving = false;
+                        $('#saveOverlay').removeClass('active');
+
+                        failed(data);
                     });
                 }).catch((data) => {
-                    failed(data);
                     console.error("Could not save resource");
+                    isSaving = false;
+                    $('#saveOverlay').removeClass('active');
+
+                    failed(data);
                 });
             });
         };

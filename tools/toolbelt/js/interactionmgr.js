@@ -257,7 +257,7 @@ const InteractionMgr = (new function(){
             onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
 
             // Functions
-            setCanDrag: (canDrag) => { interaction.canDrag = true; return interactionFunctions; },
+            setCanDrag: (canDrag) => { interaction.canDrag = canDrag; return interactionFunctions; },
             move: (x, y) => { interaction.x = x; interaction.y = y; return interactionFunctions; },
             remove: () => { const idx = interactables.findIndex((ent) => ent === interaction); interactables.splice(idx, 1); }
         };
