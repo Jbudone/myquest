@@ -95,14 +95,14 @@ const ConsoleMgr = (new function(){
             }
         }
 
-        let splitText = text.split('\n');
-        if (splitText.length > 1) {
-            splitText.forEach((log) => {
-                if (!log) log = " ";
-                this.log(log, options | LOG_DONTLOGTOCONSOLE);
-            });
-            return;
-        }
+        //let splitText = text.split('\n');
+        //if (splitText.length > 1) {
+        //    splitText.forEach((log) => {
+        //        if (!log) log = " ";
+        //        this.log(log, options | LOG_DONTLOGTOCONSOLE);
+        //    });
+        //    return;
+        //}
 
         const logEl = $('<span/>')
                             .addClass('consoleLog')
