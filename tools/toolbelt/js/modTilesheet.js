@@ -701,10 +701,12 @@ const ModTilesheet = (function(containerEl){
 
     $(document).scroll(() => {
 
+        const kFLOATING_TOP = 160;
+
         const scrollTop = $(document).scrollTop(),
             imageCtrlsFloating = folderHierarchyImageCtrlEl.hasClass('floating');
 
-        let shouldBeFloating = scrollTop > 100 && resource.generated;
+        let shouldBeFloating = scrollTop > kFLOATING_TOP && resource.generated;
 
         // Too far down, need to view image ctrls
         if (imageCtrlsFloating !== shouldBeFloating) {
@@ -720,7 +722,7 @@ const ModTilesheet = (function(containerEl){
         const spriteCtrlsEl     = $('#tilesheetSpriteGroupControls'),
             spriteCtrlsFloating = spriteCtrlsEl.hasClass('floating');
 
-        shouldBeFloating = scrollTop > 100 && resource.generated;
+        shouldBeFloating = scrollTop > kFLOATING_TOP && resource.generated;
         if (spriteCtrlsFloating !== shouldBeFloating) {
 
             if (shouldBeFloating) {

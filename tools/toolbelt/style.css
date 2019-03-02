@@ -266,8 +266,21 @@ body {
     display: block;
 }
 
+.folderHierarchyFolderName {
+    color: #A0A;
+    font-size: 20px;
+    font-family: Rockwell, "Courier Bold", Courier, Georgia, Times, "Times New Roman", serif;
+    font-weight: 600;
+	text-decoration: none;
+}
+
 .folderHierarchyFile {
     margin-left: 16px;
+}
+
+.folderHierarchyImageName {
+	text-decoration: none;
+	color: #0AF;
 }
 
 .folderHierarchyImage > #tilesheetFolderHierarchyImageCtrl {
@@ -523,4 +536,12 @@ body {
 
 .tooltip:hover .tooltiptext {
   visibility: visible;
+}
+
+.preventSelection {
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
 }
