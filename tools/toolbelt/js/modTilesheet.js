@@ -358,15 +358,34 @@ const ModTilesheet = (function(containerEl){
                 if (!dep.processing) {
                     dep.previewSrc = dep.imageSrc;
 
+                    let failedCacheBust = false;
+
                     const createBitmap = () => {
 
-                        setTimeout(() => {
+                        if (dep.previewImg.width === 0 && !failedCacheBust) {
+                            // Something went wrong, possibly an issue w/ our cache busting
+                            // We may just need to wait a little longer
+                            console.log("Waiting a little longer for " + dep.imageSrc);
+
+                            failedCacheBust = true;
+                            setTimeout(createBitmap, 100);
+                            return;
+
+                            // FIXME: Why doesn't this work? 
+                            //await (function() { return new Promise((finishedWaiting) => {
+                            //    setTimeout(finishedWaiting, 100);
+                            //}); })();
+                        }
 
                         if (dep.previewImg.width === 0) {
                             // An issue w/ the image
                             console.error(`Error loading image: ${dep.imageSrc}`);
                             failed();
                             return;
+                        }
+
+                        if (failedCacheBust) {
+                            console.log(`  Finished waiting for ${dep.imageSrc}`);
                         }
 
                         createImageBitmap(dep.previewImg).then((resp) => {
@@ -377,8 +396,6 @@ const ModTilesheet = (function(containerEl){
                             console.error(err);
                             failed(err);
                         });
-
-                        }, 100);
                     };
 
 
