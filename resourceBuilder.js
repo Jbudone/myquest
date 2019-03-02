@@ -30,7 +30,8 @@ const util          = require('util'),
 
 const Settings = {
     forceRebuild: false,
-    checkNeedsRebuild: false
+    checkNeedsRebuild: false,
+    verbose: false
 }
 
 // Process Server arguments
@@ -58,6 +59,10 @@ for (let i=0; i<process.argv.length; ++i) {
         const filterAsset = process.argv[++i];
         console.log(`Filtering asset: "${filterAsset}"`);
         Settings.filterAsset = filterAsset;
+    }
+
+    if (arg === "--verbose") {
+        Settings.verbose = true;
     }
 }
 
@@ -439,7 +444,6 @@ const packageRoutines = {
                     delete sheet.sprites;
                 }
 
-                console.log(sheet);
                 return;
             } else {
                 console.error("Unexpected sheetType! " + asset.sheetType);
@@ -448,8 +452,6 @@ const packageRoutines = {
             let sheet = list.find((sheet) => sheet.id === assetName);
             sheet.hash = asset.processedHash;
             sheet.rawHash = asset.hash;
-
-            console.log(sheet);
         },
         "finalize": (package) => {
 
@@ -1019,9 +1021,6 @@ const processImage = (package) => {
 
     return new Promise((success, fail) => {
 
-        console.log("Processing image:");
-        console.log(package);
-
         // Do we need to encrypt the image?
         if (package.options.encrypted) {
 
@@ -1117,9 +1116,6 @@ const processImage = (package) => {
 const processGeneratedTilesheet = (package) => {
 
     return new Promise((success, fail) => {
-
-        console.log("Processing image:");
-        console.log(package);
 
         const oldDependencies = package.dependencies,
             newDependencies   = package.newDependencies || [];
@@ -1318,18 +1314,20 @@ const processGeneratedTilesheet = (package) => {
         });
 
 
-        console.log("Generated tilesheet:");
-        console.log(`  Width: ${package.tilesize * genMaxX}`);
-        console.log(`  Height: ${package.tilesize * genMaxY}`);
-        console.log(`  Sprites:`);
-        console.log(spritesToExtract);
-        console.log(`  Images:`);
-        console.log(imagesToExtract);
+        if (Settings.verbose) {
+            console.log("Generated tilesheet:");
+            console.log(`  Width: ${package.tilesize * genMaxX}`);
+            console.log(`  Height: ${package.tilesize * genMaxY}`);
+            console.log(`  Sprites:`);
+            console.log(spritesToExtract);
+            console.log(`  Images:`);
+            console.log(imagesToExtract);
 
-        console.log(oldDependencies);
-        console.log(oldSprites);
-        console.log(package.dependencies);
-        console.log(package.sprites);
+            console.log(oldDependencies);
+            console.log(oldSprites);
+            console.log(package.dependencies);
+            console.log(package.sprites);
+        }
 
 
         // Go through all sprites and find the min/max positions to determine our newColumns/newRows boundaries.
@@ -1433,9 +1431,11 @@ const processGeneratedTilesheet = (package) => {
                 }
             }
 
-            console.log("Translations:");
-            console.log(spriteGroup);
-            console.log(spriteTranslations);
+            if (Settings.verbose) {
+                console.log("Translations:");
+                console.log(spriteGroup);
+                console.log(spriteTranslations);
+            }
 
 
             // Loop through extended boundaries (y/x starts from twOld and thOld), then introduce new
@@ -1546,7 +1546,10 @@ const processGeneratedTilesheet = (package) => {
         });
 
         convertCmd += `-background none -layers merge "${package.output}"`;
-        console.log(convertCmd);
+
+        if (Settings.verbose) {
+            console.log(convertCmd);
+        }
 
 
         let needToUpdateMap = false;
