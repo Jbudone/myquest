@@ -79,6 +79,13 @@ const ConsoleMgr = (new function(){
         logGroupEl = null;
     };
 
+    this.addSeperator = () => {
+
+        $('<span/>')
+            .addClass('consoleLogSep')
+            .appendTo(this.consoleEl);
+    };
+
     this.log = (text, options) => {
 
         if (!text) {
