@@ -251,6 +251,20 @@ body {
 
 #tilesheetFolderHierarchyImageCtrl {
     margin-left: 24px;
+
+    transition-property: all;
+    transition-duration: 0.5s;
+    transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+}
+
+#tilesheetFolderHierarchyImageCtrl.floating {
+	position: fixed;
+    top: 50px;
+    left: calc(50% - 256px);
+    background: #0F0A0A;
+    padding: 20px;
+    border-radius: 14px;
+    border: 2px solid #111;
 }
 
 .tilesheetFolderHierarchyImageCtrlText {
@@ -404,6 +418,7 @@ body {
 
 .consoleLog {
 	display: block;
+	margin: 10px;
 
     font-family: Rockwell, "Courier Bold", Courier, Georgia, Times, "Times New Roman", serif;
     font-size: 14px;
@@ -416,16 +431,24 @@ body {
 	color: #F00;
 }
 
+.consoleLogSep {
+    width: 80%;
+    display: block;
+    height: 2px;
+    background: #080808;
+    margin: auto;
+}
+
 /************************************/
 /*      Save Overlay      */
 
 #saveOverlay {
-    position: absolute;
+    position: fixed;
     width: 100%;
     height: 100%;
     left: 0px;
     top: 0px;
-    background: #FFF5;
+    background: #000C;
 
 	display: none;
 }

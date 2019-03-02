@@ -81,6 +81,7 @@ const ModTilesheet = (function(containerEl){
         folderHierarchyImageCtrlEl = $('#tilesheetFolderHierarchyImageCtrl');
 
     let imgReady = false,
+        needsRedraw = false,
         pendingChanges = false;
 
     let highlights = [],
@@ -698,6 +699,23 @@ const ModTilesheet = (function(containerEl){
         });
     };
 
+    $(document).scroll(() => {
+
+        const scrollTop = $(document).scrollTop(),
+            imageCtrlsFloating = folderHierarchyImageCtrlEl.hasClass('floating'),
+            shouldBeFloating = scrollTop > 100;
+
+        // Too far down, need to view image ctrls
+        if (imageCtrlsFloating !== shouldBeFloating) {
+
+            if (shouldBeFloating) {
+                folderHierarchyImageCtrlEl.addClass('floating');
+            } else {
+                folderHierarchyImageCtrlEl.removeClass('floating');
+            }
+        }
+    });
+
     const reloadDependencyInTilesheet = (dependency) => {
         //  Determine image dimensions, find best position for image  (prefer current position if possible; default currentPosition (0,0))
         //  If necessary: increase tilesheet size
@@ -1025,6 +1043,7 @@ const ModTilesheet = (function(containerEl){
             virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
 
             imgReady = true;
+            needsRedraw = true;
         };
 
         redrawDepsOnCanvas();
@@ -1042,6 +1061,7 @@ const ModTilesheet = (function(containerEl){
         resImg = new Image();
         resImg.onload = () => {
             imgReady = true;
+            needsRedraw = true;
 
             canvasEl.width = resImg.width;
             canvasEl.height = resImg.height;
@@ -1539,6 +1559,7 @@ const ModTilesheet = (function(containerEl){
 
     this.unload = () => {
         imgReady = false;
+        needsRedraw = true;
         resource = null;
         loadedResource = null;
 
@@ -1689,7 +1710,11 @@ const ModTilesheet = (function(containerEl){
 
     this.step = (time) => {
         if (imgReady) {
-            this.redraw();
+
+            //if (needsRedraw) {
+                this.redraw();
+                //needsRedraw = false;
+            //}
         }
     };
 
@@ -1913,9 +1938,11 @@ const ModTilesheet = (function(containerEl){
         //loadedResource = _.cloneDeep(resource);
 
         this.onSave(resource.id).then((data) => {
+            ConsoleMgr.addSeperator();
             ConsoleMgr.log(`Successfully saved ${resource.id}`);
             ConsoleMgr.log(data.results);
         }).catch((data) => {
+            ConsoleMgr.addSeperator();
             console.log(data);
             ConsoleMgr.log(`Error saving ${resource.id}`, LOG_ERROR);
 
@@ -1951,7 +1978,7 @@ const ModTilesheet = (function(containerEl){
 
     this.updatePendingChanges = () => {
 
-        const hadPendingChanges = $('#tilesheetControls').hasClass('pendingChanges');
+        const hadPendingChanges = $('#ModTilesheet').hasClass('pendingChanges');
 
         // Has dirtyOnLoad changed?
         if (hadPendingChanges === pendingChanges) {
