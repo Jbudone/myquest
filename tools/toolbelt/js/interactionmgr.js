@@ -259,7 +259,14 @@ const InteractionMgr = (new function(){
             // Functions
             setCanDrag: (canDrag) => { interaction.canDrag = canDrag; return interactionFunctions; },
             move: (x, y) => { interaction.x = x; interaction.y = y; return interactionFunctions; },
-            remove: () => { const idx = interactables.findIndex((ent) => ent === interaction); interactables.splice(idx, 1); }
+            remove: () => { const idx = interactables.findIndex((ent) => ent === interaction); interactables.splice(idx, 1); },
+            stopDragging: () => {
+                interaction.onEndDrag();
+                $(this.canvasEl).removeClass('interactionGrabbing');
+                dragging.interactions = [];
+
+                return interactionFunctions;
+            }
         };
 
         interactables.push(interaction);

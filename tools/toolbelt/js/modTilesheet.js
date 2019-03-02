@@ -702,8 +702,9 @@ const ModTilesheet = (function(containerEl){
     $(document).scroll(() => {
 
         const scrollTop = $(document).scrollTop(),
-            imageCtrlsFloating = folderHierarchyImageCtrlEl.hasClass('floating'),
-            shouldBeFloating = scrollTop > 100;
+            imageCtrlsFloating = folderHierarchyImageCtrlEl.hasClass('floating');
+
+        let shouldBeFloating = scrollTop > 100;
 
         // Too far down, need to view image ctrls
         if (imageCtrlsFloating !== shouldBeFloating) {
@@ -712,6 +713,20 @@ const ModTilesheet = (function(containerEl){
                 folderHierarchyImageCtrlEl.addClass('floating');
             } else {
                 folderHierarchyImageCtrlEl.removeClass('floating');
+            }
+        }
+
+
+        const spriteCtrlsEl     = $('#tilesheetSpriteGroupControls'),
+            spriteCtrlsFloating = spriteCtrlsEl.hasClass('floating');
+
+        shouldBeFloating = scrollTop > 100;
+        if (spriteCtrlsFloating !== shouldBeFloating) {
+
+            if (shouldBeFloating) {
+                spriteCtrlsEl.addClass('floating');
+            } else {
+                spriteCtrlsEl.removeClass('floating');
             }
         }
     });
@@ -966,6 +981,8 @@ const ModTilesheet = (function(containerEl){
         $(virtualCanvasEl).width(canvasWidth);
         $(virtualCanvasEl).height(canvasHeight);
 
+        $('#tilesheetSpriteGroupControls').css({ left: resImg.width + 50 });
+
 
         redrawDepsOnCanvas();
         //  2) Draw into virtual canvas
@@ -1072,6 +1089,8 @@ const ModTilesheet = (function(containerEl){
             $(canvasEl).height(resImg.height);
             $(virtualCanvasEl).width(resImg.width);
             $(virtualCanvasEl).height(resImg.height);
+
+            $('#tilesheetSpriteGroupControls').css({ left: resImg.width + 50 });
 
             const tilesize = parseInt(resource.tilesize, 10);
             if (reloadOptions.setResSize) {
@@ -2148,4 +2167,37 @@ const ModTilesheet = (function(containerEl){
 
         return false;
 	};
+
+    $('#spriteGroupCtrlTossTop').hover(() => {
+
+        if (borderedIsland) {
+            $('#spriteGroupCtrlTossTop').addClass('hovering');
+        }
+    }, () => {
+
+        const wasHovering = $('#spriteGroupCtrlTossTop').hasClass('hovering');
+        if (wasHovering) {
+            $('#spriteGroupCtrlTossTop').removeClass('hovering');
+        }
+    }).mouseup(() => {
+
+        if (borderedIsland) {
+            console.log("Drop spriteGroup to top:");
+            console.log(borderedIsland);
+
+
+            // Drop to the top
+            borderedIsland.newDstX = 0;
+            borderedIsland.newDstY = 0;
+
+            const dep = dependencies.find((dep) => dep.imageSrc === borderedIsland.imageSrc);
+            reloadDependencyInTilesheet(dep);
+
+            // Stop dragging
+            const sprite = sprites.find((sprite) => sprite.spriteGroup.imageSrc === borderedIsland.imageSrc);
+            sprite.interactable.stopDragging();
+            highlights = [];
+            highlightedIslands = [];
+        }
+    });
 });
