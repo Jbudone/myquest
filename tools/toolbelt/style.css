@@ -37,10 +37,15 @@ body {
 /*      Tilesheet      */
 
 #ModTilesheet {
-    display: grid;
     justify-content: space-between;
     grid-gap: 10px;
     grid-template-columns: 75% 25%;
+
+	display: none;
+}
+
+#ModTilesheet.activeModule {
+    display: grid;
 }
 
 #tilesheetControls {
