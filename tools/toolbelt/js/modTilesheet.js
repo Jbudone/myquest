@@ -1414,9 +1414,9 @@ const ModTilesheet = (function(containerEl){
 
                     borderedIsland = spriteGroup;
                 })
-                .onDrag((dist) => {
+                .onDrag((dist, worldPt) => {
 
-                    // FIXME: Potential area that we could translate sprites to. This could
+                    // Potential area that we could translate sprites to. This could
                     // make it feel smoother/natural when its colliding w/ other sprites and
                     // can't translate to the exact position that you specified
                     const potentialTranslations = [{
@@ -1425,6 +1425,62 @@ const ModTilesheet = (function(containerEl){
                     }];
 
                     if (potentialTranslations[0].x === 0 && potentialTranslations[0].y === 0) return;
+
+                    // Precomputed concentric circles for potential translations
+                    const potentialTranslationOffsets = [],
+                        cursorCellOffX = potentialTranslations[0].x,
+                        cursorCellOffY = potentialTranslations[0].y;
+                    // .#.
+                    // #.#  Radius 1
+                    // .#.
+                    potentialTranslationOffsets.push({ x: 0,  y: -1 });
+                    potentialTranslationOffsets.push({ x: -1, y: 0 });
+                    potentialTranslationOffsets.push({ x: 1,  y: 0 });
+                    potentialTranslationOffsets.push({ x: 0,  y: 1 });
+
+                    // #.#
+                    // ...  Radius sqrt(2)
+                    // #.#
+                    potentialTranslationOffsets.push({ x: -1,  y: -1 });
+                    potentialTranslationOffsets.push({ x: 1,   y: -1 });
+                    potentialTranslationOffsets.push({ x: -1,  y: 1 });
+                    potentialTranslationOffsets.push({ x: 1,   y: 1 });
+
+                    // Sort offsets by nearest to cursor
+                    const localRelX = (worldPt.x % tilesize) / tilesize - 0.5,
+                        localRelY   = (worldPt.y % tilesize) / tilesize - 0.5;
+
+                    // NOTE: We want to sort the translations before we extend to further radii, since the sort will
+                    // apply to those subsequent concentric circles
+                    potentialTranslationOffsets.sort((a, b) => {
+                        if (!a.dist) {
+                            a.dist = Math.pow(a.x - localRelX, 2) + Math.pow(a.y - localRelY, 2);
+                        }
+
+                        if (!b.dist) {
+                            b.dist = Math.pow(b.x - localRelX, 2) + Math.pow(b.y - localRelY, 2);
+                        }
+
+                        return a.dist < b.dist;
+                    });
+                    
+                    // Radius 2-5
+                    for (let r = 2; r <= 5; ++r) {
+                        for (let i = 0; i < (4 + 4); ++i) {
+                            potentialTranslationOffsets.push({
+                                x: potentialTranslationOffsets[i].x * r,
+                                y: potentialTranslationOffsets[i].y * r
+                            });
+                        }
+                    }
+
+                    potentialTranslationOffsets.forEach((offset) => {
+                        potentialTranslations.push({
+                            x: offset.x + cursorCellOffX,
+                            y: offset.y + cursorCellOffY
+                        });
+                    });
+
 
 
                     // FIXME: Should setup a collision bitmask over each row for quicker

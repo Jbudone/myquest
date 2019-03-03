@@ -85,7 +85,7 @@ const InteractionMgr = (new function(){
                 y: worldPt.y - dragging.mouseDownPos.y
             };
             dragging.interactions.forEach((interaction) => {
-                interaction.onDrag(draggedDist);
+                interaction.onDrag(draggedDist, worldPt);
             });
         }
 
