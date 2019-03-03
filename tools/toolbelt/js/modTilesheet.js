@@ -97,6 +97,9 @@ const ModTilesheet = (function(containerEl){
         ACTION_OBJECT      = 4,
         ACTION_EXTRACT     = 5;
 
+    const MAX_VIRTUAL_COLUMNS = 40,
+        MAX_VIRTUAL_ROWS = 80;
+
     const entities = {
         collision: [],
         floating: [],
@@ -757,8 +760,8 @@ const ModTilesheet = (function(containerEl){
 
         const tilesW = Math.ceil(dependency.previewImg.width / resource.tilesize),
               tilesH = Math.ceil(dependency.previewImg.height / resource.tilesize);
-        let tilesheetW = Math.max(resource.columns, tilesW),
-            tilesheetH = Math.max(resource.rows, tilesH);
+        let tilesheetW = Math.max(resource.virtualColumns, tilesW),
+            tilesheetH = Math.max(resource.virtualRows, tilesH);
 
 
         // Go through every tile (starting about currentPosition) to attempt to find a good position for this dep
@@ -956,8 +959,8 @@ const ModTilesheet = (function(containerEl){
         
 
         // 7) Redraw/updateSpritePositions?
-        resource.columns = tilesheetW;
-        resource.rows = tilesheetH;
+        resource.virtualColumns = tilesheetW;
+        resource.virtualRows = tilesheetH;
 
         // FIXME: Redraw resImg from scratch since one of our deps have changed so resImg is completely useless to us now
         //  1) Go through each dep, find top/left position
@@ -1000,7 +1003,7 @@ const ModTilesheet = (function(containerEl){
         $(virtualCanvasEl).width(canvasWidth);
         $(virtualCanvasEl).height(canvasHeight);
 
-        $('#tilesheetSpriteGroupControls').css({ left: resImg.width + 50 });
+        $('#tilesheetSpriteGroupControls').css({ left: canvasWidth + 50 });
 
 
         redrawDepsOnCanvas();
@@ -1099,19 +1102,25 @@ const ModTilesheet = (function(containerEl){
             imgReady = true;
             needsRedraw = true;
 
-            canvasEl.width = resImg.width;
-            canvasEl.height = resImg.height;
-            virtualCanvasEl.width = resImg.width;
-            virtualCanvasEl.height = resImg.height;
-
-            $(canvasEl).width(resImg.width);
-            $(canvasEl).height(resImg.height);
-            $(virtualCanvasEl).width(resImg.width);
-            $(virtualCanvasEl).height(resImg.height);
-
-            $('#tilesheetSpriteGroupControls').css({ left: resImg.width + 50 });
-
             const tilesize = parseInt(resource.tilesize, 10);
+
+            resource.virtualColumns = MAX_VIRTUAL_COLUMNS;
+            resource.virtualRows = MAX_VIRTUAL_ROWS;
+            const virtualCanvasWidth = resource.virtualColumns * tilesize,
+                virtualCanvasHeight = resource.virtualRows * tilesize;
+
+            canvasEl.width = virtualCanvasWidth;
+            canvasEl.height = virtualCanvasHeight;
+            virtualCanvasEl.width = virtualCanvasWidth;
+            virtualCanvasEl.height = virtualCanvasHeight;
+
+            $(canvasEl).width(virtualCanvasWidth);
+            $(canvasEl).height(virtualCanvasHeight);
+            $(virtualCanvasEl).width(virtualCanvasWidth);
+            $(virtualCanvasEl).height(virtualCanvasHeight);
+
+            $('#tilesheetSpriteGroupControls').css({ left: virtualCanvasWidth + 50 });
+
             if (reloadOptions.setResSize) {
                 resource.columns = resImg.width / tilesize;
                 resource.rows = resImg.height / tilesize;
@@ -1136,7 +1145,7 @@ const ModTilesheet = (function(containerEl){
                                         highlights.splice(idx, 1);
                                     })
                                     .onClick(() => {
-                                        const ent = ((entity.x / tilesize) % resource.columns) + ((entity.y / tilesize) * parseInt(resource.columns, 10));
+                                        const ent = ((entity.x / tilesize) % resource.virtualColumns) + ((entity.y / tilesize) * parseInt(resource.virtualColumns, 10));
                                         toggleEntity(ent);
                                     });
                 }
@@ -1213,7 +1222,7 @@ const ModTilesheet = (function(containerEl){
 
             // Draw image to virtual canvas
             virtualCanvasCtx.clearRect(0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
-            virtualCanvasCtx.drawImage(resImg, 0, 0, resImg.width, resImg.height, 0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
+            virtualCanvasCtx.drawImage(resImg, 0, 0, resImg.width, resImg.height, 0, 0, resImg.width, resImg.height);
 
             virtualCanvasImg  = new Image();
             virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
@@ -1240,6 +1249,9 @@ const ModTilesheet = (function(containerEl){
         resource = _resource;
         loadedResource = _.cloneDeep(_resource);
         dirtyOnLoad = false;
+
+        resource.virtualColumns = MAX_VIRTUAL_COLUMNS;
+        resource.virtualRows = MAX_VIRTUAL_ROWS;
 
         InteractionMgr.load(canvasEl);
 
@@ -1413,6 +1425,7 @@ const ModTilesheet = (function(containerEl){
                     }
 
                     borderedIsland = spriteGroup;
+                    $('#tilesheetSpriteGroupControls').removeClass('inactive');
                 })
                 .onDrag((dist, worldPt) => {
 
@@ -1489,7 +1502,7 @@ const ModTilesheet = (function(containerEl){
                         const x = (sprite.dragStartX / tilesize) + translation.x,
                             y = (sprite.dragStartY / tilesize) + translation.y;
 
-                        if (x < 0 || x >= resource.columns || y < 0 || y >= resource.rows) {
+                        if (x < 0 || x >= resource.virtualColumns || y < 0 || y >= resource.virtualRows) {
                             return false;
                         }
 
@@ -1545,6 +1558,7 @@ const ModTilesheet = (function(containerEl){
                 })
                 .onEndDrag(() => {
                     borderedIsland = null;
+                    $('#tilesheetSpriteGroupControls').addClass('inactive');
                 })
                 .onDblClick(() => {
 
@@ -1599,11 +1613,11 @@ const ModTilesheet = (function(containerEl){
                 const tilesize = parseInt(resource.tilesize, 10);
                 for (let i = 0; i < translatedGroup.length; ++i) {
                     let item = translatedGroup[i].oldItem,
-                        itemX = (item % parseInt(resource.columns, 10)) * tilesize,
-                        itemY = Math.floor(item / parseInt(resource.columns, 10)) * tilesize;
+                        itemX = (item % parseInt(resource.virtualColumns, 10)) * tilesize,
+                        itemY = Math.floor(item / parseInt(resource.virtualColumns, 10)) * tilesize;
 
                     if (prevPos.x === itemX && prevPos.y === itemY) {
-                        const newItem = (sprite.newDstY / tilesize) * parseInt(resource.columns, 10) + sprite.newDstX / tilesize;
+                        const newItem = (sprite.newDstY / tilesize) * parseInt(resource.virtualColumns, 10) + sprite.newDstX / tilesize;
                         translatedGroup[i].newItem = newItem;
                         break;
                     }
@@ -1741,8 +1755,8 @@ const ModTilesheet = (function(containerEl){
             canvasCtx.globalAlpha = 0.4;
             for (let i = 0; i < drawGroup.list.length; ++i) {
                 const ent = drawGroup.list[i],
-                    x = (ent % parseInt(resource.columns, 10)) * tilesize,
-                    y = Math.floor(ent / parseInt(resource.columns, 10)) * tilesize,
+                    x = (ent % parseInt(resource.virtualColumns, 10)) * tilesize,
+                    y = Math.floor(ent / parseInt(resource.virtualColumns, 10)) * tilesize,
                     w = tilesize,
                     h = tilesize;
 
@@ -1755,8 +1769,14 @@ const ModTilesheet = (function(containerEl){
         // Draw Grid
         if (Settings.drawGrid || borderedIsland) {
             canvasCtx.save();
-            for (let y = 0; y < (resource.rows * tilesize); y += tilesize) {
-                for (let x = 0; x < (resource.columns * tilesize); x += tilesize) {
+            for (let y = 0; y < (resource.virtualRows * tilesize); y += tilesize) {
+                if (y >= (resource.rows * tilesize)) canvasCtx.strokeStyle = '#0F0';
+                else if (y === 0) canvasCtx.strokeStyle = '#000';
+                for (let x = 0; x < (resource.virtualColumns * tilesize); x += tilesize) {
+                    if (y < (resource.rows * tilesize)) {
+                        if (x >= (resource.columns * tilesize)) canvasCtx.strokeStyle = '#0F0';
+                        else if (x === 0) canvasCtx.strokeStyle = '#000';
+                    }
 
                     const gridLineWidth = 1,
                         gridAlpha       = 0.1;
@@ -2026,6 +2046,14 @@ const ModTilesheet = (function(containerEl){
             resource.description = description;
         }
 
+        // Delete transient values
+        const storedTransientFields = {
+            virtualColumns: resource.virtualColumns,
+            virtualRows: resource.virtualRows
+        };
+        delete resource.virtualColumns;
+        delete resource.virtualRows;
+
         // TODO: It would be better to wait for a reply on save to confirm the save was successful
         // Otherwise what happens if we continue to save this w/out having rebuilt it, or vice versa we keep rebuilding
         // each time we save. Need to reload on rebuild or somethnig
@@ -2048,6 +2076,10 @@ const ModTilesheet = (function(containerEl){
                 }
             }
         });
+
+        // Restore transient fields
+        resource.virtualColumns = storedTransientFields.virtualColumns;
+        resource.virtualRows = storedTransientFields.virtualRows;
     };
 
     this.updateDirtyOnLoad = () => {

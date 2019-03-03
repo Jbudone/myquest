@@ -224,36 +224,6 @@ body {
     overflow-y: scroll;
 }
 
-#tilesheetSpriteGroupControls {
-    grid-column: 2;
-    grid-row: 2;
-
-	height: 200px;
-	width: 100px;
-	
-	background: #0F0A0AD0;
-    border-radius: 10px;
-    border: 2px solid #0A0A0A;
-
-	display: none;
-}
-
-#tilesheetSpriteGroupControls.floating {
-	display: block;
-	position: fixed;
-	top: calc(50% - 100px);
-}
-
-#spriteGroupCtrlTossTop {
-    width: 80%;
-    margin: auto;
-    display: block;
-}
-
-#spriteGroupCtrlTossTop.hovering {
-	width: 85%;
-}
-
 /* Hide all subfolders if the parent folder isn't opened */
 .folderHierarchyFolder > .folderList {
     display: none;
@@ -381,6 +351,46 @@ body {
     border: #111 2px solid;
     border-radius: 4px;
     max-width: 100%;
+}
+
+/*      Tilesheet SpriteGroup Controls      */
+
+#tilesheetSpriteGroupControls {
+    grid-column: 2;
+    grid-row: 2;
+
+	height: 200px;
+	width: 100px;
+	
+	background: #0F0A0AD0;
+    border-radius: 10px;
+    border: 2px solid #0A0A0A;
+
+	display: none;
+}
+
+#tilesheetSpriteGroupControls.floating {
+	display: block;
+	position: fixed;
+	top: calc(50% - 100px);
+}
+
+#tilesheetSpriteGroupControls.inactive {
+	display: none;
+}
+
+#spriteGroupCtrlTossTop {
+    width: 80%;
+    margin: auto;
+    display: block;
+}
+
+#spriteGroupCtrlTossTop.hovering {
+	width: 85%;
+}
+
+#spriteGroupGroups {
+	display: none;
 }
 
 /************************************/

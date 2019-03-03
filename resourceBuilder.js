@@ -1765,6 +1765,10 @@ const processGeneratedTilesheet = (package) => {
                             // Build revised XML back into XML string and save changes
                             if (updatedMap) {
 
+                                refTileset.$.tilecount = package.columns * package.rows;
+                                refTileset.$.columns = package.columns;
+                                refTileset.image[0].$.width = newColumns * tilesize;
+
                                 const builder  = new XmlBuilder({
                                         xmldec: {
                                             'version': '1.0',
