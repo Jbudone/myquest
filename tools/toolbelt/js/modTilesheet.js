@@ -1022,6 +1022,8 @@ const ModTilesheet = (function(containerEl){
         console.log(spriteGroups);
         console.log(`Reloading dependency: Dimensions (${dependency.previewImg.width}, ${dependency.previewImg.height})`);
 
+        updateVirtualCanvasHeight();
+
         // 1) What is the current tilesheet size? What is the size of this dep? Increase size if necessary
         // 2) Go through tilesheet to find best position (just treat dep as a solid block, and find x/y tiles size from tilesheet.tilesize); no positions available? Increase y
         // 3) Add/modify dep in tilesheet for redrawing purposes
@@ -1559,6 +1561,7 @@ const ModTilesheet = (function(containerEl){
                 .onEndDrag(() => {
                     borderedIsland = null;
                     $('#tilesheetSpriteGroupControls').addClass('inactive');
+                    updateVirtualCanvasHeight();
                 })
                 .onDblClick(() => {
 
@@ -2307,4 +2310,35 @@ const ModTilesheet = (function(containerEl){
             highlightedIslands = [];
         }
     });
+
+    const updateVirtualCanvasHeight = () => {
+
+        let maxY = 0;
+        sprites.forEach((sprite) => {
+            maxY = Math.max(sprite.newDstY, maxY);
+        });
+
+        const usedRows = maxY / resource.tilesize;
+        let newRows = Math.min(usedRows + 10, MAX_VIRTUAL_ROWS);
+        setVirtualCanvasRows(newRows);
+    };
+
+    const setVirtualCanvasRows = (rows) => {
+
+        if (resource.virtualRows === rows) return;
+
+        resource.virtualRows = rows;
+        
+        const tilesize = parseInt(resource.tilesize, 10),
+            virtualCanvasHeight = tilesize * rows;
+
+        canvasEl.height = virtualCanvasHeight;
+        virtualCanvasEl.height = virtualCanvasHeight;
+        $(canvasEl).height(virtualCanvasHeight);
+        $(virtualCanvasEl).height(virtualCanvasHeight);
+
+        this.redrawVirtualCanvas();
+    };
+
+    window['setVirtualCanvasRows'] = setVirtualCanvasRows;
 });
