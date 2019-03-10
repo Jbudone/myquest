@@ -1,7 +1,6 @@
 // Server
 // This is the starting point for the server
 
-
 const requirejs = require('requirejs');
 requirejs.config({
     nodeRequire: require,
@@ -57,26 +56,39 @@ const waitForInspector = () => {
         return char;
     };
 
-    Log(chalk.red.bold("Hit any key to open the inspector"));
-    const n = prompt();
-    if (n !== null) {
+    // Check for an existing connection for the inspector
+    const { spawnSync } = require('child_process');
+    const checkInspectorProc = spawnSync('node', ['./dist/js/checkForInspector.js', '--port', process.debugPort], {
+        cwd: process.cwd(),
+        env: process.env,
+        encoding: 'utf-8'
+    });
 
-        // Spawn a script that can listen for ctrl-c to kill the inspector if we don't want to start the inspector
-        // NOTE: We have to spawnSync otherwise the spawn will wait until after this function to spawn the script.
-        // Consequently we need the spawned script to exit so that we can continue to spark the inspector. That's why we
-        // need to spawnSync a script who's sole purpose is to spawn another script
-        const { spawnSync } = require('child_process');
-        const killProc = spawnSync('node', ['./dist/js/spawnSyncScript.js', './dist/js/killInspector.js', '--master-id', process.pid], {
-            stdio: ['inherit', 'ignore', 'ignore'], // stdin -> child process
-            cwd: process.cwd(),
-            env: process.env,
-            encoding: 'utf-8'
-        });
-
-        Log(chalk.red.bold("Waiting for inspector.."));
-        const inspector = require('inspector');
-        inspector.open(9229, "127.0.0.1", true); // port, host, block
+    if (checkInspectorProc.status === 2) {
+        // There's already an open connection for the inspector
         debugger;
+    } else {
+
+        Log(chalk.red.bold("Hit any key to open the inspector"));
+        const n = prompt();
+        if (n !== null) {
+
+            // Spawn a script that can listen for ctrl-c to kill the inspector if we don't want to start the inspector
+            // NOTE: We have to spawnSync otherwise the spawn will wait until after this function to spawn the script.
+            // Consequently we need the spawned script to exit so that we can continue to spark the inspector. That's why we
+            // need to spawnSync a script who's sole purpose is to spawn another script
+            const killProc = spawnSync('node', ['./dist/js/spawnSyncScript.js', './dist/js/killInspector.js', '--master-id', process.pid], {
+                stdio: ['inherit', 'ignore', 'ignore'], // stdin -> child process
+                cwd: process.cwd(),
+                env: process.env,
+                encoding: 'utf-8'
+            });
+
+            Log(chalk.red.bold("Waiting for inspector.."));
+            const inspector = require('inspector');
+            inspector.open(process.debugPort, "127.0.0.1", true); // port, host, block
+            debugger;
+        }
     }
 };
 
@@ -772,7 +784,10 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
     exec('node resourceBuilder.js --needs-rebuild', (error, stdout, stderr) => {
 
         console.log(stdout);
-        console.error(stderr);
+
+        if (stderr) {
+            console.error(stderr);
+        }
 
         if (error) {
             console.error(error);
