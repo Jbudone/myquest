@@ -984,6 +984,7 @@ const ModTilesheet = (function(containerEl){
             });
 
             imgReady = true;
+            needsRedraw = true;
         };
 
         const canvasWidth = tilesheetW * resource.tilesize,
@@ -1584,8 +1585,6 @@ const ModTilesheet = (function(containerEl){
                             $('#tilesheetFolderHierarchyContainer').scrollTop(scrollTo);
                         }
                     });
-
-                    needsRedraw = true;
                 });
 
             sprite.interactable = interactable;
