@@ -653,7 +653,6 @@ const ModTilesheet = (function(containerEl){
                         $('<a/>')
                             .attr('href', '#')
                             .addClass('folderHierarchyExpandFolder')
-                            .text(">")
                             .click(triggerExpandFile)
                     )
                     .append(

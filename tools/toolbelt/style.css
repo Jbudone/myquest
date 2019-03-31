@@ -241,6 +241,19 @@ body {
     display: block;
 }
 
+.folderHierarchyExpandFolder {
+	color: #FFF;
+	text-decoration: none;
+}
+
+.folderHierarchyExpandFolder::after {
+	content: "\25B4";
+}
+
+.folderHierarchyFolder.open > .folderHierarchyExpandFolder::after {
+	content: "\25B8";
+}
+
 .folderHierarchyFolderName {
     color: #A0A;
     font-size: 20px;
