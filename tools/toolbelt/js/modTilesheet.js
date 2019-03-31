@@ -984,9 +984,6 @@ const ModTilesheet = (function(containerEl){
                 virtualCanvasCtx.drawImage(dep.previewImgBitmap, 0, 0, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight, dstX, dstY, dep.previewImg.naturalWidth, dep.previewImg.naturalHeight);
             });
 
-            virtualCanvasImg  = new Image();
-            virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
-
             imgReady = true;
         };
 
@@ -1079,9 +1076,6 @@ const ModTilesheet = (function(containerEl){
             //        dstY = sprite.newDstY;
             //    virtualCanvasCtx.drawImage(resImg, srcX, srcY, tilesize, tilesize, dstX, dstY, tilesize, tilesize);
             //});
-
-            virtualCanvasImg  = new Image();
-            virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
 
             imgReady = true;
             needsRedraw = true;
@@ -1226,8 +1220,6 @@ const ModTilesheet = (function(containerEl){
             virtualCanvasCtx.clearRect(0, 0, virtualCanvasEl.width, virtualCanvasEl.height);
             virtualCanvasCtx.drawImage(resImg, 0, 0, resImg.width, resImg.height, 0, 0, resImg.width, resImg.height);
 
-            virtualCanvasImg  = new Image();
-            virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
 
             this.redraw();
 
@@ -1409,6 +1401,8 @@ const ModTilesheet = (function(containerEl){
                         spriteGroup: spriteGroup,
                         sprites: spritesInGroup
                     });
+
+                    needsRedraw = true;
                 })
                 .onHoverOut(() => {
                     for (let i = 0; i < highlightedIslands.length; ++i) {
@@ -1417,6 +1411,8 @@ const ModTilesheet = (function(containerEl){
                             break;
                         }
                     }
+
+                    needsRedraw = true;
                 })
                 .setCanDrag(!dirtyOnLoad)
                 .onBeginDrag(() => {
@@ -1428,6 +1424,7 @@ const ModTilesheet = (function(containerEl){
 
                     borderedIsland = spriteGroup;
                     $('#tilesheetSpriteGroupControls').removeClass('inactive');
+                    needsRedraw = true;
                 })
                 .onDrag((dist, worldPt) => {
 
@@ -1562,6 +1559,8 @@ const ModTilesheet = (function(containerEl){
                     borderedIsland = null;
                     $('#tilesheetSpriteGroupControls').addClass('inactive');
                     updateVirtualCanvasHeight();
+
+                    needsRedraw = true;
                 })
                 .onDblClick(() => {
 
@@ -1586,6 +1585,8 @@ const ModTilesheet = (function(containerEl){
                             $('#tilesheetFolderHierarchyContainer').scrollTop(scrollTo);
                         }
                     });
+
+                    needsRedraw = true;
                 });
 
             sprite.interactable = interactable;
@@ -1663,9 +1664,6 @@ const ModTilesheet = (function(containerEl){
                 virtualCanvasCtx.drawImage(resImg, 0, 0, width, height, dstX, dstY, width, height);
             }
         });
-
-        virtualCanvasImg  = new Image();
-        virtualCanvasImg.src = virtualCanvasEl.toDataURL("image/png");
     };
 
     this.unload = () => {
@@ -1699,7 +1697,7 @@ const ModTilesheet = (function(containerEl){
 
     this.redraw = () => {
         canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-        canvasCtx.drawImage(virtualCanvasImg, 0, 0, virtualCanvasImg.width, virtualCanvasImg.height, 0, 0, canvasEl.width, canvasEl.height);
+        canvasCtx.drawImage(virtualCanvasEl, 0, 0, virtualCanvasEl.width, virtualCanvasEl.height, 0, 0, canvasEl.width, canvasEl.height);
 
         // Draw highlighted sprites
         for (let i = 0; i < highlights.length; ++i) {
@@ -1826,12 +1824,9 @@ const ModTilesheet = (function(containerEl){
     };
 
     this.step = (time) => {
-        if (imgReady) {
-
-            //if (needsRedraw) {
-                this.redraw();
-                //needsRedraw = false;
-            //}
+        if (imgReady && needsRedraw) {
+            this.redraw();
+            needsRedraw = false;
         }
     };
 
