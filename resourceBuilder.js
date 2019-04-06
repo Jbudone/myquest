@@ -1615,12 +1615,57 @@ const processGeneratedTilesheet = (package) => {
                                 return;
                             }
 
+                            let updatedMap = false;
+
 
                             // Go through each layer find any sprites that
                             const tilesetGid = parseInt(refTileset.$.firstgid, 10),
                                 tilesetLastGid = parseInt(refTileset.$.tilecount, 10) + tilesetGid;
 
-                            let updatedMap = false;
+                            // Check if this tilesheet's gid range has changed, if so we'll need to shift all
+                            // tilesheet's gids after it
+                            const newTilecount = package.columns * package.rows,
+                                shiftedTilesets = [];
+                            if (newTilecount !== parseInt(refTileset.$.tilecount, 10)) {
+
+                                const firstGid = parseInt(refTileset.$.firstgid, 10),
+                                    newLastGid = firstGid + newTilecount;
+
+
+                                // Grab an ordered list of tilesets
+                                const orderedTilesets = [];
+                                result.map.tileset.forEach((tileset) => {
+                                    orderedTilesets.push({
+                                        firstGid: parseInt(tileset.$.firstgid, 10),
+                                        tilecount: parseInt(tileset.$.tilecount, 10)
+                                    });
+                                });
+                                
+                                orderedTilesets.sort((a, b) => a.firstGid - b.firstGid);
+                                let gidOffset = 0;
+                                for (let i = 0; i < orderedTilesets.length; ++i) {
+                                    let tileset = orderedTilesets[i];
+
+                                    // Have we found the point where tilesets need to be offset yet?
+                                    if (gidOffset === 0) {
+
+                                        // Is this the tileset we're updating?
+                                        if (tileset.firstGid === tilesetGid) {
+                                            gidOffset = newTilecount - parseInt(refTileset.$.tilecount, 10);
+                                        }
+                                        continue;
+                                    }
+
+                                    tileset.lastGid = tileset.firstGid + tileset.tilecount;
+                                    tileset.newFirstGid = tileset.firstGid + gidOffset;
+                                    tileset.newLastGid = tileset.newFirstGid + tileset.tilecount;
+                                    tileset.offset = gidOffset;
+
+                                    shiftedTilesets.push(tileset);
+                                    updatedMap = true;
+                                }
+                            }
+
                             result.map.layer.forEach((layer) => {
                                 const layerData = layer.data[0]._,
                                     layerWidth = parseInt(layer.$.width, 10),
@@ -1630,6 +1675,8 @@ const processGeneratedTilesheet = (package) => {
                                 let foundTilesetInLayer = false;
                                 for (let i = 0; i < layerDataSplit.length; ++i) {
                                     const g = layerDataSplit[i];
+                                    if (g === 0) continue; // No sprite here
+
 
                                     // A trick to flag that we've already processed this sprite (from scaled
                                     // spriteGroups). Just negate this sprite and continue to the next
@@ -1752,6 +1799,15 @@ const processGeneratedTilesheet = (package) => {
                                             //console.log(`Found tileset in area: ${area.file}: ${g} - ${tilesetGid} == ${localSprite} : ${localSprite} -> ${translatedSprite}  (translated: ${translatedSprite - localSprite}) ==> ${tilesetGid + translatedSprite}   ${ translated ? "" : "SPRITE NOT FOUND!" }`);
                                             layerDataSplit[i] = tilesetGid + translatedSprite;
                                         }
+                                    } else if (shiftedTilesets) {
+                                        // Does this sprite belong to another tilesheet that's been shifted?
+                                        const shiftedTileset = shiftedTilesets.find((tileset) => {
+                                            return (g >= tileset.firstGid && g < tileset.lastGid);
+                                        });
+
+                                        if (shiftedTileset) {
+                                            layerDataSplit[i] = g + shiftedTileset.offset;
+                                        }
                                     }
                                 }
 
@@ -1765,9 +1821,20 @@ const processGeneratedTilesheet = (package) => {
                             // Build revised XML back into XML string and save changes
                             if (updatedMap) {
 
-                                refTileset.$.tilecount = package.columns * package.rows;
+                                refTileset.$.tilecount = newTilecount;
                                 refTileset.$.columns = package.columns;
                                 refTileset.image[0].$.width = newColumns * tilesize;
+
+
+                                if (shiftedTilesets) {
+                                    result.map.tileset.forEach((tileset) => {
+                                        const shiftedTileset = shiftedTilesets.find((t) => t.firstGid === parseInt(tileset.$.firstgid, 10));
+
+                                        if (shiftedTileset) {
+                                            tileset.$.firstgid = shiftedTileset.newFirstGid;
+                                        }
+                                    });
+                                }
 
                                 const builder  = new XmlBuilder({
                                         xmldec: {
