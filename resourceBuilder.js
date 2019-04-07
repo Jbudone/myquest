@@ -1783,7 +1783,17 @@ const processGeneratedTilesheet = (package) => {
                                             let translated = true;
                                             if (translatedSprite === undefined) {
                                                 translated = false;
-                                                translatedSprite = localSprite; // Hasn't moved? No sprite here?
+                                                translatedSprite = localSprite; // Hasn't moved?
+
+                                                if (oldColumns !== newColumns) {
+                                                    // Our bounds have changed, since sprite = row * numColumns +
+                                                    // column, and numColumns have changed, need to recalc this
+                                                    const spriteRow    = Math.floor(localSprite / oldColumns),
+                                                        spriteCol      = localSprite - (spriteRow * oldColumns),
+                                                        newSpriteLocal = spriteRow * newColumns + spriteCol;
+
+                                                    translatedSprite = newSpriteLocal;
+                                                }
 
                                             } else if (translatedSprite === null) {
                                                 translated = false;
@@ -1824,6 +1834,7 @@ const processGeneratedTilesheet = (package) => {
                                 refTileset.$.tilecount = newTilecount;
                                 refTileset.$.columns = package.columns;
                                 refTileset.image[0].$.width = newColumns * tilesize;
+                                refTileset.image[0].$.height = newRows * tilesize;
 
 
                                 if (shiftedTilesets) {
