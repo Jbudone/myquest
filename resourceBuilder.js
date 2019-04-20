@@ -1442,38 +1442,91 @@ const processGeneratedTilesheet = (package) => {
             // sprites
             // NOTE: We may have scaled AND moved the spriteGroup, so we need to search from local coordinates
             let extendedSpriteGroup = null;
-            for (let y = 0; y < th; ++y) {
-                for (let x = 0; x < tw; ++x) {
+            const spriteMapping = {};
+            for (let y = 0; y < Math.max(th, thOld); ++y) {
+                for (let x = 0; x < Math.max(tw, twOld); ++x) {
 
                     // If this sprite is w/in the boundaries of the old spriteGroup then its not a new sprite
                     //if (y < thOld && x < twOld) continue;
 
                     if (!extendedSpriteGroup) {
                         extendedSpriteGroup = {
-                            newSprites: {}, // Local pos
+                            newSprites: {}, // (new) Local pos -> (new) Sheet pos
+                            oldSprites: {}, // (old) Sheet pos -> (old) Local pos
                             width: tw,
                             height: th,
                             oldWidth: twOld,
-                            oldHeight: thOld
+                            oldHeight: thOld,
+                            spriteMapping: spriteMapping
                         }
 
                         extendedSpriteGroups.push(extendedSpriteGroup);
+                        extendedSpriteGroup.spriteMapping = spriteMapping;
                     }
 
                     const localPos = y * tw + x,
-                        sheetPos = (dstY + y) * newColumns + (dstX + x);
+                        sheetPos   = (dstY + y) * newColumns + (dstX + x);
                     extendedSpriteGroup.newSprites[localPos] = sheetPos;
+                    if (y < thOld && x < twOld) {
+
+                        // Create a mapping from oldSpriteGroup -> newSpriteGroup
+                        //
+                        // spriteMapping: {
+                        //		oldSprite: { // Key: sprite gid
+                        //			newSprites: [ // Array of new sprite INTERNAL id's that this one maps to
+                        //				0, 1,    // oldSprite maps to 4 sprites in new list
+                        //				16, 17,  // use internal id so we know x/y offsets
+                        //				32, 33 ]
+                        //		},
+                        //
+                        //		oldSprite: {
+                        //			newSprites: [ 2 ] // Simple one-to-one mapping
+                        //		},
+                        //
+                        //		oldSprite: {
+                        //			newSprites: [] // Remove this sprite, no mapping
+                        //		}
+                        //	}
+
+                        const oldSpriteI = y * twOld + x,
+                            newSprites = [];
+                        spriteMapping[oldSpriteI] = { newSprites };
+
+                        // Where does this sprite map to in the revised spriteGroup
+                        const top = Math.floor((y / thOld) * th),
+                            bot   = Math.ceil(((y + 1) / thOld) * th),
+                            left  = Math.floor((x / twOld) * tw),
+                            right = Math.ceil(((x + 1) / twOld) * tw);
+
+                        const oldSprite = (dstYOld + y) * oldColumns + (dstXOld + x);
+
+                        if (Settings.verbose) {
+                            console.log(`sprite ${oldSpriteI} (sheet ${oldSprite}) mapped bounds: (${left}, ${top}) -> (${right}, ${bot})`);
+                        }
+
+                        // Add each of the sprites that this area covers in the new spriteGroup
+                        for (nY = top; nY < bot; ++nY) {
+                            for (nX = left; nX < right; ++nX) {
+                                const nS = nY * tw + nX;
+                                newSprites.push(nS);
+
+                                if (Settings.verbose) {
+                                    console.log(`  adding ${nS}  (${nX}, ${nY})`);
+                                }
+                            }
+                        }
+
+
+                        // NOTE: We need to add each sprite within the spriteGroup to the spriteGroupExtensionBoundaries,
+                        // since we may use a subset of any portion of the spriteGroup, but when we scale we want to catch
+                        // these
+                        spriteGroupExtensionBoundaries[oldSprite] = {
+                            extendedSpriteGroup: extendedSpriteGroup
+                        };
+
+                        extendedSpriteGroup.oldSprites[oldSprite] = y * twOld + x; // old sheetPos -> old localPos
+                    }
                 }
-            }
-
-            // Find the boundaries of the spriteGroup (old sprite bottom/right boundaries)
-            if (extendedSpriteGroup) {
-
-                // NOTE: We only need the topleft boundary, since that's the first boundary point that we'll hit
-                const oldSprite = dstYOld * oldColumns + dstXOld;
-                spriteGroupExtensionBoundaries[oldSprite] = {
-                    extendedSpriteGroup: extendedSpriteGroup
-                };
             }
         });
 
@@ -1542,7 +1595,7 @@ const processGeneratedTilesheet = (package) => {
         imagesToExtract.forEach((img) => {
             const dstX = img.dstX,
                 dstY = img.dstY;
-            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} \\) `;
+            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} -background none -gravity northwest -extent ${newColumns * package.tilesize}x${newRows * package.tilesize} \\) `;
         });
 
         convertCmd += `-background none -layers merge "${package.output}"`;
@@ -1553,7 +1606,7 @@ const processGeneratedTilesheet = (package) => {
 
 
         let needToUpdateMap = false;
-        if (!_.isEmpty(spriteTranslations) || !_.isEmpty(spriteGroupExtensionBoundaries)) {
+        if (!_.isEmpty(spriteTranslations) || !_.isEmpty(spriteGroupExtensionBoundaries) || oldColumns !== newColumns) {
             needToUpdateMap = true;
         }
 
@@ -1685,7 +1738,7 @@ const processGeneratedTilesheet = (package) => {
                                         continue;
                                     }
 
-                                    if (g >= tilesetGid && g <= tilesetLastGid) {
+                                    if (g >= tilesetGid && g < tilesetLastGid) {
                                         foundTilesetInLayer = true;
 
                                         const boundarySprite = spriteGroupExtensionBoundaries[g - tilesetGid];
@@ -1696,57 +1749,194 @@ const processGeneratedTilesheet = (package) => {
                                         // spriteGroup
                                         if (boundarySprite) {
 
-                                            console.log(`Found boundary edge of extended spriteGroup here`);
+                                            const extendedSpriteGroup = boundarySprite.extendedSpriteGroup;
 
-                                            const extendedSpriteGroup = boundarySprite.extendedSpriteGroup,
-                                                updatedSprites = [];
+                                            if (Settings.verbose) {
+                                                console.log(`Found boundary edge of extended spriteGroup here`);
+                                                console.log(`Boundary sprite at: ${g - tilesetGid}  (local  ${extendedSpriteGroup.oldSprites[g - tilesetGid]})`);
+                                            }
 
                                             const mapY = Math.floor(i / layerWidth),
-                                                mapX = (i % layerWidth);
+                                                mapX   = (i % layerWidth);
                                             let collision = false;
-                                            for (let localY = 0; localY < extendedSpriteGroup.height; ++localY) {
-                                                for (let localX = 0; localX < extendedSpriteGroup.width; ++localX) {
 
-                                                    // Old sprites from spriteGroup: need to check for translation
-                                                    const isOldSprite = localY < extendedSpriteGroup.oldHeight && localX < extendedSpriteGroup.oldWidth;
+                                            // Assume this is the topleft sprite in the spriteGroup. Loop through the
+                                            // bounds of the (old) spriteGroup and create a mapping from each map
+                                            // index to the (new) spriteGroup sprite.
+                                            // FIXME: This obviously isn't always true and takes extra cycles as well as
+                                            // being slightly error prone:
+                                            //
+                                            //   1) What if we have two left-halves of the spriteGroup side by side,
+                                            //   then we need to recognize that those are two separate spriteGroups.
+                                            //   Need to check for continuity (is the neighbouring sprite in the map
+                                            //   also the same neighbouring sprite in the old spriteGroup?)
+                                            //
+                                            //   2) What if we have a right-half of the spriteGroup on the map? We
+                                            //   should recognize where the sprite lies in the spriteGroup and start at
+                                            //   that position in this loop
+                                            let topLeftMappedSpriteI  = null,
+                                                mappedSpriteYLocalNew = 0,
+                                                mappedSpriteXLocalNew = 0,
+                                                tentativeMapping      = {},
+                                                markedNewSprites      = {};
+                                            for (let y = mapY; y < (mapY + extendedSpriteGroup.oldHeight); ++y) {
+                                                // FIXME: Entire row not connected? Then don't bother looping
+                                                for (let x = mapX; x < (mapX + extendedSpriteGroup.oldWidth); ++x) {
 
+                                                    const mapSpriteI = y * layerWidth + x;
+                                                    if (mapSpriteI >= layerDataSplit.length) {
+                                                        // Going beyond edge of map
+                                                        // NOTE: Not necessary to call this a collision since we can
+                                                        // have half of the spriteGroup cutoff by the map
 
-                                                    // Extended sprite: will use new sheetPos
-                                                    const mapPos = (localY + mapY) * layerWidth + (localX + mapX),
-                                                        localPos = localY * extendedSpriteGroup.width + localX,
-                                                        sheetPos = extendedSpriteGroup.newSprites[localPos];
-
-
-                                                    if (!isOldSprite)
-                                                    {
-                                                        // Is there a collision here?
-                                                        if (layerDataSplit[mapPos]) collision = true;
-
-                                                        if (mapPos >= layerDataSplit.length) {
-                                                            // The spriteGroup has been extended beyond the bounds of the
-                                                            // map. Need to remove
-                                                            collision = true;
+                                                        if (Settings.verbose) {
+                                                            console.log(`  Collision at ${mapSpriteI} (not in map range)`);
                                                         }
-
-                                                        if (collision) break;
-
-                                                        console.log(`Extending sprite at pos ${mapPos}: ${sheetPos}`);
-                                                        updatedSprites.push(mapPos);
+                                                        break;
                                                     }
 
+                                                    const mapSprite = layerDataSplit[mapSpriteI];
+                                                    if (mapSprite === 0) {
+                                                        // Empty tile
 
-                                                    // Since we're updating this from topleft -> botright, we will end
-                                                    // up coming across these sprites again. In order to prevent any
-                                                    // issues w/ updating the sprite twice, we can simply set it as a
-                                                    // negative number and use that as a flag to indicate that we've
-                                                    // already touched this. Then we just need to negate it again and
-                                                    // continue on. This will work for all sprites except the topleft
-                                                    // one
-                                                    layerDataSplit[mapPos] = -1 * (tilesetGid + sheetPos);
+                                                        if (Settings.verbose) {
+                                                            console.log(`  No sprite at ${mapSpriteI}`);
+                                                        }
+                                                        continue;
+                                                    }
 
+                                                    if (mapSprite < tilesetGid || mapSprite >= tilesetLastGid) {
+                                                        // Not in sheet
+
+                                                        if (Settings.verbose) {
+                                                            console.log(`  Collision at ${mapSpriteI} (not in sheet)`);
+                                                        }
+
+                                                        collision = true; //break; // FIXME: Do we need to break early?
+                                                        continue;
+                                                    }
+
+                                                    const sheetSprite = mapSprite - tilesetGid;
+                                                    if (!extendedSpriteGroup.oldSprites.hasOwnProperty(sheetSprite)) {
+                                                        // Not in spriteGroup
+
+                                                        if (Settings.verbose) {
+                                                            console.log(`  Collision at ${mapSpriteI}  (${sheetSprite}) (not in spriteGroup)`);
+                                                        }
+
+                                                        collision = true; //break;
+                                                        continue;
+                                                    }
+
+                                                    if (Settings.verbose) {
+                                                        console.log(`  Adding ${mapSpriteI}`);
+                                                    }
+
+                                                    // Add to tentativeMapping
+                                                    const localSpriteOldI = extendedSpriteGroup.oldSprites[sheetSprite],
+                                                    spriteMapping         = extendedSpriteGroup.spriteMapping[localSpriteOldI];
+                                                    if (spriteMapping.newSprites.length === 0) {
+                                                        // No mapping here, delete this sprite
+
+                                                        if (Settings.verbose) {
+                                                            console.log(` ${mapSpriteI} deleted`);
+                                                        }
+
+                                                        tentativeMapping[mapSpriteI] = 0;
+                                                    } else {
+
+                                                        // Is this the first sprite in the spriteGroup?
+                                                        // Mark it as our topleft point so that we can use it to
+                                                        // determine the offset for other sprites
+                                                        if (topLeftMappedSpriteI === null) {
+                                                            topLeftMappedSpriteI  = spriteMapping.newSprites[0];
+                                                            mappedSpriteYLocalNew = Math.floor(topLeftMappedSpriteI / extendedSpriteGroup.width),
+                                                            mappedSpriteXLocalNew = topLeftMappedSpriteI - (mappedSpriteYLocalNew * extendedSpriteGroup.width);
+                                                        }
+
+                                                        // Add all new sprites that this old sprite maps to
+                                                        spriteMapping.newSprites.forEach((newSpriteLocalI) => {
+                                                            const newSpriteLocalY = Math.floor(newSpriteLocalI / extendedSpriteGroup.width),
+                                                                newSpriteLocalX   = newSpriteLocalI - (newSpriteLocalY * extendedSpriteGroup.width),
+                                                                mapToMapY         = mapY + (newSpriteLocalY - mappedSpriteYLocalNew),
+                                                                mapToMapX         = mapX + (newSpriteLocalX - mappedSpriteXLocalNew),
+                                                                mapToMapI         = mapToMapY * layerWidth + mapToMapX;
+
+
+                                                            // We could have multiple old sprites map to the same new
+                                                            // sprite (eg. scaling a 20x20 spriteGroup -> 1x1) then
+                                                            // every new tile from the old group maps to the same 1x1
+                                                            // tile
+                                                            // In this case we use the first come first serve bases for
+                                                            // old sprites to claim new sprites
+                                                            if (markedNewSprites[newSpriteLocalI]) {
+
+                                                                if (Settings.verbose) {
+                                                                    console.log(` ${mapToMapI} skipped because ${extendedSpriteGroup.newSprites[newSpriteLocalI] + tilesetGid} already mapped`);
+                                                                }
+
+                                                                return;
+                                                            }
+
+                                                            // Is there a collision at this mapped point?
+                                                            if (mapToMapI < 0 || mapToMapI >= layerDataSplit.length) {
+                                                                // Outside of map range
+
+                                                                if (Settings.verbose) {
+                                                                    console.log(`  Mapped position outside of map range ${mapToMapI}`);
+                                                                }
+
+                                                                collision = true;
+                                                                return;
+                                                            }
+
+                                                            const tentativeSprite = layerDataSplit[mapToMapI];
+                                                            if (tentativeSprite > 0) {
+                                                                if (tentativeSprite < tilesetGid || tentativeSprite >= tilesetLastGid) {
+                                                                    // Not in sheet
+
+                                                                    if (Settings.verbose) {
+                                                                        console.log(`  Collision at ${mapToMapI} (${tentativeSprite}) (not in sheet)`);
+                                                                    }
+
+                                                                    collision = true;
+                                                                    return;
+                                                                }
+
+                                                                if (!extendedSpriteGroup.oldSprites.hasOwnProperty(tentativeSprite - tilesetGid)) {
+                                                                    // Not in spriteGroup
+
+                                                                    if (Settings.verbose) {
+                                                                        console.log(`  Collision at ${mapToMapI}  (${tentativeSprite - tilesetGid}) (not in spriteGroup)`);
+                                                                    }
+
+                                                                    collision = true;
+                                                                    return;
+                                                                }
+                                                            }
+
+
+
+                                                            if (Settings.verbose) {
+                                                                console.log(` ${mapToMapI} added with mapping (local ${newSpriteLocalI}) -> ${extendedSpriteGroup.newSprites[newSpriteLocalI] + tilesetGid}`);
+                                                            }
+
+                                                            markedNewSprites[newSpriteLocalI] = true;
+                                                            tentativeMapping[mapToMapI] = extendedSpriteGroup.newSprites[newSpriteLocalI] + tilesetGid;
+                                                        });
+
+                                                        // We may have not marked mapSpriteI as anything (eg. scaling
+                                                        // down), in which case we need to delete mapSpriteI
+                                                        if (!tentativeMapping[mapSpriteI]) {
+
+                                                            if (Settings.verbose) {
+                                                                console.log(` ${mapSpriteI} deleted because no spriteMapping mapped to it`);
+                                                            }
+
+                                                            tentativeMapping[mapSpriteI] = 0;
+                                                        }
+                                                    }
                                                 }
-
-                                                if (collision) break;
                                             }
 
 
@@ -1754,25 +1944,42 @@ const processGeneratedTilesheet = (package) => {
                                             if (collision) {
                                                 console.log(`Collision on spriteGroup. Removing spriteGroup`);
 
-                                                // Revert updated sprites
-                                                updatedSprites.forEach((sprite) => {
-                                                    layerDataSplit[sprite] = 0;
-                                                });
-
                                                 // Clear old region of spriteGroup
-                                                // FIXME: Check if this sprite is part of the spriteGroup, just in case
-                                                // we intentionally only had the partial spriteGroup
                                                 for (let localY = 0; localY < extendedSpriteGroup.oldHeight; ++localY) {
                                                     for (let localX = 0; localX < extendedSpriteGroup.oldWidth; ++localX) {
 
-                                                        const mapPos = (localY + mapY) * layerWidth + (localX + mapX);
-                                                        layerDataSplit[mapPos] = 0;
+                                                        const mapPos  = (localY + mapY) * layerWidth + (localX + mapX),
+                                                            mapSprite = layerDataSplit[mapPos];
 
+                                                        if
+                                                        (
+                                                            mapSprite > 0 &&
+                                                            (mapSprite >= tilesetGid && mapSprite < tilesetLastGid) &&
+                                                            extendedSpriteGroup.oldSprites.hasOwnProperty(mapSprite - tilesetGid)
+                                                        )
+                                                        {
+                                                            // Sprite in spriteGroup, remove
+                                                            layerDataSplit[mapPos] = 0;
+                                                        }
                                                     }
                                                 }
                                             } else {
-                                                const topleftPos = mapY * layerWidth + mapX;
-                                                layerDataSplit[topleftPos] *= -1;
+
+                                                // No collision? Apply tentativeMapping
+                                                _.each(tentativeMapping, (mapped, mapI) => {
+                                                    
+                                                    layerDataSplit[mapI] = mapped * -1;
+
+                                                    // Can't do negative for this one since we won't be going through
+                                                    // this one again
+                                                    if (parseInt(mapI, 10) === i) {
+                                                        layerDataSplit[mapI] *= -1;
+                                                    }
+
+                                                    if (Settings.verbose) {
+                                                        console.log(`Mapping ${mapI} -> ${mapped}`);
+                                                    }
+                                                });
                                             }
                                         } else {
 
