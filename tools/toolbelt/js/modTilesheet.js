@@ -78,7 +78,8 @@ const ModTilesheet = (function(containerEl){
         virtualCanvasImg = null;
 
     let folderHierarchyEl = $('#tilesheetFolderHierarchy'),
-        folderHierarchyImageCtrlEl = $('#tilesheetFolderHierarchyImageCtrl');
+        folderHierarchyImageCtrlEl = $('#tilesheetFolderHierarchyImageCtrl'),
+        folderHierarchyImagePreviewEl = $('#tilesheetFolderPreviewSourceImg');
 
     let imgReady = false,
         needsRedraw = false,
@@ -308,6 +309,17 @@ const ModTilesheet = (function(containerEl){
                     dep.previewSrc = previewSrc;
 
                     const createBitmap = () => {
+
+                        if (dep.previewImg.width > MAX_VIRTUAL_COLUMNS * parseInt(resource.tilesize, 10)) {
+                            // Image is too wide!
+                            console.error(`Image too wide!: ${dep.imageSrc}`);
+                            failed({
+                                success: false,
+                                results: "Image too wide"
+                            });
+                            return;
+                        }
+
                         createImageBitmap(dep.previewImg).then((resp) => {
                             dep.previewImgBitmap = resp;
                             succeeded(json);
@@ -386,6 +398,14 @@ const ModTilesheet = (function(containerEl){
                             failed();
                             return;
                         }
+
+                        if (dep.previewImg.width > MAX_VIRTUAL_COLUMNS * parseInt(resource.tilesize, 10)) {
+                            // Image is too wide!
+                            console.error(`Image too wide!: ${dep.imageSrc}`);
+                            failed();
+                            return;
+                        }
+
 
                         if (failedCacheBust) {
                             console.log(`  Finished waiting for ${dep.imageSrc}`);
@@ -603,6 +623,16 @@ const ModTilesheet = (function(containerEl){
                     return false;
                 };
 
+                const previewFile = () => {
+                    $('#tilesheetFolderPreviewSourceImgSrc').attr('src', `../../${file.pathTo}`);
+                    $('#tilesheetFolderPreviewSourceImgOuter').addClass('open');
+                };
+
+                const unPreviewFile = () => {
+                    $('#tilesheetFolderPreviewSourceImgOuter').removeClass('open');
+                    $('#tilesheetFolderPreviewSourceImgSrc').attr('src', '');
+                };
+
                 const triggerIncludeImage = () => {
 
                     let includeImage = $('.folderHierarchyIncludeImage', fileEl)[0].checked;
@@ -690,6 +720,7 @@ const ModTilesheet = (function(containerEl){
                             .addClass('folderHierarchyImageName')
                             .text(fileName)
                             .click(triggerExpandFile)
+                            .hover(previewFile, unPreviewFile)
                     );
                 }
 
@@ -750,6 +781,13 @@ const ModTilesheet = (function(containerEl){
                 spriteCtrlsEl.removeClass('floating');
             }
         }
+    });
+
+    $('#tilesheetFolderHierarchyContainer').scroll(() => {
+
+        const scrollTop = $('#tilesheetFolderHierarchyContainer').scrollTop();
+
+        $('#tilesheetFolderPreviewSourceImgOuter').css({ 'margin-top': scrollTop - 4 });
     });
 
     const reloadDependencyInTilesheet = (dependency) => {
