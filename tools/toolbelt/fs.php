@@ -146,7 +146,7 @@ if ($request == "save") {
     ob_start();
     $assetId = $_POST['assetId'];
 	$packageId = $_POST['packageId'];
-    $runCmd = "cd ../../ ; node resourceBuilder.js --package $packageId --asset $assetId 2>&1";
+    $runCmd = "cd ../../ ; node resourceBuilder.js --package $packageId --asset $assetId --verbose 2>&1";
     passthru($runCmd, $err);
     $results = ob_get_contents();
     ob_end_clean(); //Use this instead of ob_flush()
