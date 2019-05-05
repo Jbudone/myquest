@@ -1131,8 +1131,6 @@ const processGeneratedTilesheet = (package) => {
         let spritesToExtract = [],
             imagesToExtract = [],
             yOffset = 0,
-            genMaxX = 0,
-            genMaxY = 0,
             spriteGroups = [];
 
         const extractionDeps = [],
@@ -1176,6 +1174,16 @@ const processGeneratedTilesheet = (package) => {
                     y = Math.floor(sprite / columns),
                     dstX = (x - minX),
                     dstY = (y - minY + yOffset);
+
+                if
+                (
+                    Math.ceil(dstX) !== Math.floor(dstX) ||
+                    Math.ceil(dstY) !== Math.floor(dstY)
+                )
+                {
+                    debugger;
+                    console.error(`Bad dstX/dstY: ${dstX}x${dstY}`);
+                }
 
                 const existingSprite = modifiedSprites.find((s) => s.source === source && s.sprite === sprite);
 
@@ -1248,8 +1256,6 @@ const processGeneratedTilesheet = (package) => {
             });
 
             yOffset += (maxY - minY + 1);
-            genMaxY += (maxY - minY + 1);
-            genMaxX = Math.max(genMaxX, maxX - minX + 1);
 
             package.dependencies.push({
                 assetId: dependency.asset.id,
@@ -1293,8 +1299,6 @@ const processGeneratedTilesheet = (package) => {
             });
 
 
-            genMaxY += (maxY - minY + 1);
-            genMaxX = Math.max(genMaxX, maxX - minX + 1);
 
 
             spriteGroups.push({
@@ -1316,8 +1320,6 @@ const processGeneratedTilesheet = (package) => {
 
         if (Settings.verbose) {
             console.log("Generated tilesheet:");
-            console.log(`  Width: ${package.tilesize * genMaxX}`);
-            console.log(`  Height: ${package.tilesize * genMaxY}`);
             console.log(`  Sprites:`);
             console.log(spritesToExtract);
             console.log(`  Images:`);
@@ -1368,8 +1370,9 @@ const processGeneratedTilesheet = (package) => {
 
         
 
-        const newColumns = maxDstX - minDstX,
-            newRows = maxDstY - minDstY;
+        // NOTE: We could trim the top/left, if we want to do this then need to fix translations
+        const newColumns = maxDstX,// - minDstX,
+            newRows = maxDstY;// - minDstY;
 
 
         const spriteTranslations             = {},
@@ -1382,24 +1385,25 @@ const processGeneratedTilesheet = (package) => {
         const boundsHaveChanged = (oldColumns !== newColumns || oldRows !== newRows);
         if (boundsHaveChanged) {
 
-            for (let i = 0; i < package.sprites.length; ++i) {
-                package.sprites[i].dstX -= minDstX * tilesize;
-                package.sprites[i].dstY -= minDstY * tilesize;
-            }
+            // NOTE: Uncomment below for trimming top/left
+            //for (let i = 0; i < package.sprites.length; ++i) {
+            //    package.sprites[i].dstX -= minDstX * tilesize;
+            //    package.sprites[i].dstY -= minDstY * tilesize;
+            //}
 
             // Translate sprite in spriteIsland
-            spriteGroups.forEach((sg) => {
+            //spriteGroups.forEach((sg) => {
 
-                if (sg.spriteIsland) {
-                    sg.spriteIsland.forEach((s) => {
-                        s.dstX -= minDstX;
-                        s.dstY -= minDstY;
-                    });
-                } else {
-                    sg.dstX -= minDstX;
-                    sg.dstY -= minDstY;
-                }
-            });
+            //    if (sg.spriteIsland) {
+            //        sg.spriteIsland.forEach((s) => {
+            //            s.dstX -= minDstX * tilesize;
+            //            s.dstY -= minDstY * tilesize;
+            //        });
+            //    } else {
+            //        sg.dstX -= minDstX * tilesize;
+            //        sg.dstY -= minDstY * tilesize;
+            //    }
+            //});
         }
 
         spriteGroupsToTranslate.forEach((spriteGroup) => {
@@ -1594,8 +1598,10 @@ const processGeneratedTilesheet = (package) => {
 
         imagesToExtract.forEach((img) => {
             const dstX = img.dstX,
-                dstY = img.dstY;
-            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} -background none -gravity northwest -extent ${newColumns * package.tilesize}x${newRows * package.tilesize} \\) `;
+                dstY   = img.dstY,
+                right  = newColumns * package.tilesize - dstX,
+                bot    = newRows * package.tilesize - dstY;
+            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} -background none -gravity northwest -extent ${right}x${bot} -gravity southeast -extent ${right + dstX}x${bot + dstY} \\) `;
         });
 
         convertCmd += `-background none -layers merge "${package.output}"`;
@@ -2088,6 +2094,19 @@ const processGeneratedTilesheet = (package) => {
             });
 
             Promise.all(waitingOnMaps).then(() => {
+
+                // If we have tiled open we can send keystrokes to the process to reload the tilesheet/map
+
+                //  ctrl+r  reload map
+                //  ctrl+t  reload tilesheet
+                // NOTE: If tiled isn't open this will silently fail without side effects
+                // FIXME: If the sheet bounds haven't changed then we won't receive a popup
+                // FIXME: xdotool also allows waiting for behaviors, will this recognize the popup?
+                const waitForPopupTime = 0.4, // Tiled will popup asking to reload (it hasn't recognized that we've changed the bounds yet)
+                    waitToReload = 0.1, // After denying reload: takes a moment for the popup press to respond
+                    waitToShow = 1.0;
+                execSync('export DISPLAY=:0.0 ; export XAUTHORITY=/home/jbud/.Xauthority ; xdotool search --class tiled windowactivate --sync %1 key ctrl+t sleep ' + waitForPopupTime + ' key N sleep ' + waitToReload + ' key ctrl+r key ctrl+r sleep ' + waitToShow + '  windowactivate $( xdotool getactivewindow )');
+
                 success();
             }).catch((err) => {
                 fail(err);
