@@ -206,6 +206,7 @@ const ModTilesheet = (function(containerEl){
                 }
             }
 
+            needsRedraw = true;
             pendingChanges = true;
             this.updatePendingChanges();
         }
@@ -1170,6 +1171,7 @@ const ModTilesheet = (function(containerEl){
                     InteractionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
                                     .onHoverIn(() => {
                                         highlights.push(entity);
+                                        needsRedraw = true;
                                     })
                                     .onHoverOut(() => {
                                         const idx = highlights.findIndex((e) => {
@@ -1177,9 +1179,10 @@ const ModTilesheet = (function(containerEl){
                                         });
 
                                         highlights.splice(idx, 1);
+                                        needsRedraw = true;
                                     })
                                     .onClick(() => {
-                                        const ent = ((entity.x / tilesize) % resource.virtualColumns) + ((entity.y / tilesize) * parseInt(resource.virtualColumns, 10));
+                                        const ent = ((entity.x / tilesize) % resource.columns) + ((entity.y / tilesize) * parseInt(resource.columns, 10));
                                         toggleEntity(ent);
                                     });
                 }
@@ -1792,8 +1795,8 @@ const ModTilesheet = (function(containerEl){
             canvasCtx.globalAlpha = 0.4;
             for (let i = 0; i < drawGroup.list.length; ++i) {
                 const ent = drawGroup.list[i],
-                    x = (ent % parseInt(resource.virtualColumns, 10)) * tilesize,
-                    y = Math.floor(ent / parseInt(resource.virtualColumns, 10)) * tilesize,
+                    x = (ent % parseInt(resource.columns, 10)) * tilesize,
+                    y = Math.floor(ent / parseInt(resource.columns, 10)) * tilesize,
                     w = tilesize,
                     h = tilesize;
 
