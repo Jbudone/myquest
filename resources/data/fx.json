@@ -135,6 +135,38 @@
         }
     },
 
+    "backgroundLayers": [
+        {
+            "src": "resources/backgrounds/game_background_1/layers/sky.png",
+            "moveSpeed": 0,
+            "primary": true
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/clouds_1.png",
+            "moveSpeed": 0.002
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/clouds_2.png",
+            "moveSpeed": 0.01
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/clouds_3.png",
+            "moveSpeed": 0.006
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/clouds_4.png",
+            "moveSpeed": 0.005
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/rocks_1.png",
+            "moveSpeed": 0
+        },
+        {
+            "src": "resources/backgrounds/game_background_1/layers/rocks_2.png",
+            "moveSpeed": 0
+        }
+    ],
+
     "events": {
         "attacked.player": {
             "region": "world",

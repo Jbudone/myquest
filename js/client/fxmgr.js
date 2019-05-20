@@ -123,6 +123,75 @@ define(['loggable'], (Loggable) => {
 
     const SoundSys = new SoundSystem();
 
+
+    const BackgroundSystem = function() {
+
+        let lastUpdate = now();
+        this.layers = [];
+        this.activeLayers = [];
+        this.primaryLayer = null;
+
+        this.initialize = (bgLayers) => {
+
+            bgLayers.forEach((layer) => {
+                const layerEl = $('<div/>')
+                                .addClass('bgLayer')
+                                .css({
+                                    'background-image': `url(${layer.src})`,
+                                    'background-repeat': 'repeat',
+                                    'background-position-x': 0
+                                })
+                                .appendTo( $('#screenBackground') );
+
+                const layerObj = {
+                    layerEl: layerEl,
+                    offset: 0,
+                    moveSpeed: layer.moveSpeed
+                };
+
+                if (layer.primary) {
+                    this.primaryLayer = layerObj;
+
+                    layerEl.css({
+                        'background-color': '#FFF',
+                        'background-blend-mode': 'multiply'
+                    });
+                }
+
+                this.layers.push(layerObj);
+                if (layer.moveSpeed > 0) {
+                    this.activeLayers.push(layerObj);
+                }
+            });
+        };
+
+        this.step = (time) => {
+
+            const delta = time - lastUpdate;
+            if (delta < 60) return; // Otherwise moves are too small
+
+            this.activeLayers.forEach((layer) => {
+                const moveAmount = delta * layer.moveSpeed;
+                if (moveAmount > 0) {
+                    const elOffset = Math.floor(layer.offset);
+                    layer.offset = (layer.offset + moveAmount) % $(layer.layerEl).width();
+                    const newElOffset = Math.floor(layer.offset);
+
+                    if (elOffset !== newElOffset) {
+                        $(layer.layerEl).css({ 'background-position-x': newElOffset });
+                    }
+                }
+            });
+
+            lastUpdate = time;
+        };
+    };
+
+    const BackgroundSys = new BackgroundSystem();
+
+
+
+
     const FXMgr = (function(){
 
         extendClass(this).with(Loggable);
@@ -342,6 +411,8 @@ define(['loggable'], (Loggable) => {
                     this.settings[name] = value;
                 });
 
+                BackgroundSys.initialize(asset.backgroundLayers);
+
                 Promise.all(loadingSamples).then(() => {
                     this.initialized = true;
                     success();
@@ -362,6 +433,8 @@ define(['loggable'], (Loggable) => {
                     this.setVolume( this.settings.volume );
                 }
             }
+
+            BackgroundSys.step(time);
         };
     });
 

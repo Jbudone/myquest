@@ -15,6 +15,23 @@ h3 {
 	display: none !important;
 }
 
+#screenBackground {
+    position: absolute;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    left: 0px;
+    /* top: 0px; */
+    bottom: 0px;
+    z-index: -1;
+}
+
+.bgLayer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
 #game {
 	width: 1024px;
 	margin-left: calc((100% - 1024px)/2);
