@@ -13,6 +13,13 @@ define(function(){
         logDump = new Array(logDumpSize);
     let logDumpIndex = 0;
 
+    logDump.fill({
+        message: "",
+        type: null,
+        timestamp: -1,
+        prefix: ""
+    });
+
     // TODO: Themed logging - Log("*Header*: (_something horrible happened_) details of what went down")
     if (Env.isServer || Env.isBot) {
 
@@ -214,7 +221,10 @@ define(function(){
 
             const timestamp = now(),
                 prefix = this.logPrefix;
-            logDump[logDumpIndex - 1] = { message, type, timestamp, prefix }; // FIXME: Preallocate these objects on init
+            logDump[logDumpIndex - 1].message   = message;
+            logDump[logDumpIndex - 1].type      = type;
+            logDump[logDumpIndex - 1].timestamp = timestamp;
+            logDump[logDumpIndex - 1].prefix    = prefix;
         },
         SuppressLogs: function(b) { suppressLogs = b },
         DumpLog: function(){
