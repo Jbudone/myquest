@@ -30,6 +30,68 @@ https://opengameart.org/content/statues
 https://graphicriver.net/item/isometric-tower-defense-game-kit-pack-sprites-backgrounds/16958247
 https://graphicriver.net/item/2d-isometric-game-assets-bundle-towers-castles-houses-more/17427144
 
+https://gameartpartners.com/downloads/cartoon-nature-elements-set/
+https://gameartpartners.com/downloads/2d-forest-elements/
+https://gameartpartners.com/vendor/acasas/
+https://gameartpartners.com/downloads/medieval-top-down-tower-defense-art/
+https://gameartpartners.com/vendor/simirk/
+https://gameartpartners.com/downloads/snowy-mountains-platformer-tileset/
+https://gameartpartners.com/downloads/top-down-tileset-the-quiet-forest/
+https://graphicriver.net/item/tower-defence-game-assets-and-sprites/14668129?s_rank=25
+https://graphicriver.net/item/frozen-village-isometric-block-tileset/20770975?s_rank=42
+https://graphicriver.net/item/topdown-winter-tileset/19292603?s_rank=100
+https://graphicriver.net/item/topdown-medieval-forest-game-tileset/19292556?s_rank=102
+https://graphicriver.net/item/topdown-dungeon-tileset/19292571?s_rank=101
+https://assetstore.unity.com/packages/2d/environments/tabulampot-plants-pack-34715
+https://assetstore.unity.com/packages/2d/environments/premium-workshops-tiles-props-100428
+https://assetstore.unity.com/publishers/22311?page=1
+https://assetstore.unity.com/packages/2d/environments/flowers-2d-vol-1-52810
+https://gameartpartners.com/downloads/pixel-art-top-down-dungeon/
+https://assetstore.unity.com/packages/templates/maze-game-2d-pack-70901
+https://assetstore.unity.com/packages/2d/characters/heroes-and-villains-fantasy-2d-pack-26881
+https://assetstore.unity.com/packages/2d/environments/simpleee-isometric-environment-pack-79749
+https://assetstore.unity.com/packages/2d/environments/2d-trees-pack-107613
+https://assetstore.unity.com/packages/2d/environments/2d-cave-rock-platform-53259
+https://assetstore.unity.com/packages/2d/environments/cartoon-farm-building-29911
+https://assetstore.unity.com/publishers/34249
+https://assetstore.unity.com/packages/2d/environments/2d-fantasy-buildings-and-background-pack-65545
+https://assetstore.unity.com/packages/2d/environments/handycraft-forest-pack-38517
+https://assetstore.unity.com/packages/2d/environments/magic-village-13902
+https://assetstore.unity.com/packages/2d/environments/fruit-village-25959
+https://assetstore.unity.com/packages/2d/environments/wonder-forest-18020
+https://assetstore.unity.com/packages/2d/environments/2d-isometric-elements-20300
+https://assetstore.unity.com/packages/2d/environments/2d-rpg-environment-sprites-37493
+https://assetstore.unity.com/packages/2d/environments/trees-2d-vol-2-52809
+https://graphicriver.net/item/dark-castle-game-objects/21447559?s_rank=28
+https://graphicriver.net/item/tower-defense-grass-pack/20321987?clicked=post_purchase_thumb
+https://free-game-assets.itch.io/
+
+https://assetstore.unity.com/packages/3d/environments/fantasy/isometric-pack-3d-62262
+https://assetstore.unity.com/packages/2d/environments/2d-cartoon-castles-42750
+
+
+
+https://gameartpartners.com/downloads/isometric-forest/
+https://graphicriver.net/item/big-game-top-down-tileset/21920127?s_rank=4
+https://graphicriver.net/item/fantasy-tower-defense-game-kit/21844669
+https://graphicriver.net/item/magic-tower-game-objects/21485308
+https://graphicriver.net/item/tower-defense-tile-sets/21135093?s_rank=37
+https://assetstore.unity.com/packages/2d/environments/2d-stone-pack-64656
+https://assetstore.unity.com/packages/2d/environments/tower-defence-construction-pack-106170
+
+
+https://gameartpartners.com/downloads/isometric-forest/
+https://graphicriver.net/item/big-game-top-down-tileset/21920127
+https://graphicriver.net/item/fantasy-tower-defense-game-kit/21844669
+https://assetstore.unity.com/packages/2d/environments/2d-stone-pack-64656
+https://assetstore.unity.com/packages/2d/environments/tower-defence-construction-pack-106170
+https://assetstore.unity.com/packages/2d/environments/2d-forest-buildings-44089
+https://assetstore.unity.com/packages/2d/textures-materials/building/builder-game-2d-pack-21783
+https://assetstore.unity.com/packages/2d/environments/2d-forest-world-tileset-119496
+https://assetstore.unity.com/packages/2d/environments/2d-isometric-trees-60844
+
+
+
 
 Purchaseable Sprites
 ------------------
@@ -74,6 +136,8 @@ RvR style areas for different factions (you can work your way into factions); ta
 Consider some items (core components) drop on a per-player basis? This prevents players farming areas for cash, and forces players to craft or work for their gear/utilities
 
 Combat that actually requires skill/planning: eg. You're a rogue and spot an animal out in the open. You go invisible and sneak up near it, then place a trap w/ some bait (food). Then make a noise to get the animals attention so it spots the bait. When it hits the trap you reveal yourself and fire a dart at it, then run off in a direction. As it chases you you run through a (non-trap?) that you placed on that ground that speeds you up, then quickly activate a rune that will mezz the animal when it reaches you. You have a moment to place some seeds in the ground surrounding the animal, play your flute to quickly grow them into dry grass, and light it on fire to burn the animal (or perhaps keep it trapped).  Throw over some napalm to explode on the animal
+
+Equipment that auto enables you for PvP, and some that allows players to find you wherever you are. Maybe they can also steal this item when you log off (drops to the ground whereever you logoff or die). People can setup traps, defensive equipment, bribe monsters, etc. to protect their item. Banks won't accept this item, or perhaps you're kill on sight in towns so you can't deposit that item
 
 Quests
  - Romeo & Juliet
@@ -625,6 +689,9 @@ WORKING ON (was previously working on)
                 - Modify options
                 - Extract tiles from sheet to be (automatically) added into a compiled tileset (may want different tiles to go to different tilesets; may want some grouping part too: plains tileset, keep trees together, keep terrain together)
                 - Collision, shoot-through, floating, etc.  flags
+                - Select area of tilesheet for imagemagick processing in specific region (probably don't want regions to overlap)
+                    - Select region of tilesheet shows up on preview window; w/ imagemagick conversion?
+                    - On-the-fly imagemagick processing/updating temp file & rendering in preview
                 - Animated sprites
                 - Animation editor + preview
                 - Spritesheet editor
@@ -637,6 +704,26 @@ WORKING ON (was previously working on)
      - New avatars for talking to: eg. ones from BQ
      - New sprites for lower forest area: bear warrior, wolf + wolf den & ruins (from tilesheets); crab + turtles near water & to the right; statues to area on the right
      - Include comment metadata w/ tilesheets/spritesheets (authors, copyright license, link, etc.)
+     - Tilesheet layers -> tilesheet
+        - Different sizes, need to try to resize accordingly
+        - Could treat as an autogenerated tilesheet to make use of moving sprite groups around; then dependency needs to reference the layer image as opposed to a sheet, and also needs some processing for resizing
+            - "built" flag to indicate the tilesheet is built from a bunch of other images in some given directory; dependencies are all of the checked images within the directory
+            - each dependency has some option for resizing
+            - similar to autogenerated, allow spriteislands & translating islands
+    - Tilesheets/spritesheets -> preprocess tonemapping: to help w/ tilesheets from different sources not using the same colours
+        - Extract colourmap from image:
+            convert input.png -colors 64 -unique-colors colormap.png
+        - Remap colours from image:
+            convert input.png -modulate 100,120,100 +dither -remap colormap.png -set colourspace RGB input.remap.png
+            NOTES:
+                - Modulate: seems like it may be worth it to darken/saturate slightly so that we prefer certain colours for specific tilesheets
+                - Scale:  `-filter box -scale 75% -scale 125%` before remap can help w/ simplifying colours if colours are too complex atm
+                - `-posterize 12` or `-colors 14` before or after could help
+        - Edge highlighting:
+            convert biggames.png -scale 500% -define convolve:scale='500,100%' -morphology Convolve 'Log:0x2' -scale 20% biggames.edge.png
+            NOTE: Scaling up seems to help w/ getting edges, but also speckles the images a little
+    - Tilesheets/spritesheets create edges: marching cubes & draw edges. Note that in some cases we may already have edges around the sprite, so need to put this into consideration. Also some tiles we may not want edges (eg. grass)
+    - Background FXMgr: accept events for modifying background (eg. onHit -> change bg-colour of sky and blend-mode multiply, onLevelUp -> different colour)
 
 
 	- Browser Debugging Snippets
@@ -789,11 +876,15 @@ WORKING ON (was previously working on)
 		    - Orthogonal/CSV; 100x100 map; 16x16 tiles   # NOTE: Larger maps seem to be a problem, so trying out smaller maps for now
 			- Tilesheets: Map -> New Tileset -> tilesheet   16x16
 			  									npcs (tools/sheetedit/avatars.png)  32x32
+                                                Embed Tilesheet!  (this simply references the image file rather than creating a separate .tsx file)
 			- Tile Layers: base, sprites
 			- Object Layers: zoning, spawns, interactables
 			- Add map
 			  	- add map to world.json
-				- run tools/export-world.json
+				- run tools/export-map
+
+        - Updating map
+            - tools/export-map
 
 	- Adding a New Mesh
         - Create a single .blend file w/ all of the animations included (each anim can be in a separate frame if necessary)
@@ -1531,8 +1622,15 @@ EXTERNAL ASSETS
 
 ==== Unity
 
+    * Open up Unity to download assets
+    * If you can't login, go to Edit -> Sign Out. Relaunch the application and it'll login again
+    * Assets hiding in:  C:/Users/josh.braendel/AppData/Roaming/Unity/Asset Store-5.x/
     * .unitypackage is just a .tar.gz
     * Each folder contains 1 or 0 assets; each asset's true name is in the contents of pathname (including its original path). I suspect the folders without an asset (but still contain a pathname) are just folders
+    * Add each asset (manually? =[ ) into a gimp file as separate layers, save and copy to a new file w/ scaled layers
+    * Scale each layer (w/ interpolation == None) such that either the width or height (pick the largest of the two) fits a multiple of 32
+    * Copy a layer into another layer to sit underneath it; this will double up on the alpha outline to give a dark outline (do this last, once you've moved your layers into place)
+    * Be conscious of the canvas size; don't want too wide
 
 ==== Blender
 
