@@ -25,6 +25,8 @@ const prettier = require('prettier');
 //
 //      Would need this to also be safe with block scope (conditions/etc.)
 //
+//      How could we carry over checks / store global intrinics?  CHECK(IS_FUNCTION, assert), CHECK(IS_OBJECT, Env)
+//
 //  - Check not null/undefined:
 //      a[c.d] -- c.d should be defined, and probably a raw type (NumericLiteral, string)
 //
@@ -37,10 +39,10 @@ const prettier = require('prettier');
 
 
 
-//const code = "const a = function() { const b = 1; const c = 3; c.call(); assert(Log(b) && 1 && true && b.yup()); a.b.c.thing(); b(); a[b.c].d; return b.that(); }; assert(Log(a) && console.log(b)); Log(a()); console.log(a()); a[b.c].d; var x = { b:1, c:[1,2] };";
+const code = "const a = function() {\nconst b = 1; const c = 3; c.call(); assert(Log(b) && 1 && true && b.yup()); a.b.c.thing(); b(); a[b.c].d; return b.that(); }; assert(Log(a) && console.log(b)); Log(a()); console.log(a()); a[b.c].d; var x = { b:1, c:[1,2] };";
 //const code = "{ CALL({ check: 1, args: [{ node: a.b.c }] }); }";
 //const code = "{ a[b.c.d].e.f(); }";
-const code = "{ a[b.c]; }";
+//const code = "{ a[b.c] = 2; }";
 var parsed = Parser.parse(code);
 
 const OBJECT_TYPE = "OBJECT",
@@ -403,6 +405,13 @@ traverse(parsed, {
                     curNode.elements.forEach((objElem) => {
                         CheckNode(objElem, null, checkArr, false);
                     });
+                } else if (curNode.type === 'AssignmentExpression') {
+
+                    CheckNode(curNode.left, null, checkArr, false);
+                    CheckNode(curNode.right, null, checkArr, false);
+                } else if (curNode.type === 'ReturnStatement') {
+
+                    CheckNode(curNode.argument, null, checkArr, false);
                 } else {
                     console.error(`FIXME: Unhandled node type: ${curNode.type}`);
                     return true;
@@ -412,6 +421,7 @@ traverse(parsed, {
             // Begin checking this expression
             const checkArr = [];
             CheckNode(node, null, checkArr, true);
+            if (checkArr.length === 0) continue; // Nothing to check here
 
             console.log(checkArr);
 
@@ -570,8 +580,9 @@ traverse(parsed, {
 
 const output = generate(parsed, { /* options */ }, code);
 
-const prettifiedCode = prettier.format(output.code, { parser: 'babel' })
+//const prettifiedCode = prettier.format(output.code, { parser: 'babel' })
 
 console.log(parsed);
 console.log(output);
-console.log(prettifiedCode);
+console.log(output.code);
+//console.log(prettifiedCode);
