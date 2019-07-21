@@ -2,11 +2,23 @@ const Parser = require("@babel/parser");
 const traverse = require('@babel/traverse').default;
 const generate = require('@babel/generator').default;
 const t = require('@babel/types');
+const fs = require('fs');
 
 const prettier = require('prettier');
 
 
 // TODO:
+//  - Write CHECK statement -- cleanup
+//  - Test in the wild -- prepro all
+//  - Startup: Check js for all files + modified date, compare against counterpart in dist + modified date, do we need
+//  to wait on rebuild?
+//  - Source maps to hide CHECK statement
+//  * FIXME:  if(a.b.c.d) return b.x();  // can't have CHECK() on b.x() because there's no { } scope within if statement
+//  * FIXME: Condition checks   if(....)
+//  * FIXME: VariableDeclarations  const a = b.c.d.e;
+//  * Cleanup this file
+//  - Lint for less safe code / unable to check code
+//
 //
 //  - How would we prevent checks if we've already done a manual check?
 //      if (a && a.b && a.b.c) { ... }
@@ -37,12 +49,27 @@ const prettier = require('prettier');
 //  - Profiler speeds for larger files
 //  - Confirm source maps intact
 
+//let code = "const a = function() {\nconst b = 1; const c = 3; c.call(); assert(Log(b) && 1 && true && b.yup()); a.b.c.thing(); b(); a[b.c].d; return b.that(); }; assert(Log(a) && console.log(b)); Log(a()); console.log(a()); a[b.c].d; var x = { b:1, c:[1,2] };";
+//let code = "{ CALL({ check: 1, args: [{ node: a.b.c }] }); }";
+let code = "{ a[b.c.d].e.f(); }";
+//let code = "{ a[b.c] = 2; }";
+//let code = "{ a.b(3); }";
+//let code = " { a.b().c(); }";
 
 
-const code = "const a = function() {\nconst b = 1; const c = 3; c.call(); assert(Log(b) && 1 && true && b.yup()); a.b.c.thing(); b(); a[b.c].d; return b.that(); }; assert(Log(a) && console.log(b)); Log(a()); console.log(a()); a[b.c].d; var x = { b:1, c:[1,2] };";
-//const code = "{ CALL({ check: 1, args: [{ node: a.b.c }] }); }";
-//const code = "{ a[b.c.d].e.f(); }";
-//const code = "{ a[b.c] = 2; }";
+// Process Server arguments
+for (let i=0; i<process.argv.length; ++i) {
+
+    const arg = process.argv[i];
+
+    if (arg === "--file") {
+        const file = process.argv[++i];
+        code = fs.readFileSync(file, 'utf8');
+    }
+}
+
+
+
 var parsed = Parser.parse(code);
 
 const OBJECT_TYPE = "OBJECT",
@@ -286,7 +313,7 @@ traverse(parsed, {
                 if (curNode.type === 'ExpressionStatement') {
                     //console.log(curNode);
                     //console.log(code.substr(curNode.start, curNode.end - curNode.start));
-                    console.log("Check: " + codeStr);
+                    //console.log("Check: " + codeStr);
 
                     // 
                     //   MemberExpression:
@@ -313,12 +340,10 @@ traverse(parsed, {
                     return computed;
                 } else if (curNode.type === 'MemberExpression') {
 
-                    // 1) CheckNode(`object`, expectType: Object)
-                    // 2) expectType !== null?
-                    //    - HasKey(
+                    // FIXME: Should confirm curNode.object is NOT a CallExpression (lint)
                     let computed = CheckNode(curNode.object, OBJECT_TYPE, checkArr, false);
                     if (computed) {
-                        checkArr = [];
+                        //checkArr.splice(0);
                         console.error("FIXME: Computed node in MemberExpression");
                         return true;
                     }
@@ -327,11 +352,12 @@ traverse(parsed, {
                     // I believe the only way this could happen is if its an array:   a.b.c[XXXXXX]
                     if (curNode.property.type === 'MemberExpression') {
                         // FIXME: We may want an IS_NOT_NULL check here
+                        // FIXME: may also want IS_NOT_COMPUTED   lint check here  eg.  a[c()],  a[b ? c() : d+1]
                         computed = CheckNode(curNode.property, null, checkArr, false);
                     }
 
                     if (computed) {
-                        checkArr = [];
+                        //checkArr.splice(0);
                         console.error("FIXME: Computed node in MemberExpression");
                         return true;
                     }
@@ -344,31 +370,33 @@ traverse(parsed, {
                             args: [curNode, curNode.object, curNode.property]
                         });
 
-                        console.log(`  ${codeStr}: HAS_KEY`);
+                        //console.log(`  ${codeStr}: HAS_KEY`);
 
                         checkArr.push({
                             checker: IS_TYPE,
                             args: [curNode, OBJECT_TYPE]
                         });
-                        console.log(`  ${codeStr}: IS_TYPE: OBJECT`);
+                        //console.log(`  ${codeStr}: IS_TYPE: OBJECT`);
                     }
 
                     return false;
 
                 } else if (curNode.type === 'CallExpression') {
 
+                    // FIXME: Should confirm curNode.callee is NOT a CallExpression (lint)
                     const computed = CheckNode(curNode.callee, null, checkArr, false);
                     if (computed) {
-                        checkArr = [];
+                        //checkArr.splice(0);
                         console.error("FIXME: Computed node in CallExpression");
                         return true;
                     }
 
-                    if (expectType !== null) {
-                        checkArr = [];
-                        console.error("FIXME: CallExpression is expected to be a type!");
-                        process.exit();
-                    }
+                    //if (expectType !== null) {
+                    //    checkArr = [];
+                    //    debugger;
+                    //    console.error("FIXME: CallExpression is expected to be a type!");
+                    //    process.exit();
+                    //}
 
                     checkArr.push({
                         checker: IS_TYPE,
@@ -380,7 +408,7 @@ traverse(parsed, {
                         // We don't care whether or not this argument is computed
                     });
 
-                    console.log(`  ${codeStr}: IS_TYPE: FUNCTION`);
+                    //console.log(`  ${codeStr}: IS_TYPE: FUNCTION`);
                     
                     return true;
                 } else if (curNode.type === 'Identifier') {
@@ -391,7 +419,7 @@ traverse(parsed, {
                             checker: IS_TYPE,
                             args: [curNode, expectType]
                         });
-                        console.log(`  ${codeStr}: IS_TYPE: OBJECT`);
+                        //console.log(`  ${codeStr}: IS_TYPE: OBJECT`);
                     }
 
                     return false;
@@ -411,7 +439,9 @@ traverse(parsed, {
                     CheckNode(curNode.right, null, checkArr, false);
                 } else if (curNode.type === 'ReturnStatement') {
 
-                    CheckNode(curNode.argument, null, checkArr, false);
+                    if (curNode.argument) {
+                        CheckNode(curNode.argument, null, checkArr, false);
+                    }
                 } else {
                     console.error(`FIXME: Unhandled node type: ${curNode.type}`);
                     return true;
@@ -423,7 +453,7 @@ traverse(parsed, {
             CheckNode(node, null, checkArr, true);
             if (checkArr.length === 0) continue; // Nothing to check here
 
-            console.log(checkArr);
+            //console.log(checkArr);
 
             const checkNodeArr = [];
             const checkNodeExpr = {
@@ -434,7 +464,12 @@ traverse(parsed, {
                         type: 'Identifier',
                         name: 'CHECK'
                     },
-                    arguments: checkNodeArr
+                    arguments: [
+                        {
+                            type: 'ArrayExpression',
+                            elements: checkNodeArr
+                        }
+                    ]
                 }
             };
 
@@ -521,9 +556,9 @@ traverse(parsed, {
 
                     // Node to check
                     const clonedNode = cloneNode(checkItem.args[0]);
-                    console.log("==============================================");
-                    console.log(clonedNode);
-                    console.log("==============================================");
+                    //console.log("==============================================");
+                    //console.log(clonedNode);
+                    //console.log("==============================================");
                     checkItemNode.properties.push({
                         type: 'ObjectProperty',
                         key: {
@@ -566,23 +601,37 @@ traverse(parsed, {
 
             });
 
-            console.log(checkNodeExpr);
-            console.log(JSON.stringify(checkNodeExpr));
+            //console.log(checkNodeExpr);
+            //console.log(JSON.stringify(checkNodeExpr));
 
+            checkNodeExpr.start = node.start;
+            checkNodeExpr.end = node.end;
+            checkNodeExpr.loc = {
+                start: {
+                    line: node.loc.start.line,
+                    column: node.loc.start.column,
+                },
+                end: {
+                    line: node.loc.end.line,
+                    column: node.loc.end.column,
+                }
+            };
             body.splice(i, 0, checkNodeExpr);
             ++i;
 
-            console.log('====================');
+            //console.log('====================');
         }
     }
   }
 });
 
-const output = generate(parsed, { /* options */ }, code);
+const output = generate(parsed, {
+    retainLines: true
+}, code);
 
 //const prettifiedCode = prettier.format(output.code, { parser: 'babel' })
 
-console.log(parsed);
-console.log(output);
+//console.log(parsed);
+//console.log(output);
 console.log(output.code);
 //console.log(prettifiedCode);
