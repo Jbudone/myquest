@@ -817,6 +817,10 @@ let processResources = (package) => {
                         if (rebuildAsset) {
 
                             if (Settings.checkNeedsRebuild) {
+
+                                if (Settings.verbose) {
+                                    console.log("Needs rebuild");
+                                }
                                 process.exit(2);
                             }
 
