@@ -778,6 +778,16 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
         });
     };
 
+    // Does our fucking task runner have a file lock?
+    // If so its likely still processing
+    if (fs.existsSync('fuckingtaskrunner.lock')) {
+
+        console.log("Fucking task runner is expected to still be running");
+        console.log("fuckingtaskrunner.lock lockfile exists");
+
+        process.exit();
+    }
+
     // Check ResourceBuilder in case our resources are out of sync
     const { exec } = require('child_process');
     console.log("Checking resourceBuilder if resources are in sync");
