@@ -56,6 +56,36 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             }
         },
         {
+            typedCommand: 'crash_unexpected',
+            command: CMD_CRASH_UNEXPECTED,
+            requiresAdmin: false,
+            description: "/crash_unexpected : crashes locally in an manner that we can't catch/prepare for",
+            args: [],
+            client: () => {
+                const crashyObj = {};
+                crashyObj.nonExistingFunc();
+            }
+        },
+        {
+            typedCommand: 'admin_crash_unexpected',
+            command: CMD_ADMIN_CRASH_UNEXPECTED,
+            requiresAdmin: true,
+            description: "/admin_crash_unexpected : sends an unexpected crash to the server that we weren't prepared to catch",
+            args: [],
+            server: (evt, data, self) => {
+                const crashyObj = {};
+                crashyObj.nonExistingFunc();
+            },
+            client: {
+                succeeded: (self) => {
+                    UI.postMessage("Success in sending message! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in sending message! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
             typedCommand: 'admin_crash',
             command: CMD_ADMIN_CRASH,
             requiresAdmin: true,
@@ -301,6 +331,88 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
 
                     this.Log(`User wants to teleport: (${data.x}, ${data.y})`);
                     success = player.movable.teleport(data.x, data.y);
+                }
+
+                player.respond(evt.id, success, { });
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self) => {
+                    UI.postMessage("Success in teleporting! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in teleport! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'teleport_to',
+            command: CMD_ADMIN_TELEPORT_TO,
+            requiresAdmin: true,
+            description: "/teleport_to [id] : teleport to an entity (by id)",
+            args: [
+                {
+                    name: 'id',
+                    sanitize: (p) => parseInt(p),
+                    test: (p) => _.isFinite(p),
+                    error: "argument a valid entity id"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isFinite(data.id)
+                )
+                {
+
+                    this.Log(`User wants to teleport to entity: (${data.id})`);
+                    success = player.movable.teleportToEntity(data.id);
+                }
+
+                player.respond(evt.id, success, { });
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self) => {
+                    UI.postMessage("Success in teleporting! ", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Fail in teleport! ", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'teleport_to_user',
+            command: CMD_ADMIN_TELEPORT_TO_PLAYER,
+            requiresAdmin: true,
+            description: "/teleport_to_player [player] : teleport to a player (player name)",
+            args: [
+                {
+                    name: 'player',
+                    sanitize: (p) => p,
+                    test: (p) => _.isString(p),
+                    error: "argument a valid player name"
+                }
+            ],
+            server: (evt, data, self, player) => {
+
+                let success = false;
+                if
+                (
+                    _.isObject(data) &&
+                    _.isString(data.player)
+                )
+                {
+
+                    this.Log(`User wants to teleport to player: (${data.player})`);
+                    success = player.movable.teleportToPlayer(data.player);
                 }
 
                 player.respond(evt.id, success, { });
