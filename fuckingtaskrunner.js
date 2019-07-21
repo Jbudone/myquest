@@ -8,8 +8,11 @@ const chokidar = require('chokidar'),
 
 const Settings = {
     cacheFile: 'fuckingtaskrunner.json',
+    lockFile: 'fuckingtaskrunner.lock',
     dontWatch: false
 };
+
+let CacheSettings;
 
 //
 // -- What if processing takes a while, and we have changes while we're still processing?
@@ -34,6 +37,8 @@ const Settings = {
 // - Running out of memory on initial install on AWS -- why are we using so much memory
 // - Fix chokidir running slow, sometimes not reporting file changes
 // - BUG: Things not getting cached? Running full initial run every startup
+// - Acorn parser to build AST and better tweak accordingly (console.log, assert, etc.)
+// - Production vs. Dev for faster builds vs. slow/optimized
 //
 //
 
@@ -83,6 +88,26 @@ const File = function(path) {
     };
 };
 
+let totalLocks = 0;
+
+const LockFile = () => {
+
+    if (totalLocks === 0) {
+        console.log("Creating lockfile");
+        fs.closeSync(fs.openSync(Settings.lockFile, 'w'));
+    }
+    ++totalLocks;
+};
+
+const UnlockFile = () => {
+
+    --totalLocks;
+    if (totalLocks === 0) {
+        console.log("Removing lockfile");
+        fs.unlinkSync(Settings.lockFile);
+    }
+};
+
 const TaskState = function(taskProcess, file) {
 
     this.process = () => {
@@ -105,7 +130,10 @@ const TaskState = function(taskProcess, file) {
         }
 
         if (result instanceof Promise) {
-            result.then(() => {
+            console.log("Calling promise");
+            //result.then(() => {
+            result.finally(() => {
+                console.log("Finished promise chain");
                 this.process();
             }, (err) => {
                 console.error(`Error: ${err}`);
@@ -124,18 +152,21 @@ const Task = function(cb) {
 
     this.exec = (args) => {
         const { file, opt } = args;
-        let result = cb(file);
-        return result;
+        return cb(file);
     };
 };
 
 const echoTask = new Task((file) => {
-    if (file.in('js/scripts')) {
-        console.log("Watching script file: " + file.path);
-    } else {
-        console.log("Watching non script: " + file.path);
-    }
-    return true;
+    return new Promise((resolve, reject) => {
+        if (file.in('js/scripts')) {
+            console.log("Watching script file: " + file.path);
+        } else {
+            console.log("Watching non script: " + file.path);
+        }
+
+        resolve();
+    });
+
 });
 
 const copyTask = new Task((file) => {
@@ -158,8 +189,8 @@ const copyTask = new Task((file) => {
 // Read file
 // NOTE: This is incase the file is a binary, or something that we don't need to read anyways
 const readFileTask = new Task((file) => {
-    return new Promise(function(loaded, failed){
-        fs.readFile(file.path, function(err, data){
+    return new Promise((loaded, failed) => {
+        fs.readFile(file.path, 'utf8', function(err, data){
             if (err) {
                 failed(err);
                 return;
@@ -183,6 +214,43 @@ const buildScriptTask = new Task((file) => {
             console.log(stdout);
             resolve();
         });
+    });
+});
+
+const preprocessJSTask = new Task((file) => {
+
+    // Is file blacklisted?
+    console.log(`About to check: ${file.path}`);
+    const srcFile = file.path.substr("dist/".length);
+    if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
+        console.log(`Skipping blacklisted file ${srcFile}`);
+        return;
+    }
+
+    return new Promise((resolve, reject) => {
+
+        // Babel
+        console.log(`Preprocessing ${file.path}`);
+        exec(`node preprocessAST.js --file ${file.path}`, (err, stdout, stderr) => {
+
+            // FIXME: Do we want to write file ourselves or have prepro task output? What if we have further
+            // modifications? Is file.path the dest dir already?
+            //console.log(stdout);
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            fs.writeFile(file.path, stdout, (err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve();
+            });
+        });
+
     });
 });
 
@@ -214,6 +282,10 @@ let fileHash = (file) => {
 };
 
 const runTask = (task, file) => {
+    //return new Promise((resolve, reject) => {
+    //    resolve();
+    //    //task.exec({ file }).then(resolve);
+    //});
     return task.exec({
         file: file
     });
@@ -226,9 +298,21 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
     if (err) {
         console.error(`Error reading file cache: ${err}`);
         console.error("Starting cache from scratch..");
-        cacheData = { "files": {} };
+        cacheData = { "files": {}, "settings": {
+            preprocess: {
+                blacklist: []
+            }
+        } };
     } else {
         cacheData = JSON.parse(bufferData);
+
+        // FIXME: Assert that expected settings are there
+        if(!cacheData.settings.preprocess.blacklist) {
+            console.error("ERROR: Missing expected preprocess blacklist");
+            process.exit();
+        }
+
+        CacheSettings = cacheData.settings;
     }
 
     const Cache = {
@@ -340,6 +424,8 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     console.log("");
                     console.log("");
                     console.log(chalk.underline("Watching for changes"));
+
+                    UnlockFile();
                 }
                 console.log("");
             });
@@ -348,6 +434,8 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         const stareAwkwardlyAt = (path) => {
 
             let cb = (eventType, path) => {
+
+                LockFile();
 
                 const queued = {
                         path: path,
@@ -631,15 +719,101 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
     ++waitingOnFileListCount;
     watch('js/**/*.js', true)
         .then(copyTask)
+        //.then((new Task((file) => {
         .then((file) => {
 
+            // TODO: Uglify, Babel, Preprocessor (clear logs)
+
             if (file.in('dist/js/scripts')) {
-                return runTask(buildScriptTask, file);
+                return runTask(preprocessJSTask, file)
+                        .then(() => runTask(buildScriptTask, file));
             }
 
-            return true;
+            return runTask(preprocessJSTask, file);
+
+
+
+            //return new Promise((success, fail) => {
+            //    //runTask(echoTask, file)
+            //    echoTask.exec({ file })
+            //        .then(readFileTask)
+            //        .then(echoTask)
+            //        .then(preprocessJSTask)
+            //        .then(success);
+            //});
+
+            // runTask(task)  returns task.exec ==> cb(file)
+            // Task(cb).exec  returns cb(file) ... promise?
+            //
+            // runTask(taskA).then(taskB)  ==> Promise.then(taskB)
+            //
+            // watch(..) ==> returns taskProcess
+            // taskProcess.then(task) ==> pushes task to processList
+            //      process: if processList[i] is a Task then exec, otherwise call it
+            //      if result is a Promise then promisify, otherwise continue on pass
+            //
+            // watch().then(taskA).then(taskB)  ==> processList: [taskA, taskB] ==> 
+            //return runTask(readFileTask, file)
+            //    .then(preprocessJSTask);
+
+            //return true;
         });
+        //})));
     GotAnotherFileList();
+
+
+//    ++waitingOnFileListCount;
+//    watch([
+//        'dist/resources/maps/**/*',
+//        'dist/reources/sprites/**/*',
+//        'dist/resources/data/**/*.json',
+//
+//        'resources/maps/**/*',
+//        'resources/data/**/*.json',
+//    ], true)
+//        .then((file) => {
+//
+//            return new Promise((resolve, reject) => {
+//                fs.stat(file.path, (err, stats) => {
+//
+//                    if (err) {
+//                        reject(err);
+//                        return;
+//                    }
+//
+//                    const mode = stats.mode;
+//                    const MODE_EXEC      = 1,
+//                          MODE_WRITE     = 2,
+//                          MODE_READ      = 4,
+//                          MODE_FOR_ALL   = 1,
+//                          MODE_FOR_GROUP = 10,
+//                          MODE_FOR_OWNER = 100;
+//
+//                    const MODE_READWRITE_ALL = (MODE_WRITE | MODE_READ) * MODE_FOR_ALL;
+//
+//                    // If we don't have read/write for all, then chmod that
+//                    if ((mode & MODE_READWRITE_ALL) !== MODE_READWRITE_ALL) {
+//
+//                        //console.log(`stat ${file.path}: ${stats}`);
+//                        //console.log(stats);
+//                        console.log(`chmod ${file.path}`);
+//                        fs.chmodSync(file.path, 0o777);
+//                    }
+//
+//                    resolve();
+//                });
+//            });
+//
+//            // Want to update perms
+//            //const perms = fs.statSync(file.path);
+//            //console.log(`stat ${file.path}: ${perms}`);
+//
+//            //let result = fs.chmodSync(file.path, 0o777);
+//
+//            return true;
+//        });
+//    GotAnotherFileList();
+
 
 
     const allWatchedFilesList = [];

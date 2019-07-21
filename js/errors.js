@@ -82,6 +82,41 @@ define(['lib/stacktrace'], function(Stack){
     allErrors['Err'] = Err;
 
 
+
+
+
+
+    // FIXME: Clean this up, yuck
+    const _global = typeof GLOBAL === "undefined" ? window : GLOBAL;
+    _global.OBJECT = 'OBJECT';
+    _global.FUNCTION = 'FUNCTION';
+    _global.HAS_KEY = 'HAS_KEY';
+    _global.IS_TYPE = 'IS_TYPE';
+
+    var CHECK = (stuffToCheck) => {
+
+        console.log(stuffToCheck);
+        stuffToCheck.forEach((check) => {
+
+            if (check.checker === IS_TYPE) {
+
+                if (check.typeCmp === OBJECT) {
+                    if (typeof check.node !== "object") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
+                } else if (check.typeCmp === FUNCTION) {
+                    if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
+                } else { 
+                    DEBUGGER("Unexpected type comparison", check);
+                }
+            } else if (check.checker === HAS_KEY) {
+                if (!check.object.hasOwnProperty(check.property)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
+            } else {
+                DEBUGGER("Unexpected check", check);
+            }
+        });
+    };
+
+    _global.CHECK = CHECK;
+
   /*
 	// An extendable error class
 	// arg1 is supposed to be a hint (o/w use it for args)

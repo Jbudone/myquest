@@ -102,6 +102,7 @@ define(function(){
 	addKey('EVT_END_OF_FRAME');
 
 	addKey('EVT_DAMAGED');
+	addKey('EVT_ATTACKED');
 	addKey('EVT_REROUTING');
 	addKey('EVT_DIED');
 	addKey('EVT_NEW_TARGET');
@@ -156,11 +157,15 @@ define(function(){
     addKey('CMD_ADMIN_SUICIDE');
     addKey('CMD_ADMIN_GIVE_BUFF');
     addKey('CMD_ADMIN_CRASH');
+    addKey('CMD_ADMIN_CRASH_UNEXPECTED');
     addKey('CMD_ADMIN_HEAL');
     addKey('CMD_ADMIN_RAND_HEALTH');
     addKey('CMD_ADMIN_DAMAGE_ENTITY');
     addKey('CMD_ADMIN_TELEPORT');
+    addKey('CMD_ADMIN_TELEPORT_TO');
+    addKey('CMD_ADMIN_TELEPORT_TO_PLAYER');
     addKey('CMD_CRASH');
+    addKey('CMD_CRASH_UNEXPECTED');
     addKey('CMD_ADMIN_CHARACTER_TEMPLATE');
     addKey('CMD_ADMIN_CLEAR_BUFFS');
     addKey('CMD_ADMIN_GIVE_ITEM');
@@ -185,8 +190,13 @@ define(function(){
 	addKey('BOT_CONNECT'); // Bot commands
 	addKey('BOT_SIGNUP');
 	addKey('BOT_MOVE');
+	addKey('BOT_EXPLORE');
+	addKey('BOT_ATTACK');
+	addKey('BOT_FOLLOW');
     addKey('BOT_INQUIRE');
+    addKey('BOT_WATCH_FOR');
     addKey('BOT_SET_DEBUGURL');
+    addKey('BOT_WATCH_FOR_ENEMIES');
 
     addKey('INQUIRE_MAP'); // Bot inquiries
     addKey('INQUIRE_NAME');
