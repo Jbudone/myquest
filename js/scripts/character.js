@@ -316,6 +316,13 @@ define(
                 }
             };
 
+            // FIXME: Should rename this to loadNPC and initially load all stats/etc. here
+            // Will also need to rename to something other than NPC, since it applies to all characters
+            this.reloadNPC = () => {
+                this.loadStats();
+                //this.brain.reloadNPC();
+            };
+
             this.serializeStats = () => {
 
                 const stats = {};
@@ -1171,7 +1178,6 @@ define(
                         const component      = this.charComponents[i],
                             componentName    = entity.npc.components[i],
                             restoreComponent = _character.components[componentName];
-
 
                         if (restoreComponent) {
                             component.netInitialize(restoreComponent);
