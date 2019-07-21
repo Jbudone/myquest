@@ -53,12 +53,27 @@ define(
                     maxSheetGid    = this.area.properties.tilesets.reduce((maxGid, sheet) => Math.max(sheet.gid.last, maxGid), 0),
                     tileGidOffsets = new Array(maxSheetGid);
 
+                // While adding sheets we may discard some sheets. This is fine in most cases, however we may have added
+                // a sprite from that sheet and then not be able to find the sheet. Temporarily keep a list of discarded
+                // sheets so that we can throw warning
+                let badSheets = [];
+
 
                 this.sheets = [];
                 this.area.properties.tilesets.forEach((tileset) => {
                     assert(tileset.image, `No image found for tileset. Did you forget to embed the tileset into the map?`);
                     const sheet = Resources.findSheetFromFile(tileset.image);
-                    if (!_.isObject(sheet)) return;
+                    if (!_.isObject(sheet)) {
+                        badSheets.push({
+                            image: tileset.image,
+                            exportedGid: {
+                                first: tileset.gid.first,
+                                last: tileset.gid.last
+                            }
+                        });
+                        return;
+                    }
+
                     sheet.exportedGid = {
                         first: tileset.gid.first,
                         last: tileset.gid.last
@@ -179,7 +194,16 @@ define(
                             );
 
                             if (sheet === undefined) {
-                                throw Err(`Unexpected sprite (${sprite}) doesn't match any spritesheet gid range`);
+
+                                const badSheet = badSheets.find((s) =>
+                                    inRange(sprite, s.exportedGid.first, s.exportedGid.last)
+                                );
+
+                                if (badSheet === undefined) {
+                                    throw Err(`Unexpected sprite (${sprite}) doesn't match any spritesheet gid range`);
+                                } else {
+                                    throw Err(`Sprite (${sprite}) referenced from bad sheet (${badSheet.image}). Did you add all sheets to resources?`);
+                                }
                             }
 
                             // Convert the sprite from the exported gid to the resource's sheet's gid
@@ -387,6 +411,10 @@ define(
                 if (Env.game.usePathPlanner) {
                     this.pathfinding.setupGrid();
                 }
+
+
+                // We're finished intiializion with sheets
+                badSheets = null;
             },
 
             initialSpawn() {

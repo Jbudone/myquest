@@ -306,14 +306,14 @@ var exportAreas = function(){
 									name: tileset.name,
 									gid: {
 										first: tileset.firstgid - 1,
-										last: (tileset.imageheight / tileset.tileheight) *
-											  (tileset.imagewidth /  tileset.tilewidth) +
+										last: Math.ceil(tileset.imageheight / tileset.tileheight) *
+											  Math.ceil(tileset.imagewidth /  tileset.tilewidth) +
 											  tileset.firstgid - 2 // NOTE: 2 because firstgid had -1
 									},
 									tileWidth: tileset.tilewidth,
 									tileHeight: tileset.tileHeight,
-									rows: (tileset.imageheight / tileset.tileheight),
-									columns: (tileset.imagewidth / tileset.tilewidth),
+									rows: Math.ceil(tileset.imageheight / tileset.tileheight),
+									columns: Math.ceil(tileset.imagewidth / tileset.tilewidth),
 									height: tileset.imageheight,
 									width: tileset.imagewidth
 								});
