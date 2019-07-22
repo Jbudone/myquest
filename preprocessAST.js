@@ -18,6 +18,8 @@ const prettier = require('prettier');
 //  * FIXME: VariableDeclarations  const a = b.c.d.e;
 //  * Cleanup this file
 //  - Lint for less safe code / unable to check code
+//  * FIXME: We currently write CHECK([ a, a.b, a.b.c ])   but if a is undefined then we'll fail before we even go
+//  inside CHECK call.. Would need to spread this across multiple calls: CHECK(a); CHECK(a.b); CHECK(a.b.c);
 //
 //
 //  - How would we prevent checks if we've already done a manual check?
@@ -51,11 +53,19 @@ const prettier = require('prettier');
 
 //let code = "const a = function() {\nconst b = 1; const c = 3; c.call(); assert(Log(b) && 1 && true && b.yup()); a.b.c.thing(); b(); a[b.c].d; return b.that(); }; assert(Log(a) && console.log(b)); Log(a()); console.log(a()); a[b.c].d; var x = { b:1, c:[1,2] };";
 //let code = "{ CALL({ check: 1, args: [{ node: a.b.c }] }); }";
-let code = "{ a[b.c.d].e.f(); }";
+//let code = "{ a[b.c.d].e.f(); }";
 //let code = "{ a[b.c] = 2; }";
 //let code = "{ a.b(3); }";
 //let code = " { a.b().c(); }";
+//let code = "{ a.b.c; }";
+//let code = "{ a.b[c].d; }";
+//let code = "{ a.b[0].d; }";
+let code = "{ a.b['s'].d; }";
 
+
+const Settings = {
+    output: null
+};
 
 // Process Server arguments
 for (let i=0; i<process.argv.length; ++i) {
@@ -65,6 +75,10 @@ for (let i=0; i<process.argv.length; ++i) {
     if (arg === "--file") {
         const file = process.argv[++i];
         code = fs.readFileSync(file, 'utf8');
+    }
+
+    if (arg == "--output") {
+        Settings.output = process.argv[++i];
     }
 }
 
@@ -365,9 +379,15 @@ traverse(parsed, {
 
                     if (expectType !== null) {
 
+                        // We'll need to handle checks on member expressions in 2 different ways:
+                        // FIXME: Better to have a check for is prop is an identifier or literal, or maybe
+                        // curNode.computed works?
+                        //   a.b   ===>  a.hasOwnProperty('b')
+                        //   a[b]  ===>  a.hasOwnProperty(b)    // computed
+                        const propComputed = curNode.computed;// curNode.property.type === 'MemberExpression';
                         checkArr.push({
                             checker: HAS_KEY,
-                            args: [curNode, curNode.object, curNode.property]
+                            args: [curNode, curNode.object, curNode.property, propComputed]
                         });
 
                         //console.log(`  ${codeStr}: HAS_KEY`);
@@ -489,9 +509,10 @@ traverse(parsed, {
                     clonedNode.object = cloneNode(node.object);
                     clonedNode.property = cloneNode(node.property);
 
-                    if (clonedNode.property.type === 'MemberExpression') {
-                        clonedNode.computed = true;
-                    }
+                    clonedNode.computed = node.computed;
+                    //if (clonedNode.property.type === 'MemberExpression') {
+                    //    clonedNode.computed = true;
+                    //}
                 } else if (node.type === 'CallExpression') {
 
                     clonedNode.type = node.type;
@@ -502,8 +523,19 @@ traverse(parsed, {
                         const clonedArg = cloneNode(arg);
                         clonedNode.arguments.push(clonedArg);
                     });
+                } else if (node.type === 'NumericLiteral') {
+
+                    clonedNode.type = node.type;
+                    clonedNode.value = node.value;
+                } else if (node.type === 'StringLiteral') {
+
+                    clonedNode.type = node.type;
+                    clonedNode.value = node.value;
                 } else {
                     console.error(`FIXME: Unexpected cloning type ${node.type}`);
+                    for (let key in node) {
+                        console.error(`  node.${key}`);
+                    }
                     return null;
                 }
 
@@ -571,6 +603,29 @@ traverse(parsed, {
 
                 } else if (checkItem.checker === HAS_KEY) {
 
+
+                    let value;
+                    if (checkItem.args[2].type === 'Identifier') {
+                        value = checkItem.args[2].name;
+                    } else if (checkItem.args[2].type === 'Literal') {
+                        value = checkItem.args[2].value;
+                    } else {
+                        // FIXME: Property may not be a literal/identifier, eg.  a[b.c.d]
+                        console.error("FIXME: Unhandled property type for HAS_KEY check");
+                        return;
+                    }
+
+                    const propNode = {};
+
+                    // Computed node?
+                    if (checkItem.args[3]) {
+                        propNode.type = 'Identifier';
+                        propNode.name = value;
+                    } else {
+                        propNode.type = 'StringLiteral';
+                        propNode.value = value;
+                    }
+
                     // Object
                     const clonedObjNode = cloneNode(checkItem.args[1]);
                     checkItemNode.properties.push({
@@ -584,14 +639,13 @@ traverse(parsed, {
                     });
 
                     // Property
-                    const clonedObjProp = cloneNode(checkItem.args[2]);
                     checkItemNode.properties.push({
                         type: 'ObjectProperty',
                         key: {
                             type: 'Identifier',
                             name: 'property'
                         },
-                        value: clonedObjProp,
+                        value: propNode,
                         kind: 'init'
                     });
 
@@ -631,7 +685,11 @@ const output = generate(parsed, {
 
 //const prettifiedCode = prettier.format(output.code, { parser: 'babel' })
 
-//console.log(parsed);
+console.log(parsed);
 //console.log(output);
 console.log(output.code);
 //console.log(prettifiedCode);
+
+if (Settings.output) {
+    fs.writeFileSync(Settings.output, output.code);
+}
