@@ -13,6 +13,9 @@ const prettier = require('prettier');
 //  - Startup: Check js for all files + modified date, compare against counterpart in dist + modified date, do we need
 //  to wait on rebuild?
 //  - Source maps to hide CHECK statement
+//  * FIXME: CheckNode(... topNode === true) probably needs blockChildNode(node, 'prop') so that we create a body and
+//  run checks inside of the body; confirm this is set for ALL topNodes, or inside CheckNode if topNode then assert its
+//  a block
 //  * FIXME: VariableDeclarations   modifyNode.hoistNodes   to push to top
 //  * FIXME: ConditionalExpression
 //  * FIXME: ThisExpression
@@ -78,9 +81,10 @@ const prettier = require('prettier');
 //let code = "{ const a = x(j.k.y / z.w, 10),\
 //                    b = x(j.k.x / z.w, 10),\
 //                    c = this.y(z, y); }";
-let code = "{ this.charComponent = function(name) {\
-                return this.charComponents.find((c) => c.name === name);\
-            }; }";
+//let code = "{ this.charComponent = function(name) {\
+//                return this.charComponents.find((c) => c.name === name);\
+//            }; }";
+let code = "{ f((c) => c.name === name); }";
 
 
 const Settings = {
@@ -984,7 +988,8 @@ traverse(parsed, {
 
         } else if (curNode.type === 'ArrowFunctionExpression') {
 
-            CheckNode(curNode.body, null, modifyNode, true, scopeNode);
+            let arrowBody = blockChildNode(curNode, 'body');
+            CheckNode(arrowBody, null, modifyNode, true, scopeNode);
 
         } else if (curNode.type === 'ThrowStatement') {
 
