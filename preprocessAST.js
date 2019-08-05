@@ -12,16 +12,12 @@ const prettier = require('prettier');
 //  - Test in the wild -- prepro all
 //  - Startup: Check js for all files + modified date, compare against counterpart in dist + modified date, do we need
 //  to wait on rebuild?
-//  - Source maps to hide CHECK statement
 //  * FIXME: CheckNode(... topNode === true) probably needs blockChildNode(node, 'prop') so that we create a body and
 //  run checks inside of the body; confirm this is set for ALL topNodes, or inside CheckNode if topNode then assert its
 //  a block
-//  * FIXME: VariableDeclarations   modifyNode.hoistNodes   to push to top
 //  * FIXME: ConditionalExpression
 //  * FIXME: ThisExpression
-//  * FIXME: We currently write CHECK([ a, a.b, a.b.c ])   but if a is undefined then we'll fail before we even go
-//  inside CHECK call.. Would need to spread this across multiple calls: CHECK(a); CHECK(a.b); CHECK(a.b.c); Can do as
-//  block statement { CHECK(a); CHECK(a.b); CHECK(a.b.c) } a.b.c()
+//  - Could place preChecks in BlockStatement: { CHECK(a); CHECK(a.b); CHECK(a.b.c); } a.b.c();
 //  - Cleanup this file
 //  - Lint for less safe code / unable to check code
 //
@@ -74,7 +70,7 @@ const prettier = require('prettier');
 //let code = "{ a.b[c].d; }";
 //let code = "{ a.b[0].d; }";
 //let code = "{ a.b['s'].d; }";
-//let code = "{ var f = () => { if(a.b.c.d) { { var a = c.d; } return b.x(); } else return 2; }; }";
+let code = "{ var f = () => { if(a.b.c.d) { { var a = c.d; } return b.x(); } else return 2; }; }";
 //let code = "{ for(var a in b.c.d) { x(); a(); } }";
 //let code = "{ var f = () => { const obj = { x: 1}, a = obj, b = a.x, c = obj.x(1, 2); } }";
 //let code = "{ const obj = { x: 1}, a = obj, b = a.x, c = obj.x(1, 2); }";
@@ -84,12 +80,20 @@ const prettier = require('prettier');
 //let code = "{ this.charComponent = function(name) {\
 //                return this.charComponents.find((c) => c.name === name);\
 //            }; }";
-let code = "{ f((c) => c.name === name); }";
+//let code = "{ f((c) => c.name === name); }";
 
 
 const Settings = {
     output: null
 };
+
+const ModifyNode = function() {
+    this.preCheck = [];
+    this.replaceNode = [];
+    this.hoistNodes = [];
+};
+
+let sourceFile = 'a.js';
 
 // Process Server arguments
 for (let i=0; i<process.argv.length; ++i) {
@@ -97,8 +101,8 @@ for (let i=0; i<process.argv.length; ++i) {
     const arg = process.argv[i];
 
     if (arg === "--file") {
-        const file = process.argv[++i];
-        code = fs.readFileSync(file, 'utf8');
+        sourceFile = process.argv[++i];
+        code = fs.readFileSync(sourceFile, 'utf8');
     }
 
     if (arg == "--output") {
@@ -108,7 +112,7 @@ for (let i=0; i<process.argv.length; ++i) {
 
 
 
-var parsed = Parser.parse(code);
+var parsed = Parser.parse(code, { sourceFilename: sourceFile });
 
 const OBJECT_TYPE = "OBJECT",
     FUNCTION_TYPE = "FUNCTION";
@@ -280,18 +284,43 @@ traverse(parsed, {
                     type: 'BlockStatement',
                     directives: [],
                     body: [node[prop]],
-                    skip: true
+                    loc: {
+                        filename: sourceFile,
+                        start: {
+                            line: node.loc.start.line,
+                            column: node.loc.start.column
+                        },
+                        end: {
+                            line: node.loc.end.line,
+                            column: node.loc.end.column
+                        }
+                    }
                 };
 
                 node[prop] = blockNode;
                 return blockNode;
             }
 
-            node[prop].skip = true;
             return node[prop];
         };
 
-        const buildNodeFromCheck = (checkItem) => {
+        const buildNodeFromCheck = (checkItem, loc) => {
+
+            const setNodeLoc = (node) => {
+                //node.start = 0;
+                //node.end = 0;
+                node.loc = {
+                    filename: loc.filename,
+                    start: {
+                        line: loc.start.line,
+                        column: loc.start.column
+                    },
+                    end: {
+                        line: loc.end.line,
+                        column: loc.end.column
+                    }
+                }
+            };
 
                     const checkNodeArr = [];
                     const checkNodeExpr = {
@@ -310,6 +339,8 @@ traverse(parsed, {
                             ]
                         }
                     };
+
+                    setNodeLoc(checkNodeExpr);
 
                         const checkItemNode = {
                             type: 'ObjectExpression',
@@ -333,10 +364,12 @@ traverse(parsed, {
                             ]
                         };
 
+                    setNodeLoc(checkItemNode);
+
                         if (checkItem.checker === IS_TYPE) {
 
                             // Type Comparison
-                            checkItemNode.properties.push({
+                            const typeCmpNode = {
                                 type: 'ObjectProperty',
                                 key: {
                                     type: 'Identifier',
@@ -348,14 +381,17 @@ traverse(parsed, {
                                     name: checkItem.args[1]
                                 },
                                 kind: 'init'
-                            });
+                            };
+
+                            setNodeLoc(typeCmpNode);
+                            checkItemNode.properties.push(typeCmpNode);
 
                             // Node to check
                             const clonedNode = cloneNode(checkItem.args[0]);
                             //console.log("==============================================");
                             //console.log(clonedNode);
                             //console.log("==============================================");
-                            checkItemNode.properties.push({
+                            const objNode = {
                                 type: 'ObjectProperty',
                                 key: {
                                     type: 'Identifier',
@@ -363,7 +399,10 @@ traverse(parsed, {
                                 },
                                 value: clonedNode,
                                 kind: 'init'
-                            });
+                            };
+
+                            setNodeLoc(objNode);
+                            checkItemNode.properties.push(objNode);
 
                         } else if (checkItem.checker === HAS_KEY) {
 
@@ -398,7 +437,7 @@ traverse(parsed, {
 
                             // Object
                             const clonedObjNode = cloneNode(checkItem.args[1]);
-                            checkItemNode.properties.push({
+                            const objInitNode = {
                                 type: 'ObjectProperty',
                                 key: {
                                     type: 'Identifier',
@@ -406,10 +445,12 @@ traverse(parsed, {
                                 },
                                 value: clonedObjNode,
                                 kind: 'init'
-                            });
+                            };
+                            setNodeLoc(objInitNode);
+                            checkItemNode.properties.push(objInitNode);
 
                             // Property
-                            checkItemNode.properties.push({
+                            const objPropNode = {
                                 type: 'ObjectProperty',
                                 key: {
                                     type: 'Identifier',
@@ -417,7 +458,9 @@ traverse(parsed, {
                                 },
                                 value: propNode,
                                 kind: 'init'
-                            });
+                            };
+                            setNodeLoc(objPropNode);
+                            checkItemNode.properties.push(objPropNode);
 
                         }
 
@@ -568,7 +611,7 @@ traverse(parsed, {
         if (curNode.type === 'Program') {
 
             for (let i = 0; i < curNode.body.length; ++i) {
-                const modifyNode = { preCheck: [], replaceNode: [] };
+                const modifyNode = new ModifyNode();
                 CheckNode(curNode.body[i], null, modifyNode, true, null);
             }
 
@@ -715,7 +758,12 @@ traverse(parsed, {
         } else if (curNode.type === 'ObjectExpression') {
 
             curNode.properties.forEach((objProp) => {
-                CheckNode(objProp.value, null, modifyNode, false, scopeNode);
+
+                if (objProp.type === 'ObjectProperty') {
+                    CheckNode(objProp.value, null, modifyNode, false, scopeNode);
+                } else if (objProp.type === 'ObjectMethod') {
+                    CheckNode(objProp.body, null, modifyNode, true, scopeNode);
+                }
             });
         } else if (curNode.type === 'ArrayExpression') {
 
@@ -741,27 +789,9 @@ traverse(parsed, {
 
                 // Begin checking this expression
                 const node = body[i];
-                const modifyNode = { preCheck: [], replaceNode: [] };
+                const modifyNode = new ModifyNode();
                 let prevLen = body.length;
                 CheckNode(node, null, modifyNode, true, curNode);
-
-                // We may have added some nodes in the body, in which case we need to jump forwards
-                // NOTE: we can't add in a new node in place of this node since the recursive call doesn't know what
-                // index we're at. Instead it will manipulate node, which means that we can look for the new index in
-                // body
-                // NOTE: It wouldn't make sense to remove any nodes before this one, but it would make sense to add some
-                // new ones (eg. hoisting). Because of this we can jump forwards by the length difference and then
-                // continue forwards looking for the node index
-                // FIXME: Get rid of this when we implement variable hoisting in modifyNode
-                if (body.length !== prevLen) {
-                    for (let newI = i + (body.length - prevLen); newI < body.length; ++newI) {
-                        if (body[newI] === node) {
-                            i = newI;
-                            break;
-                        }
-                    }
-                }
-
 
 
                 if (modifyNode.preCheck.length > 0) {
@@ -771,7 +801,7 @@ traverse(parsed, {
                     modifyNode.preCheck.forEach((checkItem) => {
                         // { checker: IS_TYPE, args: [NODE, TYPE] }
                         // { checker: HAS_KEY, args: [NODE, NODE.OBJECT, NODE.PROPERTY]
-                        const checkNode = buildNodeFromCheck(checkItem);
+                        const checkNode = buildNodeFromCheck(checkItem, node.loc);
                         body.splice(i, 0, checkNode);
                         ++i;
                     });
@@ -802,7 +832,7 @@ traverse(parsed, {
                     for (let j = 0; j < modifyNode.replaceNode.length; ++j) {
                         // TODO: This is a poor way to see if this is a check or an actual node
                         if (modifyNode.replaceNode[j].checker) {
-                            modifyNode.replaceNode[j] = buildNodeFromCheck(modifyNode.replaceNode[j]);
+                            modifyNode.replaceNode[j] = buildNodeFromCheck(modifyNode.replaceNode[j], node.loc);
                         }
                     }
 
@@ -810,6 +840,13 @@ traverse(parsed, {
                     i += modifyNode.replaceNode.length - 1;
                 }
 
+                if (modifyNode.hoistNodes.length > 0) {
+
+                    for (let j = 0; j < modifyNode.hoistNodes.length; ++j) {
+                        body.splice(0, 0, ...modifyNode.hoistNodes);
+                        i += modifyNode.hoistNodes.length;
+                    }
+                }
 
                 //console.log('====================');
             };
@@ -849,12 +886,7 @@ traverse(parsed, {
 
                 for (let i = 0; i < curNode.declarations.length; ++i) {
                     const declarator = curNode.declarations[i];
-
-
-                    const declaratorModifyNode = {
-                        preCheck: [],
-                        replaceNode: []
-                    };
+                    const declaratorModifyNode = new ModifyNode();
 
                     if (declarator.init) {
                         CheckNode(declarator.init, null, declaratorModifyNode, false, scopeNode);
@@ -899,22 +931,14 @@ traverse(parsed, {
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var
             // mdn says vars are auto hoisted to the top before execution. We could auto-hoist declarators in a block,
             // replace VariableDeclarator with a CHECK + Assignment
-            //  1) Pass scope node in CheckNode function
-            //  2) Add VariableDeclarator to top of block node
-            //  3) Replace VariableDeclarations with assignments
-            //  4) CheckNode on assignments
+
             const hoistedVariableDeclaration = {
                 type: 'VariableDeclaration',
                 kind: curNode.kind,
                 declarations: []
             };
 
-            scopeNode.body.unshift(hoistedVariableDeclaration);
-
-            curNode.type = 'BlockStatement';
-            curNode.directives = [];
-            curNode.body = [];
-            curNode.skip = true;
+            modifyNode.hoistNodes.push(hoistedVariableDeclaration);
 
             // FIXME: modifyNode.hoistNodes, and modifyNode.replaceNode = 0
             curNode.declarations.forEach((declarator) => {
@@ -939,17 +963,19 @@ traverse(parsed, {
                     end: curNode.end,
                 };
 
-                curNode.body.push(assignmentNode);
+                const innerModifyNode = new ModifyNode();
+                CheckNode(assignmentNode, null, innerModifyNode, true, null);
 
-                //console.log(declarator.id);
-                //console.log(declarator.init);
+                innerModifyNode.preCheck.forEach((preCheck) => {
+                    modifyNode.preCheck.push(preCheck);
+                });
+
+                innerModifyNode.replaceNode.forEach((replaceNode) => {
+                    modifyNode.replaceNode.push(replaceNode);
+                });
+
+                modifyNode.replaceNode.push(assignmentNode);
             });
-
-            delete curNode.declarations;
-
-            // Check the revised block
-            const innerModifyNode = { preCheck: [], replaceNode: [] };
-            CheckNode(curNode, null, innerModifyNode, true, null);
 
         } else if (curNode.type === 'ForInStatement') {
 
@@ -1006,11 +1032,17 @@ traverse(parsed, {
             CheckNode(curNode.left, null, modifyNode, false, scopeNode); // FIXME: Is a variable
             CheckNode(curNode.right, null, modifyNode, false, scopeNode);
 
+        } else if (curNode.type === 'NewExpression') {
+
+            curNode.arguments.forEach((callArg) => {
+                let argComputed = CheckNode(callArg, null, modifyNode, false, scopeNode);
+                // We don't care whether or not this argument is computed
+            });
+
         // ================================================
         // Whitelisted Expressions
         } else if (curNode.type === 'DebuggerStatement') {
         } else if (curNode.type === 'SpreadElement') {
-        } else if (curNode.type === 'NewExpression') {
         } else if (curNode.type === 'LogicalExpression') {
         } else if (curNode.type === 'BreakStatement') {
         } else if (curNode.type === 'ContinueStatement') {
@@ -1044,16 +1076,33 @@ traverse(parsed, {
 */
 
 const output = generate(parsed, {
-    retainLines: true
-}, code);
+    retainLines: true,
+    //comments: false,
+    //concise: true,
+    //compact: true,
+    sourceMaps: true
+}, { sourceFile: code });
 
-const prettifiedCode = prettier.format(output.code, { parser: 'babel' })
+//let prettifiedCode = prettier.format(output.code, { parser: 'babel' })
 
-console.log(parsed);
-//console.log(output);
-console.log(output.code);
-console.log(prettifiedCode);
+//console.log(parsed);
+////console.log(output);
+//console.log(output.code);
+//console.log(prettifiedCode);
+
 
 if (Settings.output) {
+    let mapFile = Settings.output + '.map';
+    const sourceMap = output.map;
+
+    for(let i = 0; i < sourceMap.sources.length; ++i) {
+        const srcPath = sourceMap.sources[i];
+        const relPath = srcPath.substr(srcPath.lastIndexOf('/') + 1);
+        sourceMap.sources[i] = relPath;
+    }
+
+    let mapRelFile = Settings.output.substr(Settings.output.lastIndexOf('/') + 1) + '.map';
+    output.code += `\n//# sourceMappingURL=${mapRelFile}`;
     fs.writeFileSync(Settings.output, output.code);
+    fs.writeFileSync(mapFile, JSON.stringify(sourceMap));
 }
