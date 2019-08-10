@@ -1014,6 +1014,34 @@ traverse(parsed, {
 
         } else if (curNode.type === 'ArrowFunctionExpression') {
 
+            const isBlockStatement = curNode.body.type === 'BlockStatement';
+
+            // If body wasn't a block statement then it may have the return shortcut too
+            //   var x = () => 1;
+            if (!isBlockStatement) {
+
+                if (curNode.body.type !== 'ReturnStatement') {
+                    const returnStatement = {
+                        type: 'ReturnStatement',
+                        argument: curNode.body,
+
+                        loc: {
+                            filename: sourceFile,
+                            start: {
+                                line: curNode.body.loc.start.line,
+                                column: curNode.body.loc.start.column
+                            },
+                            end: {
+                                line: curNode.body.loc.end.line,
+                                column: curNode.body.loc.end.column
+                            }
+                        }
+                    };
+
+                    curNode.body = returnStatement;
+                }
+            }
+
             let arrowBody = blockChildNode(curNode, 'body');
             CheckNode(arrowBody, null, modifyNode, true, scopeNode);
 
@@ -1039,11 +1067,24 @@ traverse(parsed, {
                 // We don't care whether or not this argument is computed
             });
 
+        } else if (curNode.type === 'LogicalExpression') {
+
+            // FIXME:
+            //  What if we have 2 cases where the 2nd case is assumed to not be tested (eg. obj doesn't exist unless the
+            //  first case fails)
+            //      caseAObj.a.b.c || caseBObj.a.b.c 
+            CheckNode(curNode.left, null, modifyNode, false, scopeNode);
+            CheckNode(curNode.right, null, modifyNode, false, scopeNode);
+
+        } else if (curNode.type === 'BinaryExpression') {
+
+            CheckNode(curNode.left, null, modifyNode, false, scopeNode);
+            CheckNode(curNode.right, null, modifyNode, false, scopeNode);
+
         // ================================================
         // Whitelisted Expressions
         } else if (curNode.type === 'DebuggerStatement') {
         } else if (curNode.type === 'SpreadElement') {
-        } else if (curNode.type === 'LogicalExpression') {
         } else if (curNode.type === 'BreakStatement') {
         } else if (curNode.type === 'ContinueStatement') {
         // ================================================
