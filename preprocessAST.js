@@ -9,12 +9,21 @@ const prettier = require('prettier');
 
 // TODO:
 //  - Write CHECK statement -- cleanup
+//  - SCRIPT_INJECT in here as opposed to bash?
+//      - Have to check leadingComments on all nodes for this
 //  - Test in the wild -- prepro all
 //  - Startup: Check js for all files + modified date, compare against counterpart in dist + modified date, do we need
 //  to wait on rebuild?
 //  * FIXME: CheckNode(... topNode === true) probably needs blockChildNode(node, 'prop') so that we create a body and
 //  run checks inside of the body; confirm this is set for ALL topNodes, or inside CheckNode if topNode then assert its
 //  a block
+//  * FIXME: LocalExpression, BinaryExpression
+//      These are allowed to fail since we may have previous checks:
+//          _.isObject(notAnObj) && notAnObj.a.b.c.d()
+//
+//      We could make our checks like: { CHECK(a) && CHECK(a.b) && CHECK(a.b.c) }
+//      With binary/logical expressions we could include them as so:
+//          { (CHECK(a) && { CHECK(a.b) || CHECK(a.c) }) || (CHECK(b) }
 //  * FIXME: ConditionalExpression
 //  * FIXME: ThisExpression
 //  - Could place preChecks in BlockStatement: { CHECK(a); CHECK(a.b); CHECK(a.b.c); } a.b.c();
@@ -70,7 +79,7 @@ const prettier = require('prettier');
 //let code = "{ a.b[c].d; }";
 //let code = "{ a.b[0].d; }";
 //let code = "{ a.b['s'].d; }";
-let code = "{ var f = () => { if(a.b.c.d) { { var a = c.d; } return b.x(); } else return 2; }; }";
+//let code = "{ var f = () => { if(a.b.c.d) { { var a = c.d; } return b.x(); } else return 2; }; }";
 //let code = "{ for(var a in b.c.d) { x(); a(); } }";
 //let code = "{ var f = () => { const obj = { x: 1}, a = obj, b = a.x, c = obj.x(1, 2); } }";
 //let code = "{ const obj = { x: 1}, a = obj, b = a.x, c = obj.x(1, 2); }";
@@ -81,6 +90,9 @@ let code = "{ var f = () => { if(a.b.c.d) { { var a = c.d; } return b.x(); } els
 //                return this.charComponents.find((c) => c.name === name);\
 //            }; }";
 //let code = "{ f((c) => c.name === name); }";
+let code = "{ const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',\n\
+    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
+    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
 
 
 const Settings = {
@@ -368,6 +380,13 @@ traverse(parsed, {
 
                         if (checkItem.checker === IS_TYPE) {
 
+                            // Whitelisted types for checking
+                            const whitelistTypeCheck = ['MemberExpression', 'Identifier'];
+                            if (whitelistTypeCheck.indexOf(checkItem.args[0].type) === -1) {
+                                return null;
+                            }
+
+
                             // Type Comparison
                             const typeCmpNode = {
                                 type: 'ObjectProperty',
@@ -467,6 +486,86 @@ traverse(parsed, {
                         checkNodeArr.push(checkItemNode);
 
                         return checkNodeExpr;
+        };
+
+        const checkNodeBody = (node) => {
+            const body = node.body;
+            for(let i = 0; i < body.length; ++i) {
+            //curNode.body.forEach((node) => {
+
+                // Begin checking this expression
+                const node = body[i];
+                const modifyNode = new ModifyNode();
+                let prevLen = body.length;
+                CheckNode(node, null, modifyNode, true, node);
+
+
+                if (modifyNode.preCheck.length > 0) {
+
+
+                    // Build array of checks from checkArr
+                    modifyNode.preCheck.forEach((checkItem) => {
+                        // { checker: IS_TYPE, args: [NODE, TYPE] }
+                        // { checker: HAS_KEY, args: [NODE, NODE.OBJECT, NODE.PROPERTY]
+                        const checkNode = buildNodeFromCheck(checkItem, node.loc);
+                        if (checkNode) {
+                            body.splice(i, 0, checkNode);
+                            ++i;
+                        }
+                    });
+                }
+
+
+                    //console.log(checkNodeExpr);
+                    //console.log(JSON.stringify(checkNodeExpr));
+
+                    /*
+                    checkNodeExpr.start = node.start;
+                    checkNodeExpr.end = node.end;
+                    checkNodeExpr.loc = {
+                        start: {
+                            line: node.loc.start.line,
+                            column: node.loc.start.column,
+                        },
+                        end: {
+                            line: node.loc.end.line,
+                            column: node.loc.end.column,
+                        }
+                    };
+                    */
+
+
+                if (modifyNode.replaceNode.length > 0) {
+
+                    const leadingComments = node.leadingComments;
+
+                    for (let j = 0; j < modifyNode.replaceNode.length; ++j) {
+                        // TODO: This is a poor way to see if this is a check or an actual node
+                        if (modifyNode.replaceNode[j].checker) {
+                            const replaceNode = buildNodeFromCheck(modifyNode.replaceNode[j], node.loc);
+                            modifyNode.replaceNode[j] = replaceNode;
+                            if (!replaceNode) {
+                                modifyNode.replaceNode.splice(j, 1);
+                                --j;
+                            }
+                        }
+                    }
+
+                    body[i].leadingComments = leadingComments;
+                    body.splice(i, 1, ...modifyNode.replaceNode);
+                    i += modifyNode.replaceNode.length - 1;
+                }
+
+                if (modifyNode.hoistNodes.length > 0) {
+
+                    for (let j = 0; j < modifyNode.hoistNodes.length; ++j) {
+                        body.splice(0, 0, ...modifyNode.hoistNodes);
+                        i += modifyNode.hoistNodes.length;
+                    }
+                }
+
+                //console.log('====================');
+            };
         };
 
         // Flexibility in checker:
@@ -610,10 +709,11 @@ traverse(parsed, {
 
         if (curNode.type === 'Program') {
 
-            for (let i = 0; i < curNode.body.length; ++i) {
-                const modifyNode = new ModifyNode();
-                CheckNode(curNode.body[i], null, modifyNode, true, null);
-            }
+            checkNodeBody(curNode);
+            //for (let i = 0; i < curNode.body.length; ++i) {
+            //    const modifyNode = new ModifyNode();
+            //    CheckNode(curNode.body[i], null, modifyNode, true, null);
+            //}
 
         } else if (curNode.type === 'ExpressionStatement') {
             //console.log(curNode);
@@ -720,10 +820,15 @@ traverse(parsed, {
             //    process.exit();
             //}
 
-            modifyNode.preCheck.push({
-                checker: IS_TYPE,
-                args: [curNode.callee, FUNCTION_TYPE]
-            });
+            // In some cases we can't or don't want to bother checking the callee
+            //  eg.    var a = ((() => return { a: 1 })())
+            const safeFunctionCallees = ['Identifier', 'MemberExpression'];
+            if (safeFunctionCallees.indexOf(curNode.callee.type) !== -1) {
+                modifyNode.preCheck.push({
+                    checker: IS_TYPE,
+                    args: [curNode.callee, FUNCTION_TYPE]
+                });
+            }
 
             curNode.arguments.forEach((callArg) => {
                 let argComputed = CheckNode(callArg, null, modifyNode, false, scopeNode);
@@ -783,73 +888,7 @@ traverse(parsed, {
         } else if (curNode.type === 'BlockStatement') {
 
             // NOTE: These is a top-level blockstatement within this scope
-            const body = curNode.body;
-            for(let i = 0; i < body.length; ++i) {
-            //curNode.body.forEach((node) => {
-
-                // Begin checking this expression
-                const node = body[i];
-                const modifyNode = new ModifyNode();
-                let prevLen = body.length;
-                CheckNode(node, null, modifyNode, true, curNode);
-
-
-                if (modifyNode.preCheck.length > 0) {
-
-
-                    // Build array of checks from checkArr
-                    modifyNode.preCheck.forEach((checkItem) => {
-                        // { checker: IS_TYPE, args: [NODE, TYPE] }
-                        // { checker: HAS_KEY, args: [NODE, NODE.OBJECT, NODE.PROPERTY]
-                        const checkNode = buildNodeFromCheck(checkItem, node.loc);
-                        body.splice(i, 0, checkNode);
-                        ++i;
-                    });
-                }
-
-
-                    //console.log(checkNodeExpr);
-                    //console.log(JSON.stringify(checkNodeExpr));
-
-                    /*
-                    checkNodeExpr.start = node.start;
-                    checkNodeExpr.end = node.end;
-                    checkNodeExpr.loc = {
-                        start: {
-                            line: node.loc.start.line,
-                            column: node.loc.start.column,
-                        },
-                        end: {
-                            line: node.loc.end.line,
-                            column: node.loc.end.column,
-                        }
-                    };
-                    */
-
-
-                if (modifyNode.replaceNode.length > 0) {
-
-                    for (let j = 0; j < modifyNode.replaceNode.length; ++j) {
-                        // TODO: This is a poor way to see if this is a check or an actual node
-                        if (modifyNode.replaceNode[j].checker) {
-                            modifyNode.replaceNode[j] = buildNodeFromCheck(modifyNode.replaceNode[j], node.loc);
-                        }
-                    }
-
-                    body.splice(i, 1, ...modifyNode.replaceNode);
-                    i += modifyNode.replaceNode.length - 1;
-                }
-
-                if (modifyNode.hoistNodes.length > 0) {
-
-                    for (let j = 0; j < modifyNode.hoistNodes.length; ++j) {
-                        body.splice(0, 0, ...modifyNode.hoistNodes);
-                        i += modifyNode.hoistNodes.length;
-                    }
-                }
-
-                //console.log('====================');
-            };
+            checkNodeBody(curNode);
 
         } else if (curNode.type === 'ForStatement') {
 
@@ -874,7 +913,9 @@ traverse(parsed, {
             // NOTE: Need to make curNode the LAST VariableDeclaration
             //
             // NOTE: const and let are not hoisted under the hood, and are instead defined at execution point
-            if (curNode.kind === 'const' || curNode.kind === 'let') {
+            // TODO: Inlcuding var in this list, even though we'd prefer to hoist vars. For some reason hosting vars
+            // doesn't work properly and results in assignments that don't have a semicolon
+            if (curNode.kind === 'const' || curNode.kind === 'let' || curNode.kind === 'var') {
 
                 // FIXME: This is really gross and breaks our assumptions about not inserting nodes in place of curNode
                 //let nodeIndexInScope = 0;
@@ -958,9 +999,19 @@ traverse(parsed, {
                     left: declarator.id,
                     right: declarator.init,
 
-                    loc: curNode.loc,
-                    start: curNode.start,
-                    end: curNode.end,
+                    loc: {
+                        filename: sourceFile,
+                        start: {
+                            line: curNode.loc.start.line,
+                            column: curNode.loc.start.column
+                        },
+                        end: {
+                            line: curNode.loc.end.line,
+                            column: curNode.loc.end.column
+                        }
+                    },
+                    //start: curNode.start,
+                    //end: curNode.end,
                 };
 
                 const innerModifyNode = new ModifyNode();
@@ -1055,11 +1106,6 @@ traverse(parsed, {
                 CheckNode(template, null, modifyNode, false, scopeNode);
             });
 
-        } else if (curNode.type === 'BinaryExpression') {
-
-            CheckNode(curNode.left, null, modifyNode, false, scopeNode); // FIXME: Is a variable
-            CheckNode(curNode.right, null, modifyNode, false, scopeNode);
-
         } else if (curNode.type === 'NewExpression') {
 
             curNode.arguments.forEach((callArg) => {
@@ -1067,20 +1113,11 @@ traverse(parsed, {
                 // We don't care whether or not this argument is computed
             });
 
+
+        // ================================================
+        // Special Treatment Expressions (whitelisted for now)
         } else if (curNode.type === 'LogicalExpression') {
-
-            // FIXME:
-            //  What if we have 2 cases where the 2nd case is assumed to not be tested (eg. obj doesn't exist unless the
-            //  first case fails)
-            //      caseAObj.a.b.c || caseBObj.a.b.c 
-            CheckNode(curNode.left, null, modifyNode, false, scopeNode);
-            CheckNode(curNode.right, null, modifyNode, false, scopeNode);
-
         } else if (curNode.type === 'BinaryExpression') {
-
-            CheckNode(curNode.left, null, modifyNode, false, scopeNode);
-            CheckNode(curNode.right, null, modifyNode, false, scopeNode);
-
         // ================================================
         // Whitelisted Expressions
         } else if (curNode.type === 'DebuggerStatement') {
@@ -1117,7 +1154,8 @@ traverse(parsed, {
 */
 
 const output = generate(parsed, {
-    retainLines: true,
+    //retainLines: true, // NOTE: retainLines can cause multiple statements to merge to the same line, and causes issues
+    //w/ /* SCRIPT INECT */ also being merged with other statements, so those statements get wiped
     //comments: false,
     //concise: true,
     //compact: true,
