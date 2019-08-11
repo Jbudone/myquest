@@ -48,8 +48,12 @@ for (let i=0; i<process.argv.length; ++i) {
 
     const arg = process.argv[i];
 
-    if (arg === "--dont-watch") {
+    if (arg === '--dont-watch') {
         console.log("Only running once (no watching for changes)");
+        Settings.dontWatch = true;
+    } else if (arg === '--rebuild-js') {
+        console.log("Rebuilding js files");
+        Settings.rebuildJs = true;
         Settings.dontWatch = true;
     }
 }
@@ -225,13 +229,18 @@ const preprocessJSTask = new Task((file) => {
     if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
         console.log(`Skipping blacklisted file ${srcFile}`);
         return true;
+    } else if (srcFile.indexOf("lib/") >= 0) {
+        console.log(`Skipping lib file ${srcFile}`);
+        return true;
     }
 
     return new Promise((resolve, reject) => {
 
         // Babel
         console.log(`Preprocessing ${file.path}`);
-        exec(`node preprocessAST.js --file ${file.path} --output ${file.path}`, (err, stdout, stderr) => {
+        const prePath = file.path.replace('.js', '.pre.js');
+        execSync(`mv ${file.path} ${prePath}`);
+        exec(`node preprocessAST.js --file ${prePath} --output ${file.path}`, (err, stdout, stderr) => {
 
             if (err) {
                 reject(err);
@@ -576,6 +585,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     file.needsProcess = true;
                 } else if (file.hash !== file.cachedHash) {
                     // File has changed since we last processed
+                    Cache.UpdateFile(file);
+                    file.needsProcess = true;
+                } else if (Settings.rebuildJs && file.path.indexOf('.js') !== -1) {
+                    // Rebuilding all JS files regardless
                     Cache.UpdateFile(file);
                     file.needsProcess = true;
                 } else {
