@@ -224,31 +224,22 @@ const preprocessJSTask = new Task((file) => {
     const srcFile = file.path.substr("dist/".length);
     if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
         console.log(`Skipping blacklisted file ${srcFile}`);
-        return;
+        return true;
     }
 
     return new Promise((resolve, reject) => {
 
         // Babel
         console.log(`Preprocessing ${file.path}`);
-        exec(`node preprocessAST.js --file ${file.path}`, (err, stdout, stderr) => {
+        exec(`node preprocessAST.js --file ${file.path} --output ${file.path}`, (err, stdout, stderr) => {
 
-            // FIXME: Do we want to write file ourselves or have prepro task output? What if we have further
-            // modifications? Is file.path the dest dir already?
-            //console.log(stdout);
             if (err) {
                 reject(err);
                 return;
             }
 
-            fs.writeFile(file.path, stdout, (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                resolve();
-            });
+            console.log(stderr);
+            resolve();
         });
 
     });
