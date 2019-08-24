@@ -1,4 +1,6 @@
 
+const CTRL_KEY = 1, ALT_KEY = 2, SHIFT_KEY = 3;
+
 const InteractionMgr = (function(){
 
     this.canvasEl = null;
@@ -8,7 +10,8 @@ const InteractionMgr = (function(){
             interactions: [],
             mouseDownPos: null
         },
-        mouseButtons = [];
+        mouseButtons = [],
+        modifiers = [];
 
     let lastMouseDown = (new Date()).getTime();
 
@@ -124,7 +127,13 @@ const InteractionMgr = (function(){
 
         if (mouseButtons[1]) {
             this.onMiddleMouseDrag(worldPt, draggedDist);
+        } else if (mouseButtons[2]) {
+            this.onRightMouseDrag(worldPt, draggedDist);
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
     const onMouseUp = (evt) => {
@@ -136,6 +145,9 @@ const InteractionMgr = (function(){
 
         if (evt.button === 1) {
             this.onMiddleMouseClick(worldPt);
+            return;
+        } else if (evt.button === 2) {
+            this.onRightMouseClick(worldPt);
             return;
         }
 
@@ -199,6 +211,15 @@ const InteractionMgr = (function(){
         }
         
         mouseButtons[evt.button] = true;
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
+
+        evt.cancelBubble = true;
+        evt.stopPropagation();
+        evt.preventDefault();
+        return false;
     };
 
     const onMouseDblClick = (hitInteractions, evt) => {
@@ -219,6 +240,10 @@ const InteractionMgr = (function(){
         if (!evt.ctrlKey) {
             $(this.canvasEl).removeClass('interactionGrab');
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
     const onKeyDown = (evt) => {
@@ -226,6 +251,10 @@ const InteractionMgr = (function(){
         if (couldDrag && evt.ctrlKey) {
             $(this.canvasEl).addClass('interactionGrab');
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
 
@@ -239,6 +268,10 @@ const InteractionMgr = (function(){
         // FIXME: Couldn't get this to work off canvasEl
         window.addEventListener('keyup', onKeyUp);
         window.addEventListener('keydown', onKeyDown);
+
+        document.addEventListener("contextmenu", function(e){
+            e.preventDefault();
+        }, false);
     };
 
     this.reset = () => {
@@ -312,7 +345,13 @@ const InteractionMgr = (function(){
         return interactables.find((interactable) => interactable.x === x && interactable.y === y);
     };
 
+    this.hasModifier = (modifier) => {
+        return modifiers[modifier];
+    };
+
     this.onMouseMove = () => {};
     this.onMiddleMouseClick = () => {};
     this.onMiddleMouseDrag = () => {};
+    this.onRightMouseClick = () => {};
+    this.onRightMouseDrag = () => {};
 });

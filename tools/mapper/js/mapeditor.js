@@ -105,6 +105,8 @@ const MapEditor = (new function(){
         interactionMgr.onMouseMove = onMouseMove;
         interactionMgr.onMiddleMouseClick = onMiddleMouseClick;
         interactionMgr.onMiddleMouseDrag = onMiddleMouseDrag;
+        interactionMgr.onRightMouseClick = onRightMouseClick;
+        interactionMgr.onRightMouseDrag = onRightMouseDrag;
     };
 
     let cursorSprite = null,
@@ -250,6 +252,11 @@ const MapEditor = (new function(){
         lastMapDrag.y = 0;
     };
 
+    const onRightMouseClick = (worldPt) => {
+        lastMapDrag.x = 0;
+        lastMapDrag.y = 0;
+    };
+
     let lastMapDrag = { x: 0, y: 0 };
     const onMiddleMouseDrag = (worldPt, draggedDist) => {
         mapCamera.x -= (draggedDist.x - lastMapDrag.x);
@@ -257,6 +264,13 @@ const MapEditor = (new function(){
 
         lastMapDrag.x = draggedDist.x;
         lastMapDrag.y = draggedDist.y;
+    };
+
+    const onRightMouseDrag = (worldPt, draggedDist) => {
+        // Laptop doesn't have a middle mouse button, so simulate middle mouse drag w/ shift + right mouse
+        if (interactionMgr.hasModifier(SHIFT_KEY)) {
+            onMiddleMouseDrag(worldPt, draggedDist);
+        }
     };
 
     this.exportMap = () => {
