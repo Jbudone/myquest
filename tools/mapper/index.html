@@ -1,0 +1,63 @@
+<html>
+    <head>
+		<title>Mapper</title>
+
+		<link rel="stylesheet" type="text/css" href="style.css">
+
+		<script type="text/javascript" src="/js/lib/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="/js/lib/lodash.js"></script>
+
+		<script src="js/main.js"></script>
+		<script src="js/resourcemgr.js"></script>
+		<script src="js/interactionmgr.js"></script>
+		<script src="js/mapeditor.js"></script>
+
+		<!-- Bootstrap -->
+		<!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        -->
+
+    </head>
+    <body>
+        <div id='workingWindow'>
+
+            <div id='mapperWindow'>
+                <canvas id='mapEditorCanvas'></canvas>
+            </div>
+
+
+            <div id='controlsContainer'>
+                <div id='resourceMgr'>
+                    <div id='mapList'></div>
+                    <hr/>
+                    <div id='resourceMgrList'></div>
+                </div>
+
+                <canvas id='sheetCanvas'></canvas>
+
+
+                <a id='mapperSave' href="#">Save</a>
+                <br/>
+                <a id='mapperNew' href="#">New</a>
+            </div>
+
+
+            <div id='consoleWindow'>
+                <div id='consoleWindowContents'>
+                </div>
+                <div id='consoleWindowBottom'>
+                    <a id='consoleWindowClose' href='#'>Open</a>
+                    <a id='consoleWindowClear' href='#'>Clear</a>
+                </div>
+            </div>
+
+            <div id='saveOverlay'>
+                <div id='saveIconContainer'>
+                    <img id='saveIcon' src="" />
+                </div>
+            </div>
+
+        </div>
+    </body>
+</html>

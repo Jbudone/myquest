@@ -1,0 +1,126 @@
+
+body {
+    background: #000;
+}
+
+#workingWindow {
+
+}
+
+/*******************************/
+/*           Mapper            */
+
+#mapperWindow {
+    display: block;
+    position: absolute;
+}
+
+#mapEditorCanvas {
+    width: 1200px;
+    height: 800px;
+}
+
+#mapEditorCanvas.holdingSprite {
+    cursor: none;
+}
+
+/*******************************/
+/*          Controls           */
+
+#controlsContainer {
+    float: right;
+    margin-right: 10px;
+
+    width: 400px;
+    min-height: 200px;
+    border: thin solid #6b6b6b;
+    background: #282828;
+    border-radius: 6px;
+    margin: 20px;
+    padding: 4px;
+    color: #FFF;
+}
+
+/*******************************/
+/*            Console          */
+
+#consoleWindow {
+    display: none;
+}
+
+
+/*******************************/
+/*        Resource Mgr         */
+
+#resourceMgr {
+    padding: 10px 10px;
+}
+
+#mapList {
+    margin-bottom: 40px;
+}
+
+#mapList .resource {
+    color: #FFF;
+    display: block;
+	text-decoration: none;
+}
+
+#mapList .resource:hover {
+    font-weight: bold;
+}
+
+#resourceMgrList .resource {
+    color: #FFF;
+    display: block;
+	text-decoration: none;
+}
+
+#resourceMgrList .resource:hover {
+    font-weight: bold;
+}
+
+.resourceMgrAddNew {
+    text-decoration: none;
+    color: #8FF;
+}
+
+.resourceMgrAddNew:hover {
+    font-weight: bold;
+}
+
+.resource-img {
+    display: none;
+    max-width: 100%;
+}
+
+.resource-img.active {
+    display: block;
+}
+
+#sheetCanvas {
+    width: 100%;
+}
+
+#mapperNew {
+    text-align: center;
+    text-decoration: none;
+    color: #000;
+    font-size: 42px;
+    font-weight: bold;
+}
+
+#mapperSave {
+    text-align: center;
+    text-decoration: none;
+    color: #000;
+    font-size: 42px;
+    font-weight: bold;
+}
+
+/*******************************/
+/*            Save             */
+
+#saveOverlay {
+    display: none;
+}
