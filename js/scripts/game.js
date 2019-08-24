@@ -128,9 +128,21 @@ define(
                                 const XP = character.entity.npc.XP;
                                 assert(_.isNumber(XP), "A character was killed by somebody, yet he has no XP");
 
+                                // XP gained from an enemy is equal to its base XP if you have the same level as the
+                                // enemy. That amount is scaled accordingly if your level is higher or lower than the
+                                // enemy, and capped at a min (0) and max multiplier
+                                //
+                                // ReceivedXP = BaseXP * (2.0 * (8.0 + [yourLevel - myLevel]{-8,8}) / 16)
+                                // TODO: It may be worth modifying the scaler (8.0) based off of your level
+                                const yourLevel  = character.entity.npc.level,
+                                    myLevel      = killer.charComponent('levelling').level,
+                                    xpScaler     = 6.0,
+                                    xpMultiplier = (Math.min(xpScaler, Math.max(-xpScaler, yourLevel - myLevel)) + xpScaler) / xpScaler,
+                                    gainedXP     = Math.floor(xpMultiplier * XP);
+
                                 // FIXME: Store GainedXP symbol somewhere
                                 killer.doHook('GainedXP').post({
-                                    XP: XP
+                                    XP: gainedXP
                                 });
                             }
                         }

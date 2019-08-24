@@ -773,6 +773,10 @@ WORKING ON (was previously working on)
             NOTE: Scaling up seems to help w/ getting edges, but also speckles the images a little
     - Tilesheets/spritesheets create edges: marching cubes & draw edges. Note that in some cases we may already have edges around the sprite, so need to put this into consideration. Also some tiles we may not want edges (eg. grass)
     - Background FXMgr: accept events for modifying background (eg. onHit -> change bg-colour of sky and blend-mode multiply, onLevelUp -> different colour)
+    - Look into performance/GC/optimizations
+        - https://github.com/thlorenz/v8-perf
+        - v8 args that allow you to view optimizations, bytecode, GC, etc.
+        - node args
 
 
 	- Browser Debugging Snippets
