@@ -1,6 +1,7 @@
 
 body {
     background: #000;
+	margin: 0px;
 }
 
 #workingWindow {
@@ -13,10 +14,11 @@ body {
 #mapperWindow {
     display: block;
     position: absolute;
+	width: 100%;
 }
 
 #mapEditorCanvas {
-    width: 1200px;
+    width: 100%;
     height: 800px;
 }
 
@@ -28,8 +30,9 @@ body {
 /*          Controls           */
 
 #controlsContainer {
-    float: right;
-    margin-right: 10px;
+	position: absolute;
+    top: 0px;
+    right: 0px;
 
     width: 400px;
     min-height: 200px;

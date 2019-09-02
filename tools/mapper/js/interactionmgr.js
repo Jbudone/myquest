@@ -32,11 +32,20 @@ const InteractionMgr = (function(){
         scaleY = y;
     };
 
+    let offsetX = 0.0, offsetY = 0.0;
+    this.setCameraOffset = (x, y) => {
+        offsetX = x;
+        offsetY = y;
+    };
+
     const mouseToCanvasCoords = (evt) => {
         const offset = $(this.canvasEl).offset();
         const worldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
         worldPt.x *= scaleX;
         worldPt.y *= scaleY;
+
+        worldPt.x += offsetX;
+        worldPt.y += offsetY;
 
         return worldPt;
     };
@@ -94,6 +103,10 @@ const InteractionMgr = (function(){
         const draggedDist = {
             x: 0, y: 0
         };
+
+        //worldPt.x -= offsetX;
+        //worldPt.y -= offsetY;
+
         if (dragging.mouseDownPos) {
             draggedDist.x = worldPt.x - dragging.mouseDownPos.x;
             draggedDist.y = worldPt.y - dragging.mouseDownPos.y;
@@ -279,6 +292,7 @@ const InteractionMgr = (function(){
         entityId = 0;
 
         this.setCanvasScale(1.0, 1.0);
+        this.setCameraOffset(0.0, 0.0);
     };
 
     this.unload = () => {

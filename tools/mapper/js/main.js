@@ -17,6 +17,10 @@
 //  - Shared libs between all tools: resourcemgr (toolbet/mapper, game?)
 //  - Optimize drawing: draw to a background full-view map, then draw a region of that image to the actual user view (zoomed in, camera translation, cursor tiles, highlights, etc.)
 //  - Layered sprite: lowest --> base sprite, 
+//
+//  - Tilesets: list of tilesets, hover over the list to expand it vertically
+//  - Control panel: tabs on top - files, tilesets, map properties, minimap
+//  - Map editor: 100% window size, on resize of window -> resize editor
 
 $(document).ready(() => {
 

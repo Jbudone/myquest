@@ -6,16 +6,12 @@ const MapEditor = (new function(){
 
     const mapProperties = { tilesets: [] };
 
-    const DefaultProperties = {
+    const TILE_SIZE = 16;
+    const NORTH = 0, WEST = 1, EAST = 2, SOUTH = 3;
 
+    const DefaultProperties = {
         columns: 100,
         rows: 100,
-        tilesize: 16,
-
-        width: 100 * 16,
-        height: 100 * 16,
-
-        tilesets: []
     };
 
     // Camera
@@ -27,29 +23,15 @@ const MapEditor = (new function(){
         h: 800
     };
 
-    const NORTH = 0, WEST = 1, EAST = 2, SOUTH = 3;
+    this.setupInteractions = () => {
+        interactionMgr.reset();
 
-    this.initialize = () => {
-
-        this.mapWindowEl = $('#mapperWindow');
-
-        canvasEl  = $('#mapEditorCanvas')[0];
-        canvasCtx = canvasEl.getContext('2d');
-
-        canvasEl.width = $(canvasEl).width();
-        canvasEl.height = $(canvasEl).height();
-
-        interactionMgr = new InteractionMgr();
-        interactionMgr.load(canvasEl);
-
-        this.reset();
-        const tilesize = mapProperties.tilesize;
         for (let y = 0; y < mapProperties.rows; ++y) {
             for (let x = 0; x < mapProperties.columns; ++x) {
 
-                const xPos = x * tilesize,
-                    yPos = y * tilesize;
-                const entity = { x: xPos, y: yPos, w: tilesize, h: tilesize };
+                const xPos = x * TILE_SIZE,
+                    yPos = y * TILE_SIZE;
+                const entity = { x: xPos, y: yPos, w: TILE_SIZE, h: TILE_SIZE };
                 interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
                     .onHoverIn(() => {
 
@@ -65,8 +47,8 @@ const MapEditor = (new function(){
                         const spriteGroup = [];
                         cursorSprite.sprites.forEach((sprite) => {
 
-                            const offX = sprite.x - cursorSprite.left + mapCamera.x,
-                                offY = sprite.y - cursorSprite.top + mapCamera.y,
+                            const offX = sprite.x - cursorSprite.left,
+                                offY = sprite.y - cursorSprite.top,
                                 spriteEnt = {
                                     sheet: cursorSprite.sheet,
                                     img: cursorSprite.img,
@@ -109,6 +91,23 @@ const MapEditor = (new function(){
         interactionMgr.onRightMouseDrag = onRightMouseDrag;
     };
 
+    this.initialize = () => {
+
+        this.mapWindowEl = $('#mapperWindow');
+
+        canvasEl  = $('#mapEditorCanvas')[0];
+        canvasCtx = canvasEl.getContext('2d');
+
+        canvasEl.width = $(canvasEl).width();
+        canvasEl.height = $(canvasEl).height();
+
+        interactionMgr = new InteractionMgr();
+        interactionMgr.load(canvasEl);
+
+        this.reset();
+        this.setupInteractions();
+    };
+
     let cursorSprite = null,
         cursor = { x: 0, y: 0 };
 
@@ -127,10 +126,8 @@ const MapEditor = (new function(){
 
             if (direction === EAST || direction === WEST) {
                 mapProperties.columns += expansion;
-                mapProperties.width += (expansion * 16);
             } else {
                 mapProperties.rows += expansion;
-                mapProperties.height += (expansion * 16);
             }
             
             // If we expand the top/left edges of the map then all sprites need to be shifted forwards to make up for
@@ -199,8 +196,8 @@ const MapEditor = (new function(){
 
             const leftEdge = Math.max(0, -left),
                 topEdge = Math.max(0, -top),
-                rightEdge = Math.max(0, Math.min(right, mapProperties.width) - left),
-                bottomEdge = Math.max(0, Math.min(bottom, mapProperties.height) - top),
+                rightEdge = Math.max(0, Math.min(right, mapProperties.columns * TILE_SIZE) - left),
+                bottomEdge = Math.max(0, Math.min(bottom, mapProperties.rows * TILE_SIZE) - top),
                 drawWidth = rightEdge - leftEdge,
                 drawHeight = bottomEdge - topEdge;
 
@@ -220,8 +217,8 @@ const MapEditor = (new function(){
             bottomEdge = mapCamera.h;
 
         const drawSprite = (sprite) => {
-            const tilesize = 16;
-            canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, sprite.x + cameraOffX, sprite.y + cameraOffY, 16, 16);
+            const tilesize = sprite.sheet.data.tilesize;
+            canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, sprite.x + cameraOffX, sprite.y + cameraOffY, TILE_SIZE, TILE_SIZE);
         };
 
         sprites.forEach((spriteData) => {
@@ -234,14 +231,19 @@ const MapEditor = (new function(){
             cursorSprite.sprites.forEach((sprite) => {
                 const xPos = sprite.x,
                     yPos = sprite.y,
-                    offX = xPos - cursorSprite.left,
-                    offY = yPos - cursorSprite.top;
-                canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, cursor.x + offX, cursor.y + offY, 16, 16);
+                    offX = xPos - cursorSprite.left + cameraOffX,
+                    offY = yPos - cursorSprite.top + cameraOffY;
+                canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, cursor.x + offX, cursor.y + offY, TILE_SIZE, TILE_SIZE);
             });
         }
+
+        canvasCtx.fillStyle = '#F00';
+        canvasCtx.fillRect(cursor.x + cameraOffX, cursor.y + cameraOffY, TILE_SIZE, TILE_SIZE);
+        console.log(cursor);
     };
 
     const onMouseMove = (worldPt) => {
+        // NOTE: Probably don't want to set cursor pos here since its real coords as opposed to tiles
         //cursor.x = worldPt.x;
         //cursor.y = worldPt.y;
         //this.dirtyCanvas = true;
@@ -264,6 +266,8 @@ const MapEditor = (new function(){
 
         lastMapDrag.x = draggedDist.x;
         lastMapDrag.y = draggedDist.y;
+
+        interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
     };
 
     const onRightMouseDrag = (worldPt, draggedDist) => {
@@ -345,12 +349,12 @@ const MapEditor = (new function(){
                 tilesetGid += tileset.tileCount;
             }
 
-            const sheetY = sprite.sheetY / 16,
-                sheetX = sprite.sheetX / 16,
+            const sheetY = sprite.sheetY / sprite.sheet.data.tilesize,
+                sheetX = sprite.sheetX / sprite.sheet.data.tilesize,
                 spriteLid = sheetY * tileset.data.columns + sheetX,
                 tileGid = tileset.firstGid + spriteLid;
 
-            const mapGid = (sprite.y / 16) * mapProperties.columns + (sprite.x / 16);
+            const mapGid = (sprite.y / TILE_SIZE) * mapProperties.columns + (sprite.x / TILE_SIZE);
             if (baseTiles[mapGid]) {
                 spriteTiles[mapGid] = tileGid;
             } else {
@@ -382,9 +386,7 @@ const MapEditor = (new function(){
     this.reset = () => {
         mapProperties.columns = DefaultProperties.columns;
         mapProperties.rows = DefaultProperties.rows;
-        mapProperties.tilesize = DefaultProperties.tilesize;
-        mapProperties.width = DefaultProperties.width;
-        mapProperties.height = DefaultProperties.height;
+        mapProperties.tilesize = TILE_SIZE;
 
         //mapProperties.tilesets = [];
 
@@ -407,9 +409,8 @@ const MapEditor = (new function(){
 
         mapProperties.columns = data.width;
         mapProperties.rows = data.height;
-        mapProperties.width = mapProperties.columns * 16;
-        mapProperties.height = mapProperties.rows * 16;
 
+        this.setupInteractions();
         
         // TODO: Confirm all tilesets in data.tilesets are in our tilesets list
         //data.tilesets.forEach((tileset) => {
