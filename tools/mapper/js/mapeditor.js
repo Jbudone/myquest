@@ -268,6 +268,7 @@ const MapEditor = (new function(){
         lastMapDrag.y = draggedDist.y;
 
         interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
+        this.dirtyCanvas = true;
     };
 
     const onRightMouseDrag = (worldPt, draggedDist) => {

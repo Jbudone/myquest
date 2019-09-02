@@ -104,12 +104,9 @@ const InteractionMgr = (function(){
             x: 0, y: 0
         };
 
-        //worldPt.x -= offsetX;
-        //worldPt.y -= offsetY;
-
         if (dragging.mouseDownPos) {
-            draggedDist.x = worldPt.x - dragging.mouseDownPos.x;
-            draggedDist.y = worldPt.y - dragging.mouseDownPos.y;
+            draggedDist.x = worldPt.x - offsetX - dragging.mouseDownPos.x;
+            draggedDist.y = worldPt.y - offsetY - dragging.mouseDownPos.y;
         }
 
         if (dragging.interactions.length > 0) {
@@ -213,7 +210,7 @@ const InteractionMgr = (function(){
                 }
             });
         }
-        dragging.mouseDownPos = worldPt;
+        dragging.mouseDownPos = { x: worldPt.x - offsetX, y: worldPt.y - offsetY };
 
         const now = (new Date()).getTime(),
             timeSinceLastClick = now - lastMouseDown;

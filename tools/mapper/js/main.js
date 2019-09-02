@@ -1,16 +1,11 @@
 
 // TODO
-//  - Test in game
-//      - Map is 16x16 tilesize, but movement is 4x4?
-//          - Position should be 4x4 for everything (what if we have dynamic tiles, placeables, digging, etc.)
-//          - Rendering: FOR NOW we can render 4x4  (3D in near future)
-//              - Map load (in game) turn tilesheets into 4x4, and split each sprite from 1x1 into 4x4
-//  - Save ==> Export?
+//  - Camera zooming
+//  - Can't place sprites beyond map boundaries
 //  - Cleanup
 //
-//  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd
+//  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
 //  - Layers (base/sprites/etc.)
-//  - Can't place sprites beyond map boundaries
 //  - Dynamically resize map boundaries
 //  - Updating sheets -> auto updates map
 //  - Auto reload map on changes (sheet, etc.)
