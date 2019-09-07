@@ -38,6 +38,8 @@ const MapEditor = (new function(){
             })
             .onClick(() => {
 
+                if (!cursorSprite) return;
+
                 const spriteGroup = [],
                     mapWidth = mapProperties.columns * TILE_SIZE,
                     mapHeight = mapProperties.rows * TILE_SIZE;

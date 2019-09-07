@@ -5,7 +5,7 @@
 //
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
 //  - Layers (base/sprites/etc.)
-//  - Dynamically resize map boundaries
+//  - Dynamically resize map boundaries (including shrinking)
 //  - Updating sheets -> auto updates map
 //  - Auto reload map on changes (sheet, etc.)
 //  - Shared libs between all tools: resourcemgr (toolbet/mapper, game?)
@@ -36,4 +36,18 @@ $(document).ready(() => {
 
     lastStep = Date.now();
     window.requestAnimationFrame(step);
+
+
+    $('.controlsTab').click((el) => {
+
+        let elTab = $(el.currentTarget);
+        let curActive = $('.controlsTab.active');
+        if (curActive === elTab) return;
+
+        curActive.removeClass('active');
+        $(`#${curActive.attr('data')}`).removeClass('active');
+
+        elTab.addClass('active');
+        $(`#${elTab.attr('data')}`).addClass('active');
+    });
 });

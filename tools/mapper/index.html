@@ -27,20 +27,39 @@
             </div>
 
 
-            <div id='controlsContainer'>
-                <div id='resourceMgr'>
-                    <div id='mapList'></div>
-                    <hr/>
-                    <div id='resourceMgrList'></div>
-                </div>
+			<div id='controlsWindow'>
+				<div id='controlsTabs'>
+					<div class='controlsTab active' data='controlsResourceMgr'>
+						<a href='#' class='controlsTabBtn'>A</a>
+					</div>
+					<div class='controlsTab' data='controlsX'>
+						<a href='#' class='controlsTabBtn'>B</a>
+					</div>
+					<div class='controlsTab'>
+						<a href='#' class='controlsTabBtn'>C</a>
+					</div>
+				</div>
+				<div id='controlsContainer'>
+					<div id='controlsResourceMgr' class='controlsContainerChild active'>
+						<div id='resourceMgr'>
+							<div id='mapList'></div>
+							<hr/>
+							<div id='resourceMgrList'></div>
+						</div>
 
-                <canvas id='sheetCanvas'></canvas>
+						<canvas id='sheetCanvas'></canvas>
 
 
-                <a id='mapperSave' href="#">Save</a>
-                <br/>
-                <a id='mapperNew' href="#">New</a>
-            </div>
+						<a id='mapperSave' href="#">Save</a>
+						<br/>
+						<a id='mapperNew' href="#">New</a>
+					</div>
+
+					<div id='controlsX' class='controlsContainerChild'>
+						LOLOLOLOL
+					</div>
+				</div>
+			</div>
 
 
             <div id='consoleWindow'>

@@ -29,19 +29,60 @@ body {
 /*******************************/
 /*          Controls           */
 
-#controlsContainer {
+#controlsWindow {
 	position: absolute;
     top: 0px;
     right: 0px;
 
     width: 400px;
     min-height: 200px;
+    margin: 20px;
+}
+
+#controlsTabs {
+	display: flex;
+	flex-direction: row;
+	margin-left: 6px;
+	margin-bottom: -1px;
+}
+
+.controlsTab {
+	width: 40px;
+    height: 40px;
+    border: thin solid #6b6b6b;
+    text-align: center;
+
+	background: #202020;
+}
+
+.controlsTab.active {
+	border-bottom: thin solid #282828;
+	background: #282828;
+}
+
+.controlsTab:hover {
+	font-weight: bold;
+}
+
+.controlsTabBtn {
+	color: #FFF;
+	text-decoration: none;
+}
+
+#controlsContainer {
     border: thin solid #6b6b6b;
     background: #282828;
     border-radius: 6px;
-    margin: 20px;
     padding: 4px;
     color: #FFF;
+}
+
+.controlsContainerChild {
+	display: none;
+}
+
+.controlsContainerChild.active {
+	display: block;
 }
 
 /*******************************/
