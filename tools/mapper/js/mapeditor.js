@@ -44,7 +44,9 @@ const MapEditor = (new function(){
                     })
                     .onClick(() => {
 
-                        const spriteGroup = [];
+                        const spriteGroup = [],
+                            mapWidth = mapProperties.columns * TILE_SIZE,
+                            mapHeight = mapProperties.rows * TILE_SIZE;
                         cursorSprite.sprites.forEach((sprite) => {
 
                             const offX = sprite.x - cursorSprite.left,
@@ -54,11 +56,15 @@ const MapEditor = (new function(){
                                     img: cursorSprite.img,
                                     sheetX: sprite.x,
                                     sheetY: sprite.y,
-                                    x: cursor.x + offX, 
+                                    x: cursor.x + offX,
                                     y: cursor.y + offY,
                                     group: spriteGroup
                                 };
 
+                            // Outside of map bounds? Skip
+                            if (spriteEnt.x >= mapWidth || spriteEnt.y >= mapHeight) {
+                                return;
+                            }
 
                             // Is there already a sprite here?
                             const existingSprite = sprites.find((eSprite) => {
@@ -216,6 +222,9 @@ const MapEditor = (new function(){
         const rightEdge = mapCamera.w,
             bottomEdge = mapCamera.h;
 
+        const mapWidth = mapProperties.columns * TILE_SIZE,
+            mapHeight = mapProperties.rows * TILE_SIZE;
+
         const drawSprite = (sprite) => {
             const tilesize = sprite.sheet.data.tilesize;
             canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, sprite.x + cameraOffX, sprite.y + cameraOffY, TILE_SIZE, TILE_SIZE);
@@ -233,6 +242,11 @@ const MapEditor = (new function(){
                     yPos = sprite.y,
                     offX = xPos - cursorSprite.left + cameraOffX,
                     offY = yPos - cursorSprite.top + cameraOffY;
+
+                if ((offX + cursor.x) >= mapWidth || (offY + cursor.y) >= mapHeight) {
+                    return;
+                }
+
                 canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, cursor.x + offX, cursor.y + offY, TILE_SIZE, TILE_SIZE);
             });
         }
