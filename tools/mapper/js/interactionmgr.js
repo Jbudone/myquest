@@ -38,6 +38,12 @@ const InteractionMgr = (function(){
         offsetY = y;
     };
 
+    let boundsX = 0, boundsY = 0;
+    this.setBounds = (x, y) => {
+        boundsX = x;
+        boundsY = y;
+    };
+
     const mouseToCanvasCoords = (evt) => {
         const offset = $(this.canvasEl).offset();
         const worldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
@@ -46,6 +52,10 @@ const InteractionMgr = (function(){
 
         worldPt.x += offsetX;
         worldPt.y += offsetY;
+
+        // If mouse outside of map coords, then snap to map edge
+        if (worldPt.x >= boundsX) worldPt.x = boundsX;
+        if (worldPt.y >= boundsY) worldPt.y = boundsY;
 
         return worldPt;
     };
@@ -290,6 +300,7 @@ const InteractionMgr = (function(){
 
         this.setCanvasScale(1.0, 1.0);
         this.setCameraOffset(0.0, 0.0);
+        this.setBounds(0, 0);
     };
 
     this.unload = () => {

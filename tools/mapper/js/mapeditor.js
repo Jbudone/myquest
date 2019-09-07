@@ -26,6 +26,8 @@ const MapEditor = (new function(){
     this.setupInteractions = () => {
         interactionMgr.reset();
 
+        interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
+
         for (let y = 0; y < mapProperties.rows; ++y) {
             for (let x = 0; x < mapProperties.columns; ++x) {
 
@@ -147,6 +149,8 @@ const MapEditor = (new function(){
                     sprite.y += (expansion * 16);
                 });
             }
+
+            interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
 
         } else {
             console.error("Shrinking the map, not supported yet!");
@@ -416,6 +420,7 @@ const MapEditor = (new function(){
 
         sprites = [];
 
+        this.setupInteractions();
         this.dirtyCanvas = true;
     };
 

@@ -116,8 +116,6 @@ const ResourceMgr = (new function(){
         canvasEl.height = height;
 
 
-        interactionMgr.setCanvasScale(1.0 / scaleX, 1.0 / scaleY);
-
         sheet.mapper.previewWidth = width;
         sheet.mapper.previewHeight = height;
         sheet.mapper.scaleX = scaleX;
@@ -126,6 +124,9 @@ const ResourceMgr = (new function(){
         const tilesize = parseInt(sheet.data.tilesize, 10),
             rows = parseInt(sheet.data.rows, 10),
             columns = parseInt(sheet.data.columns, 10);
+
+        interactionMgr.setCanvasScale(1.0 / scaleX, 1.0 / scaleY);
+        interactionMgr.setBounds((columns - 1) * tilesize, (rows - 1) * tilesize);
 
         if (sheet.data.spriteGroups) {
 
