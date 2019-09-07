@@ -15,7 +15,6 @@
 //  - Tilesets: list of tilesets, hover over the list to expand it vertically
 //  - Control panel: tabs on top - files, tilesets, map properties, minimap
 //  - Map editor: 100% window size, on resize of window -> resize editor
-//  - Mouse move outside of map boundaries, snap to nearest tile
 
 $(document).ready(() => {
 

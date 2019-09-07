@@ -23,6 +23,66 @@ const MapEditor = (new function(){
         h: 800
     };
 
+    const addInteractable = ((xPos, yPos) => {
+
+        const entity = { x: xPos, y: yPos, w: TILE_SIZE, h: TILE_SIZE };
+        interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
+            .onHoverIn(() => {
+
+                cursor.x = entity.x;
+                cursor.y = entity.y;
+                this.dirtyCanvas = true;
+            })
+            .onHoverOut(() => {
+                //this.dirtyCanvas = true;
+            })
+            .onClick(() => {
+
+                const spriteGroup = [],
+                    mapWidth = mapProperties.columns * TILE_SIZE,
+                    mapHeight = mapProperties.rows * TILE_SIZE;
+                cursorSprite.sprites.forEach((sprite) => {
+
+                    const offX = sprite.x - cursorSprite.left,
+                        offY = sprite.y - cursorSprite.top,
+                        spriteEnt = {
+                            sheet: cursorSprite.sheet,
+                            img: cursorSprite.img,
+                            sheetX: sprite.x,
+                            sheetY: sprite.y,
+                            x: cursor.x + offX,
+                            y: cursor.y + offY,
+                            group: spriteGroup
+                        };
+
+                        // Outside of map bounds? Skip
+                        if (spriteEnt.x >= mapWidth || spriteEnt.y >= mapHeight) {
+                            return;
+                        }
+
+                        // Is there already a sprite here?
+                        const existingSprite = sprites.find((eSprite) => {
+                            if (eSprite.x === spriteEnt.x && eSprite.y === spriteEnt.y) {
+                                return true;
+                            }
+                        });
+
+                        if (existingSprite) {
+                            // Kill existing sprite group
+                            existingSprite.group.forEach((eSprite) => {
+                                let eSpriteIdx = sprites.indexOf(eSprite);
+                                sprites.splice(eSpriteIdx, 1);
+                            });
+                        }
+
+                        spriteGroup.push(spriteEnt);
+                        sprites.push(spriteEnt);
+                });
+
+                this.dirtyCanvas = true;
+            });
+    });
+
     this.setupInteractions = () => {
         interactionMgr.reset();
 
@@ -33,62 +93,7 @@ const MapEditor = (new function(){
 
                 const xPos = x * TILE_SIZE,
                     yPos = y * TILE_SIZE;
-                const entity = { x: xPos, y: yPos, w: TILE_SIZE, h: TILE_SIZE };
-                interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
-                    .onHoverIn(() => {
-
-                        cursor.x = entity.x;
-                        cursor.y = entity.y;
-                        this.dirtyCanvas = true;
-                    })
-                    .onHoverOut(() => {
-                        //this.dirtyCanvas = true;
-                    })
-                    .onClick(() => {
-
-                        const spriteGroup = [],
-                            mapWidth = mapProperties.columns * TILE_SIZE,
-                            mapHeight = mapProperties.rows * TILE_SIZE;
-                        cursorSprite.sprites.forEach((sprite) => {
-
-                            const offX = sprite.x - cursorSprite.left,
-                                offY = sprite.y - cursorSprite.top,
-                                spriteEnt = {
-                                    sheet: cursorSprite.sheet,
-                                    img: cursorSprite.img,
-                                    sheetX: sprite.x,
-                                    sheetY: sprite.y,
-                                    x: cursor.x + offX,
-                                    y: cursor.y + offY,
-                                    group: spriteGroup
-                                };
-
-                            // Outside of map bounds? Skip
-                            if (spriteEnt.x >= mapWidth || spriteEnt.y >= mapHeight) {
-                                return;
-                            }
-
-                            // Is there already a sprite here?
-                            const existingSprite = sprites.find((eSprite) => {
-                                if (eSprite.x === spriteEnt.x && eSprite.y === spriteEnt.y) {
-                                    return true;
-                                }
-                            });
-
-                            if (existingSprite) {
-                                // Kill existing sprite group
-                                existingSprite.group.forEach((eSprite) => {
-                                    let eSpriteIdx = sprites.indexOf(eSprite);
-                                    sprites.splice(eSpriteIdx, 1);
-                                });
-                            }
-
-                            spriteGroup.push(spriteEnt);
-                            sprites.push(spriteEnt);
-                        });
-
-                        this.dirtyCanvas = true;
-                    });
+                addInteractable(xPos, yPos);
             }
         }
 
@@ -132,24 +137,47 @@ const MapEditor = (new function(){
         if (expansion > 0) {
             // Growing the map
 
-            if (direction === EAST || direction === WEST) {
-                mapProperties.columns += expansion;
-            } else {
-                mapProperties.rows += expansion;
-            }
-            
-            // If we expand the top/left edges of the map then all sprites need to be shifted forwards to make up for
+            let growFromX = 0, growToX = mapProperties.columns,
+                growFromY = 0, growToY = mapProperties.rows;
+
+            // NOTE: If we expand the top/left edges of the map then all sprites need to be shifted forwards to make up for
             // the new bounds
-            if (direction === WEST) {
-                sprites.forEach((sprite) => {
-                    sprite.x += (expansion * 16);
-                });
-            } else if (direction === NORTH) {
+            if (direction === NORTH) {
+                growFromY = mapProperties.rows;
+                mapProperties.rows += expansion;
+                growToY = mapProperties.rows;
+
                 sprites.forEach((sprite) => {
                     sprite.y += (expansion * 16);
                 });
+
+            } else if (direction === SOUTH) {
+                growFromY = mapProperties.rows;
+                mapProperties.rows += expansion;
+                growToY = mapProperties.rows;
+            } else if (direction === WEST) {
+                growFromX = mapProperties.columns;
+                mapProperties.columns += expansion;
+                growToX = mapProperties.columns;
+
+                sprites.forEach((sprite) => {
+                    sprite.x += (expansion * 16);
+                });
+
+            } else if (direction === EAST) {
+                growFromX = mapProperties.columns;
+                mapProperties.columns += expansion;
+                growToX = mapProperties.columns;
             }
 
+            for (let y = growFromY; y < growToY; ++y) {
+                for (let x = growFromX; x < growToX; ++x) {
+                    const xPos = x * TILE_SIZE,
+                        yPos   = y * TILE_SIZE;
+                    addInteractable(xPos, yPos);
+                }
+            }
+            
             interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
 
         } else {
