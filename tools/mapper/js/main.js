@@ -8,15 +8,18 @@
 //  - Dynamically resize map boundaries (including shrinking)
 //  - Updating sheets -> auto updates map
 //  - Auto reload map on changes (sheet, etc.)
-//  - Shared libs between all tools: resourcemgr (toolbet/mapper, game?)
+//  - Shared libs between all tools: resourcemgr, interactionmgr, consolemgr (toolbet/mapper, game?)
 //  - Optimize drawing: draw to a background full-view map, then draw a region of that image to the actual user view (zoomed in, camera translation, cursor tiles, highlights, etc.)
 //  - Layered sprite: lowest --> base sprite, 
 //
-//  - Tilesets: list of tilesets, hover over the list to expand it vertically
+//  - Tilesets: list of tilesets, hover over the list to expand it vertically; hovers *over* canvas like a popup
 //  - Control panel: tabs on top - files, tilesets, map properties, minimap
+//  - Minimap: rendering is optimized by rendering to pages, then just render pages to minimap
 //  - Map editor: 100% window size, on resize of window -> resize editor
 
 $(document).ready(() => {
+
+    ConsoleMgr.initialize();
 
     ResourceMgr.initialize().then(() => {
         ResourceMgr.buildElements();
@@ -28,6 +31,7 @@ $(document).ready(() => {
         const delta = timestamp - lastStep;
         lastStep = timestamp;
 
+        ConsoleMgr.step(delta);
         ResourceMgr.step(delta);
         MapEditor.step(delta);
 
