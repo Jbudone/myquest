@@ -67,6 +67,10 @@ body {
 .controlsTabBtn {
 	color: #FFF;
 	text-decoration: none;
+
+    display: block;
+	width: 100%;
+    height: 100%;
 }
 
 #controlsContainer {
@@ -79,6 +83,7 @@ body {
 
 .controlsContainerChild {
 	display: none;
+    padding: 10px 10px;
 }
 
 .controlsContainerChild.active {
@@ -95,10 +100,6 @@ body {
 
 /*******************************/
 /*        Resource Mgr         */
-
-#resourceMgr {
-    padding: 10px 10px;
-}
 
 #mapList {
     margin-bottom: 40px;

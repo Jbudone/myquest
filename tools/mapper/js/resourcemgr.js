@@ -43,9 +43,6 @@ const ResourceMgr = (new function(){
         canvasEl  = $('#sheetCanvas')[0];
         canvasCtx = canvasEl.getContext('2d');
 
-        canvasEl.width = $(canvasEl).width();
-        canvasEl.height = $(canvasEl).height();
-
         interactionMgr = new InteractionMgr();
         interactionMgr.load(canvasEl);
 
@@ -96,6 +93,11 @@ const ResourceMgr = (new function(){
             console.error(`Cannot activate sheet, image ${sheet.mapper.imagePath} not ready yet`);
             return;
         }
+
+        // Set canvas width/height. Don't do this during initialize since it may not be visible (container is hidden
+        // because tab isn't active), so its width hasn't been set yet
+        canvasEl.width = $(canvasEl).width();
+        canvasEl.height = $(canvasEl).height();
 
         this.activeSheet = sheet;
 
