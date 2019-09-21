@@ -56,6 +56,8 @@ const InteractionMgr = (function(){
         // If mouse outside of map coords, then snap to map edge
         if (worldPt.x >= boundsX) worldPt.x = boundsX;
         if (worldPt.y >= boundsY) worldPt.y = boundsY;
+        if (worldPt.x < 0)        worldPt.x = 0;
+        if (worldPt.y < 0)        worldPt.y = 0;
 
         return worldPt;
     };
@@ -277,6 +279,11 @@ const InteractionMgr = (function(){
         modifiers[ALT_KEY]   = evt.altKey;
     };
 
+    const onMouseScroll = (evt) => {
+        const worldPt = mouseToCanvasCoords(evt);
+        const scroll = { x: evt.wheelDeltaX, y: evt.wheelDeltaY };
+        this.onMouseScroll(worldPt, scroll);
+    };
 
     this.load = (canvasEl) => {
         this.canvasEl = canvasEl;
@@ -284,10 +291,12 @@ const InteractionMgr = (function(){
         canvasEl.addEventListener('mousemove', onMouseMove);
         canvasEl.addEventListener('mouseup', onMouseUp);
         canvasEl.addEventListener('mousedown', onMouseDown);
+        canvasEl.addEventListener('wheel', onMouseScroll);
 
         // FIXME: Couldn't get this to work off canvasEl
         window.addEventListener('keyup', onKeyUp);
         window.addEventListener('keydown', onKeyDown);
+        //window.addEventListener('scroll', onMouseScroll);
 
         document.addEventListener("contextmenu", function(e){
             e.preventDefault();
@@ -376,4 +385,5 @@ const InteractionMgr = (function(){
     this.onMiddleMouseDrag = () => {};
     this.onRightMouseClick = () => {};
     this.onRightMouseDrag = () => {};
+    this.onMouseScroll = () => {};
 });

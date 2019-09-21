@@ -20,7 +20,15 @@ const MapEditor = (new function(){
         x: 0,
         y: 0,
         w: 1200, // canvas size
-        h: 800
+        h: 800,
+        translate: (mapPos) => {
+            const cameraPos = { x: 0, y: 0 };
+            cameraPos.x = (mapPos.x - mapCamera.x) * (canvasEl.width / mapCamera.w);
+            cameraPos.y = (mapPos.y - mapCamera.y) * (canvasEl.height / mapCamera.h);
+            return cameraPos;
+        },
+        scaleX: (x) => x * (canvasEl.width / mapCamera.w),
+        scaleY: (y) => y * (canvasEl.height / mapCamera.h),
     };
 
     const addInteractable = ((xPos, yPos) => {
@@ -89,6 +97,7 @@ const MapEditor = (new function(){
         interactionMgr.reset();
 
         interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
+        interactionMgr.setCanvasScale(mapCamera.w / canvasEl.width, mapCamera.h / canvasEl.height);
 
         for (let y = 0; y < mapProperties.rows; ++y) {
             for (let x = 0; x < mapProperties.columns; ++x) {
@@ -104,6 +113,7 @@ const MapEditor = (new function(){
         interactionMgr.onMiddleMouseDrag = onMiddleMouseDrag;
         interactionMgr.onRightMouseClick = onRightMouseClick;
         interactionMgr.onRightMouseDrag = onRightMouseDrag;
+        interactionMgr.onMouseScroll = onMouseScroll;
     };
 
     this.initialize = () => {
@@ -115,6 +125,9 @@ const MapEditor = (new function(){
 
         canvasEl.width = $(canvasEl).width();
         canvasEl.height = $(canvasEl).height();
+
+        mapCamera.w = canvasEl.width;
+        mapCamera.h = canvasEl.height;
 
         interactionMgr = new InteractionMgr();
         interactionMgr.load(canvasEl);
@@ -183,6 +196,7 @@ const MapEditor = (new function(){
             interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
 
         } else {
+            ConsoleMgr.log('Shrinking the map not supported yet!', LOG_ERROR);
             console.error("Shrinking the map, not supported yet!");
             return;
         }
@@ -227,17 +241,17 @@ const MapEditor = (new function(){
         canvasCtx.fillStyle = '#000';
         canvasCtx.fillRect(0, 0, canvasEl.width, canvasEl.height);
 
-        let left = mapCamera.x,
-            top = mapCamera.y,
-            right = mapCamera.x + mapCamera.w,
-            bottom = mapCamera.y + mapCamera.h;
+        let left = mapCamera.scaleX(mapCamera.x),
+            top  = mapCamera.scaleY(mapCamera.y),
+            right = mapCamera.scaleX(mapCamera.w),
+            bottom = mapCamera.scaleY(mapCamera.h);
 
         if (left < right && top < bottom) {
 
             const leftEdge = Math.max(0, -left),
                 topEdge = Math.max(0, -top),
-                rightEdge = Math.max(0, Math.min(right, mapProperties.columns * TILE_SIZE) - left),
-                bottomEdge = Math.max(0, Math.min(bottom, mapProperties.rows * TILE_SIZE) - top),
+                rightEdge = Math.max(0, Math.min(right, mapCamera.scaleX(mapProperties.columns * TILE_SIZE)) - left),
+                bottomEdge = Math.max(0, Math.min(bottom, mapCamera.scaleY(mapProperties.rows * TILE_SIZE)) - top),
                 drawWidth = rightEdge - leftEdge,
                 drawHeight = bottomEdge - topEdge;
 
@@ -261,7 +275,11 @@ const MapEditor = (new function(){
 
         const drawSprite = (sprite) => {
             const tilesize = sprite.sheet.data.tilesize;
-            canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, sprite.x + cameraOffX, sprite.y + cameraOffY, TILE_SIZE, TILE_SIZE);
+
+            let pos = mapCamera.translate({ x: sprite.x, y: sprite.y });
+            let sizeX = mapCamera.scaleX(TILE_SIZE),
+                sizeY = mapCamera.scaleY(TILE_SIZE);
+            canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
         };
 
         sprites.forEach((spriteData) => {
@@ -285,9 +303,12 @@ const MapEditor = (new function(){
             });
         }
 
+
         canvasCtx.fillStyle = '#F00';
-        canvasCtx.fillRect(cursor.x + cameraOffX, cursor.y + cameraOffY, TILE_SIZE, TILE_SIZE);
-        console.log(cursor);
+        let pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
+        let sizeX = mapCamera.scaleX(TILE_SIZE),
+            sizeY = mapCamera.scaleY(TILE_SIZE);
+        canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
     };
 
     const onMouseMove = (worldPt) => {
@@ -324,6 +345,22 @@ const MapEditor = (new function(){
         if (interactionMgr.hasModifier(SHIFT_KEY)) {
             onMiddleMouseDrag(worldPt, draggedDist);
         }
+    };
+
+    const onMouseScroll = (worldPt, scroll) => {
+        console.log(`Scroll: ${scroll.y}`);
+
+        let scrollAmt = 32;
+        if (scroll.y > 0) {
+            mapCamera.w = Math.max(mapCamera.w - scrollAmt, scrollAmt);
+            mapCamera.h = Math.max(mapCamera.h - scrollAmt, scrollAmt);
+        } else if (scroll.y < 0) {
+            mapCamera.w += scrollAmt;
+            mapCamera.h += scrollAmt;
+        }
+
+        interactionMgr.setCanvasScale(mapCamera.w / canvasEl.width, mapCamera.h / canvasEl.height);
+        this.dirtyCanvas = true;
     };
 
     this.exportMap = () => {

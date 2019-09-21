@@ -2,6 +2,7 @@
 body {
     background: #000;
 	margin: 0px;
+	overflow-y: hidden;
 }
 
 #workingWindow {
