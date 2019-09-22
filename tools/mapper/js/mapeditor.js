@@ -352,17 +352,35 @@ const MapEditor = (new function(){
         }
     };
 
+    let lastScrollTime = Date.now();
+    let scrollMult = 1.0;
     const onMouseScroll = (worldPt, scroll) => {
         console.log(`Scroll: ${scroll.y}`);
 
+        // TODO: Fix up scroll multiplier when we get larger maps, this allow us to accelerate scrolling
+        const maxScrollMult = 10.0,
+            minScrollMult = 1.0;
+
+        const now = Date.now();
+        const timeDiff = 200 - Math.min(now - lastScrollTime, 200); // [0, 200]
+        if (timeDiff > 0) {
+            scrollMult += 0.1;
+            scrollMult = Math.min(maxScrollMult, scrollMult);
+        } else {
+            scrollMult = minScrollMult;
+        }
+
         let oldScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
-        let scrollAmt = 32;
+        const scrollAmt = 32 * scrollMult;
+            maxScroll = 1024 * 4,
+            minScroll = 1024;
+        console.log(`Scroll by: ${scrollAmt} (mult: ${scrollMult})`);
         if (scroll.y > 0) {
-            mapCamera.w = Math.max(mapCamera.w - scrollAmt, scrollAmt);
-            mapCamera.h = Math.max(mapCamera.h - scrollAmt, scrollAmt);
+            mapCamera.w = Math.max(mapCamera.w - scrollAmt, minScroll);
+            mapCamera.h = Math.max(mapCamera.h - scrollAmt, minScroll);
         } else if (scroll.y < 0) {
-            mapCamera.w += scrollAmt;
-            mapCamera.h += scrollAmt;
+            mapCamera.w = Math.min(mapCamera.w + scrollAmt, maxScroll);
+            mapCamera.h = Math.min(mapCamera.h + scrollAmt, maxScroll);
         }
 
         // Re-center the camera on the cursor after zooming
@@ -378,6 +396,7 @@ const MapEditor = (new function(){
         interactionMgr.setCanvasScale(newScale.x, newScale.y);
         interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
 
+        lastScrollTime = Date.now();
         this.dirtyCanvas = true;
     };
 

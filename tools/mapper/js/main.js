@@ -3,6 +3,7 @@
 //  - Top interaction tile isn't 100% visible??
 //  - Camera zooming
 //      - Fix aspect ratio (seems smooshed right now, want to retain 16x16)
+//      - Initial zoom screws up aspect ratio
 //
 //
 //      - camera.x == -8, camera.w == 16 --> display half of tile 1
