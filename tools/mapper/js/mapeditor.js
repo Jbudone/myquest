@@ -566,8 +566,13 @@ const MapEditor = (new function(){
 
             const jsonTileset = data.tilesets.find((tileset) => {
                 return (spriteGid >= tileset.firstgid && spriteGid < (tileset.firstgid + tileset.tilecount));
-            }), sheet = mapProperties.tilesets.find((tileset) => {
-                return (tileset.data.id === jsonTileset.name);
+            }),
+            spritesPath = "sprites/",
+            jsonSpriteRelPath = jsonTileset.image.substr(jsonTileset.image.indexOf(spritesPath) + spritesPath.length),
+            sheet = mapProperties.tilesets.find((tileset) => {
+                const tilesetRelPath = tileset.data.output.substr(tileset.data.output.indexOf(spritesPath) + spritesPath.length);
+
+                return jsonSpriteRelPath === tilesetRelPath;
             });
 
             const spriteLid = spriteGid - jsonTileset.firstgid,
