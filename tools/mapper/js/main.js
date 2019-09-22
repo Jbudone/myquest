@@ -1,20 +1,5 @@
 
 // TODO
-//  - Top interaction tile isn't 100% visible??
-//  - Camera zooming
-//      - Fix aspect ratio (seems smooshed right now, want to retain 16x16)
-//      - Initial zoom screws up aspect ratio
-//
-//
-//      - camera.x == -8, camera.w == 16 --> display half of tile 1
-//      - camera.x == 0,  camera.w == 16 --> only tile 1 visible
-//      - camera.x == 16, camera.w == 16 --> only tile 2 visible
-//      - camera.x == 64, camera.w == 64 --> only tiles 4..8 visible
-//
-//      - cameraPos = (mapPos - cameraOffset) * (canvasSize / camera.w)
-//
-//
-//      camera.w == 64; (canvasWidth / 4) * x == 16; x is scale ==> x = camera.w / canvasWidth
 //  - Cleanup
 //
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving

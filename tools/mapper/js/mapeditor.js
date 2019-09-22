@@ -96,6 +96,8 @@ const MapEditor = (new function(){
     this.setupInteractions = () => {
         interactionMgr.reset();
 
+
+        interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
         interactionMgr.setBounds((mapProperties.columns - 1) * TILE_SIZE, (mapProperties.rows - 1) * TILE_SIZE);
         interactionMgr.setCanvasScale(mapCamera.w / canvasEl.width, mapCamera.h / canvasEl.height);
 
@@ -371,16 +373,18 @@ const MapEditor = (new function(){
         }
 
         let oldScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
-        const scrollAmt = 32 * scrollMult;
+        const aspectRatio = (canvasEl.height / canvasEl.width),
+            scrollAmtX = 32 * scrollMult,
+            scrollAmtY = scrollAmtX * aspectRatio,
             maxScroll = 1024 * 4,
             minScroll = 1024;
-        console.log(`Scroll by: ${scrollAmt} (mult: ${scrollMult})`);
+        console.log(`Scroll by: ${scrollAmtX} (mult: ${scrollMult})`);
         if (scroll.y > 0) {
-            mapCamera.w = Math.max(mapCamera.w - scrollAmt, minScroll);
-            mapCamera.h = Math.max(mapCamera.h - scrollAmt, minScroll);
+            mapCamera.w = Math.max(mapCamera.w - scrollAmtX, minScroll);
+            mapCamera.h = Math.max(mapCamera.h - scrollAmtY, minScroll * aspectRatio);
         } else if (scroll.y < 0) {
-            mapCamera.w = Math.min(mapCamera.w + scrollAmt, maxScroll);
-            mapCamera.h = Math.min(mapCamera.h + scrollAmt, maxScroll);
+            mapCamera.w = Math.min(mapCamera.w + scrollAmtX, maxScroll);
+            mapCamera.h = Math.min(mapCamera.h + scrollAmtY, maxScroll * aspectRatio);
         }
 
         // Re-center the camera on the cursor after zooming
@@ -514,9 +518,9 @@ const MapEditor = (new function(){
         //mapProperties.tilesets = [];
 
         mapCamera.x = 0;
-        mapCamera.y = 0;
+        mapCamera.y = -12; // NOTE: Offset for consolemgr
         mapCamera.w = 1200;
-        mapCamera.h = 800;
+        mapCamera.h = mapCamera.w * (canvasEl.height / canvasEl.width);
 
         cursorSprite = null;
         cursor.x = 0;
