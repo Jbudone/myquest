@@ -23,12 +23,12 @@ const MapEditor = (new function(){
         h: 800,
         translate: (mapPos) => {
             const cameraPos = { x: 0, y: 0 };
-            cameraPos.x = (mapPos.x - mapCamera.x) * (canvasEl.width / mapCamera.w);
-            cameraPos.y = (mapPos.y - mapCamera.y) * (canvasEl.height / mapCamera.h);
+            cameraPos.x = Math.ceil((mapPos.x - mapCamera.x) * (canvasEl.width / mapCamera.w));
+            cameraPos.y = Math.ceil((mapPos.y - mapCamera.y) * (canvasEl.height / mapCamera.h));
             return cameraPos;
         },
-        scaleX: (x) => x * (canvasEl.width / mapCamera.w),
-        scaleY: (y) => y * (canvasEl.height / mapCamera.h),
+        scaleX: (x) => Math.ceil(x * (canvasEl.width / mapCamera.w)),
+        scaleY: (y) => Math.ceil(y * (canvasEl.height / mapCamera.h)),
     };
 
     const addInteractable = ((xPos, yPos) => {
@@ -270,15 +270,16 @@ const MapEditor = (new function(){
         const rightEdge = mapCamera.w,
             bottomEdge = mapCamera.h;
 
-        const mapWidth = mapProperties.columns * TILE_SIZE,
-            mapHeight = mapProperties.rows * TILE_SIZE;
+        const mapWidth = mapCamera.scaleX(mapProperties.columns * TILE_SIZE),
+            mapHeight = mapCamera.scaleY(mapProperties.rows * TILE_SIZE);
+
+        let sizeX = mapCamera.scaleX(TILE_SIZE),
+            sizeY = mapCamera.scaleY(TILE_SIZE);
 
         const drawSprite = (sprite) => {
             const tilesize = sprite.sheet.data.tilesize;
 
             let pos = mapCamera.translate({ x: sprite.x, y: sprite.y });
-            let sizeX = mapCamera.scaleX(TILE_SIZE),
-                sizeY = mapCamera.scaleY(TILE_SIZE);
             canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
         };
 
@@ -288,26 +289,30 @@ const MapEditor = (new function(){
 
         if (cursorSprite) {
 
-            const tilesize = cursorSprite.tilesize;
+            const tilesize = cursorSprite.tilesize,
+                offCamera = {
+                    x: mapCamera.scaleX(mapCamera.x),
+                    y: mapCamera.scaleY(mapCamera.y)
+                };
             cursorSprite.sprites.forEach((sprite) => {
                 const xPos = sprite.x,
                     yPos = sprite.y,
-                    offX = xPos - cursorSprite.left + cameraOffX,
-                    offY = yPos - cursorSprite.top + cameraOffY;
+                    offX = mapCamera.scaleX(xPos - cursorSprite.left),
+                    offY = mapCamera.scaleY(yPos - cursorSprite.top);
 
-                if ((offX + cursor.x) >= mapWidth || (offY + cursor.y) >= mapHeight) {
+                const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
+
+                if ((pos.x + offX + offCamera.x) >= mapWidth || (pos.y + offY + offCamera.y) >= mapHeight) {
                     return;
                 }
 
-                canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, cursor.x + offX, cursor.y + offY, TILE_SIZE, TILE_SIZE);
+                canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
             });
         }
 
 
-        canvasCtx.fillStyle = '#F00';
+        canvasCtx.fillStyle = '#FF000055';
         let pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
-        let sizeX = mapCamera.scaleX(TILE_SIZE),
-            sizeY = mapCamera.scaleY(TILE_SIZE);
         canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
     };
 
@@ -350,6 +355,7 @@ const MapEditor = (new function(){
     const onMouseScroll = (worldPt, scroll) => {
         console.log(`Scroll: ${scroll.y}`);
 
+        let oldScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
         let scrollAmt = 32;
         if (scroll.y > 0) {
             mapCamera.w = Math.max(mapCamera.w - scrollAmt, scrollAmt);
@@ -359,7 +365,19 @@ const MapEditor = (new function(){
             mapCamera.h += scrollAmt;
         }
 
-        interactionMgr.setCanvasScale(mapCamera.w / canvasEl.width, mapCamera.h / canvasEl.height);
+        // Re-center the camera on the cursor after zooming
+        let newScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
+        let newWorldPt = {
+            x: (worldPt.x - mapCamera.x) * (newScale.x / oldScale.x) + mapCamera.x,
+            y: (worldPt.y - mapCamera.y) * (newScale.y / oldScale.y) + mapCamera.y
+        };
+
+        mapCamera.x -= newWorldPt.x - worldPt.x;
+        mapCamera.y -= newWorldPt.y - worldPt.y;
+
+        interactionMgr.setCanvasScale(newScale.x, newScale.y);
+        interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
+
         this.dirtyCanvas = true;
     };
 

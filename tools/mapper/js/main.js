@@ -1,11 +1,9 @@
 
 // TODO
+//  - Top interaction tile isn't 100% visible??
 //  - Camera zooming
 //      - Fix aspect ratio (seems smooshed right now, want to retain 16x16)
-//      - Zooming: center on cursor (zoom AND translate)
 //
-//      - Need to affect draw position and size
-//      - Translate map position -> camera position (top left -> bottom right)
 //
 //      - camera.x == -8, camera.w == 16 --> display half of tile 1
 //      - camera.x == 0,  camera.w == 16 --> only tile 1 visible
