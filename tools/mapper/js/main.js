@@ -3,13 +3,29 @@
 //  - Cleanup
 //
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
+//
+//  - Layer as array of sprites, or array of tiles?
+//      - Array of tiles less efficient for drawing which is fine when we incorporate pre-drawn pages, blitting, etc.
 //  - Layers (base/sprites/etc.)
+//      - Future: we may want to only include spriteGroups as opposed to sprites (for efficiency), although we could
+//      specify sprites individually in special cases for layering/changes
+//      - Multiple layers of sprites:
+//          - We want base layer if there's no transparency for the sprite; otherwise sprite
+//          - Sprite: flower -> leaf -> tree/shadow
+//              - Flower/leaf swap each other unless you manually specify to not swap
+//              - Tree/shadow are floating and automatically go above
+//          - LAYERS:
+//              - Base sprite (only one)
+//              - Sprite ground (can stack as option in future? Otherwise keep as single for now)
+//              - Sprite floating (same as ground)
+//
+//
 //  - Dynamically resize map boundaries (including shrinking)
 //  - Updating sheets -> auto updates map
 //  - Auto reload map on changes (sheet, etc.)
 //  - Shared libs between all tools: resourcemgr, interactionmgr, consolemgr (toolbet/mapper, game?)
 //  - Optimize drawing: draw to a background full-view map, then draw a region of that image to the actual user view (zoomed in, camera translation, cursor tiles, highlights, etc.)
-//  - Layered sprite: lowest --> base sprite, 
+//  - Special layers: spawns, zoning, interactable? evt (town area, event, etc.)
 //
 //  - Tilesets: list of tilesets, hover over the list to expand it vertically; hovers *over* canvas like a popup
 //  - Control panel: tabs on top - files, tilesets, map properties, minimap

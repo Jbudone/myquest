@@ -14,6 +14,13 @@ const MapEditor = (new function(){
         rows: 100,
     };
 
+    let spriteLayers = {
+        base: [],
+        ground: [],
+        floating: []
+    };
+
+
     // Camera
     // This is the top/left point in the map visible to the camera
     const mapCamera = {
@@ -70,8 +77,10 @@ const MapEditor = (new function(){
                             return;
                         }
 
+                        const spriteLayer = spriteLayers.base;
+
                         // Is there already a sprite here?
-                        const existingSprite = sprites.find((eSprite) => {
+                        const existingSprite = spriteLayer.find((eSprite) => {
                             if (eSprite.x === spriteEnt.x && eSprite.y === spriteEnt.y) {
                                 return true;
                             }
@@ -80,13 +89,13 @@ const MapEditor = (new function(){
                         if (existingSprite) {
                             // Kill existing sprite group
                             existingSprite.group.forEach((eSprite) => {
-                                let eSpriteIdx = sprites.indexOf(eSprite);
-                                sprites.splice(eSpriteIdx, 1);
+                                let eSpriteIdx = spriteLayer.indexOf(eSprite);
+                                spriteLayer.splice(eSpriteIdx, 1);
                             });
                         }
 
                         spriteGroup.push(spriteEnt);
-                        sprites.push(spriteEnt);
+                        spriteLayer.push(spriteEnt);
                 });
 
                 this.dirtyCanvas = true;
@@ -141,8 +150,6 @@ const MapEditor = (new function(){
     let cursorSprite = null,
         cursor = { x: 0, y: 0 };
 
-    let sprites = [];
-
     this.addTileset = (sheet) => {
         if (mapProperties.tilesets.indexOf(sheet) === -1) {
             mapProperties.tilesets.push(sheet);
@@ -164,9 +171,12 @@ const MapEditor = (new function(){
                 mapProperties.rows += expansion;
                 growToY = mapProperties.rows;
 
-                sprites.forEach((sprite) => {
-                    sprite.y += (expansion * 16);
-                });
+                for (const layer in spriteLayers) {
+                    const spriteLayer = spriteLayers[layer];
+                    spriteLayer.forEach((sprite) => {
+                        sprite.y += (expansion * 16);
+                    });
+                }
 
             } else if (direction === SOUTH) {
                 growFromY = mapProperties.rows;
@@ -177,9 +187,12 @@ const MapEditor = (new function(){
                 mapProperties.columns += expansion;
                 growToX = mapProperties.columns;
 
-                sprites.forEach((sprite) => {
-                    sprite.x += (expansion * 16);
-                });
+                for (const layer in spriteLayers) {
+                    const spriteLayer = spriteLayers[layer];
+                    spriteLayer.forEach((sprite) => {
+                        sprite.x += (expansion * 16);
+                    });
+                }
 
             } else if (direction === EAST) {
                 growFromX = mapProperties.columns;
@@ -285,9 +298,13 @@ const MapEditor = (new function(){
             canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
         };
 
-        sprites.forEach((spriteData) => {
-            drawSprite(spriteData);
-        });
+        for (const layer in spriteLayers) {
+            const spriteLayer = spriteLayers[layer];
+            spriteLayer.forEach((spriteData) => {
+                drawSprite(spriteData);
+            });
+        }
+
 
         if (cursorSprite) {
 
@@ -406,7 +423,7 @@ const MapEditor = (new function(){
 
     this.exportMap = () => {
 
-        console.log(sprites);
+        console.log(spriteLayers);
 
         const mapJson = {};
 
@@ -416,10 +433,12 @@ const MapEditor = (new function(){
         const tilecount = mapJson.width * mapJson.height;
 
         const baseTiles = new Array(tilecount),
-            spriteTiles = new Array(tilecount);
+            groundTiles = new Array(tilecount),
+            floatTiles  = new Array(tilecount);
 
         baseTiles.fill(0);
-        spriteTiles.fill(0);
+        groundTiles.fill(0);
+        floatTiles.fill(0);
 
         mapJson.layers = [
             {
@@ -427,8 +446,12 @@ const MapEditor = (new function(){
                 name: 'base',
             },
             {
-                data: spriteTiles,
+                data: groundTiles,
                 name: 'sprites',
+            },
+            {
+                data: floatTiles,
+                name: 'floating', // FIXME
             },
             {
                 objects: [],
@@ -466,28 +489,34 @@ const MapEditor = (new function(){
         const tilesets = [];
         let tilesetGid = 1;
 
-        sprites.forEach((sprite) => {
-            const tileset = sprite.sheet;
-            if (tilesets.indexOf(tileset) === -1) {
-                tilesets.push(tileset);
+        const exportLayers = [
+            { src: spriteLayers.base, dst: baseTiles },
+            { src: spriteLayers.ground, dst: groundTiles },
+            { src: spriteLayers.floating, dst: floatTiles }
+        ];
 
-                tileset.firstGid = tilesetGid;
-                tileset.tileCount = tileset.data.gid.last - tileset.data.gid.first + 1;
-                tilesetGid += tileset.tileCount;
-            }
+        exportLayer.forEach((layer) => {
 
-            const sheetY = sprite.sheetY / sprite.sheet.data.tilesize,
-                sheetX = sprite.sheetX / sprite.sheet.data.tilesize,
-                spriteLid = sheetY * tileset.data.columns + sheetX,
-                tileGid = tileset.firstGid + spriteLid;
+            layer.src.forEach((sprite) => {
+                const tileset = sprite.sheet;
+                if (tilesets.indexOf(tileset) === -1) {
+                    tilesets.push(tileset);
 
-            const mapGid = (sprite.y / TILE_SIZE) * mapProperties.columns + (sprite.x / TILE_SIZE);
-            if (baseTiles[mapGid]) {
-                spriteTiles[mapGid] = tileGid;
-            } else {
-                baseTiles[mapGid] = tileGid;
-            }
+                    tileset.firstGid = tilesetGid;
+                    tileset.tileCount = tileset.data.gid.last - tileset.data.gid.first + 1;
+                    tilesetGid += tileset.tileCount;
+                }
+
+                const sheetY = sprite.sheetY / sprite.sheet.data.tilesize,
+                    sheetX = sprite.sheetX / sprite.sheet.data.tilesize,
+                    spriteLid = sheetY * tileset.data.columns + sheetX,
+                    tileGid = tileset.firstGid + spriteLid;
+
+                const mapGid = (sprite.y / TILE_SIZE) * mapProperties.columns + (sprite.x / TILE_SIZE);
+                layer.dst[mapGid] = tileGid;
+            });
         });
+
 
         tilesets.forEach((tileset) => {
             mapJson.tilesets.push({
@@ -526,7 +555,9 @@ const MapEditor = (new function(){
         cursor.x = 0;
         cursor.y = 0;
 
-        sprites = [];
+        spriteLayers.base = [];
+        spriteLayers.ground = [];
+        spriteLayers.floating = [];
 
         this.setupInteractions();
         this.dirtyCanvas = true;
@@ -546,77 +577,86 @@ const MapEditor = (new function(){
         //    mapProperties.tilesets.push(tileset);
         //});
 
-        let baseTiles, spriteTiles;
-        data.layers.forEach((layer) => {
-            if (layer.name === 'base') {
-                baseTiles = layer.data;
-            } else if (layer.name === 'sprites') {
-                spriteTiles = layer.data;
-            }
-        });
+        const layers      = [],
+            baseLayer     = data.layers.find((layer) => layer.name === 'base'),
+            groundLayer   = data.layers.find((layer) => layer.name === 'sprites'),
+            floatingLayer = data.layers.find((layer) => layer.name === 'floating');
+
+        if (baseLayer)     layers.push({ src: baseLayer.data, dst: spriteLayers.base });
+        if (groundLayer)   layers.push({ src: groundLayer.data, dst: spriteLayers.ground });
+        if (floatingLayer) layers.push({ src: floatingLayer.data, dst: spriteLayers.floating });
+
 
         let mapSpriteGroups = {};
 
-        for (let i = 0; i < baseTiles.length; ++i) {
-            if (baseTiles[i] === 0) continue;
+        layers.forEach((layer) => {
+            if (!layer.src) return;
 
-            const spriteGid = baseTiles[i],
-                mapY = Math.floor(i / mapProperties.columns),
-                mapX = i % mapProperties.columns;
+            // FIXME: Catch spriteGroups from copy -- but what if we have multiple spriteGroups at the same position but
+            // on different layers?
+            for (let i = 0; i < layer.src.length; ++i) {
+                if (layer.src[i] === 0) continue;
 
-            const jsonTileset = data.tilesets.find((tileset) => {
-                return (spriteGid >= tileset.firstgid && spriteGid < (tileset.firstgid + tileset.tilecount));
-            }),
-            spritesPath = "sprites/",
-            jsonSpriteRelPath = jsonTileset.image.substr(jsonTileset.image.indexOf(spritesPath) + spritesPath.length),
-            sheet = mapProperties.tilesets.find((tileset) => {
-                const tilesetRelPath = tileset.data.output.substr(tileset.data.output.indexOf(spritesPath) + spritesPath.length);
+                const spriteGid = layer.src[i],
+                    mapY = Math.floor(i / mapProperties.columns),
+                    mapX = i % mapProperties.columns;
 
-                return jsonSpriteRelPath === tilesetRelPath;
-            });
+                const jsonTileset = data.tilesets.find((tileset) => {
+                    return (spriteGid >= tileset.firstgid && spriteGid < (tileset.firstgid + tileset.tilecount));
+                }),
+                spritesPath = "sprites/",
+                jsonSpriteRelPath = jsonTileset.image.substr(jsonTileset.image.indexOf(spritesPath) + spritesPath.length),
+                sheet = mapProperties.tilesets.find((tileset) => {
+                    const tilesetRelPath = tileset.data.output.substr(tileset.data.output.indexOf(spritesPath) + spritesPath.length);
 
-            const spriteLid = spriteGid - jsonTileset.firstgid,
-                sheetX = spriteLid % jsonTileset.columns,
-                sheetY = Math.floor(spriteLid / jsonTileset.columns);
-
-            // Find sprite group
-            let spriteGroup;
-            if (mapSpriteGroups[i]) {
-                spriteGroup = mapSpriteGroups[i];
-            } else if (sheet.data.spriteGroups) {
-                spriteGroup = [];
-                let spriteIsland = sheet.data.spriteGroups.find((spriteGroup) => {
-                    return (spriteGroup.dstX === (sheetX * 16) && spriteGroup.dstY === (sheetY * 16));
+                    return jsonSpriteRelPath === tilesetRelPath;
                 });
 
-                if (spriteIsland) {
+                const spriteLid = spriteGid - jsonTileset.firstgid,
+                    sheetX = spriteLid % jsonTileset.columns,
+                    sheetY = Math.floor(spriteLid / jsonTileset.columns);
 
-                    for (let sgY = 0; sgY < Math.ceil(spriteIsland.height / 16); ++sgY) {
-                        for (let sgX = 0; sgX < Math.ceil(spriteIsland.width / 16); ++sgX) {
-                            let sgMapY = mapY + sgY,
-                                sgMapX = mapX + sgX,
-                                sgMapI = sgMapY * mapProperties.columns + sgMapX;
+                // Find sprite group
+                let spriteGroup;
+                if (mapSpriteGroups[i]) {
+                    spriteGroup = mapSpriteGroups[i];
+                } else if (sheet.data.spriteGroups) {
+                    spriteGroup = [];
+                    let spriteIsland = sheet.data.spriteGroups.find((spriteGroup) => {
+                        return (spriteGroup.dstX === (sheetX * 16) && spriteGroup.dstY === (sheetY * 16));
+                    });
 
-                            mapSpriteGroups[sgMapI] = spriteGroup;
+                    if (spriteIsland) {
+
+                        for (let sgY = 0; sgY < Math.ceil(spriteIsland.height / 16); ++sgY) {
+                            for (let sgX = 0; sgX < Math.ceil(spriteIsland.width / 16); ++sgX) {
+                                let sgMapY = mapY + sgY,
+                                    sgMapX = mapX + sgX,
+                                    sgMapI = sgMapY * mapProperties.columns + sgMapX;
+
+                                mapSpriteGroups[sgMapI] = spriteGroup;
+                            }
                         }
                     }
+                } else {
+                    spriteGroup = [];
                 }
-            } else {
-                spriteGroup = [];
+
+                const sprite = {
+                    sheet: sheet,
+                    img: sheet.mapper.img,
+                    sheetX: sheetX * 16,
+                    sheetY: sheetY * 16,
+                    x: mapX * 16,
+                    y: mapY * 16,
+                    group: spriteGroup
+                };
+
+                spriteGroup.push(sprite);
+                layer.dst.push(sprite);
             }
+        });
 
-            const sprite = {
-                sheet: sheet,
-                img: sheet.mapper.img,
-                sheetX: sheetX * 16,
-                sheetY: sheetY * 16,
-                x: mapX * 16,
-                y: mapY * 16,
-                group: spriteGroup
-            };
 
-            spriteGroup.push(sprite);
-            sprites.push(sprite);
-        }
     };
 }());
