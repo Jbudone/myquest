@@ -77,7 +77,21 @@ const MapEditor = (new function(){
                             return;
                         }
 
-                        const spriteLayer = spriteLayers.base;
+                        // Which layer for this particular sprite? Base if opaque, floating if float, otherwise ground
+                        let spriteRow = (sprite.y / cursorSprite.sheet.data.tilesize),
+                            spriteCol = (sprite.x / cursorSprite.sheet.data.tilesize),
+                            spriteIdx = spriteRow * cursorSprite.sheet.data.columns + spriteCol,
+                            spriteLayer = spriteLayers.base;
+
+
+                        const isFloating = cursorSprite.sheet.mapper.isTileFloating(spriteIdx),
+                            isTransparent = cursorSprite.sheet.mapper.isTileTransparent(spriteIdx);
+
+                        if (isFloating) { // Floating
+                            spriteLayer = spriteLayers.floating;
+                        } else if (isTransparent) { // Ground
+                            spriteLayer = spriteLayers.ground;
+                        }
 
                         // Is there already a sprite here?
                         const existingSprite = spriteLayer.find((eSprite) => {
@@ -153,6 +167,54 @@ const MapEditor = (new function(){
     this.addTileset = (sheet) => {
         if (mapProperties.tilesets.indexOf(sheet) === -1) {
             mapProperties.tilesets.push(sheet);
+
+            const sheetCanvas = document.createElement('canvas'),
+                ctx = sheetCanvas.getContext('2d');
+
+            sheetCanvas.width = sheet.mapper.img.width;
+            sheetCanvas.height = sheet.mapper.img.height;
+            ctx.drawImage(sheet.mapper.img, 0, 0, sheet.mapper.img.width, sheet.mapper.img.height);
+
+            sheet.mapper.tileinfo = {};
+            sheet.mapper.isTileTransparent = (idx) => {
+                if (!sheet.mapper.tileinfo[idx]) {
+                    sheet.mapper.tileinfo[idx] = {};
+                }
+
+                if (!sheet.mapper.tileinfo[idx].hasOwnProperty('transparent')) {
+
+                    let isTransparent = false,
+                        row = Math.floor(idx / sheet.data.columns),
+                        col = idx % sheet.data.columns,
+                        y   = row * sheet.data.tilesize,
+                        x   = col * sheet.data.tilesize;
+
+                    const tileData = ctx.getImageData(x, y, sheet.data.tilesize, sheet.data.tilesize);
+                    for (let i = 3; i < tileData.data.length; i += 4) {
+                        if (tileData.data[i] !== 255) {
+                            isTransparent = true;
+                            break;
+                        }
+                    }
+
+                    sheet.mapper.tileinfo[idx].transparent = isTransparent;
+                }
+
+                return sheet.mapper.tileinfo[idx].transparent;
+            };
+
+            sheet.mapper.isTileFloating = (idx) => {
+                if (!sheet.mapper.tileinfo[idx]) {
+                    sheet.mapper.tileinfo[idx] = {};
+                }
+
+                if (!sheet.mapper.tileinfo[idx].hasOwnProperty('floating')) {
+                    const isFloating = sheet.data.data.floating.indexOf(idx) >= 0;
+                    sheet.mapper.tileinfo[idx].floating = isFloating;
+                }
+
+                return sheet.mapper.tileinfo[idx].floating;
+            };
         }
     };
 
@@ -326,6 +388,24 @@ const MapEditor = (new function(){
                 }
 
                 canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
+
+                // Draw overlay over sprites to show what parts are base/ground/floating
+                let spriteRow = (sprite.y / cursorSprite.sheet.data.tilesize),
+                    spriteCol = (sprite.x / cursorSprite.sheet.data.tilesize),
+                    spriteIdx = spriteRow * cursorSprite.sheet.data.columns + spriteCol;
+
+                const isFloating = cursorSprite.sheet.mapper.isTileFloating(spriteIdx),
+                    isTransparent = cursorSprite.sheet.mapper.isTileTransparent(spriteIdx);
+
+                if (!isTransparent) { // Base
+                    canvasCtx.fillStyle = '#FF000055';
+                } else if (isFloating) { // Floating
+                    canvasCtx.fillStyle = '#0000FF55';
+                } else { // Ground
+                    canvasCtx.fillStyle = '#00FF0055';
+                }
+
+                canvasCtx.fillRect(pos.x + offX, pos.y + offY, sizeX, sizeY);
             });
         }
 

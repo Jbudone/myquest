@@ -315,6 +315,7 @@ const ResourceMgr = (new function(){
                 }
 
                 resDetails.mapper.img = img;
+                MapEditor.addTileset(resDetails);
             };
 
             let img = new Image();
@@ -324,8 +325,6 @@ const ResourceMgr = (new function(){
             resDetails.mapper = {
                 imgPath
             };
-
-            MapEditor.addTileset(resDetails);
         });
 
         this.allResources['map'].forEach((resDetails) => {
