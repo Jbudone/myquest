@@ -8,6 +8,7 @@ const MapEditor = (new function(){
 
     const TILE_SIZE = 16;
     const NORTH = 0, WEST = 1, EAST = 2, SOUTH = 3;
+    const CURSOR_PLACE = 0, CURSOR_ERASE = 1;
 
     const DefaultProperties = {
         columns: 100,
@@ -53,24 +54,25 @@ const MapEditor = (new function(){
             })
             .onClick(() => {
 
-                if (!cursorSprite) return;
+                if (!cursor.tool) return;
+                if (cursor.tool.op === CURSOR_PLACE) {
 
-                const spriteGroup = [],
-                    mapWidth = mapProperties.columns * TILE_SIZE,
-                    mapHeight = mapProperties.rows * TILE_SIZE;
-                cursorSprite.sprites.forEach((sprite) => {
+                    const spriteGroup = [],
+                        mapWidth = mapProperties.columns * TILE_SIZE,
+                        mapHeight = mapProperties.rows * TILE_SIZE;
+                    cursor.tool.sprite.sprites.forEach((sprite) => {
 
-                    const offX = sprite.x - cursorSprite.left,
-                        offY = sprite.y - cursorSprite.top,
-                        spriteEnt = {
-                            sheet: cursorSprite.sheet,
-                            img: cursorSprite.img,
-                            sheetX: sprite.x,
-                            sheetY: sprite.y,
-                            x: cursor.x + offX,
-                            y: cursor.y + offY,
-                            group: spriteGroup
-                        };
+                        const offX = sprite.x - cursor.tool.sprite.left,
+                            offY = sprite.y - cursor.tool.sprite.top,
+                            spriteEnt = {
+                                sheet: cursor.tool.sprite.sheet,
+                                img: cursor.tool.sprite.img,
+                                sheetX: sprite.x,
+                                sheetY: sprite.y,
+                                x: cursor.x + offX,
+                                y: cursor.y + offY,
+                                group: spriteGroup
+                            };
 
                         // Outside of map bounds? Skip
                         if (spriteEnt.x >= mapWidth || spriteEnt.y >= mapHeight) {
@@ -78,14 +80,14 @@ const MapEditor = (new function(){
                         }
 
                         // Which layer for this particular sprite? Base if opaque, floating if float, otherwise ground
-                        let spriteRow = (sprite.y / cursorSprite.sheet.data.tilesize),
-                            spriteCol = (sprite.x / cursorSprite.sheet.data.tilesize),
-                            spriteIdx = spriteRow * cursorSprite.sheet.data.columns + spriteCol,
+                        let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
+                            spriteCol = (sprite.x / cursor.tool.sprite.sheet.data.tilesize),
+                            spriteIdx = spriteRow * cursor.tool.sprite.sheet.data.columns + spriteCol,
                             spriteLayer = spriteLayers.base;
 
 
-                        const isFloating = cursorSprite.sheet.mapper.isTileFloating(spriteIdx),
-                            isTransparent = cursorSprite.sheet.mapper.isTileTransparent(spriteIdx);
+                        const isFloating = cursor.tool.sprite.sheet.mapper.isTileFloating(spriteIdx),
+                            isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
 
                         if (isFloating) { // Floating
                             spriteLayer = spriteLayers.floating;
@@ -110,7 +112,28 @@ const MapEditor = (new function(){
 
                         spriteGroup.push(spriteEnt);
                         spriteLayer.push(spriteEnt);
-                });
+                    });
+                } else if (cursor.tool.op === CURSOR_ERASE) {
+
+                    for (layer in spriteLayers) {
+                        let spriteLayer = spriteLayers[layer];
+
+                        // Is there already a sprite here?
+                        const existingSprite = spriteLayer.find((eSprite) => {
+                            if (eSprite.x === cursor.x && eSprite.y === cursor.y) {
+                                return true;
+                            }
+                        });
+
+                        if (existingSprite) {
+                            // Kill existing sprite group
+                            existingSprite.group.forEach((eSprite) => {
+                                let eSpriteIdx = spriteLayer.indexOf(eSprite);
+                                spriteLayer.splice(eSpriteIdx, 1);
+                            });
+                        }
+                    }
+                }
 
                 this.dirtyCanvas = true;
             });
@@ -145,6 +168,15 @@ const MapEditor = (new function(){
 
         this.mapWindowEl = $('#mapperWindow');
 
+
+        $('#mapperToolErase').click(() => {
+            cursor.tool = {
+                op: CURSOR_ERASE
+            };
+
+            return false;
+        });
+
         canvasEl  = $('#mapEditorCanvas')[0];
         canvasCtx = canvasEl.getContext('2d');
 
@@ -161,8 +193,7 @@ const MapEditor = (new function(){
         this.setupInteractions();
     };
 
-    let cursorSprite = null,
-        cursor = { x: 0, y: 0 };
+    let cursor = { x: 0, y: 0, tool: null };
 
     this.addTileset = (sheet) => {
         if (mapProperties.tilesets.indexOf(sheet) === -1) {
@@ -290,13 +321,16 @@ const MapEditor = (new function(){
             mapProperties.tilesets.push(sheet);
         }
 
-        cursorSprite = {
-            sheet,
-            img: sheet.mapper.img,
-            sprites: entity.sprites,
-            left: entity.left,
-            top: entity.top,
-            tilesize: sheet.data.tilesize
+        cursor.tool = {
+            op: CURSOR_PLACE,
+            sprite: {
+                sheet,
+                img: sheet.mapper.img,
+                sprites: entity.sprites,
+                left: entity.left,
+                top: entity.top,
+                tilesize: sheet.data.tilesize
+            }
         };
 
         $(canvasEl).addClass('holdingSprite');
@@ -368,18 +402,18 @@ const MapEditor = (new function(){
         }
 
 
-        if (cursorSprite) {
+        if (cursor.tool && cursor.tool.sprite) {
 
-            const tilesize = cursorSprite.tilesize,
+            const tilesize = cursor.tool.sprite.tilesize,
                 offCamera = {
                     x: mapCamera.scaleX(mapCamera.x),
                     y: mapCamera.scaleY(mapCamera.y)
                 };
-            cursorSprite.sprites.forEach((sprite) => {
+            cursor.tool.sprite.sprites.forEach((sprite) => {
                 const xPos = sprite.x,
                     yPos = sprite.y,
-                    offX = mapCamera.scaleX(xPos - cursorSprite.left),
-                    offY = mapCamera.scaleY(yPos - cursorSprite.top);
+                    offX = mapCamera.scaleX(xPos - cursor.tool.sprite.left),
+                    offY = mapCamera.scaleY(yPos - cursor.tool.sprite.top);
 
                 const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
 
@@ -387,15 +421,15 @@ const MapEditor = (new function(){
                     return;
                 }
 
-                canvasCtx.drawImage(cursorSprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
+                canvasCtx.drawImage(cursor.tool.sprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
 
                 // Draw overlay over sprites to show what parts are base/ground/floating
-                let spriteRow = (sprite.y / cursorSprite.sheet.data.tilesize),
-                    spriteCol = (sprite.x / cursorSprite.sheet.data.tilesize),
-                    spriteIdx = spriteRow * cursorSprite.sheet.data.columns + spriteCol;
+                let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
+                    spriteCol = (sprite.x / cursor.tool.sprite.sheet.data.tilesize),
+                    spriteIdx = spriteRow * cursor.tool.sprite.sheet.data.columns + spriteCol;
 
-                const isFloating = cursorSprite.sheet.mapper.isTileFloating(spriteIdx),
-                    isTransparent = cursorSprite.sheet.mapper.isTileTransparent(spriteIdx);
+                const isFloating = cursor.tool.sprite.sheet.mapper.isTileFloating(spriteIdx),
+                    isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
 
                 if (!isTransparent) { // Base
                     canvasCtx.fillStyle = '#FF000055';
@@ -411,6 +445,10 @@ const MapEditor = (new function(){
 
 
         canvasCtx.fillStyle = '#FF000055';
+        if (cursor.tool && cursor.tool.op === CURSOR_ERASE) {
+            canvasCtx.fillStyle = '#5555AA55';
+        }
+
         let pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
         canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
     };
@@ -631,7 +669,7 @@ const MapEditor = (new function(){
         mapCamera.w = 1200;
         mapCamera.h = mapCamera.w * (canvasEl.height / canvasEl.width);
 
-        cursorSprite = null;
+        cursor.tool = null;
         cursor.x = 0;
         cursor.y = 0;
 
