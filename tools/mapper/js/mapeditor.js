@@ -115,8 +115,10 @@ const MapEditor = (new function(){
                     });
                 } else if (cursor.tool.op === CURSOR_ERASE) {
 
-                    for (layer in spriteLayers) {
-                        let spriteLayer = spriteLayers[layer];
+                    const topToBottomLayers = [spriteLayers.floating, spriteLayers.ground, spriteLayers.base];
+                    for (let i = 0; i < topToBottomLayers.length; ++i) {
+
+                        const spriteLayer = topToBottomLayers[i];
 
                         // Is there already a sprite here?
                         const existingSprite = spriteLayer.find((eSprite) => {
@@ -131,6 +133,8 @@ const MapEditor = (new function(){
                                 let eSpriteIdx = spriteLayer.indexOf(eSprite);
                                 spriteLayer.splice(eSpriteIdx, 1);
                             });
+
+                            break;
                         }
                     }
                 }
