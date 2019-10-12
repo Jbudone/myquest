@@ -299,6 +299,7 @@ const InteractionMgr = (function(){
         //window.addEventListener('scroll', onMouseScroll);
 
         document.addEventListener("contextmenu", function(e){
+            if (e.target !== canvasEl) return;
             e.preventDefault();
         }, false);
     };
