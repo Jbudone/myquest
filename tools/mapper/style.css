@@ -61,6 +61,15 @@ body {
 	background: #282828;
 }
 
+#workingWindow.pendingChanges .controlsTab {
+	border-color: #E0E0E0;
+	border-width: 1px;
+}
+
+#workingWindow.pendingChanges .controlsTab.active {
+	border-bottom-color: #282828;
+}
+
 .controlsTab:hover {
 	font-weight: bold;
 }
@@ -72,6 +81,12 @@ body {
     display: block;
 	width: 100%;
     height: 100%;
+}
+
+#workingWindow.pendingChanges #controlsContainer {
+	border-color: #E0E0E0;
+    border-width: 6px;
+    border-top-width: 1px;
 }
 
 #controlsContainer {
@@ -262,4 +277,25 @@ body {
     color: #000;
     font-size: 42px;
     font-weight: bold;
+}
+
+#workingWindow.pendingChanges #mapperSave {
+	color: #E0E0E0;
+}
+
+
+/*******************************/
+/*          Spawns             */
+
+#spawnsList {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.spawnProfile {
+	margin: 8px;
+}
+
+.spawnProfile:hover {
+	filter: brightness(1.75);
 }

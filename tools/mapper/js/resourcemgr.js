@@ -16,17 +16,30 @@ const ResourceMgr = (new function(){
             resType: (res) => 'tilesheet'
         },
 
+        avatars: {
+            findResources: (data) => {
+                return data;
+            },
+
+            resType: (res) => 'avatars'
+        },
+
         world: {
             findResources: (data) => {
-                return data.areas;
+                const areas = [];
+                Object.keys(data.areas).forEach((areaName) => {
+                    areas.push(data.areas[areaName]);
+                });
+
+                return areas;
             },
 
             resType: (res) => 'map'
         }
     };
 
-    let sheetCanvasEl, canvasCtx;
-    let interactionMgr;
+    let sheetCanvasEl, sheetCanvasCtx;
+    let sheetsInteractionMgr;
 
     const MapProperties = {
         name: null,
@@ -39,15 +52,26 @@ const ResourceMgr = (new function(){
         // Add resource viewer element
         this.resourceMgrListEl = $('#resourceMgrList');
         this.mapListEl = $('#mapList');
+        this.spawnsEl = $('#spawnsList');
 
-        canvasEl  = $('#sheetCanvas')[0];
-        canvasCtx = canvasEl.getContext('2d');
+        sheetCanvasEl  = $('#sheetCanvas')[0];
+        sheetCanvasCtx = sheetCanvasEl.getContext('2d');
 
-        interactionMgr = new InteractionMgr();
-        interactionMgr.load(canvasEl);
+        sheetsInteractionMgr = new InteractionMgr();
+        sheetsInteractionMgr.load(sheetCanvasEl);
 
-        $('#mapperSave').click(this.onSave);
-        $('#mapperNew').click(this.onNew);
+        $('#mapperSave').click(() => {
+            ConsoleMgr.log("Saving map");
+            this.onSave().then(() => {
+                ConsoleMgr.log("Successfully saved");
+                $('#workingWindow').removeClass('pendingChanges');
+            });
+        });
+        $('#mapperNew').click(() => {
+            this.onNew().then(() => {
+                $('#workingWindow').removeClass('pendingChanges');
+            });
+        });
 
         return this.reload();
     };
@@ -84,7 +108,7 @@ const ResourceMgr = (new function(){
 
     this.deactivateSheet = () => {
         this.activeSheet = null;
-        interactionMgr.reset();
+        sheetsInteractionMgr.reset();
     };
     
     this.activateSheet = (sheet) => {
@@ -96,8 +120,8 @@ const ResourceMgr = (new function(){
 
         // Set canvas width/height. Don't do this during initialize since it may not be visible (container is hidden
         // because tab isn't active), so its width hasn't been set yet
-        canvasEl.width = $(canvasEl).width();
-        canvasEl.height = $(canvasEl).height();
+        sheetCanvasEl.width = $(sheetCanvasEl).width();
+        sheetCanvasEl.height = $(sheetCanvasEl).height();
 
         this.activeSheet = sheet;
 
@@ -108,14 +132,14 @@ const ResourceMgr = (new function(){
             width = img.width,
             scaleX = 1.0,
             scaleY = 1.0;
-        if (width > canvasEl.width) {
-            width = canvasEl.width;
-            height *= (canvasEl.width / img.width);
-            scaleX = (canvasEl.width / img.width);
-            scaleY = (canvasEl.height / img.height);
+        if (width > sheetCanvasEl.width) {
+            width = sheetCanvasEl.width;
+            height *= (sheetCanvasEl.width / img.width);
+            scaleX = (sheetCanvasEl.width / img.width);
+            scaleY = (sheetCanvasEl.height / img.height);
         }
 
-        canvasEl.height = height;
+        sheetCanvasEl.height = height;
 
 
         sheet.mapper.previewWidth = width;
@@ -127,8 +151,8 @@ const ResourceMgr = (new function(){
             rows = parseInt(sheet.data.rows, 10),
             columns = parseInt(sheet.data.columns, 10);
 
-        interactionMgr.setCanvasScale(1.0 / scaleX, 1.0 / scaleY);
-        interactionMgr.setBounds((columns - 1) * tilesize, (rows - 1) * tilesize);
+        sheetsInteractionMgr.setCanvasScale(1.0 / scaleX, 1.0 / scaleY);
+        sheetsInteractionMgr.setBounds((columns - 1) * tilesize, (rows - 1) * tilesize);
 
         if (sheet.data.spriteGroups) {
 
@@ -170,7 +194,7 @@ const ResourceMgr = (new function(){
 
                 spritesInGroup.forEach((entity) => {
 
-                    interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
+                    sheetsInteractionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
                         .onHoverIn(() => {
                             highlightedIslands.push({
                                 spriteGroup: spriteGroup,
@@ -205,9 +229,9 @@ const ResourceMgr = (new function(){
                 const entity = { x: xPos, y: yPos, w: tilesize, h: tilesize };
 
                 // Has this entity already been claimed by a spriteGroup?
-                if (interactionMgr.hasEntity(entity.x, entity.y)) continue;
+                if (sheetsInteractionMgr.hasEntity(entity.x, entity.y)) continue;
 
-                interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
+                sheetsInteractionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
                     .onHoverIn(() => {
                         highlights.push(entity);
                         this.dirtyCanvas = true;
@@ -228,8 +252,11 @@ const ResourceMgr = (new function(){
     };
 
     this.selectSprite = (entity) => {
-
         MapEditor.setSprite(this.activeSheet, entity);
+    };
+
+    this.selectAvatar = (avatar) => {
+        MapEditor.setAvatar(avatar);
     };
 
     let highlights = [],
@@ -244,6 +271,7 @@ const ResourceMgr = (new function(){
         _.forEach(this.data, (resource, resourceKey) => {
             let childResources = resource.funcs.findResources(resource.data);
 
+            /*
             if (!(childResources instanceof Array)) {
                 // Object
                 const arrChildResources = [];
@@ -254,23 +282,29 @@ const ResourceMgr = (new function(){
 
                 childResources = arrChildResources;
             }
+            */
 
-            childResources.forEach((res) => {
-                const resDetails = {
-                    resType: resource.funcs.resType(res),
-                    data: res,
-                    resParent: resource,
-                    resParentKey: resourceKey
-                };
+           if (childResources instanceof Array) {
+                childResources.forEach((res) => {
+                    const resDetails = {
+                        resType: resource.funcs.resType(res),
+                        data: res,
+                        resParent: resource,
+                        resParentKey: resourceKey
+                    };
 
-                let resList = this.allResources[resDetails.resType];
-                if (!resList) {
-                    resList = [];
-                    this.allResources[resDetails.resType] = resList;
-                }
+                    let resList = this.allResources[resDetails.resType];
+                    if (!resList) {
+                        resList = [];
+                        this.allResources[resDetails.resType] = resList;
+                    }
 
-                resList.push(resDetails);
-            });
+                    resList.push(resDetails);
+                });
+           } else {
+               const resType = resource.funcs.resType();
+               this.allResources[resType] = childResources;
+           }
         });
 
         this.resourceMgrListEl.empty();
@@ -300,31 +334,14 @@ const ResourceMgr = (new function(){
                 imgPath = `../../resources/${resDetails.data.image}`;
             }
 
-
-            let failedCacheBust = false;
-            const loadedImage = () => {
-
-                if (img.width === 0 && !failedCacheBust) {
-                    // Something went wrong, possibly an issue w/ our cache busting
-                    // We may just need to wait a little longer
-                    console.log("Waiting a little longer for " + resDetails.mapper.imgPath);
-
-                    failedCacheBust = true;
-                    setTimeout(loadedImage, 100);
-                    return;
-                }
-
-                resDetails.mapper.img = img;
-                MapEditor.addTileset(resDetails);
-            };
-
-            let img = new Image();
-            img.src = imgPath;
-            img.onload = loadedImage;
-
             resDetails.mapper = {
                 imgPath
             };
+
+            loadImage(imgPath).then((img) => {
+                resDetails.mapper.img = img;
+                MapEditor.addTileset(resDetails);
+            });
         });
 
         this.allResources['map'].forEach((resDetails) => {
@@ -338,12 +355,66 @@ const ResourceMgr = (new function(){
                             });
             this.mapListEl.append(resEl);
         });
+
+
+        // Add avatars
+        const avatarsRes = this.allResources['avatars'];
+        loadImage(`../../resources${avatarsRes.image.file}`).then((img) => {
+
+            const canvas = document.createElement('canvas'),
+                ctx = canvas.getContext('2d'),
+                width = img.width,
+                height = img.height,
+                size = avatarsRes.image.size;
+
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const scrapCanvas = document.createElement('canvas'),
+                scrapCtx = scrapCanvas.getContext('2d');
+
+            scrapCanvas.width = size;
+            scrapCanvas.height = size;
+            scrapCtx.width = size;
+            scrapCtx.height = size;
+
+            avatarsRes.avatars.forEach((avatar, i) => {
+
+                const row = Math.floor(i / avatarsRes.image.columns),
+                    col   = i % avatarsRes.image.columns;
+
+                const imgData = ctx.getImageData(col * size, row * size, size, size);
+                scrapCtx.putImageData(imgData, 0, 0);
+
+                const avatarImg = new Image();
+                avatarImg.src = scrapCanvas.toDataURL('image/png');
+
+                this.spawnsEl.append(
+                    $('<div/>').addClass('spawnProfile')
+                                .append(
+                                    $('<a/>').addClass('spawnAvatar')
+                                            .attr('href', '#')
+                                            .append(avatarImg)
+                                            .click(() => {
+
+                                                this.selectAvatar({
+                                                    id: avatar,
+                                                    img: avatarImg,
+                                                    tilesize: size
+                                                });
+                                                return false;
+                                            })
+                                )
+                );
+            });
+        });
+
         console.log(this.allResources);
     };
 
 
+
     this.clearCanvas = () => {
-        canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        sheetCanvasCtx.clearRect(0, 0, sheetCanvasEl.width, sheetCanvasEl.height);
     };
 
     this.redraw = () => {
@@ -364,16 +435,16 @@ const ResourceMgr = (new function(){
             let scaleX = this.activeSheet.mapper.scaleX;
             let scaleY = this.activeSheet.mapper.scaleY;
 
-            canvasCtx.drawImage(img, 0, 0, width, height);
+            sheetCanvasCtx.drawImage(img, 0, 0, width, height);
 
             // Draw highlighted sprites
             for (let i = 0; i < highlights.length; ++i) {
                 const highlight = highlights[i];
-                canvasCtx.save();
-                canvasCtx.fillStyle = '#F00';
-                canvasCtx.globalAlpha = 0.2;
-                canvasCtx.fillRect(highlight.x * scaleX, highlight.y * scaleY, highlight.w * scaleX, highlight.h * scaleY);
-                canvasCtx.restore();
+                sheetCanvasCtx.save();
+                sheetCanvasCtx.fillStyle = '#F00';
+                sheetCanvasCtx.globalAlpha = 0.2;
+                sheetCanvasCtx.fillRect(highlight.x * scaleX, highlight.y * scaleY, highlight.w * scaleX, highlight.h * scaleY);
+                sheetCanvasCtx.restore();
             }
 
             // Draw highlighted islands
@@ -383,11 +454,11 @@ const ResourceMgr = (new function(){
                     tilesize = 16;
                 for (let j = 0; j < island.length; ++j) {
                     const highlight = island[j];
-                    canvasCtx.save();
-                    canvasCtx.fillStyle = '#00F';
-                    canvasCtx.globalAlpha = 0.4;
-                    canvasCtx.fillRect(highlight.x * scaleX, highlight.y * scaleY, highlight.w * scaleX, highlight.h * scaleY);
-                    canvasCtx.restore();
+                    sheetCanvasCtx.save();
+                    sheetCanvasCtx.fillStyle = '#00F';
+                    sheetCanvasCtx.globalAlpha = 0.4;
+                    sheetCanvasCtx.fillRect(highlight.x * scaleX, highlight.y * scaleY, highlight.w * scaleX, highlight.h * scaleY);
+                    sheetCanvasCtx.restore();
                 }
             }
 
@@ -523,6 +594,38 @@ const ResourceMgr = (new function(){
             this.redraw();
             this.dirtyCanvas = false;
         }
+    };
+
+    const loadImage = (imgPath) => {
+        return new Promise((succeeded, failed) => {
+            let failedCacheBust = false;
+            const loadedImage = () => {
+
+                if (img.width === 0) {
+
+                    // Something went wrong, possibly an issue w/ our cache busting
+                    // We may just need to wait a little longer
+                    if (!failedCacheBust) {
+                        console.log(`Waiting a little longer for ${imgPath}`);
+
+                        failedCacheBust = true;
+                        setTimeout(loadedImage, 100);
+                        return;
+                    } else {
+                        // Already failed cache bust, likely cannot load this image
+                        console.error(`Failed to load ${imgPath}`);
+                        failed();
+                    }
+                }
+
+                succeeded(img);
+            };
+
+            let img = new Image();
+            img.src = imgPath;
+            img.onload = loadedImage;
+
+        });
     };
 
 }());

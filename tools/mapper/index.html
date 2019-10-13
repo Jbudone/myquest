@@ -21,7 +21,7 @@
 
     </head>
     <body>
-        <div id='workingWindow'>
+        <div id='workingWindow' class='pendingChanges'>
 
             <div id='mapperWindow'>
                 <canvas id='mapEditorCanvas'></canvas>
@@ -35,6 +35,9 @@
 					</div>
 					<div class='controlsTab' data='controlsTilesheets'>
 						<a href='#' class='controlsTabBtn'>Tilesheets</a>
+					</div>
+					<div class='controlsTab' data='controlsSpawns'>
+						<a href='#' class='controlsTabBtn'>Spawns</a>
 					</div>
 					<div class='controlsTab' data='controlsTools'>
 						<a href='#' class='controlsTabBtn'>Tools</a>
@@ -56,6 +59,10 @@
 					<div id='controlsTilesheets' class='controlsContainerChild'>
 						<div id='resourceMgrList'></div>
 						<canvas id='sheetCanvas'></canvas>
+					</div>
+
+					<div id='controlsSpawns' class='controlsContainerChild'>
+						<div id='spawnsList'></div>
 					</div>
 
 					<div id='controlsTools' class='controlsContainerChild'>

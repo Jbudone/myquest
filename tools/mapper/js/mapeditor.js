@@ -4,21 +4,22 @@ const MapEditor = (new function(){
     let canvasEl, canvasCtx;
     let interactionMgr;
 
-    const mapProperties = { tilesets: [] };
+    const mapProperties = { tilesets: [], avatars: {} };
 
     const TILE_SIZE = 16;
     const NORTH = 0, WEST = 1, EAST = 2, SOUTH = 3;
-    const CURSOR_PLACE = 0, CURSOR_ERASE = 1;
+    const CURSOR_PLACE_SPRITE = 0, CURSOR_ERASE = 1, CURSOR_PLACE_AVATAR = 2;
 
     const DefaultProperties = {
         columns: 100,
         rows: 100,
     };
 
-    let spriteLayers = {
+    let mapLayers = {
         base: [],
         ground: [],
-        floating: []
+        floating: [],
+        spawns: []
     };
 
 
@@ -39,6 +40,14 @@ const MapEditor = (new function(){
         scaleY: (y) => Math.ceil(y * (canvasEl.height / mapCamera.h)),
     };
 
+    const flagPendingChanges = () => {
+        $('#workingWindow').addClass('pendingChanges');
+    };
+
+    const clearFlagPendingChanges = () => {
+        $('#workingWindow').removeClass('pendingChanges');
+    };
+
     const addInteractable = ((xPos, yPos) => {
 
         const entity = { x: xPos, y: yPos, w: TILE_SIZE, h: TILE_SIZE };
@@ -55,7 +64,7 @@ const MapEditor = (new function(){
             .onClick(() => {
 
                 if (!cursor.tool) return;
-                if (cursor.tool.op === CURSOR_PLACE) {
+                if (cursor.tool.op === CURSOR_PLACE_SPRITE) {
 
                     const spriteGroup = [],
                         mapWidth = mapProperties.columns * TILE_SIZE,
@@ -83,16 +92,16 @@ const MapEditor = (new function(){
                         let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
                             spriteCol = (sprite.x / cursor.tool.sprite.sheet.data.tilesize),
                             spriteIdx = spriteRow * cursor.tool.sprite.sheet.data.columns + spriteCol,
-                            spriteLayer = spriteLayers.base;
+                            spriteLayer = mapLayers.base;
 
 
                         const isFloating = cursor.tool.sprite.sheet.mapper.isTileFloating(spriteIdx),
                             isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
 
                         if (isFloating) { // Floating
-                            spriteLayer = spriteLayers.floating;
+                            spriteLayer = mapLayers.floating;
                         } else if (isTransparent) { // Ground
-                            spriteLayer = spriteLayers.ground;
+                            spriteLayer = mapLayers.ground;
                         }
 
                         // Is there already a sprite here?
@@ -115,7 +124,7 @@ const MapEditor = (new function(){
                     });
                 } else if (cursor.tool.op === CURSOR_ERASE) {
 
-                    const topToBottomLayers = [spriteLayers.floating, spriteLayers.ground, spriteLayers.base];
+                    const topToBottomLayers = [mapLayers.floating, mapLayers.ground, mapLayers.base];
                     for (let i = 0; i < topToBottomLayers.length; ++i) {
 
                         const spriteLayer = topToBottomLayers[i];
@@ -137,8 +146,55 @@ const MapEditor = (new function(){
                             break;
                         }
                     }
+                } else if (cursor.tool.op === CURSOR_PLACE_AVATAR) {
+
+                    const avatarEnt = {
+                        name: cursor.tool.avatar.name,
+                        img: cursor.tool.avatar.img,
+                        x: cursor.x,
+                        y: cursor.y,
+                        tilesize: cursor.tool.avatar.tilesize // FIXME: This is redundant since all avatars will have the same tilesize
+                    };
+
+
+                    // Is there already a sprite here?
+                    let collisionSprite = null;
+                    [mapLayers.base, mapLayers.ground].forEach((spriteLayer) => {
+                        if (collisionSprite) return;
+                        collisionSprite = spriteLayer.find((eSprite) => {
+                            if (eSprite.x !== avatarEnt.x || eSprite.y !== avatarEnt.y) {
+                                return false;
+                            }
+
+                            const eSpriteRow = eSprite.sheetY / eSprite.sheet.data.tilesize,
+                                eSpriteCol   = eSprite.sheetX / eSprite.sheet.data.tilesize,
+                                eSpriteIdx   = eSpriteRow * eSprite.sheet.data.columns + eSpriteCol;
+
+                            // Is this a collision?
+                            return(eSprite.sheet.data.data.collisions.indexOf(eSpriteIdx) >= 0);
+                        });
+                    });
+
+                    if (collisionSprite) {
+                        return;
+                    }
+
+                    // Is there another spawn here?
+                    const existingSpawn = mapLayers.spawns.findIndex((eSpawn) => {
+                        if (eSpawn.x === avatarEnt.x && eSpawn.y === avatarEnt.y) {
+                            return true;
+                        }
+                    });
+
+                    if (existingSpawn >= 0) {
+                        // Get rid of existing spawn first
+                        mapLayers.spawns.splice(existingSpawn, 1);
+                    }
+
+                    mapLayers.spawns.push(avatarEnt);
                 }
 
+                flagPendingChanges();
                 this.dirtyCanvas = true;
             });
     });
@@ -268,8 +324,8 @@ const MapEditor = (new function(){
                 mapProperties.rows += expansion;
                 growToY = mapProperties.rows;
 
-                for (const layer in spriteLayers) {
-                    const spriteLayer = spriteLayers[layer];
+                for (const layer in mapLayers) {
+                    const spriteLayer = mapLayers[layer];
                     spriteLayer.forEach((sprite) => {
                         sprite.y += (expansion * 16);
                     });
@@ -284,8 +340,8 @@ const MapEditor = (new function(){
                 mapProperties.columns += expansion;
                 growToX = mapProperties.columns;
 
-                for (const layer in spriteLayers) {
-                    const spriteLayer = spriteLayers[layer];
+                for (const layer in mapLayers) {
+                    const spriteLayer = mapLayers[layer];
                     spriteLayer.forEach((sprite) => {
                         sprite.x += (expansion * 16);
                     });
@@ -313,6 +369,7 @@ const MapEditor = (new function(){
             return;
         }
 
+        flagPendingChanges();
         this.dirtyCanvas = true;
     };
 
@@ -326,7 +383,7 @@ const MapEditor = (new function(){
         }
 
         cursor.tool = {
-            op: CURSOR_PLACE,
+            op: CURSOR_PLACE_SPRITE,
             sprite: {
                 sheet,
                 img: sheet.mapper.img,
@@ -340,6 +397,19 @@ const MapEditor = (new function(){
         $(canvasEl).addClass('holdingSprite');
 
         this.dirtyCanvas = true;
+    };
+
+    this.setAvatar = (avatar) => {
+
+        // Add sheet to avatar sheets
+        if (!mapProperties.avatars[avatar.name]) {
+            mapProperties.avatars[avatar.name] = avatar.img;
+        }
+
+        cursor.tool = {
+            op: CURSOR_PLACE_AVATAR,
+            avatar
+        };
     };
 
     this.step = (delta) => {
@@ -398,63 +468,78 @@ const MapEditor = (new function(){
             canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
         };
 
-        for (const layer in spriteLayers) {
-            const spriteLayer = spriteLayers[layer];
-            spriteLayer.forEach((spriteData) => {
+        const drawAvatar = (avatar) => {
+            const tilesize = avatar.tilesize;
+            let pos = mapCamera.translate({ x: avatar.x, y: avatar.y });
+            canvasCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+        };
+
+        [mapLayers.base, mapLayers.ground, mapLayers.floating].forEach((layer) => {
+            layer.forEach((spriteData) => {
                 drawSprite(spriteData);
             });
+        });
+
+        mapLayers.spawns.forEach((avatarData) => {
+            drawAvatar(avatarData);
+        });
+
+
+        const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
+        if (cursor.tool) {
+            
+            if (cursor.tool.op === CURSOR_PLACE_SPRITE && cursor.tool.sprite) {
+
+                const tilesize = cursor.tool.sprite.tilesize,
+                    offCamera = {
+                        x: mapCamera.scaleX(mapCamera.x),
+                        y: mapCamera.scaleY(mapCamera.y)
+                    };
+                cursor.tool.sprite.sprites.forEach((sprite) => {
+                    const xPos = sprite.x,
+                        yPos = sprite.y,
+                        offX = mapCamera.scaleX(xPos - cursor.tool.sprite.left),
+                        offY = mapCamera.scaleY(yPos - cursor.tool.sprite.top);
+
+
+                    if ((pos.x + offX + offCamera.x) >= mapWidth || (pos.y + offY + offCamera.y) >= mapHeight) {
+                        return;
+                    }
+
+                    canvasCtx.drawImage(cursor.tool.sprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
+
+                    // Draw overlay over sprites to show what parts are base/ground/floating
+                    let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
+                        spriteCol = (sprite.x / cursor.tool.sprite.sheet.data.tilesize),
+                        spriteIdx = spriteRow * cursor.tool.sprite.sheet.data.columns + spriteCol;
+
+                    const isFloating = cursor.tool.sprite.sheet.mapper.isTileFloating(spriteIdx),
+                        isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
+
+                    if (!isTransparent) { // Base
+                        canvasCtx.fillStyle = '#FF000055';
+                    } else if (isFloating) { // Floating
+                        canvasCtx.fillStyle = '#0000FF55';
+                    } else { // Ground
+                        canvasCtx.fillStyle = '#00FF0055';
+                    }
+
+                    canvasCtx.fillRect(pos.x + offX, pos.y + offY, sizeX, sizeY);
+                });
+            } else if (cursor.tool.op === CURSOR_PLACE_AVATAR && cursor.tool.avatar) {
+
+                const tilesize = cursor.tool.avatar.tilesize;
+                canvasCtx.drawImage(cursor.tool.avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+                canvasCtx.fillStyle = '#FF550055';
+                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+            } else if (cursor.tool.op === CURSOR_ERASE) {
+                canvasCtx.fillStyle = '#5555AA55';
+                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+            }
+        } else {
+            canvasCtx.fillStyle = '#FF000055';
+            canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
         }
-
-
-        if (cursor.tool && cursor.tool.sprite) {
-
-            const tilesize = cursor.tool.sprite.tilesize,
-                offCamera = {
-                    x: mapCamera.scaleX(mapCamera.x),
-                    y: mapCamera.scaleY(mapCamera.y)
-                };
-            cursor.tool.sprite.sprites.forEach((sprite) => {
-                const xPos = sprite.x,
-                    yPos = sprite.y,
-                    offX = mapCamera.scaleX(xPos - cursor.tool.sprite.left),
-                    offY = mapCamera.scaleY(yPos - cursor.tool.sprite.top);
-
-                const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
-
-                if ((pos.x + offX + offCamera.x) >= mapWidth || (pos.y + offY + offCamera.y) >= mapHeight) {
-                    return;
-                }
-
-                canvasCtx.drawImage(cursor.tool.sprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
-
-                // Draw overlay over sprites to show what parts are base/ground/floating
-                let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
-                    spriteCol = (sprite.x / cursor.tool.sprite.sheet.data.tilesize),
-                    spriteIdx = spriteRow * cursor.tool.sprite.sheet.data.columns + spriteCol;
-
-                const isFloating = cursor.tool.sprite.sheet.mapper.isTileFloating(spriteIdx),
-                    isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
-
-                if (!isTransparent) { // Base
-                    canvasCtx.fillStyle = '#FF000055';
-                } else if (isFloating) { // Floating
-                    canvasCtx.fillStyle = '#0000FF55';
-                } else { // Ground
-                    canvasCtx.fillStyle = '#00FF0055';
-                }
-
-                canvasCtx.fillRect(pos.x + offX, pos.y + offY, sizeX, sizeY);
-            });
-        }
-
-
-        canvasCtx.fillStyle = '#FF000055';
-        if (cursor.tool && cursor.tool.op === CURSOR_ERASE) {
-            canvasCtx.fillStyle = '#5555AA55';
-        }
-
-        let pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
-        canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
     };
 
     const onMouseMove = (worldPt) => {
@@ -545,7 +630,7 @@ const MapEditor = (new function(){
 
     this.exportMap = () => {
 
-        console.log(spriteLayers);
+        console.log(mapLayers);
 
         const mapJson = {};
 
@@ -612,12 +697,12 @@ const MapEditor = (new function(){
         let tilesetGid = 1;
 
         const exportLayers = [
-            { src: spriteLayers.base, dst: baseTiles },
-            { src: spriteLayers.ground, dst: groundTiles },
-            { src: spriteLayers.floating, dst: floatTiles }
+            { src: mapLayers.base, dst: baseTiles },
+            { src: mapLayers.ground, dst: groundTiles },
+            { src: mapLayers.floating, dst: floatTiles }
         ];
 
-        exportLayer.forEach((layer) => {
+        exportLayers.forEach((layer) => {
 
             layer.src.forEach((sprite) => {
                 const tileset = sprite.sheet;
@@ -677,10 +762,11 @@ const MapEditor = (new function(){
         cursor.x = 0;
         cursor.y = 0;
 
-        spriteLayers.base = [];
-        spriteLayers.ground = [];
-        spriteLayers.floating = [];
+        mapLayers.base = [];
+        mapLayers.ground = [];
+        mapLayers.floating = [];
 
+        clearFlagPendingChanges();
         this.setupInteractions();
         this.dirtyCanvas = true;
     };
@@ -704,9 +790,9 @@ const MapEditor = (new function(){
             groundLayer   = data.layers.find((layer) => layer.name === 'sprites'),
             floatingLayer = data.layers.find((layer) => layer.name === 'floating');
 
-        if (baseLayer)     layers.push({ src: baseLayer.data, dst: spriteLayers.base });
-        if (groundLayer)   layers.push({ src: groundLayer.data, dst: spriteLayers.ground });
-        if (floatingLayer) layers.push({ src: floatingLayer.data, dst: spriteLayers.floating });
+        if (baseLayer)     layers.push({ src: baseLayer.data,     dst: mapLayers.base });
+        if (groundLayer)   layers.push({ src: groundLayer.data,   dst: mapLayers.ground });
+        if (floatingLayer) layers.push({ src: floatingLayer.data, dst: mapLayers.floating });
 
 
         let mapSpriteGroups = {};
