@@ -30,7 +30,11 @@ const prettier = require('prettier');
 //  - Lint for less safe code / unable to check code
 //  - More accurate copying of loc for sourcemaps
 //  * FIXME: Dynamic whitelist on type checking (list of known values as we traverse through nodes)
-//     HAS_KEY unecessary if we're about to test that key: IS_OBJECT(a), HAS_KEY(a, 'b'), IS_OBJECT(a.b)
+//       - HAS_KEY unecessary if we're about to test that key: IS_OBJECT(a), HAS_KEY(a, 'b'), IS_OBJECT(a.b)
+//       - scopedWhitelist: BodyStatement pushes a new scope to this array, then goes through each expression in body
+//          - Each preCheck/replacementCheck adds to scopedWhitelist
+//          - Pop scopedWhitelist at end of BodyStatement processing
+//          - whitelist: hash of node/check?
 //  * Inline checks: CHECK( (typeof a === 'object') && ('b' in a) && (typeof a.b === 'object') )
 //  - Check not null/undefined:
 //      a[c.d] -- c.d should be defined, and probably a raw type (NumericLiteral, string)
@@ -71,6 +75,9 @@ const prettier = require('prettier');
 //              a; CHECK(b);
 //
 //      a = b.c;
+//  - Clean CheckNode input:  (curNode, assert, state)
+//      assert: things we want to check/confirm
+//      state: modifyNode, scopeNode, scopedWhitelist
 
 
 
@@ -392,26 +399,135 @@ const buildNodeFromCheck = (checkItem, loc) => {
     return checkNodeExpr;
 };
 
+const stringifyNode = (node, topNode) => {
+    if (node.type === 'MemberExpression') {
+
+        if (topNode) {
+            const objStr = stringifyNode(node.object, true);
+            if (!objStr) return;
+            return `${objStr}`;
+        } else {
+            const objStr = stringifyNode(node.object),
+                valStr = stringifyNode(node.property);
+
+            if (!objStr || !valStr) return;
+            return `${objStr}.${valStr}`;
+        }
+    } else if (node.type === 'Identifier') {
+        return node.name;
+    } else if (node.type === 'ThisExpression') {
+        return 'this';
+    } else if (node.type === 'StringLiteral') {
+        return node.value;
+    }
+};
+
+const isSafeIdentifier = (node) => {
+
+    let identifier = stringifyNode(node, true);
+    if (!identifier) return false;
+
+    // Global node object?
+    // FIXME: What about window objects for user? Or mismatch between window/GLOBAL in user/server tests?
+    if (SafeIdentifiers.indexOf(identifier) >= 0) {
+        return true;
+    }
+
+    // FIXME: Check against common node libs?
+    // FIXME: Custom list of global objects in game: Err, Env
+};
+
+// isCheckWhitelisted
+// Check if we've already whitelisted this check
+const isCheckWhitelisted = (checkItem, builtCheck, scopedWhitelist) => {
+
+    let checks = builtCheck.expression.arguments[0].elements[0].properties;
+    let hashedCheck = '';
+
+    let validHashCheck = false;
+    if (checkItem.checker === IS_TYPE) {
+        let check = checks[2];
+        if (checkItem.args[1] === OBJECT_TYPE) {
+            hashedCheck = 'IS_TYPE:OBJECT_TYPE:';
+        } else if (checkItem.args[1] === FUNCTION_TYPE) {
+            hashedCheck = 'IS_TYPE:FUNCTION_TYPE:';
+        }
+
+        // Is this a globally safe object?
+        if (isSafeIdentifier(check.value)) {
+            return true;
+        }
+
+        let nodeCheckStr = stringifyNode(check.value);
+        if (nodeCheckStr) {
+            hashedCheck += nodeCheckStr;
+            validHashCheck = true;
+        }
+    } else if (checkItem.checker === HAS_KEY) {
+        let obj = checks[1], prop = checks[2];
+        let objCheckStr = stringifyNode(obj.value);
+        let valCheckStr = stringifyNode(prop.value);
+
+
+        // Is this a globally safe object?
+        if (isSafeIdentifier(obj.value)) {
+            return true;
+        }
+
+        if (objCheckStr && valCheckStr) {
+            hashedCheck = `HAS_KEY:${objCheckStr}:${valCheckStr}`;
+            validHashCheck = true;
+        }
+    }
+
+    if (!validHashCheck) {
+        console.error("FIXME: Unexpected check against whitelist");
+        return false;
+    }
+
+    // Does this hash exist in our whitelist?
+    let checkScope = scopedWhitelist;
+    do {
+        if (checkScope.whitelist.indexOf(hashedCheck) >= 0) {
+            return true;
+        }
+        checkScope = checkScope.parentScope;
+    } while (checkScope);
+
+    // Not whitelisted? Add to whitelist
+    scopedWhitelist.whitelist.push(hashedCheck);
+    return false;
+};
 
 // CheckNodeBody
 // Check all elements in the body of the node, and handle any preChecks, replacements or hoisting returned from checks
-const checkNodeBody = (node) => {
+const checkNodeBody = (node, state) => {
     const body = node.body;
+    const thisScope = state.scope;
+    const innerScope = { parentScope: thisScope, whitelist: [] };
+    state.scope = innerScope;
+    const modifyNode = state.modifyNode;
     for(let i = 0; i < body.length; ++i) {
 
         // Begin checking this expression
         const node = body[i];
-        const modifyNode = new ModifyNode();
+        const innerModifyNode = new ModifyNode();
         let prevLen = body.length;
-        CheckNode(node, null, modifyNode, true, node);
+        state.modifyNode = innerModifyNode;
+        CheckNode(node, null, state);
+
+        // FIXME: For each of these checks, check against whitelist first
+        //  - Convert check to string, or basic object
+        //  - Before building node for check, first check scoped whitelist
 
         // Prepend all preChecks before node
-        if (modifyNode.preCheck.length > 0) {
-            modifyNode.preCheck.forEach((checkItem) => {
+        if (innerModifyNode.preCheck.length > 0) {
+            innerModifyNode.preCheck.forEach((checkItem) => {
                 // { checker: IS_TYPE, args: [NODE, TYPE] }
                 // { checker: HAS_KEY, args: [NODE, NODE.OBJECT, NODE.PROPERTY] }
                 const checkNode = buildNodeFromCheck(checkItem, node.loc);
                 if (checkNode) {
+                    if (isCheckWhitelisted(checkItem, checkNode, innerScope)) return;
                     body.splice(i, 0, checkNode);
                     ++i;
                 }
@@ -419,41 +535,87 @@ const checkNodeBody = (node) => {
         }
 
         // Replace node with replacement nodes
-        if (modifyNode.replaceNode.length > 0) {
+        if (innerModifyNode.replaceNode.length > 0) {
 
             const leadingComments = node.leadingComments;
-            for (let j = 0; j < modifyNode.replaceNode.length; ++j) {
+            for (let j = 0; j < innerModifyNode.replaceNode.length; ++j) {
                 // TODO: This is a poor way to see if this is a check or an actual node
-                if (modifyNode.replaceNode[j].checker) {
-                    const replaceNode = buildNodeFromCheck(modifyNode.replaceNode[j], node.loc);
-                    modifyNode.replaceNode[j] = replaceNode;
+                if (innerModifyNode.replaceNode[j].checker) {
+                    const checkItem = innerModifyNode.replaceNode[j];
+                    const replaceNode = buildNodeFromCheck(checkItem, node.loc);
+                    innerModifyNode.replaceNode[j] = replaceNode;
                     if (!replaceNode) {
-                        modifyNode.replaceNode.splice(j, 1);
+                        innerModifyNode.replaceNode.splice(j, 1);
                         --j;
+                    } else if (isCheckWhitelisted(checkItem, replaceNode, innerScope)) {
+                        innerModifyNode.replaceNode.splice(j, 1);
+                        --j;
+                        // FIXME: We only want to remove checks, not the replaced variableDeclaration
                     }
                 }
             }
 
             body[i].leadingComments = leadingComments;
-            body.splice(i, 1, ...modifyNode.replaceNode);
-            i += modifyNode.replaceNode.length - 1;
+            body.splice(i, 1, ...innerModifyNode.replaceNode);
+            i += innerModifyNode.replaceNode.length - 1;
         }
 
         // Hoist nodes to the top
-        if (modifyNode.hoistNodes.length > 0) {
+        if (innerModifyNode.hoistNodes.length > 0) {
 
-            for (let j = 0; j < modifyNode.hoistNodes.length; ++j) {
-                body.splice(0, 0, ...modifyNode.hoistNodes);
-                i += modifyNode.hoistNodes.length;
+            for (let j = 0; j < innerModifyNode.hoistNodes.length; ++j) {
+                body.splice(0, 0, ...innerModifyNode.hoistNodes);
+                i += innerModifyNode.hoistNodes.length;
             }
         }
-    };
+    }
+
+    state.modifyNode = modifyNode;
+    state.scope = thisScope;
+};
+
+let gUid = 0;
+const Assertion = (assertList, assertion, scope) => {
+    // whitelist: array of subsequent inner scopes, each an array of assertions. Check whitelist from innermost -> outermost
+    let assertionHash = "";
+    // FIXME: Come up with a unique hash for the assertion (checker: args: [node, ...])
+    //  - Could recursively traverse through node and hash that node, then mix w/ child node hashes
+    //  - Can mark each node w/ a uid of that hash (if it isn't marked already); that way in the future if we come
+    //  across a uid in a node, we can skip hashing that one
+    //  - Then hash the check itself and mix with the node hash: "AAA_BBBBBBBBBBB"  AAA is checker hash, BBBBBBBBB is
+    //  node hash
+    //
+    //  As we hit nodes add scopedNode and point that node to scopedNode. If scopedNode already exists then point node
+    //  to that scopedNode. Use scopedNode for scopedWhitelist
+    //
+    //  OR we could do this during assertion build up time: pass a scope id to Assertion, and then add that scope to
+    //  assertion object. Assertions are built linearly so we should go through scopes in order; however if we ever do
+    //  parallelize this then we can order assertions before processing (in which case only this way would work). Then
+    //  processing assertions we build whitelist as we process and store that whitelist in scope
+    //
+    //  scope: { parentScope: ..., scopeWhitelist: [] }
+
+    assertion.scope = scope;
+
+    // FIXME: This won't work, because
+    //  Env.a = 1;
+    //  Env.b = 2;  // Both of these are different nodes for Env
+    //const getNodeId = (node) => {
+    //    if (node.uid) return node.uid;
+    //    node.uid = gUid++;
+    //};
+
+    //let checkerHash = 10 * (assertion.checker === HAS_KEY ? 1 : 2);
+
+    assertList.push(assertion);
 };
 
 
 // CheckNode
 // Recursively build checks through the node based off the type, and any children nodes it may have
-const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
+//const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode, scopedWhitelist) => {
+const CheckNode = (curNode, expectType, state) => {
+
 
     //let codeStr = "";
     //if (curNode.start && curNode.end) {
@@ -464,23 +626,18 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
     if (curNode.type === 'Program') {
 
         // Top-most node in the file
-        checkNodeBody(curNode);
+        checkNodeBody(curNode, state);
 
     } else if (curNode.type === 'ExpressionStatement') {
 
         // We're assuming ExpressionStatement is the entire expression, and cannot contain an
         // ExpressionStatement
-        if (!topLevel) {
-            console.error("Unexpected: ExpressionStatement inside of an ExpressionStatement");
-            process.exit();
-        }
-
-        const computed = CheckNode(curNode.expression, null, modifyNode, true, scopeNode);
+        const computed = CheckNode(curNode.expression, null, state);
         return computed;
     } else if (curNode.type === 'MemberExpression') {
 
         // FIXME: Should confirm curNode.object is NOT a CallExpression (lint)
-        let computed = CheckNode(curNode.object, OBJECT_TYPE, modifyNode, false, scopeNode);
+        let computed = CheckNode(curNode.object, OBJECT_TYPE, state);
         if (computed) {
             //console.error("FIXME: Computed node in MemberExpression");
             // eg.  extendClass(this).with(that)
@@ -493,7 +650,7 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
         if (curNode.property.type === 'MemberExpression') {
             // FIXME: We may want an IS_NOT_NULL check here
             // FIXME: may also want IS_NOT_COMPUTED   lint check here  eg.  a[c()],  a[b ? c() : d+1]
-            computed = CheckNode(curNode.property, null, modifyNode, false, scopeNode);
+            computed = CheckNode(curNode.property, null, state);
         }
 
         if (computed) {
@@ -510,18 +667,18 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
             //   a.b   ===>  a.hasOwnProperty('b')
             //   a[b]  ===>  a.hasOwnProperty(b)    // computed
             const propComputed = curNode.computed;// curNode.property.type === 'MemberExpression';
-            modifyNode.preCheck.push({
+
+            let preCheck = { 
                 checker: HAS_KEY,
                 args: [curNode, curNode.object, curNode.property, propComputed]
-            });
+            };
+            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
 
-            //console.log(`  ${codeStr}: HAS_KEY`);
-
-            modifyNode.preCheck.push({
+            preCheck = {
                 checker: IS_TYPE,
                 args: [curNode, OBJECT_TYPE]
-            });
-            //console.log(`  ${codeStr}: IS_TYPE: OBJECT`);
+            };
+            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
         }
 
         return false;
@@ -537,7 +694,7 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
         }
 
         // If curNode.callee is computed, we can't proceed any further
-        const computed = CheckNode(curNode.callee, null, modifyNode, false, scopeNode);
+        const computed = CheckNode(curNode.callee, null, state);
         if (computed) {
             // eg. do(this).then(that);
             return true;
@@ -547,25 +704,28 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
         //  eg.    var a = ((() => return { a: 1 })())
         const safeFunctionCallees = ['Identifier', 'MemberExpression'];
         if (safeFunctionCallees.indexOf(curNode.callee.type) !== -1) {
-            modifyNode.preCheck.push({
+
+            let preCheck = {
                 checker: IS_TYPE,
                 args: [curNode.callee, FUNCTION_TYPE]
-            });
+            };
+            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
         }
 
         // Check arguments in call
         curNode.arguments.forEach((callArg) => {
-            CheckNode(callArg, null, modifyNode, false, scopeNode);
+            CheckNode(callArg, null, state);
         });
 
         return true;
     } else if (curNode.type === 'Identifier') {
 
         if (expectType !== null) {
-            modifyNode.preCheck.push({
+            let preCheck = {
                 checker: IS_TYPE,
                 args: [curNode, expectType]
-            });
+            };
+            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
         }
 
         return false;
@@ -573,33 +733,33 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
 
         curNode.properties.forEach((objProp) => {
             if (objProp.type === 'ObjectProperty') {
-                CheckNode(objProp.value, null, modifyNode, false, scopeNode);
+                CheckNode(objProp.value, null, state);
             } else if (objProp.type === 'ObjectMethod') {
-                CheckNode(objProp.body, null, modifyNode, true, scopeNode);
+                CheckNode(objProp.body, null, state);
             }
         });
     } else if (curNode.type === 'ArrayExpression') {
 
         curNode.elements.forEach((objElem) => {
-            CheckNode(objElem, null, modifyNode, false, scopeNode);
+            CheckNode(objElem, null, state);
         });
     } else if (curNode.type === 'AssignmentExpression') {
 
-        CheckNode(curNode.left, null, modifyNode, false, scopeNode);
-        CheckNode(curNode.right, null, modifyNode, false, scopeNode);
+        CheckNode(curNode.left, null, state);
+        CheckNode(curNode.right, null, state);
     } else if (curNode.type === 'ReturnStatement') {
 
         if (curNode.argument) {
-            CheckNode(curNode.argument, null, modifyNode, false, scopeNode);
+            CheckNode(curNode.argument, null, state);
         }
     } else if (curNode.type === 'BlockStatement') {
 
         // NOTE: These is a top-level blockstatement within this scope
-        checkNodeBody(curNode);
+        checkNodeBody(curNode, state);
 
     } else if (curNode.type === 'ForStatement') {
 
-        CheckNode(curNode.body, null, modifyNode, false, scopeNode);
+        CheckNode(curNode.body, null, state);
 
     } else if (curNode.type === 'VariableDeclaration') {
 
@@ -624,12 +784,14 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
         // doesn't work properly and results in assignments that don't have a semicolon
         if (curNode.kind === 'const' || curNode.kind === 'let' || curNode.kind === 'var') {
             const replaceNodes = [];
+            const savedModifyNode = state.modifyNode;
             for (let i = 0; i < curNode.declarations.length; ++i) {
                 const declarator = curNode.declarations[i];
                 const declaratorModifyNode = new ModifyNode();
+                state.modifyNode = declaratorModifyNode;
 
                 if (declarator.init) {
-                    CheckNode(declarator.init, null, declaratorModifyNode, false, scopeNode);
+                    CheckNode(declarator.init, null, state);
                 }
 
                 let declarationNode;
@@ -655,8 +817,9 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
                 replaceNodes.push(declarationNode);
             }
 
+            state.modifyNode = savedModifyNode;
             replaceNodes.forEach((replaceNode) => {
-                modifyNode.replaceNode.push(replaceNode);
+                state.modifyNode.replaceNode.push(replaceNode);
             });
 
             return;
@@ -676,7 +839,7 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
             declarations: []
         };
 
-        modifyNode.hoistNodes.push(hoistedVariableDeclaration);
+        state.modifyNode.hoistNodes.push(hoistedVariableDeclaration);
 
         // FIXME: modifyNode.hoistNodes, and modifyNode.replaceNode = 0
         curNode.declarations.forEach((declarator) => {
@@ -711,52 +874,55 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
                 //end: curNode.end,
             };
 
+            const savedModifyNode = state.modifyNode;
             const innerModifyNode = new ModifyNode();
-            CheckNode(assignmentNode, null, innerModifyNode, true, null);
+            state.modifyNode = innerModifyNode;
+            CheckNode(assignmentNode, null, state);
 
+            state.modifyNode = savedModifyNode;
             innerModifyNode.preCheck.forEach((preCheck) => {
-                modifyNode.preCheck.push(preCheck);
+                state.modifyNode.preCheck.push(preCheck);
             });
 
             innerModifyNode.replaceNode.forEach((replaceNode) => {
-                modifyNode.replaceNode.push(replaceNode);
+                state.modifyNode.replaceNode.push(replaceNode);
             });
 
-            modifyNode.replaceNode.push(assignmentNode);
+            state.modifyNode.replaceNode.push(assignmentNode);
         });
 
     } else if (curNode.type === 'ForInStatement') {
 
-        CheckNode(curNode.right, OBJECT_TYPE, modifyNode, false, scopeNode);
+        CheckNode(curNode.right, OBJECT_TYPE, state);
         let forInBody = blockChildNode(curNode, 'body');
-        CheckNode(forInBody, null, modifyNode, true, scopeNode);
+        CheckNode(forInBody, null, state);
 
     } else if (curNode.type === 'IfStatement') {
 
-        CheckNode(curNode.test, null, modifyNode, false, scopeNode);
+        CheckNode(curNode.test, null, state);
 
         // Consequent may not be a block statement, but if we want to add checks for statements inside then we'll
         // need a block statement node. The same goes for alternate node
         let consequentNode = blockChildNode(curNode, 'consequent');
-        CheckNode(consequentNode, null, modifyNode, true, scopeNode);
+        CheckNode(consequentNode, null, state);
 
         if (curNode.alternate) {
             let alternateNode = blockChildNode(curNode, 'alternate');
-            CheckNode(alternateNode, null, modifyNode, true, scopeNode);
+            CheckNode(alternateNode, null, state);
         }
 
     } else if (curNode.type === 'UnaryExpression') {
 
-        CheckNode(curNode.argument, null, modifyNode, false, scopeNode);
+        CheckNode(curNode.argument, null, state);
 
     } else if (curNode.type === 'WhileStatement' || curNode.type === 'DoWhileStatement') {
 
-        CheckNode(curNode.test, null, modifyNode, false, scopeNode);
-        CheckNode(curNode.body, null, modifyNode, false, scopeNode);
+        CheckNode(curNode.test, null, state);
+        CheckNode(curNode.body, null, state);
 
     } else if (curNode.type === 'FunctionExpression') {
 
-        CheckNode(curNode.body, null, modifyNode, true, scopeNode);
+        CheckNode(curNode.body, null, state);
 
     } else if (curNode.type === 'ArrowFunctionExpression') {
 
@@ -788,22 +954,22 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
         }
 
         let arrowBody = blockChildNode(curNode, 'body');
-        CheckNode(arrowBody, null, modifyNode, true, scopeNode);
+        CheckNode(arrowBody, null, state);
 
     } else if (curNode.type === 'ThrowStatement') {
 
-        CheckNode(curNode.argument, null, modifyNode, true, scopeNode);
+        CheckNode(curNode.argument, null, state);
 
     } else if (curNode.type === 'TemplateLiteral') {
 
         curNode.expressions.forEach((template) => {
-            CheckNode(template, null, modifyNode, false, scopeNode);
+            CheckNode(template, null, state);
         });
 
     } else if (curNode.type === 'NewExpression') {
 
         curNode.arguments.forEach((callArg) => {
-            CheckNode(callArg, null, modifyNode, false, scopeNode);
+            CheckNode(callArg, null, state);
         });
 
 
@@ -839,7 +1005,10 @@ const CheckNode = (curNode, expectType, modifyNode, topLevel, scopeNode) => {
 
 // Begin checking body
 const parsed = Parser.parse(code, { sourceFilename: sourceFile });
-CheckNode(parsed.program, null, null, true, null);
+const SafeIdentifiers = ['Math', 'Env', 'Assert', '_', 'Array', 'Object', 'Promise', 'JSON', 'Err', 'String', 'Date', 'Number', 'Error'];
+const scope = { parentScope: null, whitelist: [] };
+const state = { modifyNode: null, scope };
+CheckNode(parsed.program, null, state);
 
 
 // FIXME: Look into what settings we want here
@@ -856,9 +1025,9 @@ const output = generate(parsed, {
 if (Settings.verbose) {
     let prettifiedCode = prettier.format(output.code, { parser: 'babel' })
 
-    console.log(parsed);
+    //console.log(parsed);
     //console.log(output);
-    console.log(output.code);
+    //console.log(output.code);
     console.log(prettifiedCode);
 }
 
