@@ -48,7 +48,7 @@
     "l1-path-finder": "*",
     "lz4": "^0.5.3",
     "mongodb": "^3.0.7",
-    "openpgp": "^2.6.2",
+    "openpgp": "^4.6.2",
     "prompt-sync": "^4.1.6",
     "readline-sync": "^1.4.9",
     "redis": "^2.8.0",
