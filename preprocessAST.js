@@ -9,6 +9,53 @@ const jshint = require('jshint').JSHINT;
 
 let __FIXME_ERRCNT = 0;
 
+// NOTE:
+//  Here's the current state of PreprocessAST for future me:
+//      - Dynamic whitelisting isn't fool proof, its completely basic in favour of better static and runtime perf + less
+//      complexity
+//
+//          Code:
+//              do.a.thing();
+//              do.a.thingTwo();
+//
+//          Basic dynamic whitelisting
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thing);
+//              do.a.thing();
+//              CHECK(do.a.thingTwo);
+//              do.a.thingTwo();
+//
+//          Safer dynamic whitelisting
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thing);
+//              do.a.thing();
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thingTwo);
+//              do.a.thingTwo();
+//
+//
+//         This considers if our whitelist has changed in other code. If we really wanted to do that we would want to
+//         preprocess *all* code and keep an obj-like file that provides a whitelist for functions across the scope of
+//         the project. Unfortunately because of JS typeless nature its not easy to determine which function is being
+//         called, so its not easy to point to the right function when whitelisting. Worse this makes things far more
+//         complicated and more perf heavy. I think having a basic whitelisting mode is better. If we really needed we
+//         could simply provide an option to make whitelisting less trustworthy so that we only whitelist safe types
+//         (Env, Math, Array, Object, etc.) and use that mode for soak tests or something
+//
+//
+//      - I'm not sure how much I trust the loc for sourcemaps; that may need some cleaning
+//      - Further preprocess would be nice: SCRIPT_INJECT, Assert, LOG_DEBUG, etc.
+//      - If statements and conditionals would be nice to work in:
+//
+//
+//          if (foo.a ? foo.a.b() : foo.b.c())
+//
+//          Desired:
+//          CHECK(foo) && (foo.a ? (CHECK(foo.a) && CHECK(foo.a.b)) : (CHECK(foo.b) && CHECK(foo.b.c)))
+//
+//      - Profiling/optimizations: I haven't done any profiling, so I'm not sure how well this performs and if there's
+//      any easy speed ups
+
+
+
+
 
 // TODO:
 //  - SCRIPT_INJECT in here as opposed to bash?
