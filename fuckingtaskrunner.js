@@ -312,7 +312,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         console.error("Starting cache from scratch..");
         cacheData = { "files": {}, "settings": {
             preprocess: {
-                blacklist: []
+                blacklist: ["js/keys.js","js/killInspector.js","js/hookable.js","js/fsm.js","js/extensions.js","js/profiler.js","js/SCRIPTINJECT.js","js/SCRIPT.INJECTION.js","js/SCRIPT.INJECTION.min.js","js/SCRIPTENV.js","js/scriptmgr.js","js/errors.js","js/event.js","js/environment.js","js/eventful.js","js/client/chalk.polyfill.js","js/errorReporter.js","js/client/errorReporter.js","js/server/errorReporter.js","js/test/errorReporter.js","js/checkForInspector.js","js/client/camera.js","js/test/pseudoUI.js","js/test/pseudoRenderer.js","js/test/pseudofxmgr.js","js/server/db.js","js/utilities.js","js/script.js"]
             }
         } };
     } else {
@@ -761,7 +761,8 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 throw new Error(err);
             };
 
-            // TODO: Uglify, Babel, Preprocessor (clear logs), Check syntax
+            // TODO: Uglify, Babel, Preprocessor (clear logs)
+            // NOTE: I think we can piggyback off preprocessJSTask to check syntax by failing if it fails to read or build AST
 
             if (file.in('dist/js/scripts')) {
                 return runTask(preprocessJSTask, file)
