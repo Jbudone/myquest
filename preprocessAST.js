@@ -5,6 +5,9 @@ const t = require('@babel/types');
 const fs = require('fs');
 
 const prettier = require('prettier');
+const jshint = require('jshint').JSHINT;
+
+let __FIXME_ERRCNT = 0;
 
 
 // TODO:
@@ -21,6 +24,7 @@ const prettier = require('prettier');
 //      With binary/logical expressions we could include them as so:
 //          { (CHECK(a) && { CHECK(a.b) || CHECK(a.c) }) || (CHECK(b) }
 //
+//  - Inline static functions: DEBUGGER, etc.
 //      We could inline with the expression:
 //          (_.isObject(notAnObj) && (CHECK(notAnObj) && CHECK(notAnObj.a) && CHECK(notAnObj.a.b) &&
 //          CHECK(notAnObj.a.b.c) && CHECK(notAnObj.a.b.c.d) && notAnObj.a.b.c.d()))
@@ -42,14 +46,11 @@ const prettier = require('prettier');
 //
 //  - How would we prevent checks if we've already done a manual check?
 //      if (a && a.b && a.b.c) { ... }
-//  - How do we carry over checks later?
-//      a.b.c.d = 1 // checks a.b.c
-//      a.b.c.e = 2 // re-checks a.b.c
-//
-//      Would also need to protect against mutations in-between
-//      a.b.c.d = 1
-//      Transform(a)
-//      a.b.c.e = 2
+//  - Whitelist check: be ready for mutations in-between:
+//     
+//     a.b.c.d = 1
+//     if (x) Transform(a)
+//     a.b.c.e = 2
 //
 //
 //      Maybe we can keep track of type intrinsic while parsing, and then when a call is made we kill nuke any
@@ -57,8 +58,8 @@ const prettier = require('prettier');
 //
 //      Would need this to also be safe with block scope (conditions/etc.)
 //
-//      How could we carry over checks / store global intrinics?  CHECK(IS_FUNCTION, assert), CHECK(IS_OBJECT, Env)
-//
+//      - Profile to determine overhead for extra assertion checking (no whitelist? nuke part of whitelist after
+//      mutation call)
 //
 //  - Profiler speeds for larger files
 //  - Could keep track of all available variables based off scope as we traverse through node. For any CHECK(..) points
@@ -104,14 +105,17 @@ const prettier = require('prettier');
 //                return this.charComponents.find((c) => c.name === name);\
 //            }; }";
 //let code = "{ f((c) => c.name === name); }";
-let code = "{ const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',\n\
-    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
-    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
+//let code = "{ const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',\n\
+//    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
+//    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
+//let code = "{ ( ( typeof defensiveInfo == 'object' || DEBUGGER('a') ) && ( typeof target == 'object' || DEBUGGER('b') ) && ( typeof target.entity == 'object' || DEBUGGER('c') ) && ( typeof target.entity.npc == 'object' || DEBUGGER('d') ) ) }";
+let code = "{ var OBJECT_TYPES = ['object', 'function']; var a = 1; OBJECT_TYPES.includes(typeof a); }";
 
 
 const Settings = {
     output: null,
     verbose: true
+    //checkSyntax: true
 };
 
 const ModifyNode = function() {
@@ -185,6 +189,12 @@ const cloneNode = (node) => {
     } else if (node.type === 'ThisExpression') {
 
         clonedNode.type = node.type;
+    } else if (node.type === 'BinaryExpression') {
+
+        clonedNode.type = node.type;
+        clonedNode.operator = node.operator;
+        clonedNode.left = cloneNode(node.left);
+        clonedNode.right = cloneNode(node.right);
     } else {
         console.error(`FIXME: Unexpected cloning type ${node.type}`);
         for (let key in node) {
@@ -232,6 +242,7 @@ const blockChildNode = (node, prop) => {
 // eg. { checker: IS_TYPE, args: [node, OBJECT_TYPE] }
 const buildNodeFromCheck = (checkItem, loc) => {
 
+
     const setNodeLoc = (node) => {
         //node.start = 0;
         //node.end = 0;
@@ -248,48 +259,32 @@ const buildNodeFromCheck = (checkItem, loc) => {
         }
     };
 
-    const checkNodeArr = [];
+    //const checkNodeArr = [];
     const checkNodeExpr = {
         type: 'ExpressionStatement',
         expression: {
-            type: 'CallExpression',
-            callee: {
-                type: 'Identifier',
-                name: 'CHECK'
-            },
-            arguments: [
-                {
-                    type: 'ArrayExpression',
-                    elements: checkNodeArr
-                }
-            ]
+            type: 'LogicalExpression',
+            NODE_CHECKTYPE: true,
+            left: {},
+            operator: '||',
+            right: {
+                type: 'CallExpression',
+                callee: {
+                    type: 'Identifier',
+                    name: 'DEBUGGER'
+                },
+                arguments: [{
+                    type: 'StringLiteral',
+                    value: `ERROR MESSAGE HERE: ${++__FIXME_ERRCNT}` // FIXME
+                }]
+            }
         }
     };
 
     setNodeLoc(checkNodeExpr);
 
-    const checkItemNode = {
-        type: 'ObjectExpression',
-        properties: [
-            {
-                type: 'ObjectProperty',
-                key: {
-                    type: 'Identifier',
-                    name: 'checker'
-                },
-                value: {
-                    // FIXME: We'll change this to numeric literal later
-                    //type: 'NumericLiteral',
-                    //value: 1
-
-                    type: 'Identifier',
-                    name: checkItem.checker
-                },
-                kind: 'init'
-            }
-        ]
-    };
-
+    const checkItemNode = {};
+    checkNodeExpr.expression.left = checkItemNode;
     setNodeLoc(checkItemNode);
 
     if (checkItem.checker === IS_TYPE) {
@@ -301,6 +296,7 @@ const buildNodeFromCheck = (checkItem, loc) => {
         }
 
 
+        /*
         // Type Comparison
         const typeCmpNode = {
             type: 'ObjectProperty',
@@ -318,21 +314,48 @@ const buildNodeFromCheck = (checkItem, loc) => {
 
         setNodeLoc(typeCmpNode);
         checkItemNode.properties.push(typeCmpNode);
+        */
 
         // Node to check
         const clonedNode = cloneNode(checkItem.args[0]);
-        const objNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'node'
-            },
-            value: clonedNode,
-            kind: 'init'
-        };
+        //const objNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'node'
+        //    },
+        //    value: clonedNode,
+        //    kind: 'init'
+        //};
 
-        setNodeLoc(objNode);
-        checkItemNode.properties.push(objNode);
+
+
+
+
+        checkItemNode.type = 'CallExpression';
+        checkItemNode.callee = {
+            object: {
+                type: 'Identifier',
+                name: 'OBJECT_TYPES'
+            },
+            property: {
+                type: 'Identifier',
+                name: 'includes'
+            },
+            computed: false,
+            type: 'MemberExpression'
+        };
+        checkItemNode.arguments = [{
+            type: 'UnaryExpression',
+            operator: 'typeof',
+            argument: clonedNode
+        }];
+
+
+
+        setNodeLoc(checkItemNode.callee);
+        setNodeLoc(checkItemNode.arguments[0]);
+        //checkItemNode.properties.push(objNode);
 
     } else if (checkItem.checker === HAS_KEY) {
 
@@ -367,34 +390,39 @@ const buildNodeFromCheck = (checkItem, loc) => {
 
         // Object
         const clonedObjNode = cloneNode(checkItem.args[1]);
-        const objInitNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'object'
-            },
-            value: clonedObjNode,
-            kind: 'init'
-        };
-        setNodeLoc(objInitNode);
-        checkItemNode.properties.push(objInitNode);
+        //const objInitNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'object'
+        //    },
+        //    value: clonedObjNode,
+        //    kind: 'init'
+        //};
+        //setNodeLoc(objInitNode);
+        //checkItemNode.properties.push(objInitNode);
 
-        // Property
-        const objPropNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'property'
-            },
-            value: propNode,
-            kind: 'init'
-        };
-        setNodeLoc(objPropNode);
-        checkItemNode.properties.push(objPropNode);
+        //// Property
+        //const objPropNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'property'
+        //    },
+        //    value: propNode,
+        //    kind: 'init'
+        //};
+        //setNodeLoc(objPropNode);
+        //checkItemNode.properties.push(objPropNode);
+        checkItemNode.type = 'BinaryExpression';
+        checkItemNode.operator = 'in';
+        checkItemNode.left = propNode;
+        checkItemNode.right = clonedObjNode;
+        setNodeLoc(checkItemNode);
 
     }
 
-    checkNodeArr.push(checkItemNode);
+    //checkNodeArr.push(checkItemNode);
 
     return checkNodeExpr;
 };
@@ -411,7 +439,12 @@ const stringifyNode = (node, topNode) => {
                 valStr = stringifyNode(node.property);
 
             if (!objStr || !valStr) return;
-            return `${objStr}.${valStr}`;
+
+            if (node.computed) {
+                return `${objStr}[${valStr}]`;
+            } else {
+                return `${objStr}.${valStr}`;
+            }
         }
     } else if (node.type === 'Identifier') {
         return node.name;
@@ -419,6 +452,14 @@ const stringifyNode = (node, topNode) => {
         return 'this';
     } else if (node.type === 'StringLiteral') {
         return node.value;
+    } else if (node.type === 'NumericLiteral') {
+        return node.value;
+    } else if (node.type === 'BinaryExpression') {
+        const left = stringifyNode(node.left),
+            right = stringifyNode(node.right);
+
+        if (!left || !right) return;
+        return `${left}${node.operator}${right}`;
     }
 };
 
@@ -441,12 +482,13 @@ const isSafeIdentifier = (node) => {
 // Check if we've already whitelisted this check
 const isCheckWhitelisted = (checkItem, builtCheck, scopedWhitelist) => {
 
-    let checks = builtCheck.expression.arguments[0].elements[0].properties;
+    //let checks = builtCheck.expression.left.arguments[0] .left.argument;
     let hashedCheck = '';
 
     let validHashCheck = false;
     if (checkItem.checker === IS_TYPE) {
-        let check = checks[2];
+        //let check = checks[2];
+        let check = checkItem.args[0];
         if (checkItem.args[1] === OBJECT_TYPE) {
             hashedCheck = 'IS_TYPE:OBJECT_TYPE:';
         } else if (checkItem.args[1] === FUNCTION_TYPE) {
@@ -454,17 +496,18 @@ const isCheckWhitelisted = (checkItem, builtCheck, scopedWhitelist) => {
         }
 
         // Is this a globally safe object?
-        if (isSafeIdentifier(check.value)) {
+        if (isSafeIdentifier(check)) {
             return true;
         }
 
-        let nodeCheckStr = stringifyNode(check.value);
+        let nodeCheckStr = stringifyNode(check);
         if (nodeCheckStr) {
             hashedCheck += nodeCheckStr;
             validHashCheck = true;
         }
     } else if (checkItem.checker === HAS_KEY) {
-        let obj = checks[1], prop = checks[2];
+        //let obj = checks[1], prop = checks[2];
+        let obj = checkItem.args[1], prop = checkItem.args[2];
         let objCheckStr = stringifyNode(obj.value);
         let valCheckStr = stringifyNode(prop.value);
 
@@ -516,9 +559,8 @@ const checkNodeBody = (node, state) => {
         state.modifyNode = innerModifyNode;
         CheckNode(node, null, state);
 
-        // FIXME: For each of these checks, check against whitelist first
-        //  - Convert check to string, or basic object
-        //  - Before building node for check, first check scoped whitelist
+        let lastAssertLine = -2,
+            lastAssert = null;
 
         // Prepend all preChecks before node
         if (innerModifyNode.preCheck.length > 0) {
@@ -528,8 +570,48 @@ const checkNodeBody = (node, state) => {
                 const checkNode = buildNodeFromCheck(checkItem, node.loc);
                 if (checkNode) {
                     if (isCheckWhitelisted(checkItem, checkNode, innerScope)) return;
-                    body.splice(i, 0, checkNode);
-                    ++i;
+
+                    // Can we flatten this assert into the previous line?
+                    if (lastAssertLine === (i - 1)) {
+                        // Find leftmost node and splice as logicalExpression there to branch this check
+                        let leftMostNode = lastAssert.expression, leftMostNodeParent = null;
+                        while (leftMostNode.left && leftMostNode.left.NODE_CHECKTYPE) {
+                            leftMostNodeParent = leftMostNode;
+                            leftMostNode = leftMostNode.left;
+                        }
+
+                        if (!leftMostNodeParent) {
+                            lastAssert.expression = {
+                                type: 'LogicalExpression',
+                                NODE_CHECKTYPE: true,
+                                left: leftMostNode,
+                                operator: '&&',
+                                right: checkNode.expression
+                            };
+                        } else {
+                            leftMostNodeParent.left = {
+                                type: 'LogicalExpression',
+                                NODE_CHECKTYPE: true,
+                                left: leftMostNode,
+                                operator: '&&',
+                                right: checkNode.expression
+                            };
+
+                            leftMostNodeParent.left.loc = leftMostNodeParent.loc;
+                        }
+
+                        // Steal loc from lastAssert
+                        checkNode.loc = lastAssert.expression.loc;
+
+                        //lastAssert.expression.arguments[0].elements.push(
+                        //    checkNode.expression.arguments[0].elements[0]
+                        //);
+                    } else {
+                        lastAssertLine = i;
+                        lastAssert = checkNode;
+                        body.splice(i, 0, checkNode);
+                        ++i;
+                    }
                 }
             });
         }
@@ -668,11 +750,13 @@ const CheckNode = (curNode, expectType, state) => {
             //   a[b]  ===>  a.hasOwnProperty(b)    // computed
             const propComputed = curNode.computed;// curNode.property.type === 'MemberExpression';
 
-            let preCheck = { 
-                checker: HAS_KEY,
-                args: [curNode, curNode.object, curNode.property, propComputed]
-            };
-            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
+            // FIXME: Can we get rid of the HAS_KEY check? Since we're about to check that prop is an object anyways, we
+            // can piggyback off that check
+            //let preCheck = { 
+            //    checker: HAS_KEY,
+            //    args: [curNode, curNode.object, curNode.property, propComputed]
+            //};
+            //Assertion(state.modifyNode.preCheck, preCheck, state.scope);
 
             preCheck = {
                 checker: IS_TYPE,
@@ -1004,8 +1088,16 @@ const CheckNode = (curNode, expectType, state) => {
 };
 
 // Begin checking body
-const parsed = Parser.parse(code, { sourceFilename: sourceFile });
-const SafeIdentifiers = ['Math', 'Env', 'Assert', '_', 'Array', 'Object', 'Promise', 'JSON', 'Err', 'String', 'Date', 'Number', 'Error'];
+let parsed = null;
+
+try {
+    parsed = Parser.parse(code, { sourceFilename: sourceFile });
+} catch (e) {
+    console.error(e);
+    process.exit(-1);
+}
+
+const SafeIdentifiers = ['Math', 'Env', 'Assert', '_', 'Array', 'Object', 'Promise', 'JSON', 'Err', 'String', 'Date', 'Number', 'Error', 'window', 'GLOBAL', 'define'];
 const scope = { parentScope: null, whitelist: [] };
 const state = { modifyNode: null, scope };
 CheckNode(parsed.program, null, state);
@@ -1020,6 +1112,12 @@ const output = generate(parsed, {
     //compact: true,
     sourceMaps: true
 }, { sourceFile: code });
+
+if (Settings.checkSyntax) {
+    console.log(jshint);
+    jshint(output.code, { esversion: 9 });
+    console.log(jshint.data());
+}
 
 
 if (Settings.verbose) {
