@@ -135,15 +135,20 @@ const TaskState = function(taskProcess, file) {
 
         if (result instanceof Promise) {
             console.log("Calling promise");
-            //result.then(() => {
-            result.finally(() => {
+            // NOTE: Finally will hit regardless of then/catch; would be better to then and catch, but process or fail accordingly
+            result.then(() => {
+            //result.finally(() => {
                 console.log("Finished promise chain");
                 this.process();
             }, (err) => {
                 console.error(`Error: ${err}`);
+                taskProcess.failed();
+            }).catch((err) => {
+                console.error(`Error: ${err}`);
+                taskProcess.failed();
             });
         } else if (!result) {
-
+            taskProcess.failed();
         } else {
             this.process();
         }
@@ -270,9 +275,16 @@ const TaskProcess = function() {
 
     this.finally = (cb) => {
         this.finished = cb;
+        return this;
+    };
+
+    this.catch = (cb) => {
+        this.failed = cb;
+        return this;
     };
 
     this.finished = () => {};
+    this.failed = () => {};
     this.processList = [];
 };
 
@@ -311,9 +323,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             console.error("ERROR: Missing expected preprocess blacklist");
             process.exit();
         }
-
-        CacheSettings = cacheData.settings;
     }
+
+    CacheSettings = cacheData.settings;
 
     const Cache = {
         data: cacheData,
@@ -378,6 +390,52 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
         const taskProcess = new TaskProcess();
 
+        const processItemFinished = (p, path, file, err) => {
+
+            // Remove from process queue
+            let idx = processingQueue.findIndex((q) => q === p);
+            processingQueue.splice(idx, 1);
+
+            // Update Cache
+            const basename = fsPath.basename(path),
+                hash       = err ? 0 : fileHash(path);
+
+            let cacheItem     = null,
+                cacheItemName = Cache.data.files[basename];
+            if (cacheItemName) {
+                cacheItem = cacheItemName.find((f) => f.path === path);
+            }
+
+            if (!cacheItem) {
+                // Adding new cache item
+                Cache.AddFile({
+                    path: path,
+                    cachedHash: hash
+                });
+            } else {
+                // Update cache item
+                Cache.UpdateFile({
+                    path: path,
+                    hash: hash
+                });
+            }
+
+            // Process next item after this one
+            if (p.runNext) {
+                processQueueItem(p.runNext);
+            } else if (processingQueue.length === 0) {
+                Cache.Save();
+
+                console.log("");
+                console.log("");
+                console.log(chalk.underline("Watching for changes"));
+
+                UnlockFile();
+            }
+            console.log("");
+
+        };
+
         // Queue of tasks waiting to be processed
         const processingQueue = [];
         const processQueueItem = (p) => {
@@ -386,48 +444,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             taskProcess.exec({
                 file: file
             }).finally(() => {
-
-                // Remove from process queue
-                let idx = processingQueue.findIndex((q) => q === p);
-                processingQueue.splice(idx, 1);
-
-                // Update Cache
-                const basename = fsPath.basename(path),
-                    hash       = fileHash(path);
-
-                let cacheItem     = null,
-                    cacheItemName = Cache.data.files[basename];
-                if (cacheItemName) {
-                    cacheItem = cacheItemName.find((f) => f.path === path);
-                }
-
-                if (!cacheItem) {
-                    // Adding new cache item
-                    Cache.AddFile({
-                        path: path,
-                        cachedHash: hash
-                    });
-                } else {
-                    // Update cache item
-                    Cache.UpdateFile({
-                        path: path,
-                        hash: hash
-                    });
-                }
-
-                // Process next item after this one
-                if (p.runNext) {
-                    processQueueItem(p.runNext);
-                } else if (processingQueue.length === 0) {
-                    Cache.Save();
-
-                    console.log("");
-                    console.log("");
-                    console.log(chalk.underline("Watching for changes"));
-
-                    UnlockFile();
-                }
-                console.log("");
+                processItemFinished(p, path, file, null);
+            }).catch((err) => {
+                
+                processItemFinished(p, path, file, 1);
             });
         };
 
@@ -651,6 +671,11 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                         }).finally(() => {
                             if (--waitingOnTasks === 0) finishedProcessingTasks();
                             //cb(); console.log("Resolved count: " + (++totalCount) + "/" + allTaskPromises.length);
+                        }).catch((err) => {
+                            // Set hash to 0 since it failed and we want to force re-prepro next time
+                            const srcFile = file.path.substr("dist/".length);
+                            Cache.UpdateFile({ path: srcFile, hash: 0 });
+                            if (--waitingOnTasks === 0) finishedProcessingTasks();
                         });
                     }
                 };
@@ -726,14 +751,25 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         //.then((new Task((file) => {
         .then((file) => {
 
-            // TODO: Uglify, Babel, Preprocessor (clear logs)
+            const jsFail = (err) => {
+                console.error("Failed to preprocess JS file");
+                console.error(err);
+
+                const prePath = file.path.replace('.js', '.pre.js');
+                execSync(`rm --force ${file.path}`);
+                execSync(`rm --force ${prePath}`);
+                throw new Error(err);
+            };
+
+            // TODO: Uglify, Babel, Preprocessor (clear logs), Check syntax
 
             if (file.in('dist/js/scripts')) {
                 return runTask(preprocessJSTask, file)
-                        .then(() => runTask(buildScriptTask, file));
+                        .then(() => runTask(buildScriptTask, file))
+                        .catch((err) => jsFail(err));
             }
 
-            return runTask(preprocessJSTask, file);
+            return runTask(preprocessJSTask, file).catch((err) => jsFail(err));
 
 
 
