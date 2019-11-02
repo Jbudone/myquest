@@ -112,6 +112,8 @@ const UnlockFile = () => {
     }
 };
 
+const PromiseToReturnTrue = () => { return new Promise((resolve) => { resolve(); }); };
+
 const TaskState = function(taskProcess, file) {
 
     this.process = () => {
@@ -233,10 +235,10 @@ const preprocessJSTask = new Task((file) => {
     const srcFile = file.path.substr("dist/".length);
     if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
         console.log(`Skipping blacklisted file ${srcFile}`);
-        return true;
+        return PromiseToReturnTrue();
     } else if (srcFile.indexOf("lib/") >= 0) {
         console.log(`Skipping lib file ${srcFile}`);
-        return true;
+        return PromiseToReturnTrue();
     }
 
     return new Promise((resolve, reject) => {
@@ -312,7 +314,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         console.error("Starting cache from scratch..");
         cacheData = { "files": {}, "settings": {
             preprocess: {
-                blacklist: ["js/keys.js","js/killInspector.js","js/hookable.js","js/fsm.js","js/extensions.js","js/profiler.js","js/SCRIPTINJECT.js","js/SCRIPT.INJECTION.js","js/SCRIPT.INJECTION.min.js","js/SCRIPTENV.js","js/scriptmgr.js","js/errors.js","js/event.js","js/environment.js","js/eventful.js","js/client/chalk.polyfill.js","js/errorReporter.js","js/client/errorReporter.js","js/server/errorReporter.js","js/test/errorReporter.js","js/checkForInspector.js","js/client/camera.js","js/test/pseudoUI.js","js/test/pseudoRenderer.js","js/test/pseudofxmgr.js","js/server/db.js","js/utilities.js","js/script.js"]
+                blacklist: ["js/keys.js","js/killInspector.js","js/hookable.js","js/fsm.js","js/extensions.js","js/profiler.js","js/SCRIPTINJECT.js","js/SCRIPT.INJECTION.js","js/SCRIPT.INJECTION.min.js","js/SCRIPTENV.js","js/scriptmgr.js","js/errors.js","js/event.js","js/environment.js","js/eventful.js","js/client/chalk.polyfill.js","js/errorReporter.js","js/client/errorReporter.js","js/server/errorReporter.js","js/test/errorReporter.js","js/checkForInspector.js","js/client/camera.js","js/test/pseudoUI.js","js/test/pseudoRenderer.js","js/test/pseudofxmgr.js","js/server/db.js","js/utilities.js","js/script.js","js/server.js"]
             }
         } };
     } else {
