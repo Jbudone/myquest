@@ -3,11 +3,18 @@
 //  - Cleanup
 //
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
-//  - Special layers: spawns, zoning, interactable? evt (town area, event, etc.)
+//  - Special layers: zoning, interactable? evt (town area, event, etc.)
 //      - Spawns: separate tilesheet w/ all avatars  (NOTE: these may be augmented later to include camps / prefabs, but also allow particular spawns for areas that need to be hand built)
 //          - Tooltip avatar name in controls panel
 //          - Show avatar name over head in map (when scrolled in enough)
-//      - Zoning
+//      - Zoning, Interactions
+//          - Modify properties directly on map (right click)
+//           Drag to resize
+//           Move interaction object on the map
+//           Right click
+//           Hover over for details
+//           display short title over box (similar to avatar name on map)
+//           Better icon (scalable) for interaction/zone
 //      - Prefabs, area events, town area / region
 //
 //
@@ -27,7 +34,6 @@
 //  - Control panel: tabs on top - files, tilesets, map properties, minimap
 //  - Minimap: rendering is optimized by rendering to pages, then just render pages to minimap
 //  - Map editor: 100% window size, on resize of window -> resize editor
-//  - Resources: Better to have multiple interaction managers (one per canvas), or have 1 shared interaction mgr and just change state or have multiple sheets loaded at once? (would need to have different options/etc. per type: tilesheets, avatars, prefabs, etc.)
 
 $(document).ready(() => {
 

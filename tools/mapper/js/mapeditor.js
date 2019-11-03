@@ -6,9 +6,19 @@ const MapEditor = (new function(){
 
     const mapProperties = { tilesets: [], avatars: {} };
 
+    const Settings = {
+        minAvatarSizeShowName: 16
+    };
+
     const TILE_SIZE = 16;
     const NORTH = 0, WEST = 1, EAST = 2, SOUTH = 3;
-    const CURSOR_PLACE_SPRITE = 0, CURSOR_ERASE = 1, CURSOR_PLACE_AVATAR = 2;
+    const CURSOR_PLACE_SPRITE = 0,
+        CURSOR_ERASE = 1,
+        CURSOR_PLACE_AVATAR = 2,
+        CURSOR_PLACE_OBJECT = 3;
+
+    const OBJ_INTERACTION = 0,
+        OBJ_ZONE = 1;
 
     const DefaultProperties = {
         columns: 100,
@@ -19,7 +29,9 @@ const MapEditor = (new function(){
         base: [],
         ground: [],
         floating: [],
-        spawns: []
+        spawns: [],
+
+        objects: []
     };
 
 
@@ -146,10 +158,50 @@ const MapEditor = (new function(){
                             break;
                         }
                     }
+
+                } else if (cursor.tool.op === CURSOR_PLACE_OBJECT) {
+
+                    const objEnt = {
+                        type: cursor.tool.type,
+                        x: cursor.x,
+                        y: cursor.y,
+                        data: cursor.tool.data
+                    };
+
+                    if (cursor.tool.type === OBJ_INTERACTION) {
+
+                        // Is there another interaction here?
+                        const existingObj = mapLayers.objects.findIndex((eObj) => {
+                            if (eObj.type === OBJ_INTERACTION && eObj.x === objEnt.x && eObj.y === objEnt.y) {
+                                return true;
+                            }
+                        });
+
+                        if (existingObj >= 0) {
+                            mapLayers.objects.splice(existingObj, 1);
+                        }
+
+                        mapLayers.objects.push(objEnt);
+                    } else if (cursor.tool.type === OBJ_ZONE) {
+
+                        // Is there another zone here?
+                        const existingObj = mapLayers.objects.findIndex((eObj) => {
+                            if (eObj.type === OBJ_ZONE && eObj.x === objEnt.x && eObj.y === objEnt.y) {
+                                return true;
+                            }
+                        });
+
+                        if (existingObj >= 0) {
+                            mapLayers.objects.splice(existingObj, 1);
+                        }
+
+                        mapLayers.objects.push(objEnt);
+                    }
+
                 } else if (cursor.tool.op === CURSOR_PLACE_AVATAR) {
 
                     const avatarEnt = {
-                        name: cursor.tool.avatar.name,
+                        id: cursor.tool.avatar.id,
                         img: cursor.tool.avatar.img,
                         x: cursor.x,
                         y: cursor.y,
@@ -232,6 +284,30 @@ const MapEditor = (new function(){
         $('#mapperToolErase').click(() => {
             cursor.tool = {
                 op: CURSOR_ERASE
+            };
+
+            return false;
+        });
+
+        $('#mapperToolInteraction').click(() => {
+            cursor.tool = {
+                op: CURSOR_PLACE_OBJECT,
+                type: OBJ_INTERACTION,
+                data: {
+                    name: 'interactable'
+                }
+            };
+
+            return false;
+        });
+
+        $('#mapperToolZone').click(() => {
+            cursor.tool = {
+                op: CURSOR_PLACE_OBJECT,
+                type: OBJ_ZONE,
+                data: {
+                    name: 'zone'
+                }
             };
 
             return false;
@@ -402,14 +478,18 @@ const MapEditor = (new function(){
     this.setAvatar = (avatar) => {
 
         // Add sheet to avatar sheets
-        if (!mapProperties.avatars[avatar.name]) {
-            mapProperties.avatars[avatar.name] = avatar.img;
+        if (!mapProperties.avatars[avatar.id]) {
+            mapProperties.avatars[avatar.id] = avatar.img;
         }
 
         cursor.tool = {
             op: CURSOR_PLACE_AVATAR,
             avatar
         };
+    };
+
+    this.addAvatar = (avatar) => {
+        mapProperties.avatars[avatar.id] = avatar.img;
     };
 
     this.step = (delta) => {
@@ -472,6 +552,23 @@ const MapEditor = (new function(){
             const tilesize = avatar.tilesize;
             let pos = mapCamera.translate({ x: avatar.x, y: avatar.y });
             canvasCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+
+            // Draw name over head if we're zoomed in enough
+            if (sizeX >= Settings.minAvatarSizeShowName) {
+                canvasCtx.font = '12px serif';
+                canvasCtx.fillStyle = '#000';
+                const name = avatar.id,
+                    nameWidth = canvasCtx.measureText(name).width, // TODO: Is this expensive? Could easily cache and dirty on zoom
+                    xPos = pos.x - Math.floor(nameWidth / 2) + (TILE_SIZE / 2);
+                canvasCtx.fillText(name, xPos, pos.y);
+            }
+        };
+
+        const drawObject = (obj) => {
+
+            canvasCtx.fillStyle = '#00000055';
+            let pos = mapCamera.translate({ x: obj.x, y: obj.y });
+            canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
         };
 
         [mapLayers.base, mapLayers.ground, mapLayers.floating].forEach((layer) => {
@@ -484,6 +581,9 @@ const MapEditor = (new function(){
             drawAvatar(avatarData);
         });
 
+        mapLayers.objects.forEach((objData) => {
+            drawObject(objData);
+        });
 
         const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
         if (cursor.tool) {
@@ -534,6 +634,9 @@ const MapEditor = (new function(){
                 canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
             } else if (cursor.tool.op === CURSOR_ERASE) {
                 canvasCtx.fillStyle = '#5555AA55';
+                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+            } else if (cursor.tool.op === CURSOR_PLACE_OBJECT) {
+                canvasCtx.fillStyle = '#55550055';
                 canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
             }
         } else {
@@ -641,7 +744,8 @@ const MapEditor = (new function(){
 
         const baseTiles = new Array(tilecount),
             groundTiles = new Array(tilecount),
-            floatTiles  = new Array(tilecount);
+            floatTiles  = new Array(tilecount),
+            spawnLayer  = {};
 
         baseTiles.fill(0);
         groundTiles.fill(0);
@@ -665,7 +769,7 @@ const MapEditor = (new function(){
                 name: 'zoning',
             },
             {
-                objects: [],
+                data: spawnLayer,
                 name: 'spawns',
             },
             {
@@ -722,6 +826,16 @@ const MapEditor = (new function(){
                 const mapGid = (sprite.y / TILE_SIZE) * mapProperties.columns + (sprite.x / TILE_SIZE);
                 layer.dst[mapGid] = tileGid;
             });
+        });
+
+        mapLayers.spawns.forEach((spawn) => {
+
+            const spawnRow = spawn.y / TILE_SIZE,
+                spawnCol   = spawn.x / TILE_SIZE,
+                spawnCoord = spawnRow * mapProperties.columns + spawnCol;
+            spawnLayer[spawnCoord] = {
+                id: spawn.id
+            };
         });
 
 
@@ -788,7 +902,8 @@ const MapEditor = (new function(){
         const layers      = [],
             baseLayer     = data.layers.find((layer) => layer.name === 'base'),
             groundLayer   = data.layers.find((layer) => layer.name === 'sprites'),
-            floatingLayer = data.layers.find((layer) => layer.name === 'floating');
+            floatingLayer = data.layers.find((layer) => layer.name === 'floating'),
+            spawnsLayer   = data.layers.find((layer) => layer.name === 'spawns');
 
         if (baseLayer)     layers.push({ src: baseLayer.data,     dst: mapLayers.base });
         if (groundLayer)   layers.push({ src: groundLayer.data,   dst: mapLayers.ground });
@@ -866,5 +981,30 @@ const MapEditor = (new function(){
         });
 
 
+
+        // Add spawns
+        if (spawnsLayer) {
+
+            if (spawnsLayer.data instanceof Array) {
+                console.error("Spawns layer using wrong format: Array instead of Object");
+            } else {
+
+                _.forEach(spawnsLayer.data, (spawnData, spawnCoordI) => {
+
+                    const spawnCoord = parseInt(spawnCoordI, 10),
+                        mapY         = Math.floor(spawnCoord / mapProperties.columns),
+                        mapX         = spawnCoord % mapProperties.columns;
+
+                    mapLayers.spawns.push({
+
+                        id: spawnData.id,
+                        img: mapProperties.avatars[spawnData.id],
+                        tilesize: 32, // FIXME: Yuck
+                        y: mapY * TILE_SIZE,
+                        x: mapX * TILE_SIZE
+                    });
+                });
+            }
+        }
     };
 }());

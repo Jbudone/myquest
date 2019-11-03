@@ -405,6 +405,9 @@ const ResourceMgr = (new function(){
                                             })
                                 )
                 );
+
+                // Push all avatars at the beginning for when we load a map
+                MapEditor.addAvatar({ id: avatar, img: avatarImg });
             });
         });
 
