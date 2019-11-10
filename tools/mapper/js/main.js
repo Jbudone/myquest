@@ -6,7 +6,6 @@
 //  - Special layers: zoning, interactable? evt (town area, event, etc.)
 //      - Spawns: separate tilesheet w/ all avatars  (NOTE: these may be augmented later to include camps / prefabs, but also allow particular spawns for areas that need to be hand built)
 //          - Tooltip avatar name in controls panel
-//          - Show avatar name over head in map (when scrolled in enough)
 //      - Zoning, Interactions
 //          - Modify properties directly on map (right click)
 //           Drag to resize
@@ -16,6 +15,21 @@
 //           display short title over box (similar to avatar name on map)
 //           Better icon (scalable) for interaction/zone
 //      - Prefabs, area events, town area / region
+// - Cursor tool: select/move/delete spawns/spriteGroups; show properties for modifying
+//      - Click: unselect previous, select new
+//      - Move: unselect afterwards
+//      - Click spritegroup
+//      - Mouse drag: rect select
+//      - Right click: popup of properties
+//      - Selection:
+//          - Move (shift)
+//          - Delete
+//          - Show selection in properties
+//              - Checkbox of layers selected (so you can deselect certain layers for move/erase)
+//          - Cursor tool: blur everything outside of the selection area
+//              - Spawns: everything is blurred but the spawns
+//              - Rect: 
+//
 //
 //
 //

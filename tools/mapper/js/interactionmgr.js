@@ -178,6 +178,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseUp();
             }
         });
 
@@ -208,6 +209,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseDown();
             }
         });
 
@@ -339,6 +341,8 @@ const InteractionMgr = (function(){
             onHoverIn: () => {},
             onHoverOut: () => {},
             onClick: () => {},
+            onMouseDown: () => {},
+            onMouseUp: () => {},
             onBeginDrag: () => {},
             onEndDrag: () => {},
             onDrag: () => {},
@@ -355,6 +359,8 @@ const InteractionMgr = (function(){
             onDrag: (cb) => { interaction.onDrag = cb; return interactionFunctions; },
             onBeginDrag: (cb) => { interaction.onBeginDrag = cb; return interactionFunctions; },
             onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
+            onMouseDown: (cb) => { interaction.onMouseDown = cb; return interactionFunctions; },
+            onMouseUp: (cb) => { interaction.onMouseUp = cb; return interactionFunctions; },
 
             // Functions
             setCanDrag: (canDrag) => { interaction.canDrag = canDrag; return interactionFunctions; },
@@ -382,6 +388,8 @@ const InteractionMgr = (function(){
     };
 
     this.onMouseMove = () => {};
+    this.onMouseDown = () => {};
+    this.onMouseUp = () => {};
     this.onMiddleMouseClick = () => {};
     this.onMiddleMouseDrag = () => {};
     this.onRightMouseClick = () => {};

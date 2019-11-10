@@ -20,10 +20,14 @@ const MapEditor = (new function(){
     const OBJ_INTERACTION = 0,
         OBJ_ZONE = 1;
 
+    const SELECTION_SPAWN = 0;
+
     const DefaultProperties = {
         columns: 100,
         rows: 100,
     };
+
+    let cursor = { x: 0, y: 0, tool: null, selected: null };
 
     let mapLayers = {
         base: [],
@@ -68,14 +72,110 @@ const MapEditor = (new function(){
 
                 cursor.x = entity.x;
                 cursor.y = entity.y;
+
+                // Move selections
+                if (!cursor.tool && cursor.selected) {
+                    if (cursor.selected.type === SELECTION_SPAWN && cursor.downEnt) {
+                        const avatar = cursor.selected.spawns[0];
+
+                        // FIXME: Re-using the same logic for placing avatars; need to abstract somewhere
+                        let canMove = true;
+
+                        // Can we move the avatar here?
+                        // Is there already a sprite here?
+                        let collisionSprite = null;
+                        [mapLayers.base, mapLayers.ground].forEach((spriteLayer) => {
+                            if (collisionSprite) return;
+                            collisionSprite = spriteLayer.find((eSprite) => {
+                                if (eSprite.x !== entity.x || eSprite.y !== entity.y) {
+                                    return false;
+                                }
+
+                                const eSpriteRow = eSprite.sheetY / eSprite.sheet.data.tilesize,
+                                    eSpriteCol   = eSprite.sheetX / eSprite.sheet.data.tilesize,
+                                    eSpriteIdx   = eSpriteRow * eSprite.sheet.data.columns + eSpriteCol;
+
+                                // Is this a collision?
+                                return(eSprite.sheet.data.data.collisions.indexOf(eSpriteIdx) >= 0);
+                            });
+                        });
+
+                        if (collisionSprite) {
+                            canMove = false;
+                        }
+
+                        // Is there another spawn here?
+                        const existingSpawn = mapLayers.spawns.findIndex((eSpawn) => {
+                            if (eSpawn.x === entity.x && eSpawn.y === entity.y) {
+                                return true;
+                            }
+                        });
+
+                        if (existingSpawn >= 0) {
+                            canMove = false;
+                        }
+
+
+                        if (canMove) {
+                            avatar.x = entity.x;
+                            avatar.y = entity.y;
+
+                            cursor.selected.autoDeselect = true; // We probably only wanted to move the sprite
+                        }
+                    }
+                }
+
+
                 this.dirtyCanvas = true;
             })
             .onHoverOut(() => {
                 //this.dirtyCanvas = true;
             })
+            .onMouseDown(() => {
+                cursor.downEnt = entity;
+
+                if (cursor.selected) {
+                    // Deselect
+                    cursor.selected = null;
+                }
+
+
+                if (!cursor.tool) {
+                    // Select entity
+
+                    // Is there a spawn here?
+                    const existingSpawn = mapLayers.spawns.find((eSpawn) => {
+                        if (eSpawn.x === entity.x && eSpawn.y === entity.y) {
+                            return true;
+                        }
+                    });
+
+                    if (existingSpawn) {
+                        cursor.selected = { type: SELECTION_SPAWN, spawns: [existingSpawn] };
+                        this.dirtyCanvas = true;
+                    }
+
+                    return;
+                }
+
+            })
+            .onMouseUp(() => {
+                cursor.upEnt = entity;
+                cursor.downEnt = null;
+                this.dirtyCanvas = true;
+            })
             .onClick(() => {
 
-                if (!cursor.tool) return;
+                if (!cursor.tool) {
+
+                    if (cursor.selected && cursor.selected.autoDeselect) {
+                        cursor.selected = null;
+                    }
+
+                    return;
+                }
+
+
                 if (cursor.tool.op === CURSOR_PLACE_SPRITE) {
 
                     const spriteGroup = [],
@@ -280,6 +380,12 @@ const MapEditor = (new function(){
 
         this.mapWindowEl = $('#mapperWindow');
 
+        $('#mapperToolCursor').click(() => {
+            cursor.tool = {};
+            this.dirtyCanvas = true;
+            return false;
+        });
+
 
         $('#mapperToolErase').click(() => {
             cursor.tool = {
@@ -328,8 +434,6 @@ const MapEditor = (new function(){
         this.reset();
         this.setupInteractions();
     };
-
-    let cursor = { x: 0, y: 0, tool: null };
 
     this.addTileset = (sheet) => {
         if (mapProperties.tilesets.indexOf(sheet) === -1) {
@@ -642,6 +746,64 @@ const MapEditor = (new function(){
         } else {
             canvasCtx.fillStyle = '#FF000055';
             canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+        }
+
+
+        if (cursor.selected) {
+
+            if (cursor.selected.type === SELECTION_SPAWN) {
+                // Highlight this spawn
+
+                const movableHighlight = {
+                    borderThickness: 1,
+                    borderColor: 'yellow',
+                    filter: 'saturate(180%) contrast(160%)'
+                };
+
+
+                const avatar = cursor.selected.spawns[0];
+                if (!cursor.selected.highlightedImg) {
+
+
+						const scrapCanvas  = document.createElement('canvas'),
+							scrapCtx       = scrapCanvas.getContext('2d');
+
+						scrapCanvas.height = avatar.tilesize;
+						scrapCanvas.width  = avatar.tilesize;
+
+
+                        for (let dOffY = -1; dOffY <= 1; ++dOffY) {
+                            for (let dOffX = -1; dOffX <= 1; ++dOffX) {
+                                scrapCtx.drawImage(
+                                    avatar.img,
+                                    0, 0,
+                                    avatar.tilesize, avatar.tilesize,
+                                    dOffX * movableHighlight.borderThickness,
+                                    dOffY * movableHighlight.borderThickness,
+                                    avatar.tilesize, avatar.tilesize,
+                                );
+                            }
+                        }
+
+                        scrapCtx.globalCompositeOperation = "source-in";
+                        scrapCtx.fillStyle = movableHighlight.borderColor;
+                        scrapCtx.fillRect(0, 0, scrapCanvas.width, scrapCanvas.height);
+
+						const scrapImg  = new Image();
+						scrapImg.src = scrapCanvas.toDataURL("image/png");
+                        cursor.selected.highlightedImg = scrapImg;
+                }
+
+                const tilesize = avatar.tilesize;
+                let pos = mapCamera.translate({ x: avatar.x, y: avatar.y });
+                canvasCtx.drawImage(cursor.selected.highlightedImg, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+
+                canvasCtx.filter = movableHighlight.filter;
+
+                canvasCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+                canvasCtx.filter = 'none';
+
+            }
         }
     };
 
