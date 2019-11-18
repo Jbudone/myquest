@@ -10,7 +10,12 @@ const ResourceMgr = (new function(){
 
         sheets: {
             findResources: (data) => {
-                return data.tilesheets.list;
+                const list = data.tilesheets.list;
+                list.forEach((sheet) => {
+                    if (!sheet.data.collisions) sheet.data.collisions = [];
+                    if (!sheet.data.floating)   sheet.data.floating = [];
+                });
+                return list;
             },
 
             resType: (res) => 'tilesheet'
