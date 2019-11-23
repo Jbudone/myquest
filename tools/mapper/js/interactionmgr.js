@@ -209,7 +209,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
-                interactable.onMouseDown();
+                interactable.onMouseDown(evt);
             }
         });
 

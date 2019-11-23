@@ -20,18 +20,19 @@
 //              - save destructed entities in old layer: obj { loc: [ {layer: 'ground', sprite}, {layer: 'sprites', sprite} ] }
 //                  This way we can continuously move sprites around but retail the old sprites below. Will need a
 //                  "clean/optimize" method later for this
-//      - FIX: Moving map w/ cursor also selects/moves sprite
-//      - Shift/Mouse drag: rect select
 //      - Shift/pull spritegroup/avatar: clone
 //      - Right click: popup of properties
+//      - Shift+mouse to select or move sprites
 //      - Selection:
-//          - Move (shift)
 //          - Delete
+//          - Shift+click now moves entire selection (including everything selected)
+//          - Move but still retain selection
 //          - Show selection in properties
 //              - Checkbox of layers selected (so you can deselect certain layers for move/erase)
 //          - Cursor tool: blur everything outside of the selection area
 //              - Spawns: everything is blurred but the spawns
-//              - Rect: 
+//              - Using cursor tool only applies to the selection area (change mouse cursor outside of selection?)
+// - Keybinding rules: list of keybinding rules and results (eg. LEFT_MOUSE_DOWN + SHIFT_DOWN ==> SPRITEGROUP_SELECT)
 //
 //
 //

@@ -42,7 +42,8 @@ const MapEditor = (new function(){
         HIGHLIGHT_SELECTED = 3;
 
     const SELECTION_SPAWN     = 0,
-        SELECTION_SPRITEGROUP = 1;
+        SELECTION_SPRITEGROUP = 1,
+        SELECTION_AREA        = 2;
 
     const DefaultProperties = {
         columns: 100,
@@ -235,7 +236,14 @@ const MapEditor = (new function(){
                 cursor.y = entity.y;
 
                 // Move selections
-                if (!cursor.tool && cursor.selected && cursor.downEnt) {
+                if
+                (
+                    !cursor.tool &&
+                    cursor.selected &&
+                    (cursor.selected.type === SELECTION_SPRITEGROUP || cursor.selected.type === SELECTION_SPAWN) &&
+                    cursor.downEnt
+                )
+                {
 
                     if (cursor.selected.type === SELECTION_SPAWN) {
                         const avatar = cursor.selected.spawns[0];
@@ -375,6 +383,17 @@ const MapEditor = (new function(){
                         }
                     }
                 }
+                else if
+                (
+                    !cursor.tool &&
+                    cursor.selected &&
+                    cursor.selected.type === SELECTION_AREA &&
+                    cursor.downEnt
+                )
+                {
+                    cursor.selected.to = entity;
+                }
+
 
 
                 this.dirtyCanvas = true;
@@ -382,16 +401,21 @@ const MapEditor = (new function(){
             .onHoverOut(() => {
                 //this.dirtyCanvas = true;
             })
-            .onMouseDown(() => {
+            .onMouseDown((evt) => {
                 cursor.downEnt = entity;
 
                 if (cursor.selected) {
                     // Deselect
                     deselect();
+                    mapOperations.clearPending();
+                    this.dirtyCanvas = true;
                 }
 
+                // Shfit+Left mouse for handling sprites
+                const spriteModifier = evt.button === 0 && evt.shiftKey,
+                    selectionModifier = evt.button === 0;
 
-                if (!cursor.tool) {
+                if (spriteModifier && !cursor.tool) {
                     // Select entity
 
                     // Is there a spawn here?
@@ -425,8 +449,11 @@ const MapEditor = (new function(){
                     }
 
                     return;
+                } else if (!spriteModifier && selectionModifier && !cursor.tool) {
+                    // Area selection
+                    cursor.selected = { type: SELECTION_AREA, from: cursor.downEnt, to: cursor.downEnt };
+                    this.dirtyCanvas = true;
                 }
-
             })
             .onMouseUp(() => {
                 cursor.upEnt = entity;
@@ -1124,6 +1151,27 @@ const MapEditor = (new function(){
         } else {
             canvasCtx.fillStyle = '#FF000055';
             canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+        }
+
+        if (cursor.selected && cursor.selected.type === SELECTION_AREA) {
+
+            const topLeft = { 
+                x: Math.min(cursor.selected.from.x, cursor.selected.to.x),
+                y: Math.min(cursor.selected.from.y, cursor.selected.to.y)
+            }, botRight = {
+                x: Math.max(cursor.selected.from.x, cursor.selected.to.x) + TILE_SIZE,
+                y: Math.max(cursor.selected.from.y, cursor.selected.to.y) + TILE_SIZE
+            };
+
+            const pos = mapCamera.translate(topLeft),
+                size  = {
+                    x: mapCamera.scaleX(botRight.x - topLeft.x),
+                    y: mapCamera.scaleY(botRight.y - topLeft.y)
+                };
+
+
+            canvasCtx.fillStyle = '#FF550055';
+            canvasCtx.fillRect(pos.x, pos.y, size.x, size.y);
         }
     };
 
