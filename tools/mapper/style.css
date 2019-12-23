@@ -18,13 +18,9 @@ body {
 	width: 100%;
 }
 
-#mapEditorCanvas {
+#glcanvas {
     width: 100%;
     height: 800px;
-}
-
-#mapEditorCanvas.holdingSprite {
-    cursor: none;
 }
 
 /*******************************/

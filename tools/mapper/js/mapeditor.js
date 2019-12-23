@@ -3,6 +3,15 @@ const MapEditor = (new function(){
     this.mapWindowEl = null;
     let canvasEl, canvasCtx;
     let interactionMgr;
+    let gl, glProgram, glProgramInfo;
+    let firstTimeRender = true; // TODO: Could probably handle first time rendering after load/reset, then all regular renders are not first times
+
+    let minimapCanvasEl, minimapCanvasCtx, minimapInteractionMgr;
+
+    const PAGE_SIZE = 8;
+    let mapPages = {};
+    let hiddenMapCanvas, hiddenMapCanvasCtx;
+    let activePages = [];
 
     const mapProperties = { tilesets: [], avatars: {} };
 
@@ -111,17 +120,26 @@ const MapEditor = (new function(){
                 }
             };
 
+            const dirtySprite = (sprite) => {
+                let page = pageFromPos(sprite.x, sprite.y, true);
+                page.dirty = true;
+            };
+
             this.perform = () => {
 
                 this.removeSprites.forEach((sprite) => {
                     let spriteIdx = sprite.layer.indexOf(sprite);
                     sprite.layer.splice(spriteIdx, 1);
+                    dirtySprite(sprite);
                 });
 
                 this.moveSprites.forEach((moveSprite) => {
                     const sprite = moveSprite.sprite;
+
+                    dirtySprite(sprite);
                     sprite.x = moveSprite.to.x;
                     sprite.y = moveSprite.to.y;
+                    dirtySprite(sprite);
                 });
             };
 
@@ -129,12 +147,16 @@ const MapEditor = (new function(){
 
                 this.removeSprites.forEach((sprite) => {
                     sprite.layer.push(sprite);
+                    dirtySprite(sprite);
                 });
 
                 this.moveSprites.forEach((moveSprite) => {
                     const sprite = moveSprite.sprite;
+
+                    dirtySprite(sprite);
                     sprite.x = moveSprite.from.x;
                     sprite.y = moveSprite.from.y;
+                    dirtySprite(sprite);
                 });
             };
 
@@ -194,15 +216,7 @@ const MapEditor = (new function(){
         x: 0,
         y: 0,
         w: 1200, // canvas size
-        h: 800,
-        translate: (mapPos) => {
-            const cameraPos = { x: 0, y: 0 };
-            cameraPos.x = Math.ceil((mapPos.x - mapCamera.x) * (canvasEl.width / mapCamera.w));
-            cameraPos.y = Math.ceil((mapPos.y - mapCamera.y) * (canvasEl.height / mapCamera.h));
-            return cameraPos;
-        },
-        scaleX: (x) => Math.ceil(x * (canvasEl.width / mapCamera.w)),
-        scaleY: (y) => Math.ceil(y * (canvasEl.height / mapCamera.h)),
+        h: 800
     };
 
     const flagPendingChanges = () => {
@@ -226,14 +240,31 @@ const MapEditor = (new function(){
         }
     };
 
+    const pageFromPos = (x, y, realCoords) => {
+
+        const tileX = realCoords ? (x / TILE_SIZE) : x,
+            tileY   = realCoords ? (y / TILE_SIZE) : y;
+
+        const pageX = Math.floor(tileX / PAGE_SIZE) * PAGE_SIZE,
+            pageY   = Math.floor(tileY / PAGE_SIZE) * PAGE_SIZE,
+            pageIdx = pageY * mapProperties.columns + pageX,
+            page = mapPages[pageIdx];
+
+        return page;
+    };
+
     const addInteractable = ((xPos, yPos) => {
 
+        const page = pageFromPos(xPos, yPos, true);
         const entity = { x: xPos, y: yPos, w: TILE_SIZE, h: TILE_SIZE };
         interactionMgr.addEntity(entity.x, entity.y, entity.w, entity.h)
             .onHoverIn(() => {
-
                 cursor.x = entity.x;
                 cursor.y = entity.y;
+
+                page.hovering = true;
+
+                let newActivePages = [page];
 
                 // Move selections
                 if
@@ -287,6 +318,10 @@ const MapEditor = (new function(){
 
 
                         if (canMove) {
+
+                            const prevPage = pageFromPos(avatar.x, avatar.y, true);
+                            newActivePages.push(prevPage);
+
                             avatar.x = entity.x;
                             avatar.y = entity.y;
 
@@ -374,6 +409,13 @@ const MapEditor = (new function(){
                                     from: { x: spriteGroup[i].x, y: spriteGroup[i].y },
                                     to: { x: newSpriteGroupPos[i].x, y: newSpriteGroupPos[i].y },
                                 };
+
+
+                                // This particular sprite from the spriteGroup could extend into a different page
+                                const spriteNewPage = pageFromPos(newSpriteGroupPos[i].x, newSpriteGroupPos[i].y, true),
+                                    spriteOldPage   = pageFromPos(spriteGroup[i].x, spriteGroup[i].y, true);
+                                newActivePages.push(spriteNewPage);
+                                newActivePages.push(spriteOldPage);
                             }
 
                             const pendingOp = mapOperations.newOp();
@@ -393,12 +435,48 @@ const MapEditor = (new function(){
                 {
                     cursor.selected.to = entity;
                 }
+                else if
+                (
+                    cursor.tool &&
+                    cursor.tool.op === CURSOR_PLACE_SPRITE &&
+                    cursor.tool.sprite
+                )
+                {
+                    // Dirty pages from hover
 
+                    const spriteGroup = cursor.tool.sprite.sprites;
+                    for (let i = 0; i < spriteGroup.length; ++i) {
+
+                        // This particular sprite from the spriteGroup could extend into a different page
+                        const spritePage = pageFromPos(entity.x + spriteGroup[i].x - cursor.tool.sprite.left, entity.y + spriteGroup[i].y - cursor.tool.sprite.top, true);
+
+                        if (newActivePages.indexOf(spritePage) === -1) {
+                            newActivePages.push(spritePage);
+                        }
+                    }
+                }
+
+                for (let i = 0; i < activePages.length; ++i) {
+                    if (newActivePages.indexOf(activePages[i]) === -1) {
+                        activePages[i].dirty = true;
+                        activePages.splice(i, 1);
+                        --i;
+                    }
+                }
+
+                for (let i = 0; i < newActivePages.length; ++i) {
+                    if (activePages.indexOf(newActivePages[i]) === -1) {
+                        activePages.push(newActivePages[i]);
+                    }
+                }
+
+                activePages.forEach((page) => page.dirty = true);
 
 
                 this.dirtyCanvas = true;
             })
             .onHoverOut(() => {
+                // NOTE: HoverOut handled by HoverIn's active page's management
                 //this.dirtyCanvas = true;
             })
             .onMouseDown((evt) => {
@@ -408,6 +486,7 @@ const MapEditor = (new function(){
                     // Deselect
                     deselect();
                     mapOperations.clearPending();
+                    page.dirty = true;
                     this.dirtyCanvas = true;
                 }
 
@@ -428,6 +507,7 @@ const MapEditor = (new function(){
                     if (existingSpawn) {
                         cursor.selected = { type: SELECTION_SPAWN, spawns: [existingSpawn] };
                         existingSpawn.highlighted = HIGHLIGHT_SELECTED;
+                        page.dirty = true;
                         this.dirtyCanvas = true;
                     } else {
 
@@ -444,6 +524,7 @@ const MapEditor = (new function(){
 
                             cursor.selected = { type: SELECTION_SPRITEGROUP, group: existingSprite.group, sprite: existingSprite };
                             existingSprite.group.highlighted = HIGHLIGHT_SELECTED;
+                            page.dirty = true;
                             this.dirtyCanvas = true;
                         }
                     }
@@ -452,6 +533,7 @@ const MapEditor = (new function(){
                 } else if (!spriteModifier && selectionModifier && !cursor.tool) {
                     // Area selection
                     cursor.selected = { type: SELECTION_AREA, from: cursor.downEnt, to: cursor.downEnt };
+                    page.dirty = true;
                     this.dirtyCanvas = true;
                 }
             })
@@ -735,11 +817,13 @@ const MapEditor = (new function(){
             return false;
         });
 
-        canvasEl  = $('#mapEditorCanvas')[0];
-        canvasCtx = canvasEl.getContext('2d');
+        canvasEl  = $('#glcanvas')[0];
+        gl = canvasEl.getContext('webgl');
 
         canvasEl.width = $(canvasEl).width();
         canvasEl.height = $(canvasEl).height();
+        gl.width = $(canvasEl).width();
+        gl.height = $(canvasEl).height();
 
         mapCamera.w = canvasEl.width;
         mapCamera.h = canvasEl.height;
@@ -747,6 +831,23 @@ const MapEditor = (new function(){
         interactionMgr = new InteractionMgr();
         interactionMgr.load(canvasEl);
 
+        minimapCanvasEl = $('#minimapCanvas')[0];
+        minimapCanvasCtx = minimapCanvasEl.getContext('2d');
+
+        minimapInteractionMgr = new InteractionMgr();
+        minimapInteractionMgr.load(minimapCanvasEl);
+
+        hiddenMapCanvas = document.createElement('canvas');
+        hiddenMapCanvasCtx = hiddenMapCanvas.getContext('2d');
+
+        hiddenMapCanvas.width  = 100;
+        hiddenMapCanvas.height = 100;
+        hiddenMapCanvasCtx.width = hiddenMapCanvas.width;
+        hiddenMapCanvasCtx.height = hiddenMapCanvas.height;
+
+        initializeGL();
+
+        this.resetPages();
         this.reset();
         this.setupInteractions();
     };
@@ -923,83 +1024,360 @@ const MapEditor = (new function(){
         }
     };
 
-    this.clearCanvas = () => {
+    this.clearPageCanvas = (page) => {
 
-        canvasCtx.save();
-        canvasCtx.fillStyle = '#000';
-        canvasCtx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+        const pageCanvas = page.canvas,
+            pageCtx      = page.ctx;
 
-        let left = mapCamera.scaleX(mapCamera.x),
-            top  = mapCamera.scaleY(mapCamera.y),
-            right = mapCamera.scaleX(mapCamera.w),
-            bottom = mapCamera.scaleY(mapCamera.h);
+        pageCtx.save();
+        pageCtx.fillStyle = '#F00';
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pageCtx.restore();
+    };
 
-        if (left < right && top < bottom) {
+    initializeGL = () => {
+        glProgram = gl.createProgram();
 
-            const leftEdge = Math.max(0, -left),
-                topEdge = Math.max(0, -top),
-                rightEdge = Math.max(0, Math.min(right, mapCamera.scaleX(mapProperties.columns * TILE_SIZE)) - left),
-                bottomEdge = Math.max(0, Math.min(bottom, mapCamera.scaleY(mapProperties.rows * TILE_SIZE)) - top),
-                drawWidth = rightEdge - leftEdge,
-                drawHeight = bottomEdge - topEdge;
+        const vsCode = "\
+  attribute vec4 aVertexPosition;\
+    attribute vec2 aTextureCoord;\
+    varying highp vec2 vTextureCoord;\
+\
+  void main() {\
+      gl_Position = aVertexPosition;\
+      vTextureCoord = aTextureCoord;\
+  }";
 
-            canvasCtx.fillStyle = '#222';
-            canvasCtx.fillRect(leftEdge, topEdge, drawWidth, drawHeight);
+        const fsCode = "\
+     varying highp vec2 vTextureCoord;\
+    uniform sampler2D uSampler;\
+\
+    void main(void) {\
+      gl_FragColor = texture2D(uSampler, vTextureCoord);\
+    }";
+
+
+        // Vertex shader
+        const vsShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vsShader, vsCode);
+        gl.compileShader(vsShader);
+
+        if (!gl.getShaderParameter(vsShader, gl.COMPILE_STATUS)) {
+            console.error(`Error compiling vertex shader:`);
+            console.error(gl.getShaderInfoLog(vsShader));
         }
-        canvasCtx.restore();
+
+        gl.attachShader(glProgram, vsShader);
+
+
+        // Fragment shader
+        const fsShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fsShader, fsCode);
+        gl.compileShader(fsShader);
+
+        if (!gl.getShaderParameter(fsShader, gl.COMPILE_STATUS)) {
+            console.error(`Error compiling fragment shader:`);
+            console.error(gl.getShaderInfoLog(fsShader));
+        }
+
+        gl.attachShader(glProgram, fsShader);
+
+
+        // Link program
+        gl.linkProgram(glProgram);
+        if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+            console.error("Error linking shader program:");
+            console.error(gl.getProgramInfoLog(glProgram));
+        }
+
+
+        gl.viewport(0, 0, canvasEl.width, canvasEl.height); // FIXME: May need to viewport on window size change
+
+
+        // Vertex buffer
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+        const positions = [
+            -1.0, -1.0,
+            1.0, -1.0,
+            1.0, 1.0,
+            -1.0, 1.0
+        ];
+
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+
+        // Texture coords buffer
+        const textureCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+
+        const textureCoordinates = [
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0
+        ];
+
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+
+
+        // Index buffer
+        const indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+
+        const indices = [
+            0, 1, 2,
+            0, 2, 3
+        ];
+
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+        glProgramInfo = {
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(glProgram, 'aVertexPosition'),
+                textureCoord: gl.getAttribLocation(glProgram, 'aTextureCoord'),
+            },
+            uniformLocations: {
+                uSampler: gl.getUniformLocation(glProgram, 'uSampler'),
+            },
+            buffers: {
+                positions: positionBuffer,
+                textureCoords: textureCoordBuffer
+            }
+        };
+
+        gl.enableVertexAttribArray(glProgramInfo.attribLocations.vertexPosition);
+        gl.vertexAttribPointer(glProgramInfo.attribLocations.vertexPosition, 2, gl.FLOAT, false, 0, 0);
+
+        // Setup vertex position attributes
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(glProgramInfo.attribLocations.vertexPosition, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(glProgramInfo.attribLocations.vertexPosition);
+
+        // Setup texture attributes
+        gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+        gl.vertexAttribPointer(glProgramInfo.attribLocations.textureCoord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(glProgramInfo.attribLocations.textureCoord);
+
+        // Setup index attributes
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    };
+
+
+    function drawScene() {
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
+        gl.clearDepth(1.0);                 // Clear everything
+        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // Clear canvas
+
+        {
+            //mapCamera.w = mapProperties.columns * TILE_SIZE;
+            //mapCamera.h = mapProperties.rows * TILE_SIZE;
+            //mapCamera.x = 64;
+            //mapCamera.y = 64;
+            //mapCamera.w = 64;
+            //mapCamera.h = 64;
+
+            // FIXME: Only need to set interactionMgr stuff on change
+            interactionMgr.setCameraOffset(mapCamera.x, mapCamera.y);
+            interactionMgr.setCanvasScale(mapCamera.w / canvasEl.width, mapCamera.h / canvasEl.height);
+
+            const mapWidth = mapProperties.columns * TILE_SIZE,
+                mapHeight  = mapProperties.rows * TILE_SIZE,
+                cameraOffX = mapCamera.x,
+                cameraOffY = mapCamera.y;
+
+            const leftOverZero = Math.max(0, 0 - cameraOffX),
+                topOverZero    = Math.max(0, 0 - cameraOffY),
+                rightOverZero  = (cameraOffX + mapCamera.w) - mapWidth,
+                bottomOverZero = (cameraOffY + mapCamera.h) - mapHeight;
+
+            const drawWidth = Math.min(mapWidth, cameraOffX + mapCamera.w) - Math.max(0.0, cameraOffX),
+                drawHeight  = Math.min(mapHeight, cameraOffY + mapCamera.h) - Math.max(0.0, cameraOffY);
+
+
+            // Vertex coordinates
+            const drawFromX = leftOverZero / mapCamera.w,
+                drawFromY   = 1.0 - (topOverZero / mapCamera.h),
+                drawToX     = drawFromX + drawWidth / mapCamera.w,
+                drawToY     = drawFromY - drawHeight / mapCamera.h;
+
+            const glLeft = drawFromX * 2.0 - 1.0,
+                glRight  = drawToX * 2.0 - 1.0,
+                glTop    = drawFromY * 2.0 - 1.0,
+                glBottom = drawToY * 2.0 - 1.0;
+
+            const positions = [
+                glLeft, glTop,
+                glRight, glTop,
+                glRight, glBottom,
+                glLeft, glBottom
+            ];
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, glProgramInfo.buffers.positions);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+
+
+            // Texture coordinates
+            const drawTexFromX = Math.max(0.0, cameraOffX / mapWidth),
+                drawTexFromY   = Math.max(0.0, cameraOffY / mapHeight),
+                drawTexToX     = Math.min(1.0, (mapCamera.w / mapWidth + cameraOffX / mapWidth)),
+                drawTexToY     = Math.min(1.0, (mapCamera.h / mapHeight + cameraOffY / mapHeight));
+
+            const glTexLeft = drawTexFromX,
+                glTexRight  = drawTexToX,
+                glTexTop    = drawTexToY,
+                glTexBottom = drawTexFromY;
+
+            const textureCoords = [
+                glTexLeft,  glTexBottom,
+                glTexRight, glTexBottom,
+                glTexRight, glTexTop,
+                glTexLeft,  glTexTop
+            ];
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, glProgramInfo.buffers.textureCoords);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+        }
+
+
+        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     };
 
     this.redraw = () => {
-        this.clearCanvas();
+//const color = { r: Math.random() * 256, g: Math.random() * 256, b: Math.random() * 256 };
 
-        const cameraOffX = -mapCamera.x,
-            cameraOffY = -mapCamera.y;
+        const pagesToRedraw = [];
+        for (const pageIdx in mapPages) {
+            const page = mapPages[pageIdx];
+            if (page.dirty) {
+//page.color = color;
+                this.redrawPage(page);
 
-        const rightEdge = mapCamera.w,
-            bottomEdge = mapCamera.h;
+                // Blit page into full canvas
+                let pageWidth  = PAGE_SIZE * TILE_SIZE,
+                    pageHeight = PAGE_SIZE * TILE_SIZE,
+                    pageRight  = page.x + PAGE_SIZE,
+                    pageBottom = page.y + PAGE_SIZE;
 
-        const mapWidth = mapCamera.scaleX(mapProperties.columns * TILE_SIZE),
-            mapHeight = mapCamera.scaleY(mapProperties.rows * TILE_SIZE);
+                if (pageRight >= mapProperties.columns) {
+                    pageWidth -= (pageRight - mapProperties.columns) * TILE_SIZE;
+                }
 
-        let sizeX = mapCamera.scaleX(TILE_SIZE),
-            sizeY = mapCamera.scaleY(TILE_SIZE);
+                if (pageBottom >= mapProperties.rows) {
+                    pageHeight -= (pageBottom - mapProperties.rows) * TILE_SIZE;
+                }
+
+                const pageImageData = page.ctx.getImageData(0, 0, pageWidth, pageHeight);
+                hiddenMapCanvasCtx.putImageData(pageImageData, page.x * TILE_SIZE, page.y * TILE_SIZE);
+                page.dirty = false;
+
+                pagesToRedraw.push({
+                    x: page.x * TILE_SIZE,
+                    y: page.y * TILE_SIZE,
+                    imgData: pageImageData,
+                    hovering: page.hovering,
+                    //color: page.color
+                });
+            }
+        }
+
+
+        if (firstTimeRender) {
+
+            // First time render we render the full scene onto the texture. Also need to prepare the texture
+            const scrapImg  = new Image();
+            scrapImg.onload = () => {
+
+                gl.useProgram(glProgram);
+
+                const texture = gl.createTexture();
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+
+                const imgData = hiddenMapCanvasCtx.getImageData(0, 0, hiddenMapCanvasCtx.width, hiddenMapCanvasCtx.height);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, hiddenMapCanvasCtx.width, hiddenMapCanvasCtx.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, imgData.data);
+
+                // WebGL1 has different requirements for power of 2 images
+                // vs non power of 2 images so check if the image is a
+                // power of 2 in both dimensions.
+                //if (isPowerOf2(scrapImg.width) && isPowerOf2(scrapImg.height)) {
+                //   // Yes, it's a power of 2. Generate mips.
+                //   gl.generateMipmap(gl.TEXTURE_2D);
+                //} else {
+                // No, it's not a power of 2. Turn off mips and set
+                // wrapping to clamp to edge
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                //}
+
+                gl.uniform1i(glProgramInfo.uniformLocations.uSampler, 0);
+                drawScene();
+
+            };
+
+            scrapImg.src = hiddenMapCanvas.toDataURL("image/png");
+            firstTimeRender = false;
+        } else if(gl) {
+            // Upload individual pages texSubImage2d
+            // TODO: Could webworker these calls and update as they come in
+            pagesToRedraw.forEach((pageToRedraw) => {
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, pageToRedraw.x, pageToRedraw.y, pageToRedraw.imgData.width, pageToRedraw.imgData.height, gl.RGBA, gl.UNSIGNED_BYTE, pageToRedraw.imgData.data);
+            });
+
+            drawScene();
+        }
+    };
+
+    this.redrawPage = (page) => {
+        this.clearPageCanvas(page);
+
+        const pageLeft = page.x * TILE_SIZE,
+            pageTop    = page.y * TILE_SIZE,
+            pageRight  = (page.x + PAGE_SIZE) * TILE_SIZE,
+            pageBot    = (page.y + PAGE_SIZE) * TILE_SIZE,
+            pageCtx    = page.ctx;
+
 
         const drawSprite = (sprite) => {
-            const tilesize = sprite.sheet.data.tilesize;
-
-            let pos = mapCamera.translate({ x: sprite.x, y: sprite.y });
+            const tilesize = sprite.sheet.data.tilesize,
+                relPos     = { x: sprite.x - pageLeft, y: sprite.y - pageTop };
 
             if (sprite.group.highlighted) {
 
                 if (sprite.group.highlighted === HIGHLIGHT_SELECTED) {
-                    canvasCtx.filter = Settings.highlight.selected.spriteGroup;
+                    pageCtx.filter = Settings.highlight.selected.spriteGroup;
                 } else if (sprite.group.highlighted === HIGHLIGHT_ADD) {
-                    canvasCtx.filter = Settings.highlight.add.spriteGroup;
+                    pageCtx.filter = Settings.highlight.add.spriteGroup;
                 } else if (sprite.group.highlighted === HIGHLIGHT_REMOVE) {
-                    canvasCtx.filter = Settings.highlight.remove.spriteGroup;
+                    pageCtx.filter = Settings.highlight.remove.spriteGroup;
                 }
 
-                canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
-                canvasCtx.filter = 'none';
+                pageCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
+                pageCtx.filter = 'none';
             } else {
-                canvasCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+                pageCtx.drawImage(sprite.img, sprite.sheetX, sprite.sheetY, tilesize, tilesize, relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
             }
 
             if (Settings.drawSpriteFlags) {
                 if (sprite.layer === mapLayers.ground) {
-                    canvasCtx.fillStyle = '#FF000055';
-                    canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+                    pageCtx.fillStyle = '#FF000055';
+                    pageCtx.fillRect(relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
                 } else if (sprite.layer === mapLayers.floating) {
-                    canvasCtx.fillStyle = '#0000FF55';
-                    canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+                    pageCtx.fillStyle = '#0000FF55';
+                    pageCtx.fillRect(relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
                 }
             }
         };
 
         const drawAvatar = (avatar) => {
-            const tilesize = avatar.tilesize;
-            let pos = mapCamera.translate({ x: avatar.x, y: avatar.y });
-
+            const tilesize = avatar.tilesize,
+                relPos     = { x: avatar.x - pageLeft, y: avatar.y - pageTop };
 
             if (avatar.highlighted) {
                 const movableHighlight = {
@@ -1019,70 +1397,80 @@ const MapEditor = (new function(){
                 //const avatar = cursor.selected.spawns[0];
                 if (!avatar.highlightedImg) {
 
+                    const scrapCanvas  = document.createElement('canvas'),
+                        scrapCtx       = scrapCanvas.getContext('2d');
 
-						const scrapCanvas  = document.createElement('canvas'),
-							scrapCtx       = scrapCanvas.getContext('2d');
-
-						scrapCanvas.height = avatar.tilesize;
-						scrapCanvas.width  = avatar.tilesize;
+                    scrapCanvas.height = avatar.tilesize;
+                    scrapCanvas.width  = avatar.tilesize;
 
 
-                        for (let dOffY = -1; dOffY <= 1; ++dOffY) {
-                            for (let dOffX = -1; dOffX <= 1; ++dOffX) {
-                                scrapCtx.drawImage(
-                                    avatar.img,
-                                    0, 0,
-                                    avatar.tilesize, avatar.tilesize,
-                                    dOffX * movableHighlight.borderThickness,
-                                    dOffY * movableHighlight.borderThickness,
-                                    avatar.tilesize, avatar.tilesize,
-                                );
-                            }
+                    for (let dOffY = -1; dOffY <= 1; ++dOffY) {
+                        for (let dOffX = -1; dOffX <= 1; ++dOffX) {
+                            scrapCtx.drawImage(
+                                avatar.img,
+                                0, 0,
+                                avatar.tilesize, avatar.tilesize,
+                                dOffX * movableHighlight.borderThickness,
+                                dOffY * movableHighlight.borderThickness,
+                                avatar.tilesize, avatar.tilesize,
+                            );
                         }
+                    }
 
-                        scrapCtx.globalCompositeOperation = "source-in";
-                        scrapCtx.fillStyle = movableHighlight.borderColor;
-                        scrapCtx.fillRect(0, 0, scrapCanvas.width, scrapCanvas.height);
+                    scrapCtx.globalCompositeOperation = "source-in";
+                    scrapCtx.fillStyle = movableHighlight.borderColor;
+                    scrapCtx.fillRect(0, 0, scrapCanvas.width, scrapCanvas.height);
 
-						const scrapImg  = new Image();
-						scrapImg.src = scrapCanvas.toDataURL("image/png");
-                        avatar.highlightedImg = scrapImg;
+                    const scrapImg  = new Image();
+                    scrapImg.src = scrapCanvas.toDataURL("image/png");
+                    avatar.highlightedImg = scrapImg;
                 }
 
-                const tilesize = avatar.tilesize;
-                let pos = mapCamera.translate({ x: avatar.x, y: avatar.y });
-                canvasCtx.drawImage(avatar.highlightedImg, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+                pageCtx.drawImage(avatar.highlightedImg, 0, 0, tilesize, tilesize, relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
 
-                canvasCtx.filter = movableHighlight.filter;
+                pageCtx.filter = movableHighlight.filter;
 
-                canvasCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
-                canvasCtx.filter = 'none';
+                pageCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
+                pageCtx.filter = 'none';
             } else {
-                canvasCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+                pageCtx.drawImage(avatar.img, 0, 0, tilesize, tilesize, relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
             }
 
 
             // Draw name over head if we're zoomed in enough
-            if (sizeX >= Settings.minAvatarSizeShowName) {
-                canvasCtx.font = '12px serif';
-                canvasCtx.fillStyle = '#000';
+            if (TILE_SIZE >= Settings.minAvatarSizeShowName) {
+                pageCtx.font = '12px serif';
+                pageCtx.fillStyle = '#000';
                 const name = avatar.id,
-                    nameWidth = canvasCtx.measureText(name).width, // TODO: Is this expensive? Could easily cache and dirty on zoom
-                    xPos = pos.x - Math.floor(nameWidth / 2) + (TILE_SIZE / 2);
-                canvasCtx.fillText(name, xPos, pos.y);
+                    nameWidth = pageCtx.measureText(name).width, // TODO: Is this expensive? Could easily cache and dirty on zoom
+                    xPos = relPos.x - Math.floor(nameWidth / 2) + (TILE_SIZE / 2);
+                pageCtx.fillText(name, xPos, relPos.y);
             }
         };
 
         const drawObject = (obj) => {
 
-            canvasCtx.fillStyle = '#00000055';
-            let pos = mapCamera.translate({ x: obj.x, y: obj.y });
-            canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+            pageCtx.fillStyle = '#00000055';
+            const relPos = { x: obj.x - pageLeft, y: obj.y - pageTop };
+            pageCtx.fillRect(relPos.x, relPos.y, TILE_SIZE, TILE_SIZE);
         };
 
         [mapLayers.base, mapLayers.ground, mapLayers.floating].forEach((layer) => {
             layer.forEach((spriteData) => {
-                drawSprite(spriteData);
+
+                // Sprite in page?
+                // FIXME: This is horribly inefficient, might be better to sort sprites by page, or store layers in
+                // pages
+                if
+                (
+                    spriteData.x >= pageLeft &&
+                    spriteData.x < pageRight &&
+                    spriteData.y >= pageTop &&
+                    spriteData.y < pageBot
+                )
+                {
+                    drawSprite(spriteData);
+                }
             });
         });
 
@@ -1094,28 +1482,33 @@ const MapEditor = (new function(){
             drawObject(objData);
         });
 
-        const pos = mapCamera.translate({ x: cursor.x, y: cursor.y });
+
+
+        const pos = { x: cursor.x - pageLeft, y: cursor.y - pageTop };
         if (cursor.tool) {
             
             if (cursor.tool.op === CURSOR_PLACE_SPRITE && cursor.tool.sprite) {
 
-                const tilesize = cursor.tool.sprite.tilesize,
-                    offCamera = {
-                        x: mapCamera.scaleX(mapCamera.x),
-                        y: mapCamera.scaleY(mapCamera.y)
-                    };
+                const tilesize = cursor.tool.sprite.tilesize;
                 cursor.tool.sprite.sprites.forEach((sprite) => {
                     const xPos = sprite.x,
-                        yPos = sprite.y,
-                        offX = mapCamera.scaleX(xPos - cursor.tool.sprite.left),
-                        offY = mapCamera.scaleY(yPos - cursor.tool.sprite.top);
+                        yPos   = sprite.y,
+                        offX   = xPos - cursor.tool.sprite.left,
+                        offY   = yPos - cursor.tool.sprite.top;
 
 
-                    if ((pos.x + offX + offCamera.x) >= mapWidth || (pos.y + offY + offCamera.y) >= mapHeight) {
+                    if
+                    (
+                        (cursor.x + offX) < pageLeft ||
+                        (cursor.y + offY) < pageTop ||
+                        (cursor.x + offX) >= pageRight ||
+                        (cursor.y + offY) >= pageBot
+                    )
+                    {
                         return;
                     }
 
-                    canvasCtx.drawImage(cursor.tool.sprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, sizeX, sizeY);
+                    pageCtx.drawImage(cursor.tool.sprite.img, xPos, yPos, tilesize, tilesize, pos.x + offX, pos.y + offY, TILE_SIZE, TILE_SIZE);
 
                     // Draw overlay over sprites to show what parts are base/ground/floating
                     let spriteRow = (sprite.y / cursor.tool.sprite.sheet.data.tilesize),
@@ -1126,33 +1519,34 @@ const MapEditor = (new function(){
                         isTransparent = cursor.tool.sprite.sheet.mapper.isTileTransparent(spriteIdx);
 
                     if (!isTransparent) { // Base
-                        canvasCtx.fillStyle = '#FF000055';
+                        pageCtx.fillStyle = '#FF000055';
                     } else if (isFloating) { // Floating
-                        canvasCtx.fillStyle = '#0000FF55';
+                        pageCtx.fillStyle = '#0000FF55';
                     } else { // Ground
-                        canvasCtx.fillStyle = '#00FF0055';
+                        pageCtx.fillStyle = '#00FF0055';
                     }
 
-                    canvasCtx.fillRect(pos.x + offX, pos.y + offY, sizeX, sizeY);
+                    pageCtx.fillRect(pos.x + offX, pos.y + offY, TILE_SIZE, TILE_SIZE);
                 });
             } else if (cursor.tool.op === CURSOR_PLACE_AVATAR && cursor.tool.avatar) {
 
                 const tilesize = cursor.tool.avatar.tilesize;
-                canvasCtx.drawImage(cursor.tool.avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
-                canvasCtx.fillStyle = '#FF550055';
-                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+                pageCtx.drawImage(cursor.tool.avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, TILE_SIZE, TILE_SIZE);
+                pageCtx.fillStyle = '#FF550055';
+                pageCtx.fillRect(pos.x, pos.y, TILE_SIZE, TILE_SIZE);
             } else if (cursor.tool.op === CURSOR_ERASE) {
-                canvasCtx.fillStyle = '#5555AA55';
-                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+                pageCtx.fillStyle = '#5555AA55';
+                pageCtx.fillRect(pos.x, pos.y, TILE_SIZE, TILE_SIZE);
             } else if (cursor.tool.op === CURSOR_PLACE_OBJECT) {
-                canvasCtx.fillStyle = '#55550055';
-                canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+                pageCtx.fillStyle = '#55550055';
+                pageCtx.fillRect(pos.x, pos.y, TILE_SIZE, TILE_SIZE);
             }
         } else {
-            canvasCtx.fillStyle = '#FF000055';
-            canvasCtx.fillRect(pos.x, pos.y, sizeX, sizeY);
+            pageCtx.fillStyle = '#FF000055';
+            pageCtx.fillRect(pos.x, pos.y, TILE_SIZE, TILE_SIZE);
         }
 
+        /*
         if (cursor.selected && cursor.selected.type === SELECTION_AREA) {
 
             const topLeft = { 
@@ -1170,8 +1564,67 @@ const MapEditor = (new function(){
                 };
 
 
-            canvasCtx.fillStyle = '#FF550055';
-            canvasCtx.fillRect(pos.x, pos.y, size.x, size.y);
+            pageCtx.fillStyle = '#FF550055';
+            pageCtx.fillRect(pos.x, pos.y, size.x, size.y);
+        }
+        */
+
+        // FIXME: Redraw minimap
+        //const ctxImage = pageCtx.getImageData(0, 0, 
+        //minimapCanvasCtx.drawImage(IMG, 0, 0, minimapCanvasCtx.
+        //        pageCtx.drawImage(cursor.tool.avatar.img, 0, 0, tilesize, tilesize, pos.x, pos.y, sizeX, sizeY);
+
+
+
+
+        if
+        (
+            page.hovering &&
+            cursor.x >= pageLeft &&
+            cursor.y >= pageTop &&
+            cursor.x < pageRight &&
+            cursor.y < pageBot
+        )
+        {
+            pageCtx.fillStyle = '#FF000033';
+            //pageCtx.fillStyle = `rgba( ${page.color.r}, ${page.color.g}, ${page.color.b}, 0.2 )`;
+            pageCtx.fillRect(cursor.x - pageLeft, cursor.y - pageTop, TILE_SIZE, TILE_SIZE);
+            //pageCtx.fillRect(0, 0, TILE_SIZE * PAGE_SIZE, TILE_SIZE * PAGE_SIZE);
+        }
+        else
+        {
+            delete page.hovering;
+        }
+    };
+
+    // Create pages for map
+    this.resetPages = () => {
+
+        mapPages = {}; // Nuke previous pages
+
+        for (let y = 0; y < (mapProperties.rows + PAGE_SIZE - 1); y += PAGE_SIZE) {
+            for (let x = 0; x < (mapProperties.columns + PAGE_SIZE - 1); x += PAGE_SIZE) {
+                const pageIdx = y * mapProperties.columns + x,
+                    page = {
+                        y, x,
+                        canvas: null,
+                        ctx: null,
+                        dirty: true
+                    };
+
+
+                const pageCanvas = document.createElement('canvas'),
+                    pageCtx = pageCanvas.getContext('2d');
+
+                pageCanvas.width  = PAGE_SIZE * TILE_SIZE;
+                pageCanvas.height = PAGE_SIZE * TILE_SIZE;
+                pageCtx.width     = PAGE_SIZE * TILE_SIZE;
+                pageCtx.height    = PAGE_SIZE * TILE_SIZE;
+                page.canvas       = pageCanvas;
+                page.ctx          = pageCtx;
+
+                mapPages[pageIdx] = page;
+            }
         }
     };
 
@@ -1214,7 +1667,6 @@ const MapEditor = (new function(){
     let lastScrollTime = Date.now();
     let scrollMult = 1.0;
     const onMouseScroll = (worldPt, scroll) => {
-        console.log(`Scroll: ${scroll.y}`);
 
         // TODO: Fix up scroll multiplier when we get larger maps, this allow us to accelerate scrolling
         const maxScrollMult = 10.0,
@@ -1245,6 +1697,7 @@ const MapEditor = (new function(){
         }
 
         // Re-center the camera on the cursor after zooming
+        // FIXME: Need to adjust aspect ratio to full map
         let newScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
         let newWorldPt = {
             x: (worldPt.x - mapCamera.x) * (newScale.x / oldScale.x) + mapCamera.x,
@@ -1391,6 +1844,7 @@ const MapEditor = (new function(){
     };
 
     this.reset = () => {
+        firstTimeRender = true;
         mapProperties.columns = DefaultProperties.columns;
         mapProperties.rows = DefaultProperties.rows;
         mapProperties.tilesize = TILE_SIZE;
@@ -1400,7 +1854,7 @@ const MapEditor = (new function(){
         mapCamera.x = 0;
         mapCamera.y = -12; // NOTE: Offset for consolemgr
         mapCamera.w = 1200;
-        mapCamera.h = mapCamera.w * (canvasEl.height / canvasEl.width);
+        mapCamera.h = mapCamera.w * (hiddenMapCanvas.height / hiddenMapCanvas.width);
 
         cursor.tool = null;
         cursor.x = 0;
@@ -1421,6 +1875,14 @@ const MapEditor = (new function(){
         mapProperties.columns = data.width;
         mapProperties.rows = data.height;
 
+
+        hiddenMapCanvas.width  = mapProperties.columns * TILE_SIZE;
+        hiddenMapCanvas.height = mapProperties.rows * TILE_SIZE;
+        hiddenMapCanvasCtx.width  = hiddenMapCanvas.width;
+        hiddenMapCanvasCtx.height = hiddenMapCanvas.height;
+
+
+        this.resetPages();
         this.setupInteractions();
         
         // TODO: Confirm all tilesets in data.tilesets are in our tilesets list

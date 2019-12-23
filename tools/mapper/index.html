@@ -6,6 +6,7 @@
 
 		<script type="text/javascript" src="/js/lib/jquery-2.1.1.min.js"></script>
 		<script type="text/javascript" src="/js/lib/lodash.js"></script>
+		<script type="text/javascript" src="js/gl-matrix.js"></script>
 
 		<script src="js/main.js"></script>
 		<script src="js/resourcemgr.js"></script>
@@ -18,13 +19,14 @@
 		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
 		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
         -->
-
     </head>
     <body>
         <div id='workingWindow' class='pendingChanges'>
 
             <div id='mapperWindow'>
-                <canvas id='mapEditorCanvas'></canvas>
+				<canvas id="glcanvas">
+					Oh no! Your browser doesn't support web canvas!
+				</canvas>
             </div>
 
 
@@ -66,6 +68,13 @@
 					</div>
 
 					<div id='controlsTools' class='controlsContainerChild'>
+
+						<div id='minimapContainer'>
+							<canvas id='minimapCanvas'></canvas>
+						</div>
+
+						<hr/>
+
 						<a id='mapperToolCursor' class='controlsTool' href='#'>Cursor</a>
 						<a id='mapperToolErase' class='controlsTool' href='#'>Erase</a>
 						<a id='mapperToolInteraction' class='controlsTool' href='#'>Interaction</a>

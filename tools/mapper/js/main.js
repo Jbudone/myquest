@@ -3,6 +3,12 @@
 //  - Cleanup
 //
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
+//  - Improved drawing
+//      - Minimap
+//      - Fix canvas aspect ratio
+//      - WebGL texture mips & auto smoothing on canvas
+//      - Avatar nameplate (affected by scroll/zoom)
+//
 //  - Special layers: zoning, interactable? evt (town area, event, etc.)
 //      - Spawns: separate tilesheet w/ all avatars  (NOTE: these may be augmented later to include camps / prefabs, but also allow particular spawns for areas that need to be hand built)
 //          - Tooltip avatar name in controls panel

@@ -64,10 +64,11 @@ const InteractionMgr = (function(){
 
     const onMouseMove = (evt) => {
 
-        //console.log(evt.layerY);
-        //console.log(evt.pageY);
-        //console.log(evt.offsetY);
         const worldPt = mouseToCanvasCoords(evt);
+
+        //const offset = $(this.canvasEl).offset();
+        //const preWorldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
+        //console.log(`OnMouseMove: ${worldPt.x}, ${worldPt.y}    (raw: ${preWorldPt.x}, ${preWorldPt.y})`);
 
         let couldDrag = false;
 
