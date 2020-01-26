@@ -21,7 +21,8 @@ define(function(){
             resources:(CLIENT|SERVER),
             game:(CLIENT_TEST),
             server:(SERVER_TEST),
-            errorReporter:(CLIENT|SERVER|TEST)
+            errorReporter:(CLIENT|SERVER|TEST),
+            webworker:(CLIENT|SERVER),
 		}, ready=function(environment){
 			return new Promise(function(loaded) {
                 const envPaths = [];
@@ -46,7 +47,7 @@ define(function(){
 
                                 --loading;
                                 if (waiting && !loading) {
-                                    loaded();
+                                    cleanup();
                                 }
                             };
                             require([module], function(mod) {
@@ -56,9 +57,21 @@ define(function(){
 
                     });
                 });
+
+
+                // Clear up any extensions that don't exist in this environment
+                var cleanup = () => {
+
+                    for (let key in extensions) {
+                        if (!(typeof extensions[key] === 'object')) delete extensions[key];
+                    }
+
+                    loaded();
+                };
+
 				waiting = true;
 				if (!loading) {
-					loaded();
+                    cleanup();
 				}
 			});
 		};
