@@ -370,7 +370,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 				}
 
 				this.sheets[_sheet.id] = sheet;
-                if (!Env.isServer) {
+                if (!Env.isServer && !Env.isBot) {
                     ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                         sheet.image = bitmapImage;
                     }, (err) => {
@@ -518,7 +518,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 					}.bind(env));
 
                     this.sprites[_sheet.id] = sheet;
-                    if (!Env.isServer) {
+                    if (!Env.isServer && !Env.isBot) {
                         ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                             sheet.image = bitmapImage;
                             prepareImage();
