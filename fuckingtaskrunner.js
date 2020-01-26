@@ -4,7 +4,8 @@ const chokidar = require('chokidar'),
     fsPath     = require('path'),
     exec       = require('child_process').exec,
     execSync   = require('child_process').execSync,
-    chalk      = require('chalk');
+    chalk      = require('chalk'),
+    notifier   = require('node-notifier');
 
 const Settings = {
     cacheFile: 'fuckingtaskrunner.json',
@@ -15,6 +16,9 @@ const Settings = {
 let CacheSettings;
 
 //
+// - System notification on failed to build/prepro
+// - Allow client/server to check if anything failed to build/prepro and prevent startup w/ clear message of what
+// doesn't exist
 // -- What if processing takes a while, and we have changes while we're still processing?
 //  - Can we queue changes? Will we even receive watch updates if we're in the middle of processing?
 //  - NOTE: Be careful if we go async, to NOT allow processing a file which is already in the process of being, uh,
@@ -113,6 +117,7 @@ const UnlockFile = () => {
 };
 
 const PromiseToReturnTrue = () => { return new Promise((resolve) => { resolve(); }); };
+const PromiseToReturnError = (err) => { return new Promise((resolve, reject) => { reject(err); }); };
 
 const TaskState = function(taskProcess, file) {
 
@@ -183,14 +188,21 @@ const echoTask = new Task((file) => {
 const copyTask = new Task((file) => {
     return new Promise((resolve, reject) => {
         let pathFromJS = 'dist/js/' + fsPath.relative('js', file.path);
+        console.log(`Copying "${file.path}" to "${pathFromJS}"`);
         fs.copyFile(file.path, pathFromJS, (err) => {
             if (err) {
                 reject(err);
                 return;
             }
 
-            console.log(`Copied ${file.path} to ${pathFromJS}`);
+            console.log(`Copied "${file.path}" to "${pathFromJS}"`);
             file.path = pathFromJS;
+
+            if (!fs.existsSync(file.path)) {
+                reject(`File doesn't exist after copying`); // This can happen if its stomped over from a parallel copy/remove
+                return;
+            }
+
             resolve();
         });
     });
@@ -232,6 +244,10 @@ const preprocessJSTask = new Task((file) => {
 
     // Is file blacklisted?
     console.log(`About to check: ${file.path}`);
+    if (!fs.existsSync(file.path)) {
+        return PromiseToReturnError("File doesn't exist!");
+    }
+
     const srcFile = file.path.substr("dist/".length);
     if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
         console.log(`Skipping blacklisted file ${srcFile}`);
@@ -314,7 +330,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         console.error("Starting cache from scratch..");
         cacheData = { "files": {}, "settings": {
             preprocess: {
-                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPT.INJECTION.js", "js/SCRIPT.INJECTION.min.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js" ]
+                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPT.INJECTION.js", "js/SCRIPT.INJECTION.min.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js" ]
             }
         } };
     } else {
@@ -398,6 +414,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             let idx = processingQueue.findIndex((q) => q === p);
             processingQueue.splice(idx, 1);
 
+            console.log("Removing from processingQueue");
+            console.log(processingQueue);
+
             // Update Cache
             const basename = fsPath.basename(path),
                 hash       = err ? 0 : fileHash(path);
@@ -457,6 +476,15 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
             let cb = (eventType, path) => {
 
+                // Is this file already queued and hasn't begun processing yet? If so then it doesn't matter if its
+                // changed since the previous queue since when that one runs it'll process the most recent
+                for (let i = processingQueue.length - 1; i >= 0; --i) {
+                    if (processingQueue[i].path === path && !processingQueue[i].processing) {
+                        console.log("File already queued! Skipping");
+                        return;
+                    }
+                }
+
                 LockFile();
 
                 const queued = {
@@ -466,6 +494,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
                 processingQueue.push(queued);
 
+                console.log("Adding to processingQueue");
+                console.log(processingQueue);
+
+
                 if (runInOrderPackage && processingQueue.length > 1) {
                     if (processingQueue[processingQueue.length - 1].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
                     processingQueue[processingQueue.length - 1].runNext = queued;
@@ -474,7 +506,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     // Are we already busy processing this file? Then wait until its finished
                     // NOTE: Ignore the last item (that's us!)
                     for (let i = processingQueue.length - 2; i >= 0; --i) {
-                        if (processingQueue[i].file === path) {
+                        if (processingQueue[i].path === path) {
                             if (processingQueue[i].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
                             processingQueue[i].runNext = queued;
                             return;
@@ -498,11 +530,16 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                                     if (eventType === "rename") {
                                         return;
                                     }
+
+                                    // FIXME: Arbitrary delay in handling file to avoid needlessly running the same file
+                                    // multiple times off the same change
                                     console.log(`${chalk.yellow('>> ')} ${chalk.blue(path)} changed: ${eventType}`);
                                     watcher.close();
-                                    cb(eventType, path);
-                                    console.log(`Rewatching: ${chalk.blue(path)}`);
-                                    beginWatch(path);
+                                    setTimeout(() => {
+                                        cb(eventType, path);
+                                        console.log(`Rewatching: ${chalk.blue(path)}`);
+                                        beginWatch(path);
+                                    }, 100);
                                 });
                             } catch(e) {
                                 console.error(e);
@@ -760,6 +797,23 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 const prePath = file.path.replace('.js', '.pre.js');
                 execSync(`rm --force ${file.path}`);
                 execSync(`rm --force ${prePath}`);
+
+                // System notification
+                exec(`mpg123 --quiet resources/sounds/uiclick.mp3`);
+                notifier.notify(
+                    {
+                        title: 'Fucking. Task. Runner.',
+                        message: `Failed to preprocess JS file: ${file.path}`,
+                        //sound: '/usr/share/sounds/Oxygen-Sys-Error-Printing.ogg'
+                        //sound: 'jdrive/jstuff/work/personal/jbud/summit/playground/myquest/resources/sounds/uiclick.mp3
+                        //sound: 'resources/sounds/uiclick.mp3'
+                        type: 'error'
+                    },
+                    function(err, response) {
+                        // Response is response from notification
+                    }
+                );
+
                 throw new Error(err);
             };
 
