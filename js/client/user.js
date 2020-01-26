@@ -45,9 +45,9 @@ define(['hookable', 'dynamic', 'loggable'], (Hookable, Dynamic, Loggable) => {
             this.doHook('clickedInteractable').post(interactable, key, mouse);
         };
 
-        this.clickedTile = (tile, mouse) => {
-            if (!this.doHook('clickedTile').pre(tile, mouse)) return;
-            this.doHook('clickedTile').post(tile, mouse);
+        this.clickedTile = (tile, global, mouse) => {
+            if (!this.doHook('clickedTile').pre(tile, global, mouse)) return;
+            this.doHook('clickedTile').post(tile, global, mouse);
         };
 
         this.unload = () => {
