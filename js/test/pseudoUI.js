@@ -70,7 +70,8 @@ define(['eventful','hookable','loggable'], function(Eventful, Hookable, Loggable
 
         this.updateUserLevel = function(){ };
 
-        this.getEffects = function(){ };
+        this.getEffects = function(){ return []; };
+        this.addEffect = function(){ };
         this.resume = function(){ };
         this.pause = function(){ };
 

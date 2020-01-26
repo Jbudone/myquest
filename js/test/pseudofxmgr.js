@@ -8,6 +8,8 @@ define(() => {
                 success();
             });
         };
+
+        this.step = function(){};
     });
 
     return PseudoFXMgr;
