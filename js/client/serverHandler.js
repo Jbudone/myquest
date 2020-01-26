@@ -39,6 +39,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
 
                 if (req.evtType === EVT_LOGIN) {
+                    evt.login = 1; // So that we don't queue it and wait for EVT_FRAME_END
                     return false;
                 }
             }
@@ -106,7 +107,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         else             this.onNewCharacterFailed();
                     } else if (evt.login) {
                         if (evt.success) this.onLogin( evt.player );
-                        else             this.onLoginFailed();
+                        else             this.onLoginFailed( evt );
                     } else if (evt.initialization) {
                         this.onInitialization( evt );
                     } else if (evt.evtType === EVT_END_OF_FRAME) {
