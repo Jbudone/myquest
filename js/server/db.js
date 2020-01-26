@@ -16,19 +16,23 @@ define(['loggable'], function(Loggable){
 
 		this.connect = function(){
 
-			var me = this;
+
+
+			var me = this; 
 			return new Promise(function(loaded, failed) {
 
 				// Setup our mongo connection
 				mongo = require('mongodb').MongoClient;
 				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _client){
-                    client = _client;
-					db = _client.db('myquest')
 					if (err) {
 						this.Log("Failed to connect", LOG_ERROR);
 						this.Log(err, LOG_ERROR);
 						failed(err);
+                        return;
 					}
+
+                    client = _client;
+					db = _client.db('myquest')
 
 					this.Log("Connected and ready to go");
 					loaded();
