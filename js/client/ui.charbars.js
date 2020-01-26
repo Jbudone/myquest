@@ -1,5 +1,6 @@
 define(['loggable'], (Loggable) => {
 
+
     const UI_CharBars = function(UI) {
 
         const uiCharBars = $('#ui-charBars');
@@ -45,7 +46,7 @@ define(['loggable'], (Loggable) => {
                         $('<a/>')
                         .addClass('charBar-levelling-name')
                         .text('Level: ')
-                    )
+                    ),
                 XPEl = $('<a/>')
                     .attr('id', 'charBar-levelling-xp')
                     .appendTo(XPContainerEl)
@@ -77,7 +78,6 @@ define(['loggable'], (Loggable) => {
         this.reloadComponents = () => {
             charComponentsContainer.levelling.component = The.player.character.charComponent('levelling');
         }
-
 
         this.step = (time) => {
             if (charComponentsContainer) {
