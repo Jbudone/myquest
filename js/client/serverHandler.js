@@ -389,6 +389,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
                             else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
                             else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
+                            else if (evtType == EVT_ZONE) this.onEntityLeavePage( page, event.entity, event.newPage );
                             else {
                                 const dynamicHandler = this.handler(evtType);
                                 if (dynamicHandler) {
