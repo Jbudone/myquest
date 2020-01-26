@@ -62,6 +62,8 @@ let __FIXME_ERRCNT = 0;
 //      - Have to check leadingComments on all nodes for this
 //      - Could take an argument that specifies if we need to check for SCRPIT_INJECT; also could only look until we
 //      find it, then stop looking
+//  - MACRO files for shared code across client/server/webworkers/test
+//      - eg. Error checking in Errors.js:  OBJECT_TYPES, CHECK;  requirejs configs (between client/client-worker, and server/server-worker), etc.
 //  - FIXME: Do we need CHeckNode(topNode === true) to be a block statement? If so we should Assert this
 //  * FIXME: LocalExpression, BinaryExpression
 //      These are allowed to fail since we may have previous checks:
@@ -156,7 +158,12 @@ let __FIXME_ERRCNT = 0;
 //    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
 //    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
 //let code = "{ ( ( typeof defensiveInfo == 'object' || DEBUGGER('a') ) && ( typeof target == 'object' || DEBUGGER('b') ) && ( typeof target.entity == 'object' || DEBUGGER('c') ) && ( typeof target.entity.npc == 'object' || DEBUGGER('d') ) ) }";
-let code = "{ var OBJECT_TYPES = ['object', 'function']; var a = 1; OBJECT_TYPES.includes(typeof a); }";
+//let code = "{ var OBJECT_TYPES = ['object', 'function']; var a = 1; OBJECT_TYPES.includes(typeof a); }";
+let code = "{ The.area.pathfinding.workerHandlePath({\
+                    movableID: character.entity.id,\
+                    start: { x: fromTiles[0].x, y: fromTiles[0].y },\
+                }); }";
+
 
 
 const Settings = {
@@ -186,6 +193,7 @@ for (let i = 0; i < process.argv.length; ++i) {
     }
 }
 
+const codeLines = code.split('\n');
 
 const OBJECT_TYPE = "OBJECT",
     FUNCTION_TYPE = "FUNCTION";
@@ -322,7 +330,7 @@ const buildNodeFromCheck = (checkItem, loc) => {
                 },
                 arguments: [{
                     type: 'StringLiteral',
-                    value: `ERROR MESSAGE HERE: ${++__FIXME_ERRCNT}` // FIXME
+                    value: `ERROR MESSAGE HERE: ${++__FIXME_ERRCNT} (${Settings.output})` // FIXME
                 }]
             }
         }
@@ -620,31 +628,31 @@ const checkNodeBody = (node, state) => {
 
                     // Can we flatten this assert into the previous line?
                     if (lastAssertLine === (i - 1)) {
-                        // Find leftmost node and splice as logicalExpression there to branch this check
-                        let leftMostNode = lastAssert.expression, leftMostNodeParent = null;
-                        while (leftMostNode.left && leftMostNode.left.NODE_CHECKTYPE) {
-                            leftMostNodeParent = leftMostNode;
-                            leftMostNode = leftMostNode.left;
+                        // Find rightmost node and splice as logicalExpression there to branch this check
+                        let rightMostNode = lastAssert.expression, rightMostNodeParent = null;
+                        while (rightMostNode.right && rightMostNode.right.NODE_CHECKTYPE) {
+                            rightMostNodeParent = rightMostNode;
+                            rightMostNode = rightMostNode.right;
                         }
 
-                        if (!leftMostNodeParent) {
+                        if (!rightMostNodeParent) {
                             lastAssert.expression = {
                                 type: 'LogicalExpression',
                                 NODE_CHECKTYPE: true,
-                                left: leftMostNode,
+                                left: rightMostNode,
                                 operator: '&&',
                                 right: checkNode.expression
                             };
                         } else {
-                            leftMostNodeParent.left = {
+                            rightMostNodeParent.right = {
                                 type: 'LogicalExpression',
                                 NODE_CHECKTYPE: true,
-                                left: leftMostNode,
+                                left: rightMostNode,
                                 operator: '&&',
                                 right: checkNode.expression
                             };
 
-                            leftMostNodeParent.left.loc = leftMostNodeParent.loc;
+                            rightMostNodeParent.right.loc = rightMostNodeParent.loc;
                         }
 
                         // Steal loc from lastAssert
@@ -661,6 +669,44 @@ const checkNodeBody = (node, state) => {
                     }
                 }
             });
+
+            if (lastAssert && lastAssert.loc) {
+                let source = codeLines[lastAssert.loc.start.line - 1];
+                if (source) {
+                    source = source.trim();
+                    let rightMostNode = lastAssert.expression, rightMostNodeParent = null;
+                    while (rightMostNode.right && rightMostNode.right.NODE_CHECKTYPE) {
+                        rightMostNodeParent = rightMostNode;
+                        rightMostNode = rightMostNode.right;
+                    }
+
+                    const sourceNodeDebug = {
+                        type: 'StringLiteral',
+                        value: source
+                    };
+
+                    if (!rightMostNodeParent) {
+                        lastAssert.expression = {
+                            type: 'LogicalExpression',
+                            NODE_CHECKTYPE: true,
+                            left: rightMostNode,
+                            operator: '&&',
+                            right: sourceNodeDebug
+                        };
+                    } else {
+                        rightMostNodeParent.right = {
+                            type: 'LogicalExpression',
+                            NODE_CHECKTYPE: true,
+                            left: rightMostNode,
+                            operator: '&&',
+                            right: sourceNodeDebug
+                        };
+
+                        rightMostNodeParent.right.loc = rightMostNodeParent.loc;
+                    }
+
+                }
+            }
         }
 
         // Replace node with replacement nodes
