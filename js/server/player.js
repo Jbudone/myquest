@@ -25,6 +25,7 @@ define(
 
             this.onPreparingToWalk     = function() {};
             this.onSomeEvent           = function() {};
+            this.queuedReceives        = [];
 
             this.pages                 = { }; // Visible pages
             this.stalePages            = [];
@@ -303,6 +304,7 @@ define(
                 // check if each tile is open.
                 const safePath = area.pathfinding.checkSafePath(reqState, path);
 
+
                 const movableState = {
                     position: {
                         global: {
@@ -455,6 +457,70 @@ define(
 
             client.on('message', (evt) => {
 
+                // If we haven't even logged in yet, then we won't end up stepping through this. So can't queue messages
+                if (this.id === null) {
+                    this.receiveEvt(evt);
+                } else {
+
+                    // FIXME: Where to store delay settings?
+                    const delayPacketsMin = 50,
+                        delayPacketsMax   = 1200;
+
+                    const delay           = Math.random() * (delayPacketsMax - delayPacketsMin) + delayPacketsMin,
+                        rcvTime           = now() + Math.floor(delay);
+
+                    this.queuedReceives.push({ evt, rcvTime });
+                }
+
+                //this.receiveEvt(evt);
+            });
+
+            this.respond = (id, success, args) => {
+
+                if (this.isConnected) {
+                    const response = new Response(id);
+                    response.success = success;
+                    response.frameId = The.frameEvtId;
+                    if (args) {
+                        _.extend(response, args);
+                    }
+                    this.client.send(response.serialize());
+                }
+            };
+
+            this.send = (evt, args) => {
+
+                if (this.isConnected) {
+                    this.client.send(JSON.stringify({
+                        evtType: evt,
+                        data: args,
+                        frameId: The.frameEvtId
+                    }));
+                }
+            };
+
+            this.step = (time) => {
+                this.handlePendingEvents();
+
+                const nowTime = now();
+                let receivedIdx = -1;
+                for (let i = 0; i < this.queuedReceives.length; ++i) {
+                    if (nowTime >= this.queuedReceives[i].rcvTime) {
+                        receivedIdx = i;
+                        console.log("About to dequeue receive");
+                        this.receiveEvt(this.queuedReceives[i].evt);
+                    } else {
+                        console.log(`${nowTime} < ${this.queuedReceives[i].rcvTime}`);
+                    }
+                }
+
+                if (receivedIdx >= 0) {
+                    this.queuedReceives.splice(0, receivedIdx + 1);
+                }
+            };
+
+            this.receiveEvt = (evt) => {
+
                 this.Log(evt, LOG_DEBUG);
                 evt = JSON.parse(evt);
                 const evtType = parseInt(evt.evtType, 10);
@@ -520,7 +586,7 @@ define(
                             callback();
                         }, (err) => {
 
-                            this.Log("Could not login player..");
+                            this.Log(`Could not login player: ${err}`);
 
                             if (this.isConnected) {
                                 const response   = new Response(evt.id);
@@ -606,34 +672,6 @@ define(
                         this.onSomeEvent(evt);
                     }
                 }
-            });
-
-            this.respond = (id, success, args) => {
-
-                if (this.isConnected) {
-                    const response = new Response(id);
-                    response.success = success;
-                    response.frameId = The.frameEvtId;
-                    if (args) {
-                        _.extend(response, args);
-                    }
-                    this.client.send(response.serialize());
-                }
-            };
-
-            this.send = (evt, args) => {
-
-                if (this.isConnected) {
-                    this.client.send(JSON.stringify({
-                        evtType: evt,
-                        data: args,
-                        frameId: The.frameEvtId
-                    }));
-                }
-            };
-
-            this.step = (time) => {
-                this.handlePendingEvents();
             };
 
             this.setCharacterTemplate = (template) => {
