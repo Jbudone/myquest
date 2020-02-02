@@ -462,12 +462,20 @@ define(
                     this.receiveEvt(evt);
                 } else {
 
-                    // FIXME: Where to store delay settings?
-                    const delayPacketsMin = 50,
-                        delayPacketsMax   = 1200;
+                    let rcvTime = now();
+                    if (Env.game.server.simulateLag) {
+                        // Simulated lag by delaying received message by some arbitrary amount
+                        const delayPacketsMin = Env.game.server.simulateLag.delayPacketsMin,
+                            delayPacketsMax   = Env.game.server.simulateLag.delayPacketsMax,
+                            delay             = Math.random() * (delayPacketsMax - delayPacketsMin) + delayPacketsMin;
 
-                    const delay           = Math.random() * (delayPacketsMax - delayPacketsMin) + delayPacketsMin,
-                        rcvTime           = now() + Math.floor(delay);
+                        // NOTE: TCP promises ordered packets, so have to add ontop of last queued packet rcvTime
+                        if (this.queuedReceives.length) {
+                            rcvTime = Math.max(rcvTime, this.queuedReceives[this.queuedReceives.length - 1].rcvTime);
+                        }
+
+                        rcvTime += Math.floor(delay);
+                    }
 
                     this.queuedReceives.push({ evt, rcvTime });
                 }
