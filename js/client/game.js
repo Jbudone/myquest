@@ -2,7 +2,7 @@
 // Client Game
 //
 // Client game functionality runs here. Any sort of interaction with the client, handling events from the server, and
-// the actual game loop are all done here.
+// the actual game loop are all done here.   
 
 // TODO: Find a better way to replace modules for bots
 const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',
@@ -539,7 +539,7 @@ define(
                         entity.page = The.area.pages[page];
                     };
 
-                    // Entity was removed from a page
+                    // Entity was removed from the area
                     server.onEntityRemoved = (page, removedEntity) => {
 
                         assert(!_.isNaN(removedEntity.id), `Expected valid entity id: ${removedEntity.id}`);
@@ -553,6 +553,32 @@ define(
                         if (!entity) throw Err(`Entity not found in area: ${removedEntity.id}`);
 
                         The.area.removeEntity(entity);
+                    };
+
+                    // Entity was removed from a page
+                    server.onEntityLeavePage = (page, removedEntity, newPage) => {
+
+                        assert(!_.isNaN(removedEntity.id), `Expected valid entity id: ${removedEntity.id}`);
+
+                        // Was it just us? Redundant information
+                        if (removedEntity.id === The.player.id) return;
+
+                        this.Log(`Entity zoned between pages: ${removedEntity.id}  from ${page} -> ${newPage}`, LOG_DEBUG);
+
+                        const entity = The.area.pages[page].movables[removedEntity.id];
+
+                        // We may not have the entity if we've already removed them locally (eg. teleported)
+                        if (!entity) {
+                            this.Log(`Entity not found in area: ${removedEntity.id}`, LOG_DEBUG);
+                            return;
+                        }
+
+                        // NOTE: Entities will zone between pages locally when we receive an EVT_ENTITY_ADDED event to
+                        // the new page; however we may not have the new page that they've zoned to, which is what this
+                        // event solves
+                        if (!The.area.pages[newPage]) {
+                            The.area.removeEntity(entity);
+                        }
                     };
 
                     server.onEntityNetserialize = (page, entityId, netSerialize) => {
