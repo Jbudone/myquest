@@ -356,7 +356,7 @@ define(
                 const distX = Math.abs(pathState.position.tile.x - movableState.position.tile.x),
                     distY   = Math.abs(pathState.position.tile.y - movableState.position.tile.y);
                 // TODO: Env the max recal distance
-                if (distX + distY > 8) {
+                if (distX + distY > 80) {
 
                     this.Log("We're not close enough to the beginning of the requested path");
                     this.Log(pathState);
@@ -381,50 +381,87 @@ define(
                     return;
                 }
 
-                let maxPathLength = path.length() + maxWalk;
-                this.Log(path, LOG_DEBUG);
-                const success = area.recalibratePath(movableState, pathState, path, maxPathLength);
 
-                if (success) {
+                {
+                    const fromPt  = { x: movableState.position.global.x, y: movableState.position.global.y },
+                        toPt      = { x: path.destination.x, y: path.destination.y },
+                        fromTiles = [new Tile(Math.floor(fromPt.x / Env.tileSize), Math.floor(fromPt.y / Env.tileSize))],
+                        toTiles   = [new Tile(Math.floor(toPt.x / Env.tileSize), Math.floor(toPt.y / Env.tileSize))];
 
-                    player.path = null;
 
-                    this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
-                    this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
-                    this.Log(path, LOG_DEBUG);
-                    player.addPath(path);
-                    player.recordNewPath(path, movableState);
-                    this.triggerEvent(EVT_USER_ADDED_PATH);
+                    player.cancelPath();
+                    console.log(`Going from: (${fromPt.x}, ${fromPt.y}) -> (${toPt.x}, ${toPt.y})`);
+                    area.pathfinding.workerHandlePath({
+                        movableID: player.id,
+                        start: { x: fromTiles[0].x, y: fromTiles[0].y },
+                        destination: { x: toTiles[0].x, y: toTiles[0].y },
+                        startPt: { x: fromPt.x, y: fromPt.y },
+                        endPt: { x: toPt.x, y: toPt.y }
+                    }, (localPath) => {
 
-                    if (this.isConnected) {
-                        const response = new Response(action.id);
-                        response.success = true;
-                        response.frameId = The.frameEvtId;
-                        this.client.send(response.serialize());
-                    }
-                } else {
-                    this.Log("Could not recalibrate our current position to the beginning of the requested path");
-                    this.Log(pathState);
-                    this.Log(movableState);
-                    this.Log(path);
+                        // FIXME: CB for path
+                        //  - Success? Prepend recalibration to path; add path
+                        //  - Return results to player
+                        if (!localPath) {
+                            this.Log("Could not find path");
+                            this.Log(pathState);
+                            this.Log(movableState);
+                            this.Log(localPath);
 
-                    if (this.isConnected) {
+                            if (this.isConnected) {
 
-                        const response = new Response(action.id);
-                        response.success = false;
-                        response.state   = {
-                            position: {
-                                global: {
-                                    x: movableState.position.global.x,
-                                    y: movableState.position.global.y },
-                                tile: {
-                                    x: movableState.position.tile.x,
-                                    y: movableState.position.tile.y }
+                                const response = new Response(action.id);
+                                response.success = false;
+                                response.state   = {
+                                    position: {
+                                        global: {
+                                            x: movableState.position.global.x,
+                                            y: movableState.position.global.y },
+                                        tile: {
+                                            x: movableState.position.tile.x,
+                                            y: movableState.position.tile.y }
+                                    }
+                                };
+                                response.frameId = The.frameEvtId;
+                                this.client.send(response.serialize());
                             }
-                        };
-                        response.frameId = The.frameEvtId;
-                        this.client.send(response.serialize());
-                    }
+
+                            return;
+                        }
+
+                        path.walks = [];
+                        if (localPath.path.ALREADY_THERE) {
+                            this.Log("No need to recalibate to position; we're already synced");
+                            DEBUGGER(); // THIS SHOULD NEVER HAPPEN! Our from/to points are teh exact same
+                        } else {
+
+                            // FIXME: Prepend recalibration to path; depending on ptPath (not tiled!)
+                            let walks = localPath.path.ptPath.walks;
+                            _.forEachRight(walks, (walk) => {
+                                path.walks.unshift(walk);
+                            });
+                        }
+
+
+                        this.Log(path, LOG_DEBUG);
+                        player.path = null;
+
+                        this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
+                        this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
+                        this.Log(path, LOG_DEBUG);
+                        player.addPath(path);
+                        player.recordNewPath(path, movableState);
+                        this.triggerEvent(EVT_USER_ADDED_PATH);
+
+                        if (this.isConnected) {
+                            const response = new Response(action.id);
+                            response.success = true;
+                            response.frameId = The.frameEvtId;
+                            this.client.send(response.serialize());
+                        }
+                    });
+
+                    return;
                 }
             };
 

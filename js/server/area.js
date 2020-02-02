@@ -58,7 +58,6 @@ define(
                 // sheets so that we can throw warning
                 let badSheets = [];
 
-
                 this.sheets = [];
                 this.area.properties.tilesets.forEach((tileset) => {
                     assert(tileset.image, `No image found for tileset. Did you forget to embed the tileset into the map?`);
@@ -88,6 +87,7 @@ define(
                 this.areaWidth   = areaWidth;
                 this.areaHeight  = areaHeight;
 
+                this.pathfinding.setupArea();
                 if (Env.game.useJPS) {
                     this.jumpPoints       = new Int16Array(this.area.data.jumpPoints);
                     this.forcedNeighbours = this.area.data.forcedNeighbours;
@@ -406,7 +406,10 @@ define(
                     page.hook('addcharacterlessentity', this).before((entity) => {
                         this.doHook('addcharacterlessentity').pre(entity);
                     });
+
+                    this.pathfinding.addPage(page, i);
                 });
+
 
                 if (Env.game.usePathPlanner) {
                     this.pathfinding.setupGrid();

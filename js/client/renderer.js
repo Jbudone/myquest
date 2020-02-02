@@ -45,7 +45,13 @@ define(['loggable'], (Loggable) => {
                 bgAlpha: 0.4,
                 bgStroke: '#669966',
                 lineDash: 4,
-                alpha: 0.8
+                alpha: 0.8,
+            },
+
+            debugPath: {
+                alpha: 0.2,
+                stroke: 'blue',
+                lineWidth: 6
             },
 
             movableHighlight: {
@@ -452,10 +458,9 @@ define(['loggable'], (Loggable) => {
                 this.ctxEntities.save();
                 this.ctxEntities.globalAlpha = 0.4;
                 this.ctxEntities.strokeRect(
-                    ts * this.ui.tileHover.x,
-                    ts * this.ui.tileHover.y,
-                    ts - (this.settings.lineWidth / 2),
-                    ts - (this.settings.lineWidth / 2)
+                    Env.tileScale * this.ui.tileHover.x - (this.settings.lineWidth / 2),
+                    Env.tileScale * this.ui.tileHover.y - (this.settings.lineWidth / 2),
+                    1 + (this.settings.lineWidth / 2), 1 + (this.settings.lineWidth / 2)
                 );
 
                 if (this.showJumpPoint) {
@@ -631,6 +636,58 @@ define(['loggable'], (Loggable) => {
 
                           return(pos1 - pos2);
                     });
+
+                // Draw each movable's path for debugging
+                if (Env.game.debugPath.draw) {
+                    this.ctxEntities.save();
+                    this.ctxEntities.globalAlpha = this.settings.debugPath.alpha;
+                    this.ctxEntities.strokeStyle = this.settings.debugPath.stroke;
+                    sortedMovables.forEach((movable) => {
+
+                        // NOTE: If one walk has a destination they all have a destination
+                        if (movable.path && movable.path.start && movable.path.walks[0].destination) {
+
+                            let points = [];
+                            if (!movable.path.debugDrawPath) {
+                                // Only need to calculate this once per path
+
+                                let path       = movable.path,
+                                    curWalkI   = 0,
+                                    curWalk    = path.walks[curWalkI];
+
+                                points.push({ x: path.start.x, y: path.start.y });
+                                while (curWalk) {
+                                    let walkDest = curWalk.destination;
+                                    points.push({ x: walkDest.x, y: walkDest.y });
+
+                                    curWalk = path.walks[++curWalkI];
+                                }
+
+                                movable.path.debugDrawPath = points;
+                            } else {
+                                points = movable.path.debugDrawPath;
+                            }
+
+
+                            // Render path
+                            this.ctxEntities.beginPath();
+                            for (let i = 0; i < points.length; ++i) {
+                                const point = points[i],
+                                    x       = Env.tileScale * (point.x - The.camera.globalOffsetX),
+                                    y       = Env.tileScale * (point.y + The.camera.globalOffsetY);
+
+                                if (i === 0) {
+                                    this.ctxEntities.moveTo(x, y);
+                                } else {
+                                    this.ctxEntities.lineTo(x, y);
+                                }
+                            }
+                            this.ctxEntities.lineWidth = this.settings.debugPath.lineWidth;
+                            this.ctxEntities.stroke();
+                        }
+                    });
+                    this.ctxEntities.restore();
+                }
 
                 sortedMovables.forEach((movable) => {
                     const movableSheet = movable.sprite.sheet.image,

@@ -684,6 +684,220 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
             return safePath;
         };
+
+
+
+
+        let webworker;
+
+        // WARNING: MUST keep this in sync with worker values
+        const ADD_PAGE  = 1,
+            REMOVE_PAGE = 2,
+            HANDLE_PATH = 3,
+            SETUP_AREA  = 4;
+
+        const RESULT_ERROR = 1,
+            RESULT_PATH    = 2;
+
+        this.initializeWorker = () => {
+            webworker = new WebWorker("pathfindingWorker");
+            webworker.initialize().then(() => {
+
+                webworker.onMessage = (data) => {
+
+                    console.log(`Message received from worker`); 
+                    console.log(data);
+
+                    const resultType = data.result;
+                    if (!resultType) {
+                        console.error("Unknown resultType from worker");
+                        return;
+                    } else if (resultType === RESULT_ERROR) {
+                        console.error(`Error from worker: ${data.error}`);
+                        return;
+                    } else if (resultType === RESULT_PATH) {
+                    }
+                };
+            });
+
+            const pathfindingKeys = {
+                ADD_PAGE,
+                REMOVE_PAGE,
+                HANDLE_PATH,
+                SETUP_AREA,
+
+                RESULT_ERROR,
+                RESULT_PATH,
+
+                NORTH,
+                WEST,
+                SOUTH,
+                EAST
+            };
+
+
+            webworker.postMessage({
+                type: 'SETUP_KEYS',
+                keys: pathfindingKeys
+            });
+        };
+
+        // List of movables and their most recent path identifier
+        // This protects us in cases where a movable finds a path twice in a row before receiving the original path.
+        // The original path will eventually come through and compare its pathID with the movable's current pathID, and
+        // ignore it if its stale
+        // NOTE: In weird cases where a movable is removed and another is added in its place (same movableID but
+        // separate movables), this will still be fine since the pathID could have any arbitrary starting point
+        this.movablePathID = {};
+
+        this.workerHandlePath = (path, cb) => {
+
+            // Keep track of the movable's current pathID so that we can skip stale paths
+            if (!this.movablePathID[path.movableID]) {
+                this.movablePathID[path.movableID] = 0;
+            }
+
+            path.id = (++this.movablePathID[path.movableID]);
+
+
+            if
+            (
+                path.start.x === path.destination.x &&
+                path.start.y === path.destination.y
+            )
+            {
+                // Already on same tile
+                if
+                (
+                    path.startPt.x === path.endPt.x &&
+                    path.startPt.y === path.endPt.y
+                )
+                {
+                    // Already at point
+                    const retPath = {
+                        movableID: path.movableID,
+                        pathID: path.pathID,
+                        startTile: path.startTile,
+                        destinationTile: path.destinationTile,
+                        tileTime: -1,
+                        ptTime: -1,
+
+                        ALREADY_THERE: true
+                    };
+
+                    cb({
+                        result: RESULT_PATH,
+                        success: true,
+                        path: retPath
+                    });
+                    return;
+                }
+
+                const ptPath = new Path(),
+                    globalDiffX = path.endPt.x - path.startPt.x;
+                    globalDiffY = path.endPt.y - path.startPt.y;
+
+                let dir, dist, walk;
+
+                if (globalDiffY !== 0) {
+                    dir = SOUTH;
+                    dist = globalDiffY;
+                    if (dist < 0) {
+                        dir = NORTH;
+                        dist = dist * -1;
+                    }
+                    walk = new Walk(dir, dist, null);
+                    walk.destination = { x: path.startPt.x, y: path.endPt.y };
+                    ptPath.walks.unshift(walk);
+                }
+
+                if (globalDiffX !== 0) {
+                    dir = EAST;
+                    dist = globalDiffX;
+                    if (dist < 0) {
+                        dir = WEST;
+                        dist = dist * -1;
+                    }
+                    walk = new Walk(dir, dist, null);
+                    walk.destination = { x: path.endPt.x, y: path.endPt.y };
+                    ptPath.walks.unshift(walk);
+                }
+
+
+
+
+                const retPath = {
+                    movableID: path.movableID,
+                    pathID: path.pathID,
+                    startTile: path.startTile,
+                    destinationTile: path.destinationTile,
+                    start: path.start,
+                    walks: path.walks,
+                    
+                    ptPath: ptPath,
+                    tileTime: -1,
+                    ptTime: -1,
+                };
+
+                cb({
+                    result: RESULT_PATH,
+                    success: true,
+                    path: retPath
+                });
+                return;
+            }
+
+            webworker.postMessage({
+                type: HANDLE_PATH,
+                path: {
+                    movableID: path.movableID,
+                    pathID: path.pathID,
+                    startTile: path.start,
+                    destinationTile: path.destination,
+                    startPt: path.startPt,
+                    endPt: path.endPt
+                }
+            }, (data) => {
+                if (data.pathID !== this.movablePathID[data.movableID]) {
+                    console.log("Stale path, ignoring");
+                    return;
+                }
+
+                cb(data);
+            });
+        };
+
+        this.removePage = (page, pageI) => {
+            webworker.postMessage({
+                type: REMOVE_PAGE,
+                pageI: pageI
+            });
+        };
+
+        this.addPage = (page, pageI) => {
+            webworker.postMessage({
+                type: ADD_PAGE,
+                page: {
+                    i: pageI,
+                    x: page.x,
+                    y: page.y,
+                    collidables: _.clone(page.collidables)
+                }
+            });
+        };
+
+        this.setupArea = () => {
+            webworker.postMessage({
+                type: SETUP_AREA,
+                area: {
+                    width: area.areaWidth,
+                    height: area.areaHeight,
+                    pagesPerRow: area.pagesPerRow
+                }
+            });
+        };
+
+        this.initializeWorker();
     };
 
     return Pathfinding;
