@@ -746,6 +746,66 @@ WORKING ON (was previously working on)
                 - Spritesheet editor
                     - Options to manipulate sprite settings, and quickly run export-model/bakespritesheet for preview of changes  (eg. camera angle, imagemagick settings, textures, etc.) -- NOTE: We're likely going 3D in the near future, so keep this in consideration for what to spend time on
             - Map editor (not yet, but ready for this in the near future -- also consider the 3D overhaul + pathfinding (diagonal movement) changes soon w/ map editor)
+                1) Place sprites (group, eg. tree)
+                    - Should have an icon/image list of assets
+                2) Paint biome: water, grass, ice, etc.
+                3) Blend sprites
+                4) Automatic art placement (foliage/decos/etc.)
+                    - Perhaps prefabs? eg. tree A could have 10x different prefabs of leaves surrounding it; water near edge has 6x different prefabs w/ shells/etc. around it
+                5) Place spawns
+
+
+                - Terrain editor (part of map editor, but global and allows all spritesheets)
+                    - Define which sprites are terrain
+                    - Define groups of sprites (eg. tree, cliff, multiple sprites that act as 1 in-game sprite)
+                    - Terrain height: going up left -> right? going down top -> bottom? etc.
+                    - Biome properties (checkbox of various properties: water, dessert, forest)
+                    - Density properties (higher level for leaves, etc.)
+                    - Sprites that you're likely to see near other sprites
+                        - The base of a tree spritegroup attracts leave sprites
+                    - Blends
+                        - Put sprites next to each other to describe what's allowed
+                        - Describe sprites which are interchangable (this could include a group of sprites that are interchangeable w/ another group of sprites) eg. a long cliff could have 6 different vertical strips of sprites that are all similar, but some parts are interchangable w/ another
+                - Paint area properties
+                    NOTE: There should be a default for the level, and then we simply paint offsets to that default
+                    - Biomes/properties
+                    - Water
+                    - Density of "stuff"  (eg. forest would be trees/plants, etc.)
+                    - Height
+                        - Maybe instead of height we can draw where a cliff is
+                    - Spawns
+                    - Level of enemies
+                - NOTE: If blending, heights, etc. don't work for biome then we can use what we've got (eg. ignore height/blend) and highlight red area in editor there
+                - Right click sprite: d3 style graph/nodes of potential prefabs for that sprite; above that a list of preset styles (eg. right clicking a tree? a bunch of different tree sprites)
+                - Draw areas for particular zones (like paint, but 0 or 1 / no in-between)
+                    - town (music starts playing, "town discovered" reward)
+                    - dynamic quests
+                    - event trigger (boss)
+                    - fxmgr (snow, etc.)
+                - Spawns automatically determined at runtime based off area properties
+                    - Should also consider special camps (like Albion online mob camps, bosses, etc.)
+                - Draw walls (walls connected, randomness, etc.)
+                - Dungeons: draw tunnels through walls
+                - Harvesting areas
+                - Smaller tiles for next-gen movement updates
+                - Auto-nav creation
+                    - Consider statically dynamic areas too (doors that will open/close)
+                    - Convex regions, way-points
+                - Rules for art
+                    - Trees are likely to have leaves around it
+                - Manual placement
+                    - Select tree as a whole rather than individual tiles
+                - Allow automated updating map afterwards
+                    - Baking the level
+                        - New avatars/spawn rules for area
+                        - New prefabs
+                        - Rules for art changed (less leaves under tree; new trees for this biome, etc.)
+                - Should be easy enough + isolated so that other people can help out with this
+                - Updating sheets/etc. should trigger updates in map editor (if open, or starting since last time), eg. resizing/moving sprites in tilesheets
+                - Keep tile sizes in mind: game tiles are 4x4 (for movement) and may change again. But we don't want to needlessly specify a 16x16 tile in 4*4=16 sprites
+                - Infinite world; show world edges
+                - Updating sheets (eg. resize sprites, move sprites): update map automatically (and quickly), including if mapper is already open
+                - Can probably optimize maps: ground tiles (maps, etc.) and some decos can probably be determined on load for player. Map editor can simply export "grass tiles here"
             - Data sheet editing
                 - NPC, Media, FX, Buffs, Rules, Items
             - Icons/Sounds: preview + data editing
@@ -777,6 +837,159 @@ WORKING ON (was previously working on)
         - https://github.com/thlorenz/v8-perf
         - v8 args that allow you to view optimizations, bytecode, GC, etc.
         - node args
+    - Client error -- halt game
+    - BUG: Player 2 zones away from Player 1's PVS, NetSerializes some changes, zones back to Player 1's PVS (eg. health change, etc.)
+        - What do we send? If its minimal we could just include it all in _character; perhaps that's what we're already doing?
+    - BUG: Player 2 zones out of Player 1's PVS, disconnects, logs back in and zones back to Player 1's PVS:  player 1 has retained player 2 from earlier, and now has 2 copies of player 2
+        - We could send all zone-out, d/c, death, etc. across the map
+        - We could send/store playerID and check if we already have that playerID, then if so remove the previous player (NOTE: This should ONLY happen if the stale copy is out of our PVS) and reload the new copy
+
+
+
+    ====== GAME STYLE OVERHAUL
+        
+    - AI considerations
+        - AI is too complex, decision making could be simpler and user may find that more entertaining when they understand it better
+        - Could introduce factions similar to Grim Dawn: you're hated by XXXX syndicate, so they prefer you over the rest of the party. Also damage received main factor in who target is
+    - Combat overhaul
+        - Get rid of tab-targetted autoattack? Then we can ignore user-pathfinding on server (client-side only and just verification on server)
+        - Click to attack; do client-side movement if necessary. An attack has: 1) begin attack (if within range), 2) beginning anim (regardless of range), 3) attack animevent (only hits if within range), 4) finish attack anim (can cancel)
+    - Movement overhaul
+        - Cleanup overhaul
+            - Also get rid of unnecessary asserts
+        - You occupy multiple tiles as opposed to one
+            - Position is lowest tile (top/left); Could keep track of bounds
+
+        - Nav: shrink players size down to 1 block while increasing collision, then can just check collision on 1 tile
+            - Nav consists of many overlapping convex regions; cache common paths from 1 convex region to another convex region
+            - Dynamic changes: rebuild nav at intersection regions; all paths registered to affected navs need to be recalculated
+            - Convex regions minus holes (convex polygons) (eg. dynamic walls): calculate path through convex region, then check if we went through the hole and adjust to corners of hole
+        - Hold down mouse button for movement; periodically send updated position/destination to server
+        - Server checking:
+            - Server could blindly trust user paths, and check at runtime for collision
+        - Cardinal directions -> include diagonal
+        - Get rid of walks
+            - Use "I am here, moving here"
+            - Allow running to catch up to position
+            - Off screen: moving from 1 unloaded page, through your seen page, to another unloaded page
+                Also moving from local page to unloaded page
+                If we cap path length (ie. want to move from 0 to 1, but say that we're moving from 0 to 0.5) and expand the area of pages that server feeds to user then the only case where this could occur is if they're offscreen and we can't witness their movement anyways
+
+            1) Path: include destination, full path
+                - Include position & destination
+                ISSUE: Our position is always on the topleft corner of a tile, so if we pathfind from the center of the tile -> northeast -> next tile, then in reality we'll pass through the northern tile which could be a collision
+                    - Could have a real position (tile/tiles) and a simulated position which includes partial tile offset. Movement accumulates a delta and waits until you can reach the next tile
+                    - Actual position (tile, static, updated immediately from server updates), Sim Position (tile, update only to tile movement no partial), Visual Position (partial, updated constantly)
+                        - Current position is a visual position
+                        - Client: need actual + sim posiiton
+                        - Paths: {state, walks}, walk: {direction, tile distance}, flatten walks
+
+                    - Could get rid of tiles and just use global position
+                        - Better for pathfinding and memory in long run
+                        - Bringing down to 1 means 1x1 tiles. Moving diagonally shouldn't be a problem because it jumps between tiles
+                            1) Scale tilesize down to 1x1
+                            2) Get rid of tile usage in favour of global pos
+                    - Could use tiles and start/recalibrate into half tile positions (global position + Env.tileSize/2)
+
+***********************
+***********************
+** TRYING THIS OPTION NOW
+**                   - Keep tiles BUT pathfinding ignores tiles for the most part (no recalibration/etc., only used for collision detection)
+**                     Env.useTiledPosition
+**                       1) Skip recalibration
+**                       2) Click movement -> pass global position to pathfinding
+**                       3) Pathfinding: global position rather than tile  (consider 1x1 tiles for now until we can improve pathfinding)
+                            area.findPath, pathfinding.findPath -- useTiledPosition indicates global position NOT tiled position as args
+**                       4) Walks: use global position NOT tiles
+**                       5) DB store global position NOT tile
+
+                    NOTE: MUST treat as 1x1 tiles (or global position), otherwise moving NE from center of 16x16 tile will first move north into upper tile which may have a collision
+
+
+                    - Optimize: neighbours include jumps from current tile to nearest position (along given direction) to next tile. This should allow us to primarily utilize tiles, but then automatically recalibrate w/ 1x1 pos
+                        NOTE: might also want to include jumps to corners of neighbour tiles
+
+                    - Start point -> neighbour (weight from point to nearest point on that neighbour); then A* tile search to end tile; how to find last few steps from previous last tile to endpoint?
+                        - Could determine final steps/walk: entering final tile, determine destination point and append final walk
+                        - When traversing through path to build walks, will find the final walk to the final destination
+                        - Convex regions: faster tile -> tile searching
+                        - Portals between 
+                        - Dynamic walls/tunnels/portals
+                            - Region no longer marked as convex? Forced fallback to A*
+
+                    - Searching neighbours could include entry point (local offset in tile) so we can pick weights better. If we come across the tile later in A* I believe this means its a higher weight. If this isn't the case then we may not be able to do this since we'd have to replace the tile entry and re-search all of the searched neighbours w/ new entry points
+                    - Make entry points an option (prototyping, higher quality searching for users/bosses) and keep off for most NPCs for efficiency
+
+                    - Optimization
+                        - Hierarchical search: regions -> A* tiles
+                            - "Hierarchical Dynamic Pathfinding for Large Voxel Worlds" GDC18
+                            - Quadtree https://www.youtube.com/watch?v=sn6P7xCTvvc
+                            - Can add waypoints and portals as highest level graph (for long paths) if necessary
+                            - Can sequentially calculate path across multiple frames; pass unrefined path to clients if necessary, clients can either determine OR shouldn't have to render character yet (out of view)
+                            - Can batch spatially nearby paths together to be calculated at the same time: fetch same collisions/etc., then calculate these paths, then move on to next path batch
+                        - Can use JPS in pages where it makes more sense (eg. maze-like dungeons, tight corridors, etc.)
+                        - A* iteration: checking neighbours on tile, we can fetch collision mask (or convex regions) and queue multiple neighbours that we know have an open straight path
+                        - Runtime: current point in tile to next tile  (can be done separately on client/server); server may be able to approximate
+                            - From point A in tile to point B in neighbour tile; can determine actual position at runtime
+                        - Walls: at runtime check if next few tiles hit a "changed area" (eg. wall) and then modify path
+                            - GDC talk mentions simply updating each LOD's blocks w/ new layout, and then updating paths that are currently registered with the blocks on each LOD
+                        - OR: modification to page: find all nearby entities and check if their paths go through the page, if so then possibly repath
+                            - Could webworker and prioritize entities, so that ones that are further away are updated later
+                        - Considerations
+                            - Radius around endpoint, then pathfind from endpoint to new path point, and sequentially refine w/ webworkers over time
+                            - Sparse graph of waypoints, then periodically teleport between waypoints on server
+                            - Large open areas: assume path is clear, then periodically refine later parts of path to hug along collisions until it reattaches to path (path is a line, so check point/line intersection?)
+                                - Trees/small collisions are easy to walk around (mark these as easy to walk around, or same room)
+                                - Long walls separate rooms
+                            - Client creates path and sends to server; server trusts clients path, needs to quickly pathfind from server position to point on path
+                                - Quick check if its reasonable to teleport from server position to client position (not cheating?), and then jump to correct path position (delta steps along path already)
+                            - Server sends I am here going here, let client determine path
+
+
+                    Overhaul
+                        1) A* 16x16 tile; webworker refine path (only on client?). Potential for HPA* and JPS later
+                        2) Server teleports positions from A* (unrefined) path  NOTE: This may be slightly off because of point position and how fast you'll reach tile
+                        3) Server blindly trusts clients position/path (quick check on position for cheating); then test collision at runtime   (later can use HPA* to determine if client in different room)
+                        4) Clients receive: I am here going here. Send some point(s) early in the path as opposed to endpoint, this way we don't have to worry about path mismatch (can cache these points for broadcasting)
+                        - Update path: if nearby previuos endpoint then queue for webworker instead of solving immediately
+
+                        PROBLEMS:
+                            - Server side validation of client
+                            - Server side handling client path, path client -> new point
+                            - Server side NPC chasing after client, constantly moving
+                            - Diagonal movement:   Maybe A* doesn't consider diagonal?
+                                XXX...
+                                XXX...
+                                XXX*..
+                                ..*XXX
+                                ...XXX
+                                ...XXX
+                            - Server/client side out of sync because of point-based refinement of path on client
+
+
+                    - Client path sometimes denied (seems out of sync from server)
+                    - Server path sometimes failing
+                    - Setup bots/soaks to confirm its all working
+                    - Instinct movement, combat/chasing
+                    - Click interactable/item
+**
+***********************
+***********************
+
+
+            -  cardinal directions -> include diagonal
+            2) Server send periodic updates of path: I am here moving here
+            3) Client: create path from server. If error (eg. unsure where to go) simply don't process and wait until next update (I am here going here)
+            4) Server: blindly accept client's path, during process if error then stop processing and give an EVT_STOP_PATH event
+        - User has full map (load pages from indexdb)
+            - Server feeds changes from default (eg. broken walls, open doors, etc.)
+        - Peer-to-peer: users could send "I am here, moving here" messages to both server AND other players in nearby area
+        - Could store all movement operations in 1 single gigantic array that's all processed in a webworker, all at once (cache coherency/etc.)
+            - Includes: { position/leftover/delta, path }
+        - Could do all pathfinding operations in webworker too, and store higher-level paths in cache (ie. not points that are in a convex region since those are safe)
+    - UI overhaul
+        - Fullscreen
+        - Similar layout to Hero Siege
 
 
     - Browser Debugging Snippets
