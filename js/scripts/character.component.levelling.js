@@ -121,27 +121,30 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
                         // NOTE: We want XP to netSerialize before level (for callback ordering)
                         const newLevel = this.level + 1;
-                        this.XP = newXP - levelRules.nextLevelXP;
-                        levelRules = Rules.level[newLevel];
-                        this.level = newLevel;
 
-                        if (increasedMaxXP) {
-                            // FIXME: Levelup!
-                            this.achievedLevel = this.level;
-                            this.achievedXP = this.XP;
+                        if (Rules.level[newLevel]) {
+                            this.XP = newXP - levelRules.nextLevelXP;
+                            levelRules = Rules.level[newLevel];
+                            this.level = newLevel;
 
-                            // Level stat increases
-                            if (levelRules.bonuses) {
-                                for (const bonusKey in levelRules.bonuses) {
-                                    const stat = character.stats[bonusKey],
-                                        statInc = levelRules.bonuses[bonusKey];
-                                    if (stat.curMax === stat.max) {
-                                        if (stat.cur === stat.curMax) {
-                                            stat.cur += statInc;
+                            if (increasedMaxXP) {
+                                // FIXME: Levelup!
+                                this.achievedLevel = this.level;
+                                this.achievedXP = this.XP;
+
+                                // Level stat increases
+                                if (levelRules.bonuses) {
+                                    for (const bonusKey in levelRules.bonuses) {
+                                        const stat = character.stats[bonusKey],
+                                            statInc = levelRules.bonuses[bonusKey];
+                                        if (stat.curMax === stat.max) {
+                                            if (stat.cur === stat.curMax) {
+                                                stat.cur += statInc;
+                                            }
+                                            stat.curMax += statInc;
                                         }
-                                        stat.curMax += statInc;
+                                        stat.max += statInc;
                                     }
-                                    stat.max += statInc;
                                 }
                             }
                         }
@@ -237,7 +240,7 @@ define(['loggable', 'component'], (Loggable, Component) => {
 
 
                     if (!this.isInitializing) {
-                        FX.event('levelup', $(this), {});
+                        FX.event('levelup', this, {});
                         this.Log(`Woahhh I just levelled up! ${data.level}`);
                         UI.postMessage(`  Zomg the levelup is for me! ${this.level} / ${this.achievedLevel}`);
 

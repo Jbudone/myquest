@@ -30,11 +30,15 @@ define(['loggable'], function(Loggable){
 		this.initialize = function(options){ };
         this.step = function() { };
         this.resume = function() { };
+        this.pause = function() { };
         this.updatePages = function() { };
 
 		this.sheetFromGID = function(gid){ };
 
 		this.render = function(){ };
+		this.addRagdoll = function(){ };
+
+		this.addProjectile = function(){ };
 
 		this.renderPage = function(page, startX, startY, endX, endY, offX, offY){ };
 	};

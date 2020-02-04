@@ -248,13 +248,13 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                 requirejs(
                     [
                         'errorReporter',
-                        'resources', 'loggable',
+                        'resources', 'loggable', 'webworker',
                         'movable', 'world', 'area', 'scriptmgr', 'test/pseudofxmgr',
                         'server/db', 'server/redis', 'server/player', 'server/login'
                     ],
                     (
                         ErrorReporter,
-                        ResourceMgr, Loggable,
+                        ResourceMgr, Loggable, WebWorker,
                         Movable, World, Area, ScriptMgr, FXMgr,
                         DB, Redis, Player, LoginHandler
                     ) => {
@@ -345,6 +345,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                         const redis = new Redis();
                         redis.initialize().then(() => { loaded('redis'); },
                             (e) => { errorInGame(e); });
+
+
+                        GLOBAL.WebWorker = WebWorker;
 
 
                         // Load game resources

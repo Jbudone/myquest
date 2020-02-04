@@ -156,9 +156,15 @@ define(
                     // This is stuff like difficulty rating (eg. lower/higher level? player? boss? attackable?)
                     this.updateMovableClass = function(userLevel){
 
-                        const myLevel = movable.isPlayer ? movable.character.level : movable.npc.level;
+                        const myLevel = movable.isPlayer ? movable.character.level : movable.npc.level,
+                            levelClasses = ['movable-class-difficult', 'movable-class-equal', 'movable-class-easy'];
 
                         if (!myLevel) return; // We may not have initialized your level yet
+
+                        // Reset class
+                        levelClasses.forEach((levelClass) => {
+                            this.ui.removeClass(levelClass);
+                        });
 
                         // FIXME: Take more into consideration -- player? attackable? boss? Level ranges
                         if (myLevel > userLevel) {
@@ -410,7 +416,7 @@ define(
 
                 this.canvas.addEventListener('mousemove', (evt) => {
                     lastMouseEvt = evt;
-                    this.onMouseMove( this.positionFromMouse(evt) );
+                    this.onMouseMove( this.positionFromMouse(evt), lastMouseEvt );
                 });
 
                 this.canvas.addEventListener('mousedown', (evt) => {
@@ -476,11 +482,11 @@ define(
                 });
 
                 this.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
+                    this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
                 });
 
                 this.listenTo(The.player, EVT_MOVING_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
+                    this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
                 });
 
                 // Load UI modules

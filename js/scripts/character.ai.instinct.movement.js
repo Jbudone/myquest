@@ -84,64 +84,64 @@ define(
                     }
                 };
 
-                path = character.entity.page.area.pathfinding.findPath(character.entity, target.entity, options);
-                if (path) {
 
-                    if (path === ALREADY_THERE) {
 
-                        // We're already there..
-                        addedPath = path;
-                    } else if (maxWalk && path.length() > maxWalk) {
 
-                        addedPath = PATH_TOO_FAR;
-                    } else {
+                const playerX = character.entity.position.global.x,
+                    playerY   = character.entity.position.global.y,
+                    toX       = target.entity.position.global.x,
+                    toY       = target.entity.position.global.y,
+                    fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                    toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
-                        path.flag = PATH_CHASE;
-                        addedPath = character.entity.addPath(path);
-                        pathId    = character.entity.path.id;
 
-                        character.entity.recordNewPath(path);
+                character.entity.cancelPath();
+                character.entity.page.area.pathfinding.workerHandlePath({
+                    movableID: character.entity.id,
+                    start: { x: fromTiles[0].x, y: fromTiles[0].y },
+                    destination: { x: toTiles[0].x, y: toTiles[0].y },
+                    startPt: { x: playerX, y: playerY },
+                    endPt: { x: toX, y: toY }
+                }, (data) => {
 
-                        /* Here for debugging purposes
+                    console.log(`Path results received from worker!`);
+
+                    if (!data.success) {
+                        console.error("Could not find path!");
+
                         const fromTile = character.entity.position.tile,
                             toTile     = target.entity.position.tile;
-                        let curRealX   = character.entity.position.global.x,
-                            curRealY   = character.entity.position.global.y;
-                        this.Log(`  (${fromTile.x}, ${fromTile.y}) ==> (${toTile.x}, ${toTile.y})`, LOG_DEBUG);
-                        for (let i = 0; i < path.walks.length; ++i) {
-                            const walk          = path.walks[i];
-                            let walkStr         = `     (${Math.floor(curRealX / Env.tileSize)}, ${Math.floor(curRealY / Env.tileSize)})`,
-                                accumulatedWalk = 0;
+                        //this.Log(`FAILED TO FIND PATH: (${fromTile.x}, ${fromTile.y}) ==> (${toTile.x}, ${toTile.y})`);
+                        console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                    } else {
+                        console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                        console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
+                        console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
 
-                            this.Log(`  walk[${i}]: ${keyStrings[walk.direction]} for ${walk.distance} steps`, LOG_DEBUG);
-                            for (let j = 0; j < Math.ceil(walk.distance / Env.tileSize); ++j) {
-                                const amt = Math.min(Env.tileSize, walk.distance - accumulatedWalk);
-                                     if (walk.direction === NORTH) curRealY -= amt;
-                                else if (walk.direction === SOUTH) curRealY += amt;
-                                else if (walk.direction === WEST)  curRealX -= amt;
-                                else if (walk.direction === EAST)  curRealX += amt;
-                                accumulatedWalk += amt;
+                        if (data.path.ALREADY_THERE) {
+                            // We're already there..
+                            addedPath = ALREADY_THERE;
+                        } else {
 
-                                const curTile = { x: Math.floor(curRealX / Env.tileSize), y: Math.floor(curRealY / Env.tileSize) };
-                                walkStr += `   ===>   (${curTile.x}, ${curTile.y})`;
+                            const path = new Path();
+                            data.path.walks.forEach((walk) => {
+                                path.walks.push(walk);
+                            });
+                            path.start = data.path.start;
 
-                                // Is this a collision?
-                                if (!character.entity.page.area.hasTile(curTile) || !character.entity.page.area.isTileOpen(curTile)) {
-                                    debugger;
-                                    walkStr += " XXX COLLISION XXX ";
-                                }
+                            if (maxWalk && path.length() > maxWalk) {
+                                addedPath = PATH_TOO_FAR;
+                            } else {
+                                path.flag = PATH_CHASE;
+                                addedPath = character.entity.addPath(path);
+                                pathId    = character.entity.path.id;
 
-                                this.Log(walkStr, LOG_DEBUG);
-                                walkStr = "";
+                                character.entity.recordNewPath(path);
                             }
                         }
-                        */
+
                     }
-                } else {
-                    const fromTile = character.entity.position.tile,
-                        toTile     = target.entity.position.tile;
-                    this.Log(`FAILED TO FIND PATH: (${fromTile.x}, ${fromTile.y}) ==> (${toTile.x}, ${toTile.y})`);
-                }
+                });
 
                 return setCallbacks;
             };
@@ -158,18 +158,49 @@ define(
                     couldNotReachTile = function(){},
                     alreadyThere      = false;
 
-                const path = character.entity.page.area.pathfinding.findPath(character.entity, tile, { range: range, maxWeight: 0 });
-                if (path) {
 
-                    if (path === ALREADY_THERE) {
-                        // We're already there..
-                        alreadyThere = true;
+                const playerX = character.entity.position.global.x,
+                    playerY   = character.entity.position.global.y,
+                    toX       = tile.x * Env.tileSize,
+                    toY       = tile.y * Env.tileSize,
+                    fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                    toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
+
+                character.entity.cancelPath();
+                character.entity.page.area.pathfinding.workerHandlePath({
+                    movableID: character.entity.id,
+                    start: { x: fromTiles[0].x, y: fromTiles[0].y },
+                    destination: { x: toTiles[0].x, y: toTiles[0].y },
+                    startPt: { x: playerX, y: playerY },
+                    endPt: { x: toX, y: toY }
+                }, (data) => {
+
+                    console.log(`Path results received from worker!`);
+
+                    if (!data.success) {
+                        console.error("Could not find path!");
+                        return;
                     } else {
-                        path.flag = PATH_CHASE;
-                        character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
-                        character.entity.recordNewPath(path);
+                        console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                        console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
+                        console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
+
+                        if (data.path.ALREADY_THERE) {
+                            // We're already there..
+                            alreadyThere = true;
+                        } else {
+
+                            const path = new Path();
+                            data.path.walks.forEach((walk) => {
+                                path.walks.push(walk);
+                            });
+                            path.start = data.path.start;
+                            path.flag = PATH_CHASE;
+                            character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
+                            character.entity.recordNewPath(path);
+                        }
                     }
-                }
+                });
 
                 return {
                     then: (success, failed) => {

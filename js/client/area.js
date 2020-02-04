@@ -60,6 +60,9 @@ define(
                 this.listenTo(this, EVT_ZONE_OUT, (oldArea, oldPage, entity, zone) => {
                     this.removeEntity(entity);
                 });
+
+
+                this.pathfinding.setupArea();
             },
 
             addPages(addedPages, isZoning) {
@@ -653,6 +656,8 @@ define(
                         page.neighbours.southwest = this.pages[pageI - 1 + this.pagesPerRow];
                         page.neighbours.southwest.neighbours.northeast = page;
                     }
+
+                    this.pathfinding.addPage(page, pageI);
                 });
             },
 

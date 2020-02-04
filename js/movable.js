@@ -493,14 +493,6 @@ define(
                             }
                         }
 
-                        if (this.position.global.x % Env.tileSize !== 0 && this.position.global.y % Env.tileSize !== 0) {
-                            Log("Moved outside of both the horizontal and vertical center of the tile", LOG_ERROR);
-                            Log(`I am: ${this.id}`, LOG_ERROR);
-                            Log(this.position.global, LOG_ERROR);
-                            Log(this.getPathHistoryString(), LOG_ERROR);
-                            assert(false, "Moved outside of both the horizontal and vertical center of the tile");
-                        }
-
 
                         hasZoned = this.hasOwnProperty('isZoning');
                         if (!hasZoned) {
@@ -541,9 +533,11 @@ define(
                         if (this.path.finished()) {
                             // FIXME
                             this.triggerEvent(EVT_FINISHED_PATH, this.path.id);
-                            if (_.isFunction(this.path.onFinished)) this.path.onFinished();
-                            this.recordFinishedPath(this.path);
+
+                            const finishedPath = this.path;
                             this.path = null;
+                            if (_.isFunction(finishedPath.onFinished)) finishedPath.onFinished();
+                            this.recordFinishedPath(finishedPath);
 
                             // Finished moving
                             this.moving = false; // TODO: necessary?
@@ -616,7 +610,9 @@ define(
                 }
 
                 if (this.path && _.isFunction(this.path.onFailed)) {
-                    this.path.onFailed(EVT_NEW_PATH);
+                    const oldPath = this.path;
+                    this.path = null;
+                    oldPath.onFailed(EVT_NEW_PATH);
                 }
 
                 let x = this.position.global.x,
@@ -636,18 +632,8 @@ define(
                     else if (walk.direction === WEST)  x -= remainingWalk;
                     else if (walk.direction === EAST)  x += remainingWalk;
                     else throw Err(`Bad direction: ${walk.direction}`);
-
-                    let onX = x % Env.tileSize === 0,
-                        onY = y % Env.tileSize === 0;
-
-                    if (!onX && !onY) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    } else if (!onX && (walk.direction === NORTH || walk.direction === SOUTH)) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    } else if (!onY && (walk.direction === WEST || walk.direction === EAST)) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    }
                 }
+
                 Log(`Position: (${this.position.global.x}, ${this.position.global.y}) ==> (${x}, ${y})`, LOG_DEBUG);
                 Log(path, LOG_DEBUG);
 
@@ -675,7 +661,7 @@ define(
             this.cancelPath = () => {
                 if (this.path) {
                     if (_.isFunction(this.path.onFailed)) {
-                        this.path.onFailed();
+                        this.path.onFailed(EVT_CANCELLED_PATH);
                     }
 
                     this.triggerEvent(EVT_CANCELLED_PATH, { id: this.path.id, flag: this.path.flag });

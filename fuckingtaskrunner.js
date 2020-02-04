@@ -4,7 +4,8 @@ const chokidar = require('chokidar'),
     fsPath     = require('path'),
     exec       = require('child_process').exec,
     execSync   = require('child_process').execSync,
-    chalk      = require('chalk');
+    chalk      = require('chalk'),
+    notifier   = require('node-notifier');
 
 const Settings = {
     cacheFile: 'fuckingtaskrunner.json',
@@ -15,6 +16,9 @@ const Settings = {
 let CacheSettings;
 
 //
+// - System notification on failed to build/prepro
+// - Allow client/server to check if anything failed to build/prepro and prevent startup w/ clear message of what
+// doesn't exist
 // -- What if processing takes a while, and we have changes while we're still processing?
 //  - Can we queue changes? Will we even receive watch updates if we're in the middle of processing?
 //  - NOTE: Be careful if we go async, to NOT allow processing a file which is already in the process of being, uh,
@@ -48,8 +52,12 @@ for (let i=0; i<process.argv.length; ++i) {
 
     const arg = process.argv[i];
 
-    if (arg === "--dont-watch") {
+    if (arg === '--dont-watch') {
         console.log("Only running once (no watching for changes)");
+        Settings.dontWatch = true;
+    } else if (arg === '--rebuild-js') {
+        console.log("Rebuilding js files");
+        Settings.rebuildJs = true;
         Settings.dontWatch = true;
     }
 }
@@ -108,6 +116,9 @@ const UnlockFile = () => {
     }
 };
 
+const PromiseToReturnTrue = () => { return new Promise((resolve) => { resolve(); }); };
+const PromiseToReturnError = (err) => { return new Promise((resolve, reject) => { reject(err); }); };
+
 const TaskState = function(taskProcess, file) {
 
     this.process = () => {
@@ -131,15 +142,20 @@ const TaskState = function(taskProcess, file) {
 
         if (result instanceof Promise) {
             console.log("Calling promise");
-            //result.then(() => {
-            result.finally(() => {
+            // NOTE: Finally will hit regardless of then/catch; would be better to then and catch, but process or fail accordingly
+            result.then(() => {
+            //result.finally(() => {
                 console.log("Finished promise chain");
                 this.process();
             }, (err) => {
                 console.error(`Error: ${err}`);
+                taskProcess.failed();
+            }).catch((err) => {
+                console.error(`Error: ${err}`);
+                taskProcess.failed();
             });
         } else if (!result) {
-
+            taskProcess.failed();
         } else {
             this.process();
         }
@@ -172,14 +188,21 @@ const echoTask = new Task((file) => {
 const copyTask = new Task((file) => {
     return new Promise((resolve, reject) => {
         let pathFromJS = 'dist/js/' + fsPath.relative('js', file.path);
+        console.log(`Copying "${file.path}" to "${pathFromJS}"`);
         fs.copyFile(file.path, pathFromJS, (err) => {
             if (err) {
                 reject(err);
                 return;
             }
 
-            console.log(`Copied ${file.path} to ${pathFromJS}`);
+            console.log(`Copied "${file.path}" to "${pathFromJS}"`);
             file.path = pathFromJS;
+
+            if (!fs.existsSync(file.path)) {
+                reject(`File doesn't exist after copying`); // This can happen if its stomped over from a parallel copy/remove
+                return;
+            }
+
             resolve();
         });
     });
@@ -221,17 +244,26 @@ const preprocessJSTask = new Task((file) => {
 
     // Is file blacklisted?
     console.log(`About to check: ${file.path}`);
+    if (!fs.existsSync(file.path)) {
+        return PromiseToReturnError("File doesn't exist!");
+    }
+
     const srcFile = file.path.substr("dist/".length);
     if (CacheSettings.preprocess.blacklist.indexOf(srcFile) >= 0) {
         console.log(`Skipping blacklisted file ${srcFile}`);
-        return true;
+        return PromiseToReturnTrue();
+    } else if (srcFile.indexOf("lib/") >= 0) {
+        console.log(`Skipping lib file ${srcFile}`);
+        return PromiseToReturnTrue();
     }
 
     return new Promise((resolve, reject) => {
 
         // Babel
         console.log(`Preprocessing ${file.path}`);
-        exec(`node preprocessAST.js --file ${file.path} --output ${file.path}`, (err, stdout, stderr) => {
+        const prePath = file.path.replace('.js', '.pre.js');
+        execSync(`mv ${file.path} ${prePath}`);
+        exec(`node preprocessAST.js --file ${prePath} --output ${file.path}`, (err, stdout, stderr) => {
 
             if (err) {
                 reject(err);
@@ -261,9 +293,16 @@ const TaskProcess = function() {
 
     this.finally = (cb) => {
         this.finished = cb;
+        return this;
+    };
+
+    this.catch = (cb) => {
+        this.failed = cb;
+        return this;
     };
 
     this.finished = () => {};
+    this.failed = () => {};
     this.processList = [];
 };
 
@@ -291,7 +330,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         console.error("Starting cache from scratch..");
         cacheData = { "files": {}, "settings": {
             preprocess: {
-                blacklist: []
+                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPT.INJECTION.js", "js/SCRIPT.INJECTION.min.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js" ]
             }
         } };
     } else {
@@ -302,9 +341,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             console.error("ERROR: Missing expected preprocess blacklist");
             process.exit();
         }
-
-        CacheSettings = cacheData.settings;
     }
+
+    CacheSettings = cacheData.settings;
 
     const Cache = {
         data: cacheData,
@@ -369,6 +408,55 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
         const taskProcess = new TaskProcess();
 
+        const processItemFinished = (p, path, file, err) => {
+
+            // Remove from process queue
+            let idx = processingQueue.findIndex((q) => q === p);
+            processingQueue.splice(idx, 1);
+
+            console.log("Removing from processingQueue");
+            console.log(processingQueue);
+
+            // Update Cache
+            const basename = fsPath.basename(path),
+                hash       = err ? 0 : fileHash(path);
+
+            let cacheItem     = null,
+                cacheItemName = Cache.data.files[basename];
+            if (cacheItemName) {
+                cacheItem = cacheItemName.find((f) => f.path === path);
+            }
+
+            if (!cacheItem) {
+                // Adding new cache item
+                Cache.AddFile({
+                    path: path,
+                    cachedHash: hash
+                });
+            } else {
+                // Update cache item
+                Cache.UpdateFile({
+                    path: path,
+                    hash: hash
+                });
+            }
+
+            // Process next item after this one
+            if (p.runNext) {
+                processQueueItem(p.runNext);
+            } else if (processingQueue.length === 0) {
+                Cache.Save();
+
+                console.log("");
+                console.log("");
+                console.log(chalk.underline("Watching for changes"));
+
+                UnlockFile();
+            }
+            console.log("");
+
+        };
+
         // Queue of tasks waiting to be processed
         const processingQueue = [];
         const processQueueItem = (p) => {
@@ -377,54 +465,25 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             taskProcess.exec({
                 file: file
             }).finally(() => {
-
-                // Remove from process queue
-                let idx = processingQueue.findIndex((q) => q === p);
-                processingQueue.splice(idx, 1);
-
-                // Update Cache
-                const basename = fsPath.basename(path),
-                    hash       = fileHash(path);
-
-                let cacheItem     = null,
-                    cacheItemName = Cache.data.files[basename];
-                if (cacheItemName) {
-                    cacheItem = cacheItemName.find((f) => f.path === path);
-                }
-
-                if (!cacheItem) {
-                    // Adding new cache item
-                    Cache.AddFile({
-                        path: path,
-                        cachedHash: hash
-                    });
-                } else {
-                    // Update cache item
-                    Cache.UpdateFile({
-                        path: path,
-                        hash: hash
-                    });
-                }
-
-                // Process next item after this one
-                if (p.runNext) {
-                    processQueueItem(p.runNext);
-                } else if (processingQueue.length === 0) {
-                    Cache.Save();
-
-                    console.log("");
-                    console.log("");
-                    console.log(chalk.underline("Watching for changes"));
-
-                    UnlockFile();
-                }
-                console.log("");
+                processItemFinished(p, path, file, null);
+            }).catch((err) => {
+                
+                processItemFinished(p, path, file, 1);
             });
         };
 
         const stareAwkwardlyAt = (path) => {
 
             let cb = (eventType, path) => {
+
+                // Is this file already queued and hasn't begun processing yet? If so then it doesn't matter if its
+                // changed since the previous queue since when that one runs it'll process the most recent
+                for (let i = processingQueue.length - 1; i >= 0; --i) {
+                    if (processingQueue[i].path === path && !processingQueue[i].processing) {
+                        console.log("File already queued! Skipping");
+                        return;
+                    }
+                }
 
                 LockFile();
 
@@ -435,6 +494,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
 
                 processingQueue.push(queued);
 
+                console.log("Adding to processingQueue");
+                console.log(processingQueue);
+
+
                 if (runInOrderPackage && processingQueue.length > 1) {
                     if (processingQueue[processingQueue.length - 1].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
                     processingQueue[processingQueue.length - 1].runNext = queued;
@@ -443,7 +506,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     // Are we already busy processing this file? Then wait until its finished
                     // NOTE: Ignore the last item (that's us!)
                     for (let i = processingQueue.length - 2; i >= 0; --i) {
-                        if (processingQueue[i].file === path) {
+                        if (processingQueue[i].path === path) {
                             if (processingQueue[i].runNext) throw Error("We're about to override run next on processing item. This makes no sense!");
                             processingQueue[i].runNext = queued;
                             return;
@@ -467,11 +530,16 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                                     if (eventType === "rename") {
                                         return;
                                     }
+
+                                    // FIXME: Arbitrary delay in handling file to avoid needlessly running the same file
+                                    // multiple times off the same change
                                     console.log(`${chalk.yellow('>> ')} ${chalk.blue(path)} changed: ${eventType}`);
                                     watcher.close();
-                                    cb(eventType, path);
-                                    console.log(`Rewatching: ${chalk.blue(path)}`);
-                                    beginWatch(path);
+                                    setTimeout(() => {
+                                        cb(eventType, path);
+                                        console.log(`Rewatching: ${chalk.blue(path)}`);
+                                        beginWatch(path);
+                                    }, 100);
                                 });
                             } catch(e) {
                                 console.error(e);
@@ -578,6 +646,10 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     // File has changed since we last processed
                     Cache.UpdateFile(file);
                     file.needsProcess = true;
+                } else if (Settings.rebuildJs && file.path.indexOf('.js') !== -1) {
+                    // Rebuilding all JS files regardless
+                    Cache.UpdateFile(file);
+                    file.needsProcess = true;
                 } else {
                     // File has not changed
                 }
@@ -638,6 +710,11 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                         }).finally(() => {
                             if (--waitingOnTasks === 0) finishedProcessingTasks();
                             //cb(); console.log("Resolved count: " + (++totalCount) + "/" + allTaskPromises.length);
+                        }).catch((err) => {
+                            // Set hash to 0 since it failed and we want to force re-prepro next time
+                            const srcFile = file.path.substr("dist/".length);
+                            Cache.UpdateFile({ path: srcFile, hash: 0 });
+                            if (--waitingOnTasks === 0) finishedProcessingTasks();
                         });
                     }
                 };
@@ -713,14 +790,43 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         //.then((new Task((file) => {
         .then((file) => {
 
+            const jsFail = (err) => {
+                console.error("Failed to preprocess JS file");
+                console.error(err);
+
+                const prePath = file.path.replace('.js', '.pre.js');
+                execSync(`rm --force ${file.path}`);
+                execSync(`rm --force ${prePath}`);
+
+                // System notification
+                exec(`mpg123 --quiet resources/sounds/uiclick.mp3`);
+                notifier.notify(
+                    {
+                        title: 'Fucking. Task. Runner.',
+                        message: `Failed to preprocess JS file: ${file.path}`,
+                        //sound: '/usr/share/sounds/Oxygen-Sys-Error-Printing.ogg'
+                        //sound: 'jdrive/jstuff/work/personal/jbud/summit/playground/myquest/resources/sounds/uiclick.mp3
+                        //sound: 'resources/sounds/uiclick.mp3'
+                        type: 'error'
+                    },
+                    function(err, response) {
+                        // Response is response from notification
+                    }
+                );
+
+                throw new Error(err);
+            };
+
             // TODO: Uglify, Babel, Preprocessor (clear logs)
+            // NOTE: I think we can piggyback off preprocessJSTask to check syntax by failing if it fails to read or build AST
 
             if (file.in('dist/js/scripts')) {
                 return runTask(preprocessJSTask, file)
-                        .then(() => runTask(buildScriptTask, file));
+                        .then(() => runTask(buildScriptTask, file))
+                        .catch((err) => jsFail(err));
             }
 
-            return runTask(preprocessJSTask, file);
+            return runTask(preprocessJSTask, file).catch((err) => jsFail(err));
 
 
 

@@ -166,50 +166,60 @@ requirejs.config({
 
 
 // Load the main app module to start the app
-require(['jquery','bluebird','lodash','objectmgr','environment','keys','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp','client/chalk.polyfill'],function($,Promise,_,The,Env,Keys,Utils,Ext,Events,Stack,Errors,FSM,openpgp,chalk){
+require(['keys', 'environment'], (Keys, Env) => {
 
-	// TODO: why aren't The or Env global?
-    window['$']=$;
-    window['_']=_;
-	window['The']=The;
-	window['Env']=(new Env());
-	window['Ext']=Ext;
-	window['Stack']=Stack;
-	window['openpgp']=openpgp;
-	window['Promise']=Promise;
-    window['global']=window; // Shared global variable between client/server
-    window['chalk']=chalk;
+	window['Env'] = (new Env());
+    window['_global'] = window;
 
-	for(var util in Utils) {
-		window[util]=Utils[util];
-	}
+    require(['jquery','bluebird','lodash','objectmgr','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp','client/chalk.polyfill'],function($,Promise,_,The,Utils,Ext,Events,Stack,Errors,FSM,openpgp,chalk){
 
-	for(var evtObj in Events) {
-		window[evtObj]=Events[evtObj];
-	}
+        // TODO: why aren't The or Env global?
+        window['$']=$;
+        window['_']=_;
+        window['The']=The;
+        window['Ext']=Ext;
+        window['Stack']=Stack;
+        window['openpgp']=openpgp;
+        window['Promise']=Promise;
+        window['global']=window; // Shared global variable between client/server
+        window['chalk']=chalk;
 
-	for(var err in Errors) {
-		window[err]=Errors[err];
-	}
+        for(var util in Utils) {
+            window[util]=Utils[util];
+        }
 
-	for(var key in FSM) {
-		window[key]=FSM[key];
-	}
-	for(var i=0; i<FSM['states'].length; ++i) {
-		window[FSM['states'][i]]=i;
-	}
+        for(var evtObj in Events) {
+            window[evtObj]=Events[evtObj];
+        }
 
-	Env.isBot = false;
+        for(var err in Errors) {
+            window[err]=Errors[err];
+        }
 
-	window['printStackTrace'] = printStackTrace;
+        for(var key in FSM) {
+            window[key]=FSM[key];
+        }
+        for(var i=0; i<FSM['states'].length; ++i) {
+            window[FSM['states'][i]]=i;
+        }
 
-	var id = localStorage.getItem('id');
-	window['id']=id;
+        Env.isBot = false;
 
-    Ext.ready(Ext.CLIENT).then(() => {
-        requirejs(["main"]);
-        requirejs(["client/login"]);
-    })
+        window['printStackTrace'] = printStackTrace;
+
+        var id = localStorage.getItem('id');
+        window['id']=id;
+
+        window.DEBUGGER = (e) => {
+            console.error(e);
+            debugger;
+        };
+
+        Ext.ready(Ext.CLIENT).then(() => {
+            requirejs(["main"]);
+            requirejs(["client/login"]);
+        });
+    });
 });
 </script>
 </body>

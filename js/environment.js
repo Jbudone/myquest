@@ -68,7 +68,15 @@ define(function(){
             },
 
             debugPath: {
-                pathHistory: 100 // History count of paths for movables
+                pathHistory: 100, // History count of paths for movables
+                draw: true // Draw path
+            },
+
+            server: {
+                simulateLag: { // null to turn off
+                    delayPacketsMin: 30,
+                     delayPacketsMax: 300
+                 }
             }
 		};
 

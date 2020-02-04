@@ -2,7 +2,7 @@
 // Client Game
 //
 // Client game functionality runs here. Any sort of interaction with the client, handling events from the server, and
-// the actual game loop are all done here.
+// the actual game loop are all done here.   
 
 // TODO: Find a better way to replace modules for bots
 const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',
@@ -100,29 +100,12 @@ define(
                             }
                         };
 
-                        // We should be aligned along at least one axis on the tile
-                        const onTileX = (state.global.x % Env.tileSize) === 0,
-                            onTileY = (state.global.y % Env.tileSize) === 0;
-                        if (!onTileY && !onTileX) {
-                            throw Err(`Bad state for path, we are not aligned on either axis of tile: (${onTileX}, ${onTileY})`, playerPosition, state);
-                        }
-
-                        // TODO: The axis to which we are unaligned should be the same axis which we are moving along.
-                        // Run an assert here
-
                         if (player.path.id === null) {
                             throw Err("Player's path ID is null");
                         }
 
                         this.Log("Sending walkTo request", LOG_DEBUG);
                         this.Log(state, LOG_DEBUG);
-
-                        // Are we walking along a safe/valid path?
-                        const safePath = area.pathfinding.checkSafePath(state, path);
-                        if (!safePath) {
-                            this.Log(path, LOG_ERROR);
-                            throw Err("We've created a path which is invalid");
-                        }
 
                         // Do we have any walks that we don't want to send to the server? If we don't want to send any
                         // of them then mark path as dontSendToServer
@@ -539,7 +522,7 @@ define(
                         entity.page = The.area.pages[page];
                     };
 
-                    // Entity was removed from a page
+                    // Entity was removed from the area
                     server.onEntityRemoved = (page, removedEntity) => {
 
                         assert(!_.isNaN(removedEntity.id), `Expected valid entity id: ${removedEntity.id}`);
@@ -553,6 +536,32 @@ define(
                         if (!entity) throw Err(`Entity not found in area: ${removedEntity.id}`);
 
                         The.area.removeEntity(entity);
+                    };
+
+                    // Entity was removed from a page
+                    server.onEntityLeavePage = (page, removedEntity, newPage) => {
+
+                        assert(!_.isNaN(removedEntity.id), `Expected valid entity id: ${removedEntity.id}`);
+
+                        // Was it just us? Redundant information
+                        if (removedEntity.id === The.player.id) return;
+
+                        this.Log(`Entity zoned between pages: ${removedEntity.id}  from ${page} -> ${newPage}`, LOG_DEBUG);
+
+                        const entity = The.area.pages[page].movables[removedEntity.id];
+
+                        // We may not have the entity if we've already removed them locally (eg. teleported)
+                        if (!entity) {
+                            this.Log(`Entity not found in area: ${removedEntity.id}`, LOG_DEBUG);
+                            return;
+                        }
+
+                        // NOTE: Entities will zone between pages locally when we receive an EVT_ENTITY_ADDED event to
+                        // the new page; however we may not have the new page that they've zoned to, which is what this
+                        // event solves
+                        if (!The.area.pages[newPage]) {
+                            The.area.removeEntity(entity);
+                        }
                     };
 
                     server.onEntityNetserialize = (page, entityId, netSerialize) => {
@@ -651,37 +660,69 @@ define(
                                 return;
                             }
 
+
+
                             // Recalibrate to stopped position
-                            const tile = new Tile(state.position.tile.x, state.position.tile.y),
-                                path   = The.area.pathfinding.findPath(entity, tile);
+                            {
 
-                            if (path) {
+                                const playerX = entity.position.global.x,
+                                    playerY   = entity.position.global.y,
+                                    toX       = state.position.global.x,
+                                    toY       = state.position.global.y,
+                                    fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                                    toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
-                                if (path !== ALREADY_THERE) {
+                                The.area.pathfinding.workerHandlePath({
+                                    movableID: entity.id,
+                                    start: { x: fromTiles[0].x, y: fromTiles[0].y },
+                                    destination: { x: toTiles[0].x, y: toTiles[0].y },
+                                    startPt: { x: playerX, y: playerY },
+                                    endPt: { x: toX, y: toY }
+                                }, (data) => {
 
-                                    path.id   = pathId;
-                                    path.flag = pathFlag;
+                                    console.log(`Path results received from worker!`);
 
-                                    if (event.id === The.player.id) {
-                                        // Do not send this path to the server (obviously, since we're receiving the path
-                                        // from the server)
-                                        // TODO: Should find a cleaner way to store dontSendToServer than placing it on
-                                        // every walk
-                                        path.walks.forEach((walk) => {
-                                            walk.dontSendToServer = true;
+                                    if (!data.success) {
+                                        console.error("Could not find path!");
+                                    } else {
+                                        //console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                                        console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
+                                        console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
+
+
+                                        if (data.path.ALREADY_THERE) {
+
+                                            console.log("No path to be created..we're already there!");
+                                            entity.cancelPath();
+                                            return;
+                                        }
+
+                                        const path = new Path();
+                                        data.path.walks.forEach((walk) => {
+                                            path.walks.push(walk);
                                         });
+                                        path.start = data.path.start;
+                                        path.id   = pathId;
+                                        path.flag = pathFlag;
+
+                                        if (event.id === The.player.id) {
+                                            // Do not send this path to the server (obviously, since we're receiving the path
+                                            // from the server)
+                                            // TODO: Should find a cleaner way to store dontSendToServer than placing it on
+                                            // every walk
+                                            path.walks.forEach((walk) => {
+                                                walk.dontSendToServer = true;
+                                            });
+                                        }
+
+
+                                        // NOTE: Don't include path state here since we're running the path relative to our
+                                        // current position
+                                        entity.path = null;
+                                        entity.addPath(path);
+                                        entity.recordNewPath(path);
                                     }
-
-
-                                    // NOTE: Don't include path state here since we're running the path relative to our
-                                    // current position
-                                    entity.path = null;
-                                    entity.addPath(path);
-                                    entity.recordNewPath(path);
-                                }
-
-                            } else if (entity.path) {
-                                entity.cancelPath();
+                                });
                             }
                         }
 
@@ -978,75 +1019,106 @@ define(
 
                         // Look for an alternative path, but also recalibrate the provided path. Given the two optional
                         // paths determine what the best option is
-                        const alternativePath      = The.area.pathfinding.findPath(entity, pathState.destination.tile),
-                            recalibratePathResults = The.area.recalibratePath(movableState, pathState, path, maxWalk);
+                        const playerX = entity.position.global.x,
+                            playerY   = entity.position.global.y,
+                            toX       = pathState.destination.global.x,
+                            toY       = pathState.destination.global.y,
+                            fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                            toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
-                        if (alternativePath === ALREADY_THERE) {
 
-                            // We're already there anyways
-                            entity.path = null;
+                        entity.cancelPath();
+                        The.area.pathfinding.workerHandlePath({
+                            movableID: entity.id,
+                            start: { x: fromTiles[0].x, y: fromTiles[0].y },
+                            destination: { x: toTiles[0].x, y: toTiles[0].y },
+                            startPt: { x: playerX, y: playerY },
+                            endPt: { x: toX, y: toY }
+                        }, (data) => {
 
-                            if (entity.position.global.x % Env.tileSize !== 0 ||
-                                entity.position.global.y % Env.tileSize !== 0) {
+                            console.log(`Path results received from worker!`);
 
-                                this.Log("Our pathfinding path should at least recalibrate to the correct position of the tile", LOG_ERROR);
+                            if (!data.success) {
+
+                                // find end path and jump movable to there
+                                //this.Log("COULD NOT MOVE ENTITY THROUGH PATH!! Teleporting entity directly to path start", LOG_WARNING);
+                                //The.area.teleportEntity(entity, pathState.position.global);
+                                //entity.addPath(path);
+                                //entity.recordNewPath(path, pathState);
+                            } else {
+                                console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                                console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
+                                console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
+
+                                if (data.path.ALREADY_THERE) {
+
+                                    // We're already there anyways
+                                    entity.path = null;
+
+                                    if (entity.position.global.x % Env.tileSize !== 0 ||
+                                        entity.position.global.y % Env.tileSize !== 0) {
+
+                                        this.Log("Our pathfinding path should at least recalibrate to the correct position of the tile", LOG_ERROR);
+                                    }
+                                } else {
+                                    // FIXME: Just use alternative path for now until we can come up with a fast/high
+                                    // priority recalibrate for provided server path, and then compare alternative path
+                                    // (which could take some time and we may walk down the existing path further before
+                                    // this)
+
+
+
+                                    let alternativePath = new Path();
+                                    data.path.walks.forEach((walk) => {
+                                        alternativePath.walks.push(walk);
+                                    });
+                                    alternativePath.start = data.path.start;
+                                    alternativePath.id   = path.id;
+                                    alternativePath.flag = path.flag;
+
+                                    if (event.id === The.player.id) {
+                                        // Do not send this path to the server (obviously, since we're receiving the path from
+                                        // the server)
+                                        alternativePath.walks.forEach((walk) => { walk.dontSendToServer = true; });
+                                    }
+
+
+
+                                    delete entity.tilePath;
+                                    entity.tilePath = alternativePath;
+                                    entity.tilePath.destination = entity.tilePath.walks[entity.tilePath.walks.length - 1].destination;
+
+
+                                    delete entity.ptPath;
+                                    if (data.path.ptPath) {
+                                        const ptPath = new Path();
+                                        data.path.ptPath.walks.forEach((walk) => {
+                                            ptPath.walks.push(walk);
+                                        });
+                                        ptPath.start = data.path.ptPath.start;
+                                        entity.ptPath = ptPath;
+                                        ptPath.destination = ptPath.walks[ptPath.walks.length - 1].destination;
+
+                                        console.log("Path:");
+                                        console.log(ptPath);
+                                        entity.addPath(ptPath);
+                                        entity.recordNewPath(ptPath);
+
+                                    } else {
+                                        // FIXME: Prefer pt path for now; but later need to replace 100%
+
+                                        console.log("Path:");
+                                        console.log(path);
+                                        entity.addPath(path);
+                                        entity.recordNewPath(path);
+                                    }
+
+                                    this.Log("Adding alternative path", LOG_DEBUG);
+                                    entity.addPath(alternativePath);
+                                    entity.recordNewPath(alternativePath, movableState);
+                                }
                             }
-
-                        } else if
-                        (
-                            alternativePath &&
-                            (!recalibratePathResults || alternativePath.length() < path.length())
-                        )
-                        {
-
-                            // Alternative path from current position to path endpoint is faster
-
-                            // What if the recalibration of the provided path is too long, then its possible that our
-                            // total path length for the alternativePath is also too long. In this case we should
-                            // simply teleport
-                            if (alternativePath.length() > (path.length() + maxWalk)) {
-                                The.area.teleportEntity(entity, pathState.position.global);
-
-                                entity.addPath(path);
-                                entity.recordNewPath(path, pathState);
-                                return;
-                            }
-
-                            alternativePath.id   = path.id;
-                            alternativePath.flag = path.flag;
-
-                            if (event.id === The.player.id) {
-                                // Do not send this path to the server (obviously, since we're receiving the path from
-                                // the server)
-                                alternativePath.walks.forEach((walk) => { walk.dontSendToServer = true; });
-                            }
-
-                            this.Log("Adding alternative path", LOG_DEBUG);
-                            entity.addPath(alternativePath);
-                            entity.recordNewPath(alternativePath, movableState);
-
-                        } else if (recalibratePathResults) {
-
-                            if (event.id === The.player.id) {
-                                // Do not send this path to the server (obviously, since we're receiving the path from
-                                // the server)
-                                path.walks.forEach((walk) => { walk.dontSendToServer = true; });
-                            }
-
-                            this.Log("Adding recalibrated path", LOG_DEBUG);
-                            entity.addPath(path);
-                            entity.recordNewPath(path, movableState);
-
-                        } else {
-
-                            // find end path and jump movable to there
-                            this.Log("COULD NOT MOVE ENTITY THROUGH PATH!! Teleporting entity directly to path start", LOG_WARNING);
-
-                            The.area.teleportEntity(entity, pathState.position.global);
-
-                            entity.addPath(path);
-                            entity.recordNewPath(path, pathState);
-                        }
+                        });
                     };
 
                     // We've just teleported somewhere
@@ -1215,6 +1287,7 @@ define(
                         _(The.area.pages)
                             .pick(existingPages)
                             .forIn((page, pageI) => {
+                                The.area.pathfinding.removePage(page, pageI);
                                 page.unload();
                                 delete The.area.pages[pageI];
                             });
@@ -1364,8 +1437,32 @@ define(
                 // -------------------------------------------------------------------------------------------------- //
                 // -------------------------------------------------------------------------------------------------- //
 
-                const onMouseMove = function(mouse){
-                    ui.tileHover = new Tile(mouse.x, mouse.y);
+                const onMouseMove = function(mouse, evt) {
+                    //ui.tileHover = new Tile(mouse.x, mouse.y);
+                    ui.tileHover = { x: mouse.canvasX, y: mouse.canvasY };
+
+                    // New move to position
+                    if (evt && evt.buttons) {
+
+                        // FIXME: For now disable this, until we overhaul pathfinding system and its not so slow
+                        /*
+                        //  click to move player creates path for player
+                        const walkTo = { x: mouse.x + parseInt(The.camera.offsetX / Env.tileSize, 10),
+                        y: mouse.y - parseInt(The.camera.offsetY / Env.tileSize, 10) },
+                        walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
+                        toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
+
+
+                        // FIXME: This seems correct, however at one point when we transitioned between pages we got a
+                        // negative number for y (moving into topleft most page)
+                        const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
+
+                        The.user.clickedTile(toTile, globalPos, mouse);
+
+                        ui.updateCursor();
+                        */
+                        return;
+                    }
 
                     // Display the JumpPoints here (for testing purposes)
                     let _x     = (The.camera.offsetX / Env.tileSize) + The.area.curPage.x + ui.tileHover.x,
@@ -1470,7 +1567,7 @@ define(
 
                 ui.onMouseDown = (mouse, buttonCode) => {
 
-                    onMouseMove(mouse);
+                    onMouseMove(mouse, { buttons: buttonCode });
 
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {
@@ -1501,7 +1598,9 @@ define(
                         walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
                         toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
 
-                    The.user.clickedTile(toTile, mouse);
+                    const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
+
+                    The.user.clickedTile(toTile, globalPos, mouse);
                 };
 
                 The.user.hook('rightClickedEntity', The.user).after((entity, mouse) => {

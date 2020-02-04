@@ -221,370 +221,16 @@ define(
             // ------------------------------------------------------------------------------------------------------ //
 
 
-            // Recalibrate a path from the movable's state to the starting point of the path
-            //  Server: When the user sends a path request, but we're slightly behind in their position, then we need to
-            //  recalibrate the path to start from their server position to their expected position, and add this into
-            //  the path
-            //
-            //  Client: When the server sends us some path for an entity, but that entity isn't at the start path
-            //  position (most likely they're still walking there), then need to recalibrate the path from the entity
-            //  position to the start of the path
-            //
-            //
-            // state: The local state of entity
-            // pathState: Start position of path
-            // path: Path object
-            //
-            // NOTE: The recalibration will be injected into the path
-            this.recalibratePath = (state, pathState, path, maxWalk) => {
-
-                // Create a recalibration walk to move from posX/posY to center of tile
-                // NOTE: global real coordinates
-                const recalibrationWalk = (tile, posX, posY) => {
-
-                    const recalibration = [];
-
-                    if (posY !== tile.y * Env.tileSize) {
-                        // Inject walk to this tile
-                        const distance = -1 * (posY - tile.y * Env.tileSize),
-                            walk       = new Walk((distance < 0 ? NORTH : SOUTH), Math.abs(distance), tile.offset(0, 0));
-                        recalibration.unshift(walk);
-                    }
-
-                    if (posX !== tile.x * Env.tileSize) {
-                        // Inject walk to this tile
-                        const distance = -1 * (posX - tile.x * Env.tileSize),
-                            walk       = new Walk((distance < 0 ? WEST : EAST), Math.abs(distance), tile.offset(0, 0));
-                        recalibration.unshift(walk);
-                    }
-
-                    return recalibration;
-                };
-
-                // Check Path
-                // If player is not currently standing on starting point for path, then inject a path from current
-                // position to that starting point
-                if
-                (
-                    pathState.position.global.y !== state.position.global.y ||
-                    pathState.position.global.x !== state.position.global.x
-                ) {
-
-                    // Need to inject any necessary walk from the player position to the starting
-                    // point for the path,
-                    //
-                    //  Player Position -> Near Tile/Player -> Near Tile/Path -> Path-Start Position
-                    //
-                    //
-                    // Player Position (real coordinates)
-                    // Nearest Tile to Player (discrete tile)
-                    // Nearest Tile to Path-Start (discrete tile)
-                    // Path-Start Position (real coordinates)
-
-                    // Are we already standing on the path start tile
-                    let tileDiffX = pathState.position.tile.x - state.position.tile.x,
-                        tileDiffY = pathState.position.tile.y - state.position.tile.y;
-
-                    const onX   = state.position.global.x % Env.tileSize     === 0,
-                        onY     = state.position.global.y % Env.tileSize     === 0,
-                        pathOnX = pathState.position.global.x % Env.tileSize === 0,
-                        pathOnY = pathState.position.global.y % Env.tileSize === 0;
-                    // TODO: We could also consider differences < 2 (eg. path start is slightly more to the east, which
-                    // means they were clearly on their way to the next tile over which would have been a distance of 1)
-                    //
-                    // NOTE: We could have a situation where we're off the center of the tile, the path start is off the
-                    // center of the tile, so we can't go through this method (or otherwise need to revise it)
-                    if
-                    (
-                        Math.abs(tileDiffX) <= 1 &&
-                        Math.abs(tileDiffY) <= 1 &&
-                        (tileDiffY === 0 || tileDiffX === 0) &&
-                        ((onX ^ pathOnX) || tileDiffY === 0) && ((onY ^ pathOnY) || tileDiffX === 0)
-                    ) {
-
-                        // Simply walk to global path position
-                        // FIXME: Could easily consider initial walk   (could probably put this into Path object: addWalk)
-                        //          1) If both in same direction: merge walks
-                        //          2) If opposing directions: subtract from distance
-                        let globalDiffX = pathState.position.global.x - state.position.global.x,
-                            globalDiffY = pathState.position.global.y - state.position.global.y;
-
-
-                        // Its important that we recalibrate in order,
-                        //
-                        //  Player Position -> Near Tile/Path -> Path-Start Position
-                        // 
-                        // Otherwise you can end up running into collisions
-                        //
-                        //   +-----+-----+
-                        //   |     |  X  |   NEED To recalibrate to center of tile before recalibrating to path start
-                        //   |@.*..|..*  |
-                        //   |     |     |
-                        //   +-----+-----+
-                        //
-                        // this.Log("Recalibrations: Start State -> Start of Path Global", LOG_DEBUG);
-
-
-                        // Player Position -> Center of Tile
-
-                        if (!onX) {
-
-                            let dir, dist, walk;
-
-                            // Tile -> Path-Start Position
-                            if (globalDiffY !== 0) {
-                                dir = SOUTH;
-                                dist = globalDiffY;
-                                if (dist < 0) {
-                                    dir = NORTH;
-                                    dist = dist * -1;
-                                }
-                                walk = new Walk(dir, dist, null);
-                                path.walks.unshift(walk);
-                            }
-
-                            dir = EAST;
-                            dist = globalDiffX;
-                            if (dist < 0) {
-                                dir = WEST;
-                                dist = dist * -1;
-                            }
-                            walk = new Walk(dir, dist, null);
-                            path.walks.unshift(walk);
-
-                        } else if (!onY) {
-
-                            let dir, dist, walk;
-
-                            // Tile -> Path-Start Position
-                            if (globalDiffX !== 0) {
-                                dir = EAST;
-                                dist = globalDiffX;
-                                if (dist < 0) {
-                                    dir = WEST;
-                                    dist = dist * -1;
-                                }
-                                walk = new Walk(dir, dist, null);
-                                path.walks.unshift(walk);
-                            }
-
-                            dir = SOUTH;
-                            dist = globalDiffY;
-                            if (dist < 0) {
-                                dir = NORTH;
-                                dist = dist * -1;
-                            }
-                            walk = new Walk(dir, dist, null);
-                            path.walks.unshift(walk);
-
-                        } else {
-
-                            // We're already in the center of our own tile, so we don't need a start recalibration.
-                            // Essentially we just need to ensure that our end recalibration is done last
-                            // Since we're in the center of our own tile then we know that if globalDiffX % 16 !== 0
-                            // then the direction needs a recalibration and should be unshifted first
-                            if (globalDiffX % Env.tileSize !== 0) {
-
-                                let dir = EAST,
-                                    dist = globalDiffX;
-                                if (dist < 0) {
-                                    dir = WEST;
-                                    dist = dist * -1;
-                                }
-                                let walk = new Walk(dir, dist, null);
-                                path.walks.unshift(walk);
-
-                                // Tile -> Path-Start Position
-                                if (globalDiffY !== 0) {
-                                    dir = SOUTH;
-                                    dist = globalDiffY;
-                                    if (dist < 0) {
-                                        dir = NORTH;
-                                        dist = dist * -1;
-                                    }
-                                    walk = new Walk(dir, dist, null);
-                                    path.walks.unshift(walk);
-                                }
-
-                            } else if (globalDiffY % Env.tileSize !== 0) {
-
-                                let dir = SOUTH,
-                                    dist = globalDiffY;
-                                if (dist < 0) {
-                                    dir = NORTH;
-                                    dist = dist * -1;
-                                }
-                                let walk = new Walk(dir, dist, null);
-                                path.walks.unshift(walk);
-
-                                // Tile -> Path-Start Position
-                                if (globalDiffX !== 0) {
-                                    dir = EAST;
-                                    dist = globalDiffX;
-                                    if (dist < 0) {
-                                        dir = WEST;
-                                        dist = dist * -1;
-                                    }
-                                    walk = new Walk(dir, dist, null);
-                                    path.walks.unshift(walk);
-                                }
-
-                            } else {
-
-                                // We're in the same tile, so we only need the end recalibration (one walk)
-
-                                assert(globalDiffX === 0 || globalDiffY === 0, "We're in the same tile, no start recalibration but somehow end up off center of the tile");
-
-                                if (globalDiffX !== 0) {
-                                    let dir = EAST,
-                                        dist = globalDiffX;
-                                    if (dist < 0) {
-                                        dir = WEST;
-                                        dist = dist * -1;
-                                    }
-                                    walk = new Walk(dir, dist, null);
-                                    path.walks.unshift(walk);
-                                } else {
-                                    let dir = SOUTH,
-                                        dist = globalDiffY;
-                                    if (dist < 0) {
-                                        dir = NORTH;
-                                        dist = dist * -1;
-                                    }
-                                    let walk = new Walk(dir, dist, null);
-                                    path.walks.unshift(walk);
-                                }
-                            }
-                        }
-
-
-                        return true;
-
-                    } else {
-
-                        // Recalibrate path if necessary
-                        const startTiles = this.findNearestTiles(state.position.global.x, state.position.global.y)
-                                               .filter((tile) => this.hasTile(tile) && this.isTileOpen(tile)),
-                            endTiles     = this.findNearestTiles(pathState.position.global.x, pathState.position.global.y)
-                                               .filter((tile) => this.hasTile(tile) && this.isTileOpen(tile));
-
-                        if (startTiles.length === 0) {
-                            debugger;
-                            this.Log(`Recalibration could not find any startTiles (${state.position.global.x},${state.position.global.y})`, LOG_ERROR);
-                            return false;
-                        }
-
-                        // Find a path from position to beginning of path
-                        const foundPath = this.findPath(startTiles, endTiles);
-                        let startPath = null;
-                        if (foundPath) {
-
-                            startPath = {
-                                path: null,
-                                tile: foundPath.start.tile
-                            };
-
-                            if (foundPath.path) {
-                                startPath.path      = foundPath.path;
-                                startPath.startTile = foundPath.start.tile;
-                                startPath.endTile   = foundPath.end.tile;
-                            }
-                        }
-
-                        if (startPath) {
-
-                            // We may or may not have produced a path from our start position to the path position. If
-                            // we haven't then its most likely because one of our start tiles is equal to one of the end
-                            // tiles.
-                            const hasPath = !!startPath.path;
-
-                            const startTile = hasPath ? startPath.startTile : startPath.tile,
-                                endTile     = hasPath ? startPath.endTile : startPath.tile;
-
-                            const recalibrationStart = recalibrationWalk(startTile, state.position.global.x, state.position.global.y),
-                                recalibrationEnd     = recalibrationWalk(endTile, pathState.position.global.x, pathState.position.global.y);
-
-                            // Is the recalibration greater than our maximum recalibration length?
-                            if (maxWalk > 0) {
-                                let recalibrationLength = 0;
-                                for (let j = 0; j < recalibrationStart.length; ++j) {
-                                    recalibrationLength += recalibrationStart.distance;
-                                }
-                                for (let j = 0; j < recalibrationEnd.length; ++j) {
-                                    recalibrationLength += recalibrationEnd.distance;
-                                }
-
-                                if (hasPath) {
-                                    recalibrationLength += startPath.path.length();
-                                }
-
-                                if (recalibrationLength > maxWalk) {
-                                    this.Log(`Recalibration is longer than our maxWalk: ${recalibrationLength} > ${maxWalk}`, LOG_WARNING);
-                                    this.Log(startTiles);
-                                    this.Log(endTiles);
-                                    return false;
-                                }
-                            }
-
-                            // Excessive Debug logging here
-                            //if (hasPath) {
-                            //    this.Log("Recalibrations: Start State -> Start Tile -> Start of Path Tile -> Start of Path Global", LOG_DEBUG);
-                            //    this.Log(recalibrationStart, LOG_DEBUG);
-                            //    this.Log(startPath.path.walks, LOG_DEBUG);
-                            //    this.Log(recalibrationEnd, LOG_DEBUG);
-                            //} else {
-                            //    this.Log("Recalibrations: Start State -> Start of Path Tile -> Start of Path Global", LOG_DEBUG);
-                            //    this.Log(recalibrationStart, LOG_DEBUG);
-                            //    this.Log(recalibrationEnd, LOG_DEBUG);
-                            //}
-
-                            // Near Path/Tile -> Start Path-Position
-                            for (let j = recalibrationEnd.length - 1; j >= 0; --j) {
-                                const recalibration = recalibrationEnd[j],
-                                    dir = recalibration.direction;
-
-                                     if (dir === NORTH) recalibration.direction = SOUTH;
-                                else if (dir === SOUTH) recalibration.direction = NORTH;
-                                else if (dir === WEST)  recalibration.direction = EAST;
-                                else if (dir === EAST)  recalibration.direction = WEST;
-                                path.walks.unshift(recalibration);
-                            }
-
-                            // Near Player/Tile -> Near Path/Tile
-                            if (hasPath) {
-                                _.forEachRight(startPath.path.walks, (walk) => {
-                                    path.walks.unshift(walk);
-                                });
-                            }
-
-
-                            // Player Position -> Near Player/Tile
-                            for (let j = recalibrationStart.length - 1; j>= 0; --j) {
-                                const recalibration = recalibrationStart[j];
-                                path.walks.unshift(recalibration);
-                            }
-
-                            return true;
-
-                        } else {
-                            this.Log("No recalibration path found to get from current player position to path start..", LOG_ERROR);
-                            this.Log("--------------------------------", LOG_ERROR);
-                            this.Log(startTiles, LOG_ERROR);
-                            this.Log(endTiles, LOG_ERROR);
-                            this.Log("--------------------------------", LOG_ERROR);
-                            return false;
-                        }
-                    }
-                }
-
-                // Use this path
-                return true;
-            };
-
             // Find Path
             // Finds a path from one set of tiles to another set of tiles
             // NOTE: returns { path: null } if we're already there
             this.findPath = (fromTiles, toTiles, _maxWeight) => {
+
+
+
+
+
+
 
                 assert(_.isArray(fromTiles) && fromTiles.length > 0, "No tiles to start from");
                 assert(_.isArray(toTiles) && toTiles.length > 0, "No tiles to walk to");
@@ -894,6 +540,7 @@ define(
             //                                       COORDINATE CALCULATIONS
             // ------------------------------------------------------------------------------------------------------ //
 
+
             this.localFromGlobalCoordinates = (x, y) => {
 
                 const pageY = parseInt(y / Env.pageHeight, 10),
@@ -902,6 +549,7 @@ define(
                     page    = this.pages[pageI];
 
                 return {
+                    pageY, pageX, pageI,
                     x: (x % Env.pageWidth),
                     y: (y % Env.pageHeight),
                     page
@@ -918,8 +566,8 @@ define(
 
             this.isTileInRange = (tile) => {
 
-                return (inRange(tile.x, 0, this.areaWidth) &&
-                        inRange(tile.y, 0, this.areaHeight));
+                return (inRange(tile.x, 0, this.areaWidth - 1) &&
+                        inRange(tile.y, 0, this.areaHeight - 1));
             };
 
             this.findNearestTile = (posX, posY) => {
@@ -936,13 +584,7 @@ define(
                 // NOTE: global real coordinates
                 let tiles   = [];
                 const onTileY = (posY % Env.tileSize === 0),
-                    onTileX = (posX % Env.tileSize === 0);
-
-                // FIXME: THIS SHOULDN"T OCCUR BUT QUITE OFTEN DOES!
-                // Previous just ignored this by returning nearestTile anyways
-                // var nearestTile = this.findNearestTile(posX, posY);
-                // return [nearestTile];
-                assert(!(!onTileY && !onTileX), "Not centered to either x or y axis");
+                    onTileX   = (posX % Env.tileSize === 0);
 
                 if (onTileX && onTileY) {
                     const nearestTile = this.findNearestTile(posX, posY);
@@ -989,12 +631,14 @@ define(
             this.isTileOpen = (tile) => {
                 const localCoordinates = this.localFromGlobalCoordinates(tile.x, tile.y);
 
+                if (!Env.isServer && !localCoordinates.page) return true; // We don't have this page, so lets just assume its open?
                 return !(localCoordinates.page.collidables[localCoordinates.y] & (1 << localCoordinates.x));
             };
 
             this.isShootableTile = (tile) => {
                 const localCoordinates = this.localFromGlobalCoordinates(tile.x, tile.y);
 
+                if (!Env.isServer && !localCoordinates.page) return true; // We don't have this page, so lets just assume its open?
                 const sprite = localCoordinates.page.sprites[localCoordinates.y * Env.pageWidth + localCoordinates.x];
                 return (sprite && sprite.shootable);
             };
@@ -1088,7 +732,7 @@ define(
 
                             // Is this tile open?
                             ++iteration;
-                            if (this.isTileOpen(tileIter) && filter(tileIter)) {
+                            if (this.isTileInRange(tileIter) && this.isTileOpen(tileIter) && filter(tileIter)) {
                                 ++found;
 
                                 foundOpenTiles.push(new Tile(tileIter.x, tileIter.y));

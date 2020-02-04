@@ -1,0 +1,8 @@
+#!/bin/bash
+export DISPLAY=":0.0"
+export XAUTHORITY=/home/jbud/.Xauthority
+
+# Reload tilesheet
+# Reload map
+DISPLAY=":0" xdotool search --class tiled windowactivate --sync %1 key ctrl+t  windowactivate $( xdotool getactivewindow )
+DISPLAY=":0" xdotool search --class tiled windowactivate --sync %1 key ctrl+r  windowactivate $( xdotool getactivewindow )

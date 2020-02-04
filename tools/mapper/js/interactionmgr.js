@@ -1,4 +1,6 @@
 
+const CTRL_KEY = 1, ALT_KEY = 2, SHIFT_KEY = 3;
+
 const InteractionMgr = (function(){
 
     this.canvasEl = null;
@@ -8,7 +10,8 @@ const InteractionMgr = (function(){
             interactions: [],
             mouseDownPos: null
         },
-        mouseButtons = [];
+        mouseButtons = [],
+        modifiers = [];
 
     let lastMouseDown = (new Date()).getTime();
 
@@ -29,21 +32,43 @@ const InteractionMgr = (function(){
         scaleY = y;
     };
 
+    let offsetX = 0.0, offsetY = 0.0;
+    this.setCameraOffset = (x, y) => {
+        offsetX = x;
+        offsetY = y;
+    };
+
+    let boundsX = 0, boundsY = 0;
+    this.setBounds = (x, y) => {
+        boundsX = x;
+        boundsY = y;
+    };
+
     const mouseToCanvasCoords = (evt) => {
         const offset = $(this.canvasEl).offset();
         const worldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
         worldPt.x *= scaleX;
         worldPt.y *= scaleY;
 
+        worldPt.x += offsetX;
+        worldPt.y += offsetY;
+
+        // If mouse outside of map coords, then snap to map edge
+        if (worldPt.x >= boundsX) worldPt.x = boundsX;
+        if (worldPt.y >= boundsY) worldPt.y = boundsY;
+        if (worldPt.x < 0)        worldPt.x = 0;
+        if (worldPt.y < 0)        worldPt.y = 0;
+
         return worldPt;
     };
 
     const onMouseMove = (evt) => {
 
-        //console.log(evt.layerY);
-        //console.log(evt.pageY);
-        //console.log(evt.offsetY);
         const worldPt = mouseToCanvasCoords(evt);
+
+        //const offset = $(this.canvasEl).offset();
+        //const preWorldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
+        //console.log(`OnMouseMove: ${worldPt.x}, ${worldPt.y}    (raw: ${preWorldPt.x}, ${preWorldPt.y})`);
 
         let couldDrag = false;
 
@@ -91,9 +116,10 @@ const InteractionMgr = (function(){
         const draggedDist = {
             x: 0, y: 0
         };
+
         if (dragging.mouseDownPos) {
-            draggedDist.x = worldPt.x - dragging.mouseDownPos.x;
-            draggedDist.y = worldPt.y - dragging.mouseDownPos.y;
+            draggedDist.x = worldPt.x - offsetX - dragging.mouseDownPos.x;
+            draggedDist.y = worldPt.y - offsetY - dragging.mouseDownPos.y;
         }
 
         if (dragging.interactions.length > 0) {
@@ -124,7 +150,13 @@ const InteractionMgr = (function(){
 
         if (mouseButtons[1]) {
             this.onMiddleMouseDrag(worldPt, draggedDist);
+        } else if (mouseButtons[2]) {
+            this.onRightMouseDrag(worldPt, draggedDist);
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
     const onMouseUp = (evt) => {
@@ -137,6 +169,9 @@ const InteractionMgr = (function(){
         if (evt.button === 1) {
             this.onMiddleMouseClick(worldPt);
             return;
+        } else if (evt.button === 2) {
+            this.onRightMouseClick(worldPt);
+            return;
         }
 
         // What interactables have we hit?
@@ -144,6 +179,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseUp();
             }
         });
 
@@ -174,6 +210,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseDown(evt);
             }
         });
 
@@ -188,7 +225,7 @@ const InteractionMgr = (function(){
                 }
             });
         }
-        dragging.mouseDownPos = worldPt;
+        dragging.mouseDownPos = { x: worldPt.x - offsetX, y: worldPt.y - offsetY };
 
         const now = (new Date()).getTime(),
             timeSinceLastClick = now - lastMouseDown;
@@ -199,6 +236,15 @@ const InteractionMgr = (function(){
         }
         
         mouseButtons[evt.button] = true;
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
+
+        evt.cancelBubble = true;
+        evt.stopPropagation();
+        evt.preventDefault();
+        return false;
     };
 
     const onMouseDblClick = (hitInteractions, evt) => {
@@ -219,6 +265,10 @@ const InteractionMgr = (function(){
         if (!evt.ctrlKey) {
             $(this.canvasEl).removeClass('interactionGrab');
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
     const onKeyDown = (evt) => {
@@ -226,8 +276,17 @@ const InteractionMgr = (function(){
         if (couldDrag && evt.ctrlKey) {
             $(this.canvasEl).addClass('interactionGrab');
         }
+
+        modifiers[SHIFT_KEY] = evt.shiftKey;
+        modifiers[CTRL_KEY]  = evt.ctrlKey;
+        modifiers[ALT_KEY]   = evt.altKey;
     };
 
+    const onMouseScroll = (evt) => {
+        const worldPt = mouseToCanvasCoords(evt);
+        const scroll = { x: evt.wheelDeltaX, y: evt.wheelDeltaY };
+        this.onMouseScroll(worldPt, scroll);
+    };
 
     this.load = (canvasEl) => {
         this.canvasEl = canvasEl;
@@ -235,10 +294,17 @@ const InteractionMgr = (function(){
         canvasEl.addEventListener('mousemove', onMouseMove);
         canvasEl.addEventListener('mouseup', onMouseUp);
         canvasEl.addEventListener('mousedown', onMouseDown);
+        canvasEl.addEventListener('wheel', onMouseScroll);
 
         // FIXME: Couldn't get this to work off canvasEl
         window.addEventListener('keyup', onKeyUp);
         window.addEventListener('keydown', onKeyDown);
+        //window.addEventListener('scroll', onMouseScroll);
+
+        document.addEventListener("contextmenu", function(e){
+            if (e.target !== canvasEl) return;
+            e.preventDefault();
+        }, false);
     };
 
     this.reset = () => {
@@ -246,6 +312,8 @@ const InteractionMgr = (function(){
         entityId = 0;
 
         this.setCanvasScale(1.0, 1.0);
+        this.setCameraOffset(0.0, 0.0);
+        this.setBounds(0, 0);
     };
 
     this.unload = () => {
@@ -274,6 +342,8 @@ const InteractionMgr = (function(){
             onHoverIn: () => {},
             onHoverOut: () => {},
             onClick: () => {},
+            onMouseDown: () => {},
+            onMouseUp: () => {},
             onBeginDrag: () => {},
             onEndDrag: () => {},
             onDrag: () => {},
@@ -290,6 +360,8 @@ const InteractionMgr = (function(){
             onDrag: (cb) => { interaction.onDrag = cb; return interactionFunctions; },
             onBeginDrag: (cb) => { interaction.onBeginDrag = cb; return interactionFunctions; },
             onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
+            onMouseDown: (cb) => { interaction.onMouseDown = cb; return interactionFunctions; },
+            onMouseUp: (cb) => { interaction.onMouseUp = cb; return interactionFunctions; },
 
             // Functions
             setCanDrag: (canDrag) => { interaction.canDrag = canDrag; return interactionFunctions; },
@@ -312,7 +384,16 @@ const InteractionMgr = (function(){
         return interactables.find((interactable) => interactable.x === x && interactable.y === y);
     };
 
+    this.hasModifier = (modifier) => {
+        return modifiers[modifier];
+    };
+
     this.onMouseMove = () => {};
+    this.onMouseDown = () => {};
+    this.onMouseUp = () => {};
     this.onMiddleMouseClick = () => {};
     this.onMiddleMouseDrag = () => {};
+    this.onRightMouseClick = () => {};
+    this.onRightMouseDrag = () => {};
+    this.onMouseScroll = () => {};
 });
