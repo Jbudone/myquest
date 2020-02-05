@@ -170,6 +170,7 @@ const util          = require('util'),
     SourceMap       = require('source-map');
 
 
+GLOBAL._global = GLOBAL;
 GLOBAL.util = util;
 GLOBAL._ = _;
 GLOBAL.Promise = Promise;
@@ -181,8 +182,38 @@ GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('
 GLOBAL.fs = fs;
 
 GLOBAL.DEBUGGER = (msg) => {
-    if (!msg) msg = 'Debug: ' + (new Error()).stack.split('\n')[2];
+    const e = (new Error());
+    if (!msg) msg = 'Debug: ' + e.stack.split('\n')[2];
     console.log(msg);
+
+    // Print out line for error (for quick reference)
+    const stackFrame = ErrorReporter.parseError(e),
+        source       = stackFrame.stack[2].source
+
+    let failedCheckSource = "";
+    let startIdx = source.indexOf(msg);
+    let mapSource = null;
+    if (startIdx >= 0) {
+
+        let idx = 0, starts = [];
+        for (let i = 0; i < startIdx; ++i) {
+            if (source[i] === '(') starts.unshift(i);
+            else if (source[i] === ')') starts.shift();
+        }
+        idx = starts[starts.length - 1] + 1;
+        failedCheckSource = source.substr(idx, startIdx - idx - " || DEBUGGER(".length);
+
+        console.log(`${chalk.bold.red(failedCheckSource)}`);
+            
+        // FIXME: This is working BUT source appended to DEBUGGER is probably wrong (loc isn't accurate in preproAST)
+        console.log(`${chalk.bold.red("WARNING WARNING WARNING: SOURCE PROBABLY INACCURATE -- PLEASE FIX LOC IN preprocessAST.js")}`);
+        mapSource = source.match(/&&\s*"(?<src>((\\")*|[^"])*)"\s*;\s*$/)
+        if (mapSource && mapSource.groups && mapSource.groups.src) {
+            console.log(`${chalk.bold.red(mapSource.groups.src)}`);
+        }
+    }
+
+
     waitForInspector();
 };
 
