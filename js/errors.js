@@ -1,4 +1,4 @@
-define(['lib/stacktrace'], function(Stack){
+define(function(){
 
 	var GenericError = function(error, data) {
 		this.name    = "Error";
@@ -87,28 +87,30 @@ define(['lib/stacktrace'], function(Stack){
 
 
     // FIXME: Clean this up, yuck
-    const _global = typeof GLOBAL === "undefined" ? window : GLOBAL;
+    // WARNING WARNING WARNING:
+    //  IF YOU EDIT THIS THEN YOU'LL NEED TO EDIT webworker.job.js TOO
+    //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     _global.OBJECT = 'OBJECT';
     _global.FUNCTION = 'FUNCTION';
     _global.HAS_KEY = 'HAS_KEY';
     _global.IS_TYPE = 'IS_TYPE';
 
+    _global.OBJECT_TYPES = ['object', 'function', 'string'];
+
     var CHECK = (stuffToCheck) => {
 
-        console.log(stuffToCheck);
         stuffToCheck.forEach((check) => {
 
             if (check.checker === IS_TYPE) {
-
                 if (check.typeCmp === OBJECT) {
-                    if (typeof check.node !== "object") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
+                    if (typeof check.node !== "object" && typeof check.node !== "function" && typeof check.node !== "string") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
                 } else if (check.typeCmp === FUNCTION) {
-                    if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
+                    if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE FUNCTION", check);
                 } else { 
                     DEBUGGER("Unexpected type comparison", check);
                 }
             } else if (check.checker === HAS_KEY) {
-                if (!check.object.hasOwnProperty(check.property)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
+                if (!(check.property in check.object)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
             } else {
                 DEBUGGER("Unexpected check", check);
             }
@@ -116,6 +118,7 @@ define(['lib/stacktrace'], function(Stack){
     };
 
     _global.CHECK = CHECK;
+    //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   /*
 	// An extendable error class
