@@ -189,6 +189,11 @@ const copyTask = new Task((file) => {
     return new Promise((resolve, reject) => {
         let pathFromJS = 'dist/js/' + fsPath.relative('js', file.path);
         console.log(`Copying "${file.path}" to "${pathFromJS}"`);
+        
+        // NOTE: This may belong to a subdirectory that doesn't exist in dist yet
+
+        execSync(`mkdir -p $(dirname ${pathFromJS})`);
+
         fs.copyFile(file.path, pathFromJS, (err) => {
             if (err) {
                 reject(err);
@@ -329,8 +334,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         console.error(`Error reading file cache: ${err}`);
         console.error("Starting cache from scratch..");
         cacheData = { "files": {}, "settings": {
+            ignore: [ "js/SCRIPT.INJECTION.js" ],
             preprocess: {
-                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPT.INJECTION.js", "js/SCRIPT.INJECTION.min.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js" ]
+                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js" ]
             }
         } };
     } else {
@@ -520,6 +526,12 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             glob(path, {}, function (er, files) {
                 if (files) {
                     files.forEach((file) => {
+
+                        if (CacheSettings.ignore.indexOf(file) >= 0) {
+                            console.log(`Ignoring change: ${chalk.yellow(file)}`);
+                            return;
+                        }
+
                         console.log(`Watching: ${chalk.blue(file)}`);
                         const beginWatch = (path) => {
                             try {
@@ -574,6 +586,11 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                 glob(path, {}, function (er, files) {
                     if (files) {
                         for (let i = 0; i < files.length; ++i) {
+
+                            if (CacheSettings.ignore.indexOf(files[i]) >= 0) {
+                                //console.log(`Ignoring change: ${chalk.yellow(file)}`);
+                                continue;
+                            }
 
                             const watchItem = {
                                 path: files[i],
@@ -633,7 +650,9 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
             // Go through all of our files (previously cached, and currently watched) and update if necessary
             let updatedCache = [];
             for (let i = 0; i < allWatchedFilesList.length; ++i) {
-                let file = allWatchedFilesList[i];
+                let file = allWatchedFilesList[i],
+                    outputFile = 'dist/js/' + fsPath.relative('js', file.path),
+                    outputExists = fs.existsSync(outputFile);
                 if (file.cached && !file.exists) {
                     // File has been removed (or no longer watched)
                     Cache.RemoveFile(file);
@@ -646,6 +665,11 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
                     // File has changed since we last processed
                     Cache.UpdateFile(file);
                     file.needsProcess = true;
+                } else if (!outputExists) {
+                    // Output doesn't exist (probably explicitly deleted and needs rebuild)
+                    Cache.UpdateFile(file);
+                    file.needsProcess = true;
+                    console.log(`  File ${outputFile} doesn't exist. Rebuilding!`);
                 } else if (Settings.rebuildJs && file.path.indexOf('.js') !== -1) {
                     // Rebuilding all JS files regardless
                     Cache.UpdateFile(file);
