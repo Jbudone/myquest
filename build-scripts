@@ -3,8 +3,40 @@
 # TODO: find a better way to uglifyjs, remove comments and only keep minified script injection in memory
 
 ## inject INJECT.SCRIPT into all scripts
-node_modules/.bin/uglifyjs js/SCRIPT.INJECTION.js > dist/js/SCRIPT.INJECTION.min.js
-printf "\n" >> dist/js/SCRIPT.INJECTION.min.js
+
+# We want to minify the injection script, but we only want to do it once (in case we're about to batch
+# build scripts). Compare the dist version of script inject (should be the same) and also if the minified
+# version exists; if not then uglify, otherwise use current min
+
+
+# Source file js/SCRIPT.INJECTION.js doesn't exist?
+if [ ! -f js/SCRIPT.INJECTION.js ]; then
+    echo "js/SCRIPT.INJECTION.js doesn't exist. Exiting!";
+    exit
+fi
+
+# Do we need to rebuild SCRIPT.INJECTION.min.js?
+needToRebuild=0
+
+# Dist file dist/js/SCRIPT.INJECTION.js doesn't exist?
+if [ ! -f dist/js/SCRIPT.INJECTION.js ]; then
+    echo "dist/js/SCRIPT.INJECTION.js doesn't exist. Copying over";
+    needToRebuild=1;
+fi
+
+# Hashes differ between js/SCRIPT.INJECTION.js and dist/js/SCRIPT.INJECTION.js?
+uniques=$( cksum js/SCRIPT.INJECTION.js dist/js/SCRIPT.INJECTION.js | awk '{ print $1 }' | uniq | xargs | wc --words )
+if [ "$uniques" -eq "2" ]; then
+    echo "SCRIPT.INJECTION.js differs from dist/js/SCRIPT.INJECTION.js"
+    needToRebuild=1;
+fi
+#  - Rebuild
+if [ "$needToRebuild" == "1" ]; then
+    echo "Rebuilding script injection"
+    cp js/SCRIPT.INJECTION.js dist/js/SCRIPT.INJECTION.js;
+    node_modules/.bin/uglifyjs dist/js/SCRIPT.INJECTION.js > dist/js/SCRIPT.INJECTION.min.js
+    printf "\n" >> dist/js/SCRIPT.INJECTION.min.js
+fi
 
 BUILD_FILE=""
 
