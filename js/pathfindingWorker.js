@@ -115,7 +115,7 @@ define(() => {
 
         if (foundPath) {
             path.time = time;
-            if (!ptPath.path) {
+            if (!foundPath.path) {
                 path.ALREADY_THERE = true;
             } else {
                 path.ALREADY_THERE = false;
@@ -215,8 +215,8 @@ define(() => {
         };
 
         const isTileOpen = (tile) => {
-            const pageY = parseInt(y / Env.pageHeight, 10),
-                pageX   = parseInt(x / Env.pageWidth, 10),
+            const pageY = parseInt(tile.y / Env.pageHeight, 10),
+                pageX   = parseInt(tile.x / Env.pageWidth, 10),
                 pageI   = pageIndex(pageX, pageY),
                 page    = pages[pageI];
 
@@ -385,6 +385,7 @@ define(() => {
                         const turnWeight = (tileNode.previousDirection && tileNode.previousDirection !== o.dir ? 0.5 : 0.0);
                         return new TileNode(o.pt, o.dir, tileNode.weight + o.weight + turnWeight, tileNode);
                     });
+
 
             totalCostOfPathfind += ptNeighbours.length;
             return ptNeighbours;
