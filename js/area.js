@@ -226,7 +226,7 @@ define(
             // NOTE: returns { path: null } if we're already there
             this.findPath = (fromTiles, toTiles, _maxWeight) => {
 
-
+                DEBUGGER(); // ENsure we aren't using this anymore
 
 
 
