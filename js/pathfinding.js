@@ -72,6 +72,9 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
         // For movables, the pathfinder will automatically find their nearest tiles and consider each as a possible
         // to/from point.
         this.findPath = (from, to, options) => {
+
+            DEBUGGER(); // Ensure we aren't using this anymore 
+
             if (_.isUndefined(from) || _.isUndefined(to)) throw Err(`Either from/to was not defined`);
 
             if (!_.isArray(from)) from = [from];
@@ -327,6 +330,8 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
         this.recalibratePath = (path, fromPosition) => {
 
+            DEBUGGER(); // Assuming recalibratePath can be nuked
+
             // inject walk to beginning of path depending on where player is relative to start tile
             const startTile = path.start.tile,
                 position    = {
@@ -501,7 +506,7 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
             checkStr += `(${tile.x}, ${tile.y}) `;
             if (!area.isTileOpen(tile)) {
                 checkStr += "NOPE";
-                this.Log(checkStr, LOG_DEBUG);
+                this.Log(checkStr, LOG_INFO);
                 return false;
             }
 
@@ -524,7 +529,7 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                     checkStr += `(${tile.x}, ${tile.y}) `;
                     if (!area.isTileOpen(tile)) {
                         checkStr += "NOPE";
-                        this.Log(checkStr, LOG_DEBUG);
+                        this.Log(checkStr, LOG_INFO);
                         return false;
                     }
                 }
@@ -541,7 +546,7 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                     checkStr += `(${tile.x}, ${tile.y}) `;
                     if (!area.isTileOpen(tile)) {
                         checkStr += "NOPE";
-                        this.Log(checkStr, LOG_DEBUG);
+                        this.Log(checkStr, LOG_INFO);
                         return false;
                     }
                 }
@@ -690,7 +695,6 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
         let webworker;
 
-        // WARNING: MUST keep this in sync with worker values
         const ADD_PAGE  = 1,
             REMOVE_PAGE = 2,
             HANDLE_PATH = 3,
@@ -705,8 +709,8 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
                 webworker.onMessage = (data) => {
 
-                    console.log(`Message received from worker`); 
-                    console.log(data);
+                    this.Log(`Message received from worker`, LOG_INFO); 
+                    this.Log(data, LOG_INFO);
 
                     const resultType = data.result;
                     if (!resultType) {
@@ -752,6 +756,13 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
         this.workerHandlePath = (path, cb) => {
 
+
+            // In case we have an immediate return value
+            let queuedCb = null;
+
+
+
+
             // Keep track of the movable's current pathID so that we can skip stale paths
             if (!this.movablePathID[path.movableID]) {
                 this.movablePathID[path.movableID] = 0;
@@ -759,11 +770,15 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
             path.id = (++this.movablePathID[path.movableID]);
 
+            const startTileX = Math.floor(path.startPt.x / Env.tileSize),
+                destTileX    = Math.floor(path.endPt.x / Env.tileSize),
+                startTileY   = Math.floor(path.startPt.y / Env.tileSize),
+                destTileY    = Math.floor(path.endPt.y / Env.tileSize);
 
             if
             (
-                path.start.x === path.destination.x &&
-                path.start.y === path.destination.y
+                startTileX === destTileX &&
+                startTileY === destTileY
             )
             {
                 // Already on same tile
@@ -775,96 +790,203 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                 {
                     // Already at point
                     const retPath = {
-                        movableID: path.movableID,
-                        pathID: path.pathID,
-                        startTile: path.startTile,
-                        destinationTile: path.destinationTile,
-                        tileTime: -1,
-                        ptTime: -1,
-
+                        start: path.startPt,
+                        end: path.startPt,
                         ALREADY_THERE: true
                     };
 
-                    cb({
+                    queuedCb = {
                         result: RESULT_PATH,
                         success: true,
+
+                        movableID: path.movableID,
+                        pathID: path.id,
+                        time: -1,
+
                         path: retPath
-                    });
-                    return;
-                }
-
-                const ptPath = new Path(),
-                    globalDiffX = path.endPt.x - path.startPt.x;
-                    globalDiffY = path.endPt.y - path.startPt.y;
-
-                let dir, dist, walk;
-
-                if (globalDiffY !== 0) {
-                    dir = SOUTH;
-                    dist = globalDiffY;
-                    if (dist < 0) {
-                        dir = NORTH;
-                        dist = dist * -1;
                     }
-                    walk = new Walk(dir, dist, null);
-                    walk.destination = { x: path.startPt.x, y: path.endPt.y };
-                    ptPath.walks.unshift(walk);
                 }
+                else
+                {
 
-                if (globalDiffX !== 0) {
-                    dir = EAST;
-                    dist = globalDiffX;
-                    if (dist < 0) {
-                        dir = WEST;
-                        dist = dist * -1;
+                    const ptPath = new Path(),
+                        globalDiffX = path.endPt.x - path.startPt.x;
+                        globalDiffY = path.endPt.y - path.startPt.y;
+
+                    let dir, dist, walk;
+
+                    if (globalDiffY !== 0) {
+                        dir = SOUTH;
+                        dist = globalDiffY;
+                        if (dist < 0) {
+                            dir = NORTH;
+                            dist = dist * -1;
+                        }
+                        walk = new Walk(dir, dist, null);
+                        walk.destination = { x: path.startPt.x, y: path.endPt.y };
+                        ptPath.walks.unshift(walk);
                     }
-                    walk = new Walk(dir, dist, null);
-                    walk.destination = { x: path.endPt.x, y: path.endPt.y };
-                    ptPath.walks.unshift(walk);
+
+                    if (globalDiffX !== 0) {
+                        dir = EAST;
+                        dist = globalDiffX;
+                        if (dist < 0) {
+                            dir = WEST;
+                            dist = dist * -1;
+                        }
+                        walk = new Walk(dir, dist, null);
+                        walk.destination = { x: path.endPt.x, y: path.endPt.y };
+                        ptPath.walks.unshift(walk);
+                    }
+
+
+
+
+                    const retPath = {
+                        start: path.startPt,
+                        end: ptPath.walks[ptPath.walks.length - 1].destination,
+                        walks: ptPath.walks,
+                    };
+
+                    assert(this.checkSafePath({
+                        tile: { x: Math.floor(path.startPt.x / 16), y: Math.floor(path.startPt.y / 16) },
+                        global: path.startPt
+                    }, ptPath));
+
+                    queuedCb = {
+                        result: RESULT_PATH,
+                        success: true,
+
+                        movableID: path.movableID,
+                        pathID: path.id,
+                        time: -1,
+                        path: retPath
+                    };
                 }
+            } else {
+                webworker.postMessage({
+                    type: HANDLE_PATH,
+                    path: {
+                        movableID: path.movableID,
+                        pathID: path.id,
+                        startPt: path.startPt,
+                        endPt: path.endPt
+                    }
+                }, (data) => {
+                    if (data.pathID !== this.movablePathID[data.movableID]) {
+                        this.Log("Stale path, ignoring", LOG_DEBUG);
+                        return;
+                    }
 
-
-
-
-                const retPath = {
-                    movableID: path.movableID,
-                    pathID: path.pathID,
-                    startTile: path.startTile,
-                    destinationTile: path.destinationTile,
-                    start: path.start,
-                    walks: path.walks,
-                    
-                    ptPath: ptPath,
-                    tileTime: -1,
-                    ptTime: -1,
-                };
-
-                cb({
-                    result: RESULT_PATH,
-                    success: true,
-                    path: retPath
+                    const movable = area.movables[data.movableID];
+                    if (movable && data.success) {
+                        cbThen(data);
+                    } else {
+                        cbCatch(data);
+                    }
                 });
-                return;
             }
 
-            webworker.postMessage({
-                type: HANDLE_PATH,
-                path: {
-                    movableID: path.movableID,
-                    pathID: path.pathID,
-                    startTile: path.start,
-                    destinationTile: path.destination,
-                    startPt: path.startPt,
-                    endPt: path.endPt
-                }
-            }, (data) => {
-                if (data.pathID !== this.movablePathID[data.movableID]) {
-                    console.log("Stale path, ignoring");
-                    return;
+
+
+
+
+            let cbThen = (data) => {
+
+                this.Log(`Path results received from worker!`, LOG_DEBUG);
+
+                assert(data.path.start || data.path.end);
+                if (!data.path.start || !data.path.end) DEBUGGER();
+                this.Log(`Found path from (${data.path.start.x}, ${data.path.start.y}) -> (${data.path.end.x}, ${data.path.end.y})`, LOG_DEBUG);
+                this.Log(`FIND PATH TIME: ${data.time}`, LOG_DEBUG);
+
+                // FIXME: What about ALREADY_THERE?
+                if (data.path.ALREADY_THERE) {
+
+                } else {
+
+
+                //const movable = area.movables[data.movableID];
+                //if (!movable) {
+                //    console.error("Movable no longer exists in area!");
+                //} else if (!data.path.walks) {
+                //    throw Err("Bad tile walk");
+                //} else {
+
+                    const path = new Path();
+                    data.path.walks.forEach((walk) => {
+                        path.walks.push(walk);
+                    });
+                    path.start = data.path.start;
+
+                    // FIXME: cb w/ path so we don't have to create each time
+
+                    //delete movable.path;
+                    //const path = new Path();
+                    //data.path.walks.forEach((walk) => {
+                    //    path.walks.push(walk);
+                    //});
+                    //path.start = data.path.start;
+                    //movable.path = path;
+                    //path.destination = path.walks[path.walks.length - 1].destination;
+
+                    this.Log("Path:", LOG_DEBUG);
+                    this.Log(path, LOG_DEBUG);
+
+                    data.path = path;
+                //}
+
                 }
 
-                cb(data);
-            });
+                data.movable = area.movables[data.movableID];
+
+
+
+                if (callbacks.__then) {
+                    callbacks.__then(data);
+                }
+                
+            }, cbCatch = (data) => {
+
+                if (callbacks.__catch) {
+                    callbacks.__catch(data);
+                }
+            };
+
+            const setCallback = (cbType, cb) => {
+                if (cbType === 'then')  {
+                    callbacks.__then = cb;
+
+                    if (queuedCb) {
+                        const movable = area.movables[queuedCb.movableID];
+                        if (movable && queuedCb.success) {
+                            cbThen(queuedCb);
+                        }
+                    }
+                } else if (cbType === 'catch') {
+                    callbacks.__catch = cb;
+
+
+                    if (queuedCb) {
+                        const movable = area.movables[queuedCb.movableID];
+                        if (!movable || !queuedCb.success) {
+                            cbCatch(queuedCb);
+                        }
+                    }
+                }
+
+                return callbacks;
+            };
+
+            const callbacks = {
+                then: (cb) =>  { return setCallback('then', cb); },
+                catch: (cb) => { return setCallback('catch', cb); },
+
+                __then: null,
+                __catch: null
+            };
+
+            return callbacks;
         };
 
         this.removePage = (page, pageI) => {
