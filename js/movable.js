@@ -582,6 +582,9 @@ define(
 
             this.addPath = (path) => {
 
+                if (Env.assertion.checkSafePath) {
+                    assert(this.page.area.pathfinding.checkSafePath(this.position, path));
+                }
 
                 // add/replace path
 

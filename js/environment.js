@@ -46,7 +46,8 @@ define(function(){
 		this.assertion = {
 			eventListeningDuplicates: true,
             requiresResources: false, // Testing between computers
-            checkGetImageDataZeroBug: true // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkGetImageDataZeroBug: true, // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkSafePath: true // Confirm path is safe when adding to movable
 		};
 
 		this.game = {

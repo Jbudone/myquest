@@ -848,10 +848,10 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                         walks: ptPath.walks,
                     };
 
-                    assert(this.checkSafePath({
-                        tile: { x: Math.floor(path.startPt.x / 16), y: Math.floor(path.startPt.y / 16) },
-                        global: path.startPt
-                    }, ptPath));
+                    if (Env.assertion.checkSafePath) {
+                        const startTile = new Tile(Math.floor(path.startPt.x / Env.tileSize), Math.floor(path.startPt.y / Env.tileSize));
+                        assert(this.checkSafePath({ tile: startTile, global: path.startPt }, ptPath));
+                    }
 
                     queuedCb = {
                         result: RESULT_PATH,
