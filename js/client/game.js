@@ -28,6 +28,7 @@ define(
             this.setLogPrefix('Game');
 
             this.onStarted = function() {};
+            this.gameStep = function() {};
 
             let server   = null,
                 ui       = null,
@@ -346,6 +347,8 @@ define(
                             The.UI.step(time);
 
                             FX.step(time);
+
+                            this.gameStep(time);
 
                             // Update again
                             setTimeout(gameLoop, gameLoopSpeed);
