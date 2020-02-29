@@ -303,7 +303,7 @@ define(
                 //
                 // This works by essentially finding the starting point for the path and walking along that path to
                 // check if each tile is open.
-                const safePath = area.pathfinding.checkSafePath(reqState, path);
+                //const safePath = area.pathfinding.checkSafePath(reqState, path);
 
 
                 const movableState = {
@@ -329,6 +329,7 @@ define(
                     }
                 };
 
+                /*
                 if (!safePath) {
                     this.Log("Path is not safe for user... cancelling!");
 
@@ -381,6 +382,7 @@ define(
                     }
                     return;
                 }
+                */
 
 
                 // FIXME: Decide if we should recalibrate from curPos -> pathPos and unshift to provide path  OR  find a
@@ -402,10 +404,13 @@ define(
                         endPt: { x: toPt.x, y: toPt.y }
                     }).then((localPath) => {
 
-                        path.walks = [];
+                        this.Log(localPath, LOG_DEBUG);
+                        player.path = null;
                         if (localPath.path.ALREADY_THERE) {
                             this.Log("No need to recalibate to position; we're already synced");
-                            DEBUGGER(); // THIS SHOULD NEVER HAPPEN! Our from/to points are teh exact same
+
+                            // NOTE: This can happen where the user and server position are out of sync and the user
+                            // just happens to click to move to the server position
                         } else {
 
                             // FIXME: Prepend recalibration to path?
@@ -413,18 +418,15 @@ define(
                             //_.forEachRight(walks, (walk) => {
                             //    path.walks.unshift(walk);
                             //});
+
+                            this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
+                            this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
+                            this.Log(localPath.path, LOG_DEBUG);
+                            player.addPath(localPath.path);
+                            player.recordNewPath(localPath.path, movableState);
+                            this.triggerEvent(EVT_USER_ADDED_PATH);
                         }
 
-
-                        this.Log(localPath, LOG_DEBUG);
-                        player.path = null;
-
-                        this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
-                        this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
-                        this.Log(localPath.path, LOG_DEBUG);
-                        player.addPath(localPath.path);
-                        player.recordNewPath(localPath.path, movableState);
-                        this.triggerEvent(EVT_USER_ADDED_PATH);
 
                         if (this.isConnected) {
                             const response = new Response(action.id);
