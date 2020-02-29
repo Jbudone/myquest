@@ -1003,6 +1003,18 @@ define(['loggable'], (Loggable) => {
                 if(!spriteObj.sheet) spriteObj.sheet = sheetData;
                 if (sy!=-1 && sx!=-1 && sprite !== -1 && spriteObj.hasOwnProperty('static')) {
                     pageBg.canvasCtx.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+
+
+                    if (Env.renderer.drawCollisions) {
+                        const entIdInSheet = sprite - sheetData.gid.first;
+                        if (collisions !== undefined && collisions.indexOf(entIdInSheet) >= 0) {
+                            pageBg.canvasCtx.fillStyle = "#FF0000AA";
+                            pageBg.canvasCtx.fillRect(
+                                px, py,
+                                Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize
+                            );
+                        }
+                    }
                 }
             }
         };
