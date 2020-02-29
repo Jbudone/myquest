@@ -68,7 +68,7 @@ define(function(){
           stack = err.stack;
 
       stack = message + "\n" + stack;
-      if (!Env.isServer) {
+      if (!Env.isServer && !Env.isBot) {
           console.error(message);
           console.error(args);
           debugger;
