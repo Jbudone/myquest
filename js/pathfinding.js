@@ -919,6 +919,10 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                     });
                     path.start = data.path.start;
 
+                    if (data.path.debugCheckedNodes) {
+                        path.debugCheckedNodes = data.path.debugCheckedNodes;
+                    }
+
                     // FIXME: cb w/ path so we don't have to create each time
 
                     //delete movable.path;

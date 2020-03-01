@@ -684,6 +684,23 @@ define(['loggable'], (Loggable) => {
                             }
                             this.ctxEntities.lineWidth = this.settings.debugPath.lineWidth;
                             this.ctxEntities.stroke();
+
+                            // Render tiles searched for path
+                            // NOTE: nodes are points (entrance to tile)
+                            if (movable.path.debugCheckedNodes) {
+                                let nodes = movable.path.debugCheckedNodes;
+                                for (let i = 0; i < nodes.length; ++i) {
+                                    const node = nodes[i],
+                                        x = Math.floor(node.x / Env.tileSize),
+                                        y = Math.floor(node.y / Env.tileSize);
+
+                                    this.ctxEntities.strokeRect(
+                                        Env.tileScale * (x * Env.tileSize - The.camera.globalOffsetX),
+                                        Env.tileScale * (y * Env.tileSize + The.camera.globalOffsetY),
+                                        Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize,
+                                    );
+                                }
+                            }
                         }
                     });
                     this.ctxEntities.restore();

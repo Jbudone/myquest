@@ -64,6 +64,7 @@ define(() => {
                     retPath = {
                         start: path.startPt,
                         end: path.startPt,
+                        debugCheckedNodes: [],
                         ALREADY_THERE: true
                     };
                 } else {
@@ -71,7 +72,8 @@ define(() => {
 
                         walks: path.ptPath.walks,
                         start: path.startPt,
-                        end: path.ptPath.walks[path.ptPath.walks.length - 1].destination
+                        end: path.ptPath.walks[path.ptPath.walks.length - 1].destination,
+                        debugCheckedNodes: path.debugCheckedNodes
                     };
                 }
 
@@ -115,6 +117,7 @@ define(() => {
 
         if (foundPath) {
             path.time = time;
+            path.debugCheckedNodes = foundPath.debugCheckedNodes;
             if (!foundPath.path) {
                 path.ALREADY_THERE = true;
             } else {
@@ -331,7 +334,8 @@ define(() => {
             neighbours            = {};
 
         let nearestEnd          = null,
-            totalCostOfPathfind = 0;
+            totalCostOfPathfind = 0,
+            debugCheckedNodes   = [];
 
         const diagonalCost = 1.5,//Math.ceil(Math.sqrt(Env.tileSize)),
             cardinalCost   = 1;
@@ -494,6 +498,9 @@ define(() => {
                 const neighbourNode = nodeNeighbours[i],
                     neighbour       = neighbourNode.pt,
                     neighbourHash   = hashCoordinates(neighbour.x, neighbour.y);
+
+
+                debugCheckedNodes.push({ x: neighbour.x, y: neighbour.y, cost: cheapestWeightClass });
 
                 // FIXME: Check if neighbour point is in the same tile as the end point, if so we can manually build
                 // remaining points here
@@ -781,6 +788,7 @@ define(() => {
 
 
             return {
+                debugCheckedNodes,
                 path,
                 start: startPt,
                 end: nearestEnd
