@@ -388,7 +388,6 @@ define(() => {
                     });
 
 
-            totalCostOfPathfind += ptNeighbours.length;
             return ptNeighbours;
 
         };
@@ -468,12 +467,30 @@ define(() => {
             }
         openNodes[estimatedCost].push(fromNode);
 
+        let totalIts = 0;
+
         // A* Pathfinding
         while (!isObjectEmpty(openNodes)) {
 
+            ++totalIts;
+            if (totalIts > 1000) {
+                DEBUGGER();
+                console.error("We've iterated too much! Something went wrong");
+                break;
+            }
+
             // Pop the (approximated) cheapest available pt
-            const cheapestWeightClass = frontOfObject(openNodes),
-                openNode              = openNodes[cheapestWeightClass].shift();
+            //const cheapestWeightClass = frontOfObject(openNodes),
+            //    openNode              = openNodes[cheapestWeightClass].shift();
+
+            // FIXME: frontOfObject not working so long as we have a turn weight of 0.5 (string ordering?)
+            let cheapestWeightClass = frontOfObject(openNodes);
+            Object.keys(openNodes).forEach((key) => {
+                if (parseInt(key, 10) < cheapestWeightClass) {
+                    cheapestWeightClass = key;
+                }
+            });
+            const openNode = openNodes[cheapestWeightClass].shift();
 
             if (openNodes[cheapestWeightClass].length === 0) {
                 delete openNodes[cheapestWeightClass];
