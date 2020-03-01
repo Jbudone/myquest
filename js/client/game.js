@@ -836,6 +836,8 @@ define(
                             else if (walk.direction === SOUTH) pathState.destination.global.y += walkDist;
                             else if (walk.direction === WEST)  pathState.destination.global.x -= walkDist;
                             else if (walk.direction === EAST)  pathState.destination.global.x += walkDist;
+
+                            walk.destination = { x: pathState.destination.global.x, y: pathState.destination.global.y };
                         });
 
                         const destTileX = Math.floor(pathState.destination.global.x / Env.tileSize),
