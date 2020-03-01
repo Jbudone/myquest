@@ -108,12 +108,9 @@ define(() => {
         //  - from/to (points)  need to fill path (points)
         //  - from/to (points) and tiled path as hint,  need to refine path to points
 
-        let time = Date.now(),
-            now  = time;
-
+        let time = -Date.now();
         const foundPath = findPath(path.startPt, path.endPt);
-        time -= now;
-
+        time += Date.now();
 
         if (foundPath) {
             path.time = time;
@@ -491,6 +488,8 @@ define(() => {
                     neighbour.weight < maxWeight
                 );
             });
+
+            totalCostOfPathfind += nodeNeighbours.length;
 
             // Check each neighbour if they were already searched (replace if necessary), otherwise add
             for (let i = 0; i < nodeNeighbours.length; ++i) {
