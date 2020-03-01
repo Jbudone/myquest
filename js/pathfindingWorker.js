@@ -348,12 +348,6 @@ define(() => {
             ];
 
             // FIXME: Check previousDirection to avoid searching in the reverse direction (was going north, no need to check south neighbour)
-            // NOTE: Without this we're also running into an issue of moving forwards/backwards between walks (eg. north then south)
-                 if (tileNode.previousDirection === 'n') cardinalDistances[2] = maxWeight;
-            else if (tileNode.previousDirection === 'w') cardinalDistances[3] = maxWeight;
-            else if (tileNode.previousDirection === 's') cardinalDistances[0] = maxWeight;
-            else if (tileNode.previousDirection === 'e') cardinalDistances[1] = maxWeight;
-
 
             const ptNeighbours =
                 [
