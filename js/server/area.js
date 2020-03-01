@@ -293,6 +293,10 @@ define(
 
                 // Setup Spawns
                 this.spawns = spawns;
+                if (Env.game.world.noNpcs) {
+                    this.Log("Preventing npcs from spawning: Env.game.world.noNpcs");
+                    this.spawns = null;
+                }
                 const pagesWithSpawns = {};
                 _.forEach(this.spawns, (spawn, spawnCoord) => {
                     const ty   = parseInt(spawnCoord / areaWidth, 10),

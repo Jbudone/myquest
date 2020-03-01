@@ -79,6 +79,10 @@ define(function(){
                     delayPacketsMin: 30,
                      delayPacketsMax: 300
                  }
+            },
+
+            world: {
+                noNpcs: true
             }
 		};
 
