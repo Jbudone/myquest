@@ -832,10 +832,16 @@ define(
 
                             const walkDist = evtWalk.distance - evtWalk.walked;
 
-                                 if (walk.direction === NORTH) pathState.destination.global.y -= walkDist;
-                            else if (walk.direction === SOUTH) pathState.destination.global.y += walkDist;
-                            else if (walk.direction === WEST)  pathState.destination.global.x -= walkDist;
-                            else if (walk.direction === EAST)  pathState.destination.global.x += walkDist;
+                            const isNorth = (walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST),
+                                isSouth   = (walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST),
+                                isWest    = (walk.direction === WEST || walk.direction === NORTHWEST || walk.direction === SOUTHWEST),
+                                isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
+
+                                if (walk.direction === isNorth) pathState.destination.global.y -= walkDist;
+                            else if (walk.direction === isSouth) pathState.destination.global.y += walkDist;
+
+                                 if (walk.direction === isWest)  pathState.destination.global.x -= walkDist;
+                            else if (walk.direction === isEast)  pathState.destination.global.x += walkDist;
 
                             walk.destination = { x: pathState.destination.global.x, y: pathState.destination.global.y };
                         });
@@ -869,10 +875,17 @@ define(
 
                             entity.path.walks.forEach((walk) => {
                                 const walkDist = walk.distance - walk.walked;
-                                     if (walk.direction === NORTH) currentDestination.y -= walkDist;
-                                else if (walk.direction === SOUTH) currentDestination.y += walkDist;
-                                else if (walk.direction === WEST)  currentDestination.x -= walkDist;
-                                else if (walk.direction === EAST)  currentDestination.x += walkDist;
+
+                                const isNorth = (walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST),
+                                    isSouth   = (walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST),
+                                    isWest    = (walk.direction === WEST || walk.direction === NORTHWEST || walk.direction === SOUTHWEST),
+                                    isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
+
+
+                                     if (walk.direction === isNorth) currentDestination.y -= walkDist;
+                                else if (walk.direction === isSouth) currentDestination.y += walkDist;
+                                else if (walk.direction === isWest)  currentDestination.x -= walkDist;
+                                else if (walk.direction === isEast)  currentDestination.x += walkDist;
                             });
 
                             if (currentDestination.x === pathState.destination.global.x && currentDestination.y === pathState.destination.global.y) {

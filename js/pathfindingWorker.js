@@ -347,28 +347,31 @@ define(() => {
                 (Env.tileSize - pt.x % Env.tileSize) // EAST
             ];
 
+            const diagonalDistances = [
+                Math.min(cardinalDistances[0], cardinalDistances[1]), // NORTHWEST
+                Math.min(cardinalDistances[0], cardinalDistances[3]), // NORTHEAST
+                Math.min(cardinalDistances[2], cardinalDistances[1]), // SOUTHWEST
+                Math.min(cardinalDistances[2], cardinalDistances[3]), // SOUTHEAST
+            ];
+
             // FIXME: Check previousDirection to avoid searching in the reverse direction (was going north, no need to check south neighbour)
 
             const ptNeighbours =
                 [
-
-                    // Diagonals
-                    //{ pt: { x: pt.x - 1, y: pt.y - 1 }, weight: diagonalCost, dir: 'nw' },
-                    //{ pt: { x: pt.x + 1, y: pt.y - 1 }, weight: diagonalCost, dir: 'ne' },
-                    //{ pt: { x: pt.x - 1, y: pt.y + 1 }, weight: diagonalCost, dir: 'sw' },
-                    //{ pt: { x: pt.x + 1, y: pt.y + 1 }, weight: diagonalCost, dir: 'se' },
-
-                    // Cardinals
-                    //{ pt: { x: pt.x - 1, y: pt.y },     weight: cardinalCost, dir: 'w' },
-                    //{ pt: { x: pt.x + 1, y: pt.y },     weight: cardinalCost, dir: 'e' },
-                    //{ pt: { x: pt.x, y: pt.y - 1 },     weight: cardinalCost, dir: 'n' },
-                    //{ pt: { x: pt.x, y: pt.y + 1 },     weight: cardinalCost, dir: 's' },
-
-
+                    // Cardinal Directions
                     { pt: { x: pt.x - cardinalDistances[1], y: pt.y },     weight: cardinalCost * cardinalDistances[1], dir: 'w' },
                     { pt: { x: pt.x + cardinalDistances[3], y: pt.y },     weight: cardinalCost * cardinalDistances[3], dir: 'e' },
                     { pt: { x: pt.x, y: pt.y - cardinalDistances[0] },     weight: cardinalCost * cardinalDistances[0], dir: 'n' },
                     { pt: { x: pt.x, y: pt.y + cardinalDistances[2] },     weight: cardinalCost * cardinalDistances[2], dir: 's' },
+
+                    // Diagonal Directions
+                    // Going in a diagonal direction to the nearest edge; so pick the min cardinal direction and use
+                    // that as our travel distance
+                    { pt: { x: pt.x - diagonalDistances[0], y: pt.y - diagonalDistances[0] },     weight: diagonalCost * diagonalDistances[0], dir: 'nw' },
+                    { pt: { x: pt.x + diagonalDistances[1], y: pt.y - diagonalDistances[1] },     weight: diagonalCost * diagonalDistances[1], dir: 'ne' },
+                    { pt: { x: pt.x - diagonalDistances[2], y: pt.y + diagonalDistances[2] },     weight: diagonalCost * diagonalDistances[2], dir: 'sw' },
+                    { pt: { x: pt.x + diagonalDistances[3], y: pt.y + diagonalDistances[3] },     weight: diagonalCost * diagonalDistances[3], dir: 'se' },
+
                 ].map((o) => {
                     o.tile = new Tile(Math.floor(o.pt.x / Env.tileSize), Math.floor(o.pt.y / Env.tileSize));
                     return o;
@@ -631,19 +634,19 @@ define(() => {
             let distX = Math.abs(nearestEnd.pt.x - nextPt.pt.x),
                 distY = Math.abs(nearestEnd.pt.y - nextPt.pt.y),
                 dist  = Math.max(distX, distY);
-            if (distX !== 0 && distY !== 0) {
-                debugger;
-                throw "Previous point off alignment, no diagonal yet!";
+            if(!(distX === 0 || distY === 0 || distX === distY)) {
+                debugger; // Wtf?
+                throw "This shouldn't happen!";
             }
 
             if (direction === 'n') dir = NORTH;
             else if (direction === 's') dir = SOUTH;
             else if (direction === 'e') dir = EAST;
             else if (direction === 'w') dir = WEST;
-            //else if (direction === 'nw') dir = NORTHWEST;
-            //else if (direction === 'ne') dir = NORTHEAST;
-            //else if (direction === 'sw') dir = SOUTHWEST;
-            //else if (direction === 'se') dir = SOUTHEAST;
+            else if (direction === 'nw') dir = NORTHWEST;
+            else if (direction === 'ne') dir = NORTHEAST;
+            else if (direction === 'sw') dir = SOUTHWEST;
+            else if (direction === 'se') dir = SOUTHEAST;
 
             let walk = new Walk(dir, dist, null);
             path.walks.unshift(walk);
@@ -659,9 +662,9 @@ define(() => {
                 distX = Math.abs(nextPt.pt.x - nextPt.previousPt.pt.x);
                 distY = Math.abs(nextPt.pt.y - nextPt.previousPt.pt.y);
                 dist = Math.max(distX, distY);
-                if (distX !== 0 && distY !== 0) {
-                    debugger;
-                    throw "Previous point off alignment, no diagonal yet!";
+                if(!(distX === 0 || distY === 0 || distX === distY)) {
+                    debugger; // Wtf?
+                    throw "This shouldn't happen!";
                 }
 
                 if (nextPt.previousDirection !== direction) {
@@ -673,7 +676,11 @@ define(() => {
                         (direction === 'n' && nextPt.previousDirection === 's') ||
                         (direction === 's' && nextPt.previousDirection === 'n') ||
                         (direction === 'w' && nextPt.previousDirection === 'e') ||
-                        (direction === 'e' && nextPt.previousDirection === 'w')
+                        (direction === 'e' && nextPt.previousDirection === 'w') ||
+                        (direction === 'nw' && nextPt.previousDirection === 'se') ||
+                        (direction === 'ne' && nextPt.previousDirection === 'sw') ||
+                        (direction === 'sw' && nextPt.previousDirection === 'ne') ||
+                        (direction === 'se' && nextPt.previousDirection === 'nw')
                     )
                     {
                         debugger;
@@ -687,11 +694,11 @@ define(() => {
                     else if (direction === 's') dir = SOUTH;
                     else if (direction === 'e') dir = EAST;
                     else if (direction === 'w') dir = WEST;
+                    else if (direction === 'nw') dir = NORTHWEST;
+                    else if (direction === 'ne') dir = NORTHEAST;
+                    else if (direction === 'sw') dir = SOUTHWEST;
+                    else if (direction === 'se') dir = SOUTHEAST;
                     else throw `UNEXPECTED DIR ${direction}`;
-                    //else if (direction === 'nw') dir = NORTHWEST;
-                    //else if (direction === 'ne') dir = NORTHEAST;
-                    //else if (direction === 'sw') dir = SOUTHWEST;
-                    //else if (direction === 'se') dir = SOUTHEAST;
 
 
 
@@ -719,19 +726,6 @@ define(() => {
 
                 finalWalk.destination = finalDest;
 
-                if (finalDir === NORTH) {
-                    finalDest.y -= finalDist;
-                } else if (finalDir === SOUTH) {
-                    finalDest.y += finalDist;
-                }
-
-                if (finalDir === WEST) {
-                    finalDest.x -= finalDist;
-                } else if (finalDir === EAST) {
-                    finalDest.x += finalDist;
-                }
-
-                /*
                 if (finalDir === NORTH || finalDir === NORTHWEST || finalDir === NORTHEAST) {
                     finalDest.y -= finalDist;
                 } else if (finalDir === SOUTH || finalDir === SOUTHWEST || finalDir === SOUTHEAST) {
@@ -744,12 +738,9 @@ define(() => {
                     finalDest.x += finalDist;
                 }
 
-                */
-
-                //if (finalDest.x !== nearestEnd.pt.x || finalDest.y !== nearestEnd.pt.y) {
-                //    DEBUGGER(); // Wrong destination
-                //
-                //}
+                if (finalDest.x !== nearestEnd.pt.x || finalDest.y !== nearestEnd.pt.y) {
+                    DEBUGGER(); // Wrong destination
+                }
             }
 
             {
@@ -758,20 +749,6 @@ define(() => {
                     startDist  = path.walks[0].distance,
                     startDest  = path.walks[0].destination;
 
-
-                if (startDir === NORTH) {
-                    startDest.y -= startDist;
-                } else if (startDir === SOUTH) {
-                    startDest.y += startDist;
-                }
-
-                if (startDir === WEST) {
-                    startDest.x -= startDist;
-                } else if (startDir === EAST) {
-                    startDest.x += startDist;
-                }
-
-                /*
                 if (startDir === NORTH || startDir === NORTHWEST || startDir === NORTHEAST) {
                     startDest.y -= startDist;
                 } else if (startDir === SOUTH || startDir === SOUTHWEST || startDir === SOUTHEAST) {
@@ -783,7 +760,6 @@ define(() => {
                 } else if (startDir === EAST || startDir === NORTHEAST || startDir === SOUTHEAST) {
                     startDest.x += startDist;
                 }
-                */
             }
 
 

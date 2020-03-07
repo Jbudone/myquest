@@ -147,6 +147,10 @@ define(function(){
 	addKey('EAST');
 	addKey('SOUTH');
 	addKey('WEST');
+    addKey('NORTHWEST');
+    addKey('NORTHEAST');
+    addKey('SOUTHWEST');
+    addKey('SOUTHEAST');
 
 	addKey('EVT_CHAT');
 

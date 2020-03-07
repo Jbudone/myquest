@@ -514,17 +514,40 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                 let walk = path.walks[i],
                     dist = walk.distance - walk.walked;
 
-                let vert      = walk.direction === NORTH || walk.direction === SOUTH,
-                    positive  = (walk.direction === SOUTH || walk.direction === EAST) ? 1 : -1;
-                let d;
+
+                const isNorth = walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST,
+                    isSouth   = walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST,
+                    isWest    = walk.direction === WEST  || walk.direction === NORTHWEST || walk.direction === SOUTHWEST,
+                    isEast    = walk.direction === EAST  || walk.direction === NORTHEAST || walk.direction === SOUTHEAST;
+
+                
+
                 this.Log(`Checking from (${globalX}, ${globalY}) for walk (${walk.direction}}, ${dist})`, LOG_DEBUG);
-                for (d = Math.min(dist, Env.tileSize); d <= dist; d += Env.tileSize) {
+                for (let t = 0; t < dist; ) {
+
+                    let dX = 0, dY = 0;
+                    if (isNorth) dY = globalY % Env.tileSize + 1;
+                    else if (isSouth) dY = Env.tileSize - (globalY % Env.tileSize);
+
+                    if (isWest) dX = globalX % Env.tileSize + 1;
+                    else if (isEast) dX = Env.tileSize - (globalX % Env.tileSize);
+
+                    // Shortest path to next tile (note we may only be moving in cardinal direction, so 0 means not in
+                    // that direction)
+                    if (dX === 0) dX = 999999;
+                    if (dY === 0) dY = 999999;
+                    let d = Math.min(dX, dY, dist - t);
+                    t += d;
+
+                    if (isNorth) globalY -= d;
+                    else if (isSouth) globalY += d;
+
+                    if (isWest) globalX -= d;
+                    else if (isEast) globalX += d;
+
                     this.Log("d: " + d, LOG_DEBUG);
-                    if (vert) {
-                        tile.y = Math.floor((globalY + positive * d) / Env.tileSize);
-                    } else {
-                        tile.x = Math.floor((globalX + positive * d) / Env.tileSize);
-                    }
+                    tile.x = Math.floor(globalX / Env.tileSize);
+                    tile.y = Math.floor(globalY / Env.tileSize);
 
                     checkStr += `(${tile.x}, ${tile.y}) `;
                     if (!area.isTileOpen(tile)) {
@@ -532,29 +555,6 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                         this.Log(checkStr, LOG_INFO);
                         return false;
                     }
-                }
-
-                let leftover = d - dist;
-                if (leftover > 0) {
-                    this.Log("leftover: " + leftover, LOG_DEBUG);
-                    if (vert) {
-                        tile.y = Math.floor((globalY + positive * dist) / Env.tileSize);
-                    } else {
-                        tile.x = Math.floor((globalX + positive * dist) / Env.tileSize);
-                    }
-
-                    checkStr += `(${tile.x}, ${tile.y}) `;
-                    if (!area.isTileOpen(tile)) {
-                        checkStr += "NOPE";
-                        this.Log(checkStr, LOG_INFO);
-                        return false;
-                    }
-                }
-
-                if (vert) {
-                    globalY += positive * dist;
-                } else {
-                    globalX += positive * dist;
                 }
             }
 
@@ -736,7 +736,12 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                 NORTH,
                 WEST,
                 SOUTH,
-                EAST
+                EAST,
+
+                NORTHWEST,
+                NORTHEAST,
+                SOUTHWEST,
+                SOUTHEAST,
             };
 
 
