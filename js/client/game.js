@@ -684,23 +684,17 @@ define(
 
                                     if (data.path.ALREADY_THERE) {
 
-                                        console.log("No path to be created..we're already there!");
-                                        entity.cancelPath();
+                                        assert(false, "This shouldn't be possible, we already checked if we're there to early-out");
                                         return;
                                     }
 
-                                    //const path = new Path();
-                                    //data.path.walks.forEach((walk) => {
-                                    //    path.walks.push(walk);
-                                    //});
-                                    //path.start = { x: playerX, y: playerY };
                                     const path = data.path;
                                     path.id   = pathId;
                                     path.flag = pathFlag;
 
                                     if (event.id === The.player.id) {
-                                        // Do not send this path to the server (obviously, since we're receiving the path
-                                        // from the server)
+                                        // Do not send this path to the server (obviously, since we're receiving the
+                                        // path from the server)
                                         // TODO: Should find a cleaner way to store dontSendToServer than placing it on
                                         // every walk
                                         path.walks.forEach((walk) => {
@@ -837,11 +831,11 @@ define(
                                 isWest    = (walk.direction === WEST || walk.direction === NORTHWEST || walk.direction === SOUTHWEST),
                                 isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
 
-                                if (walk.direction === isNorth) pathState.destination.global.y -= walkDist;
-                            else if (walk.direction === isSouth) pathState.destination.global.y += walkDist;
+                                 if (isNorth) pathState.destination.global.y -= walkDist;
+                            else if (isSouth) pathState.destination.global.y += walkDist;
 
-                                 if (walk.direction === isWest)  pathState.destination.global.x -= walkDist;
-                            else if (walk.direction === isEast)  pathState.destination.global.x += walkDist;
+                                 if (isWest)  pathState.destination.global.x -= walkDist;
+                            else if (isEast)  pathState.destination.global.x += walkDist;
 
                             walk.destination = { x: pathState.destination.global.x, y: pathState.destination.global.y };
                         });
@@ -882,10 +876,11 @@ define(
                                     isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
 
 
-                                     if (walk.direction === isNorth) currentDestination.y -= walkDist;
-                                else if (walk.direction === isSouth) currentDestination.y += walkDist;
-                                else if (walk.direction === isWest)  currentDestination.x -= walkDist;
-                                else if (walk.direction === isEast)  currentDestination.x += walkDist;
+                                     if (isNorth) currentDestination.y -= walkDist;
+                                else if (isSouth) currentDestination.y += walkDist;
+
+                                     if (isWest)  currentDestination.x -= walkDist;
+                                else if (isEast)  currentDestination.x += walkDist;
                             });
 
                             if (currentDestination.x === pathState.destination.global.x && currentDestination.y === pathState.destination.global.y) {
@@ -1047,12 +1042,7 @@ define(
 
                                 // We're already there anyways
                                 entity.path = null;
-
-                                if (entity.position.global.x % Env.tileSize !== 0 ||
-                                    entity.position.global.y % Env.tileSize !== 0) {
-
-                                    this.Log("Our pathfinding path should at least recalibrate to the correct position of the tile", LOG_ERROR);
-                                }
+                                assert(false, "We checked for path when we're already there!");
                             } else {
                                 // FIXME: Just use alternative path for now until we can come up with a fast/high
                                 // priority recalibrate for provided server path, and then compare alternative path
