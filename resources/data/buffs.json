@@ -140,6 +140,22 @@
                 "description": "Buffed by the king -- making friends in high places"
             }
         }
-	}
+	},
+    {
+        "id": "FearBuff",
+        "base": "fearbuff",
+        "args": {
+            "options": {
+                "duration": 2000
+            }
+        },
+        "effects": {
+            "icon": "deathsickness",
+            "tooltip": {
+                "name": "Fear Buff",
+                "description": "You are very afraid"
+            }
+        }
+    }
     
 ]}
