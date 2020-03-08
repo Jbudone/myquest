@@ -223,6 +223,8 @@ const cloneNode = (node) => {
         //if (clonedNode.property.type === 'MemberExpression') {
         //    clonedNode.computed = true;
         //}
+    } else if (node.type === 'ThisExpression') {
+        clonedNode.type = node.type;
     } else if (node.type === 'CallExpression') {
 
         clonedNode.type = node.type;
@@ -336,6 +338,17 @@ const buildNodeFromCheck = (checkItem, loc) => {
         }
     };
 
+    const canCheckType = (node) => {
+
+        if (node.type === 'Identifier' || node.type === 'ThisExpression') {
+            return true;
+        } else if (node.type === 'MemberExpression') {
+            return canCheckType(node.object) && canCheckType(node.property);
+        }
+
+        return false;
+    };
+
     setNodeLoc(checkNodeExpr);
 
     const checkItemNode = {};
@@ -345,8 +358,7 @@ const buildNodeFromCheck = (checkItem, loc) => {
     if (checkItem.checker === IS_TYPE) {
 
         // Whitelisted types for checking
-        const whitelistTypeCheck = ['MemberExpression', 'Identifier'];
-        if (whitelistTypeCheck.indexOf(checkItem.args[0].type) === -1) {
+        if (!canCheckType(checkItem.args[0])) {
             return null;
         }
 
