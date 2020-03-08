@@ -47,8 +47,7 @@ define(
 
 
                 let queuedCb = null,
-                    queuedStop = null,
-                    hasCbs = false;
+                    queuedStop = null;
 
                 let cbs = {
                     succeeded: function(){},
@@ -164,7 +163,8 @@ define(
 
                 let reachedTile       = function(){},
                     couldNotReachTile = function(){},
-                    alreadyThere      = false;
+                    alreadyThere      = false,
+                    addedPath         = null;
 
 
                 const playerX = character.entity.position.global.x,
@@ -173,6 +173,8 @@ define(
                     toY       = tile.y * Env.tileSize,
                     fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
                     toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
+
+
 
                 character.entity.cancelPath();
                 character.entity.page.area.pathfinding.workerHandlePath({
@@ -189,7 +191,7 @@ define(
 
                     const path = data.path;
                     path.flag = PATH_CHASE;
-                    character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
+                    addedPath = character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
                     character.entity.recordNewPath(path);
 
                 }).catch((data) => {
@@ -207,6 +209,11 @@ define(
 
                         reachedTile       = success || function(){};
                         couldNotReachTile = failed || function(){};
+
+                        // We already have a path
+                        if (addedPath) {
+                            addedPath.finished(reachedTile, couldNotReachTile);
+                        }
                     }
                 };
             };
