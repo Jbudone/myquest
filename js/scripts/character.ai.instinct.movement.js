@@ -45,24 +45,45 @@ define(
                     path         = null,
                     pathId       = null;
 
+
+                let queuedCb = null,
+                    queuedStop = null,
+                    hasCbs = false;
+
+                let cbs = {
+                    succeeded: function(){},
+                    failed: function(){},
+                };
+
+                const __then = () => {
+
+                    // We may have not setup our callbacks yet before reaching this. Just early out and use queuedCb to
+                    // hit this when we set our callbacks
+                    if (!cbs.succeeded && !cbs.failed) return;
+
+                    if (addedPath === ALREADY_THERE) {
+                        this.Log("We're already there", LOG_DEBUG);
+                        cbs.succeeded();
+                    } else if (addedPath === PATH_TOO_FAR) {
+                        this.Log("You're too far!", LOG_DEBUG);
+                        cbs.failed(addedPath);
+                    } else if (addedPath) {
+                        addedPath.finished(cbs.succeeded, cbs.failed);
+                    } else {
+                        this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
+                        cbs.failed();
+                    }
+                };
+
                 const setCallbacks = {
 
                     then: (succeeded, failed) => {
 
-                        if (!_.isFunction(succeeded)) succeeded = function(){};
-                        if (!_.isFunction(failed)) failed = function(){};
+                        if (succeeded) cbs.succeeded = succeeded;
+                        if (failed)    cbs.failed = failed;
 
-                        if (addedPath === ALREADY_THERE) {
-                            this.Log("We're already there", LOG_DEBUG);
-                            succeeded();
-                        } else if (addedPath === PATH_TOO_FAR) {
-                            this.Log("You're too far!", LOG_DEBUG);
-                            failed(addedPath);
-                        } else if (addedPath) {
-                            addedPath.finished(succeeded, failed);
-                        } else if (failed) {
-                            this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
-                            failed();
+                        if (queuedCb) {
+                            __then();
                         }
 
                         return setCallbacks;
@@ -78,6 +99,8 @@ define(
                             }
 
                             character.entity.cancelPath();
+                        } else {
+                            queuedStop = pathId;
                         }
 
                         addedPath = null;
@@ -98,6 +121,11 @@ define(
                     endPt: { x: toX, y: toY }
                 }).then((data) => {
 
+                    if (queuedStop) {
+                        this.Log("Queued to stop path before we finished fetching path. Just ignore this", LOG_DEBUG);
+                        return;
+                    }
+
                     if (data.path.ALREADY_THERE) {
 
                         addedPath = ALREADY_THERE;
@@ -115,9 +143,12 @@ define(
                         character.entity.recordNewPath(path);
                     }
 
+                    __then();
+
                 }).catch((data) => {
                     console.error("Could not find path!");
                     console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                    cbs.failed();
                 });
 
                 return setCallbacks;
