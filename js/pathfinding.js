@@ -1,6 +1,6 @@
 
 // Pathfinding
-define(['movable', 'loggable'], (Movable, Loggable) => {
+define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, PathfindingBase) => {
 
     const Pathfinding = function(area) {
 
@@ -869,27 +869,75 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                     };
                 }
             } else {
-                webworker.postMessage({
-                    type: HANDLE_PATH,
-                    path: {
-                        movableID: path.movableID,
-                        pathID: path.id,
-                        startPt: path.startPt,
-                        endPt: path.endPt
-                    }
-                }, (data) => {
-                    if (data.pathID !== this.movablePathID[data.movableID]) {
-                        this.Log("Stale path, ignoring", LOG_DEBUG);
-                        return;
+
+
+                if (path.immediate) {
+                    // Do not offload to worker! We need this path immediately
+
+                    let time = -Date.now();
+                    const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
+                    time += Date.now();
+
+                    if (foundPath) {
+                        path.time = time;
+                        path.debugCheckedNodes = foundPath.debugCheckedNodes;
+                        if (!foundPath.path) {
+                            path.ALREADY_THERE = true;
+                        } else {
+                            path.ALREADY_THERE = false;
+                            path.ptPath = {
+                                start: foundPath.path.start,
+                                end: foundPath.path.walks[foundPath.path.walks.length - 1].destination,
+                                walks: foundPath.path.walks,
+                                debugCheckedNodes: path.debugCheckedNodes
+                            };
+                        }
+
+
+                        queuedCb = {
+                            result: RESULT_PATH,
+                            success: true,
+
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            time: path.time,
+                            path: path.ptPath
+                        };
+                    } else {
+                        queuedCb = {
+                            result: RESULT_PATH,
+                            success: false,
+
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            time: path.time
+                        };
                     }
 
-                    const movable = area.movables[data.movableID];
-                    if (movable && data.success) {
-                        cbThen(data);
-                    } else {
-                        cbCatch(data);
-                    }
-                });
+                } else {
+
+                    webworker.postMessage({
+                        type: HANDLE_PATH,
+                        path: {
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            startPt: path.startPt,
+                            endPt: path.endPt
+                        }
+                    }, (data) => {
+                        if (data.pathID !== this.movablePathID[data.movableID]) {
+                            this.Log("Stale path, ignoring", LOG_DEBUG);
+                            return;
+                        }
+
+                        const movable = area.movables[data.movableID];
+                        if (movable && data.success) {
+                            cbThen(data);
+                        } else {
+                            cbCatch(data);
+                        }
+                    });
+                }
             }
 
 
