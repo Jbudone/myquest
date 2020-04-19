@@ -1,11 +1,13 @@
 const requirejs = require('requirejs');
 requirejs.config({
     nodeRequire: require,
-    baseUrl: __dirname,
+    baseUrl: __dirname + '/..', // __dirname is dist/js/server
     paths: {
         lodash: "https://cdn.jsdelivr.net/lodash/4.14.1/lodash.min.js"
     }
 });
+
+global.dirname = __dirname;
 
 
 let scriptModule = null;
@@ -14,7 +16,7 @@ for (let i=0; i<process.argv.length; ++i) {
 
     const arg = process.argv[i];
     if (arg === "--module") {
-        scriptModule = `../${process.argv[++i]}`;
+        scriptModule = `${process.argv[++i]}`;
     }
 }
 
@@ -36,47 +38,8 @@ if (scriptModule) {
         }
     };
 
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-    // SHARED CODE FOR ERROR CHECKING
-    global.OBJECT = 'OBJECT';
-    global.FUNCTION = 'FUNCTION';
-    global.HAS_KEY = 'HAS_KEY';
-    global.IS_TYPE = 'IS_TYPE';
-
-    global.OBJECT_TYPES = ['object', 'function', 'string', 'number'];
-
-    var DEBUGGER = (msg) => {
-        debugger;
-    };
-    global.DEBUGGER = DEBUGGER;
-    global.worker = worker;
-
-    var CHECK = (stuffToCheck) => {
-
-        stuffToCheck.forEach((check) => {
-
-            if (check.checker === IS_TYPE) {
-                if (check.typeCmp === OBJECT) {
-                    if (typeof check.node !== "object" && typeof check.node !== "function" && typeof check.node !== "string") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
-                } else if (check.typeCmp === FUNCTION) {
-                    if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE FUNCTION", check);
-                } else { 
-                    DEBUGGER("Unexpected type comparison", check);
-                }
-            } else if (check.checker === HAS_KEY) {
-                if (!(check.property in check.object)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
-            } else {
-                DEBUGGER("Unexpected check", check);
-            }
-        });
-    };
-
-    global.CHECK = CHECK;
-    // WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
+    global.IS_WORKER = true;
+    global.LOG = console.log;
 
     // In case we receive messages before the module is loaded
     let queuedMessages = [];
@@ -92,15 +55,67 @@ if (scriptModule) {
     global._ = _;
 
     // Load worker module
-    requirejs([scriptModule], (Module) => {
-        const moduleJob = new Module(worker);
+    requirejs(['errors', 'debugging'], (Errors, Debugging) => {
 
-        queuedMessages.forEach((message) => {
-            onMessage(message);
-        });
 
-        worker.postMessage({
-            success: true
+
+        const errorInGame = (e) => {
+
+            const isAnError = e !== "SIGINT";
+            if (shuttingDown) {
+
+                // We may have already started shutting down, but could be waiting for the inspector. We may want to kill the
+                // process without any debugging (ctrl-c)
+                if (!isAnError) {
+                    process.exit(e);
+                }
+
+                return;
+            }
+
+            shuttingDown = true;
+
+            if (isAnError) {
+                console.error("Error in game");
+                if (console.trace) console.trace();
+            }
+
+            if (e) {
+                waitForInspector();
+            }
+
+            process.exit(e);
+        };
+
+        global.shuttingDown = false;
+        global.errorInGame = errorInGame;
+
+        // If anything happens make sure we go through the common error/exit routine
+        process.on('exit', errorInGame);
+        //process.on('SIGINT', errorInGame);
+        process.on('uncaughtException', errorInGame);
+
+
+        global.worker = worker;
+        global._global = global;
+
+
+        requirejs([scriptModule], (Module) => {
+            const moduleJob = new Module(worker);
+
+            queuedMessages.forEach((message) => {
+                onMessage(message);
+            });
+
+            worker.postMessage({
+                success: true
+            });
+        }, (e) => {
+            DEBUGGER("Error loading module", e);
+            console.error(e);
+            process.exit();
         });
+    }, (e) => {
+        console.error(e);
     });
 }

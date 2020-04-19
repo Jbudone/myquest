@@ -19,79 +19,6 @@ requirejs.config({
 let shutdownGame = null,
     shuttingDown = false;
 
-const waitForInspector = () => {
-
-    const prompt = () => {
-
-        const fd = fs.openSync('/dev/tty', 'rs');
-
-        const wasRaw = process.stdin.isRaw;
-        if (!wasRaw) { process.stdin.setRawMode(true); }
-
-        let char = null;
-        while (true) {
-            const buf = Buffer.alloc(3);
-            const read = fs.readSync(fd, buf, 0, 3);
-
-            // if it is not a control character seq, assume only one character is read
-            char = buf[read-1];
-
-            // catch a ^C and return null
-            if (char == 3){
-                process.stdout.write('^C\n');
-
-                char = null;
-                break;
-            }
-
-            if (read > 1) { // received a control sequence
-                continue; // any other 3 character sequence is ignored
-            }
-
-            break;
-        }
-
-        fs.closeSync(fd);
-        process.stdin.setRawMode(wasRaw);
-        return char;
-    };
-
-    // Check for an existing connection for the inspector
-    const { spawnSync } = require('child_process');
-    const checkInspectorProc = spawnSync('node', ['./dist/js/checkForInspector.js', '--port', process.debugPort], {
-        cwd: process.cwd(),
-        env: process.env,
-        encoding: 'utf-8'
-    });
-
-    if (checkInspectorProc.status === 2) {
-        // There's already an open connection for the inspector
-        debugger;
-    } else {
-
-        Log(chalk.red.bold("Hit any key to open the inspector"));
-        const n = prompt();
-        if (n !== null) {
-
-            // Spawn a script that can listen for ctrl-c to kill the inspector if we don't want to start the inspector
-            // NOTE: We have to spawnSync otherwise the spawn will wait until after this function to spawn the script.
-            // Consequently we need the spawned script to exit so that we can continue to spark the inspector. That's why we
-            // need to spawnSync a script who's sole purpose is to spawn another script
-            const killProc = spawnSync('node', ['./dist/js/spawnSyncScript.js', './dist/js/killInspector.js', '--master-id', process.pid], {
-                stdio: ['inherit', 'ignore', 'ignore'], // stdin -> child process
-                cwd: process.cwd(),
-                env: process.env,
-                encoding: 'utf-8'
-            });
-
-            Log(chalk.red.bold("Waiting for inspector.."));
-            const inspector = require('inspector');
-            inspector.open(process.debugPort, "127.0.0.1", true); // port, host, block
-            debugger;
-        }
-    }
-};
-
 const errorInGame = (e) => {
 
     const isAnError = e !== "SIGINT";
@@ -180,52 +107,6 @@ GLOBAL.WebSocketServer = WebSocketServer;
 GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('path').dirname('')  returns an empty string
 
 GLOBAL.fs = fs;
-
-GLOBAL.DEBUGGER = (msg) => {
-    const e = (new Error());
-    if (!msg) msg = 'Debug: ' + e.stack.split('\n')[2];
-    console.log(msg);
-
-    // Print out line for error (for quick reference)
-    const stackFrame = ErrorReporter.parseError(e),
-        source       = stackFrame.stack[2].source
-
-    let failedCheckSource = "";
-    let startIdx = source.indexOf(msg);
-    let mapSource = null;
-    if (startIdx >= 0) {
-
-        let idx = 0, starts = [];
-        for (let i = 0; i < startIdx; ++i) {
-            if (source[i] === '(') starts.unshift(i);
-            else if (source[i] === ')') starts.shift();
-        }
-        idx = starts[starts.length - 1] + 1;
-        failedCheckSource = source.substr(idx, startIdx - idx - " || DEBUGGER(".length);
-
-        console.log(`${chalk.bold.red(failedCheckSource)}`);
-            
-        // FIXME: This is working BUT source appended to DEBUGGER is probably wrong (loc isn't accurate in preproAST)
-        console.log(`${chalk.bold.red("WARNING WARNING WARNING: SOURCE PROBABLY INACCURATE -- PLEASE FIX LOC IN preprocessAST.js")}`);
-        mapSource = source.match(/&&\s*"(?<src>((\\")*|[^"])*)"\s*;\s*$/)
-        if (mapSource && mapSource.groups && mapSource.groups.src) {
-            console.log(`${chalk.bold.red(mapSource.groups.src)}`);
-        }
-    }
-
-
-    waitForInspector();
-};
-
-const assert = (expr, message) => {
-    if (!expr) {
-        console.log(message);
-        DEBUGGER();
-        throw Err(message);
-    }
-};
-
-GLOBAL.assert = assert;
 
 // Promise.longStackTraces();
 
