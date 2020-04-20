@@ -10,6 +10,9 @@ requirejs.config({
     }
 });
 
+async function loadDebuggingModule(){
+    await import('./debugging.js');
+}; loadDebuggingModule();
 
 // Error in Game
 // If there is any issue whatsoever, crash the server immediately and drop into here. The intention is that any error
