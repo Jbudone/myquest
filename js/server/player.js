@@ -329,6 +329,29 @@ define(
                     }
                 };
 
+
+                if (!player.character.canMove()) {
+                    if (this.isConnected) {
+
+                        const response = new Response(action.id);
+                        response.success = false;
+                        response.state   = {
+                            position: {
+                                global: {
+                                    x: movableState.position.global.x,
+                                    y: movableState.position.global.y },
+                                tile: {
+                                    x: movableState.position.tile.x,
+                                    y: movableState.position.tile.y }
+                            }
+                        };
+                        response.frameId = The.frameEvtId;
+                        this.client.send(response.serialize());
+                    }
+
+                    return;
+                }
+
                 /*
                 if (!safePath) {
                     this.Log("Path is not safe for user... cancelling!");
@@ -558,7 +581,7 @@ define(
                         this.Log("About to dequeue receive", LOG_INFO);
                         this.receiveEvt(this.queuedReceives[i].evt);
                     } else {
-                        this.Log(`${nowTime} < ${this.queuedReceives[i].rcvTime}`, LOG_INFO);
+                        this.Log(`${nowTime} < ${this.queuedReceives[i].rcvTime}`, LOG_DEBUG);
                     }
                 }
 
