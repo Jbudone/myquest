@@ -42,14 +42,6 @@ let __FIXME_ERRCNT = 0;
 //
 //      - I'm not sure how much I trust the loc for sourcemaps; that may need some cleaning
 //      - Further preprocess would be nice: SCRIPT_INJECT, Assert, LOG_DEBUG, etc.
-//      - If statements and conditionals would be nice to work in:
-//
-//
-//          if (foo.a ? foo.a.b() : foo.b.c())
-//
-//          Desired:
-//          CHECK(foo) && (foo.a ? (CHECK(foo.a) && CHECK(foo.a.b)) : (CHECK(foo.b) && CHECK(foo.b.c)))
-//
 //      - Profiling/optimizations: I haven't done any profiling, so I'm not sure how well this performs and if there's
 //      any easy speed ups
 
@@ -65,6 +57,30 @@ let __FIXME_ERRCNT = 0;
 //  - MACRO files for shared code across client/server/webworkers/test
 //      - eg. Error checking in Errors.js:  OBJECT_TYPES, CHECK;  requirejs configs (between client/client-worker, and server/server-worker), etc.
 //  - FIXME: Do we need CHeckNode(topNode === true) to be a block statement? If so we should Assert this
+//  * FIXME: Dependency Graph / re-ordering nodes
+//      * CallExpression currying
+//          - var s = GetTile().LocalPos().x
+//          - if(GetTile(isPlayer ? x : y).SwapPlayer().LocalPos(isPlayer ? y : x).x < 0)
+//
+//          The solution is probably to recursively check the node and inject these dependency nodes BEFORE the dependent node
+//
+//          var __RESULTS = GetTile();
+//          __RESULTS = __RESULTS.LocalPos();
+//          __RESULTS = __RESULTS.x;
+//          var s = __RESULTS;
+//
+//
+//          var __RESULTS = isPlayer ? x : y;
+//          __RESULTS = GetTile(__RESULTS);
+//          __RESULTS = __RESULTS.SwapPlayer();
+//          __RESULTS2 = isPlayer ? y : x;
+//          __RESULTS = __RESULTS.LocalPos(__RESULTS2);
+//          __RESULTS = __RESULTS.x;
+//          if (__RESULTS < 0)
+//
+//
+//          First we'd have to order the dependency graph and swap our nodes with dependent-ordered nodes. Then we'd go
+//          through and check each node
 //  * FIXME: LocalExpression, BinaryExpression
 //      These are allowed to fail since we may have previous checks:
 //          _.isObject(notAnObj) && notAnObj.a.b.c.d()
@@ -77,7 +93,6 @@ let __FIXME_ERRCNT = 0;
 //      We could inline with the expression:
 //          (_.isObject(notAnObj) && (CHECK(notAnObj) && CHECK(notAnObj.a) && CHECK(notAnObj.a.b) &&
 //          CHECK(notAnObj.a.b.c) && CHECK(notAnObj.a.b.c.d) && notAnObj.a.b.c.d()))
-//  * FIXME: ConditionalExpression
 //  - Smoke tests would be nice for this. Parse & CHECK code that's supposed to fail at parts, and will only crash if
 //  preprocessed incorrectly
 //  - Lint for less safe code / unable to check code
@@ -159,10 +174,59 @@ let __FIXME_ERRCNT = 0;
 //    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
 //let code = "{ ( ( typeof defensiveInfo == 'object' || DEBUGGER('a') ) && ( typeof target == 'object' || DEBUGGER('b') ) && ( typeof target.entity == 'object' || DEBUGGER('c') ) && ( typeof target.entity.npc == 'object' || DEBUGGER('d') ) ) }";
 //let code = "{ var OBJECT_TYPES = ['object', 'function']; var a = 1; OBJECT_TYPES.includes(typeof a); }";
-let code = "{ The.area.pathfinding.workerHandlePath({\
-                    movableID: character.entity.id,\
-                    start: { x: fromTiles[0].x, y: fromTiles[0].y },\
-                }); }";
+//let code = "{ The.area.pathfinding.workerHandlePath({\
+//                    movableID: character.entity.id,\
+//                    start: { x: fromTiles[0].x, y: fromTiles[0].y },\
+//                }); }";
+/*
+let code = "{\
+    character.entity.cancelPath();\n\
+    character.entity.page.area.pathfinding.workerHandlePath({\
+        movableID: The.player.id,\
+        startPt: { x: playerX, y: playerY },\
+        endPt: { x: toGlobal.x, y: toGlobal.y }\
+    }).then((data) => {\
+        if (data.ptPath.ALREADY_THERE) {\
+            addedPath = ALREADY_THERE;\
+            return;\
+        }\
+        const path = new Path();\
+        data.ptPath.walks.forEach((walk) => {\
+            path.walks.push(walk);\
+        });\
+        path.start = { x: playerX, y: playerY };\
+        if (maxWalk && path.length() > maxWalk) {\
+            addedPath = PATH_TOO_FAR;\
+        } else {\
+            path.flag = PATH_CHASE;\
+            addedPath = character.entity.addPath(path);\
+            pathId    = character.entity.path.id;\
+            character.entity.recordNewPath(path);\
+        }\
+    }).catch((data) => {\
+        console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);\
+    });\
+}";
+*/
+//let code = "{\
+//    workerHandlePath().then((data) => {\
+//        Taco.bell();\
+//    });\
+//}";
+//let code = "{ let taco = [1,2,3].filter((i) => i > 1).map((i) => i * 2); }";
+//let code = "{\
+//      server.handler(EVT_REGENERATE).set(function (evt, data) {\
+//        UI.postMessage(`Regenerating ${data.entityId} to health ${data.health}`, MESSAGE_INFO);\
+//        The.area.movables[data.entityId].character.doHook(RegenerateEvt).post(data);\
+//      });\
+//}";
+//let code = "{ const area = this.entity.page.area; }";
+//let code = "{ var t = (mouse) => { const x = (mouse.clientX - taco.bell.meat); }; }";
+let code = "{ this.Log(`e == ${e}`, LOG_DEBUG);\n\
+            this.Log(`Do we have a target? ${this.target ? 1 : 2}`, LOG_DEBUG);\n\
+            this.Log(`Does our target have a character? ${this.target.character.a.b.c ? target.character.a.b.c : target.character.a.b()}`, LOG_DEBUG); }";
+
+
 
 
 
@@ -1160,6 +1224,82 @@ const CheckNode = (curNode, expectType, state) => {
         curNode.arguments.forEach((callArg) => {
             CheckNode(callArg, null, state);
         });
+
+    } else if (curNode.type === 'ConditionalExpression') {
+
+        // test, consequent, alternate
+        // Attempt to check these and replace node
+
+        ['test', 'consequent', 'alternate'].forEach((nodeKey) => {
+            const savedModifyNode = state.modifyNode;
+            const innerModifyNode = new ModifyNode();
+            state.modifyNode = innerModifyNode;
+
+            const nodePart = curNode[nodeKey];
+            CheckNode(nodePart, null, state);
+
+            // Setup all assertions
+            const testNodes = [];
+            innerModifyNode.preCheck.forEach((preCheck) => {
+                const checkNode = buildNodeFromCheck(preCheck, curNode.loc);
+                if (checkNode) testNodes.push(checkNode);
+            });
+
+            innerModifyNode.replaceNode.forEach((replaceNode) => {
+                const checkNode = buildNodeFromCheck(replaceNode, curNode.loc);
+                if (checkNode) testNodes.push(checkNode);
+            });
+
+            let rightMostCheckNode = null;
+            testNodes.forEach((testNode) => {
+
+                if (rightMostCheckNode) {
+                    const newNode = {
+                        type: 'LogicalExpression',
+                        NODE_CHECKTYPE: true,
+                        left: testNode.expression,
+                        operator: '&&',
+                        right: {
+                            type: 'BooleanLiteral',
+                            value: true
+                        }
+                    };
+                    rightMostCheckNode.right = newNode;
+                    rightMostCheckNode = newNode;
+                } else {
+
+                    const newNode = {
+                        type: 'LogicalExpression',
+                        NODE_CHECKTYPE: true,
+                        left: testNode.expression,
+                        operator: '&&',
+                        right: {
+                            type: 'BooleanLiteral',
+                            value: true
+                        }
+                    };
+
+                    curNode[nodeKey] = {
+                        type: 'ConditionalExpression',
+                        NODE_CHECKTYPE: true,
+                        test: newNode,
+                        consequent: curNode[nodeKey],
+                        alternate: {
+                            type: 'Identifier',
+                            name: 'undefined'
+                        }
+                    };
+
+                    rightMostCheckNode = newNode;
+                }
+            });
+
+
+
+            state.modifyNode = savedModifyNode;
+        });
+
+
 
 
     // ================================================
