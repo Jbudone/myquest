@@ -847,8 +847,8 @@ const MapEditor = (new function(){
 
         initializeGL();
 
-        this.resetPages();
         this.reset();
+        this.resetPages();
         this.setupInteractions();
     };
 
@@ -1690,14 +1690,12 @@ const MapEditor = (new function(){
         console.log(`Scroll by: ${scrollAmtX} (mult: ${scrollMult})`);
         if (scroll.y > 0) {
             mapCamera.w = Math.max(mapCamera.w - scrollAmtX, minScroll);
-            mapCamera.h = Math.max(mapCamera.h - scrollAmtY, minScroll * aspectRatio);
         } else if (scroll.y < 0) {
             mapCamera.w = Math.min(mapCamera.w + scrollAmtX, maxScroll);
-            mapCamera.h = Math.min(mapCamera.h + scrollAmtY, maxScroll * aspectRatio);
         }
+        mapCamera.h = mapCamera.w * aspectRatio;
 
         // Re-center the camera on the cursor after zooming
-        // FIXME: Need to adjust aspect ratio to full map
         let newScale = { x: mapCamera.w / canvasEl.width, y: mapCamera.h / canvasEl.height };
         let newWorldPt = {
             x: (worldPt.x - mapCamera.x) * (newScale.x / oldScale.x) + mapCamera.x,
@@ -1853,8 +1851,8 @@ const MapEditor = (new function(){
 
         mapCamera.x = 0;
         mapCamera.y = -12; // NOTE: Offset for consolemgr
-        mapCamera.w = 1200;
-        mapCamera.h = mapCamera.w * (hiddenMapCanvas.height / hiddenMapCanvas.width);
+        mapCamera.w = canvasEl.width;
+        mapCamera.h = mapCamera.w * (canvasEl.height / canvasEl.width);
 
         cursor.tool = null;
         cursor.x = 0;
