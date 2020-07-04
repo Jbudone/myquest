@@ -5,7 +5,6 @@
 //  - Indicator: saving, saved, loaded map, new map, editing a map that isn't new'd, map updated/needs saving
 //  - Improved drawing
 //      - Minimap
-//      - Fix canvas aspect ratio
 //      - WebGL texture mips & auto smoothing on canvas
 //      - Avatar nameplate (affected by scroll/zoom)
 //

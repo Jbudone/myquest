@@ -1017,7 +1017,7 @@ const MapEditor = (new function(){
     this.step = (delta) => {
 
         accumulatedStepDelta += delta;
-        if (accumulatedStepDelta >= 100 && this.dirtyCanvas) {
+        if (accumulatedStepDelta >= 10 && this.dirtyCanvas) {
             accumulatedStepDelta = 0;
             this.redraw();
             this.dirtyCanvas = false;
