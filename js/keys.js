@@ -223,5 +223,7 @@ define(function(){
         'XP', 'LEVEL'
     ]);
 
+    addKey('EVT_EVTNODEMGR_UPDATES_PAGE');
+
 	return keys;
 });

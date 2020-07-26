@@ -47,6 +47,7 @@ define(
                     area           = this.area.data.pages,
                     zones          = this.area.data.zones,
                     interactables  = this.area.data.interactables,
+                    eventnodes     = this.area.data.eventnodes,
                     areaPageHeight = this.area.properties.pageHeight,
                     areaPageWidth  = this.area.properties.pageWidth,
                     pages          = this.pages,
@@ -341,6 +342,20 @@ define(
                     });
                 });
 
+                // Add EventNodes
+                eventnodes.forEach((eventnode) => {
+                    const region = eventnode.region[0], // FIXME: Only 1 tile for position now
+                        globalY  = Math.floor(region / areaWidth),
+                        globalX  = region - globalY * areaWidth,
+                        pageY    = parseInt(globalY / Env.pageHeight, 10),
+                        pageX    = parseInt(globalX / Env.pageWidth, 10),
+                        pageI    = this.pagesPerRow * pageY + pageX,
+                        page     = this.pages[pageI];
+
+
+                    this.evtNodeMgr.addNode(eventnode, page, false);
+                });
+
 
                 // page octree
                 const pagesY = Math.ceil(areaHeight / pageHeight),
@@ -420,6 +435,10 @@ define(
                 badSheets = null;
             },
 
+            start() {
+                this.evtNodeMgr.activate();
+            },
+
             initialSpawn() {
                 _.forEach(this.pages, (page) => {
                     page.initialSpawn();
@@ -482,6 +501,8 @@ define(
                     const page = this.pagesList[i];
                     page.step(time);
                 } while (--i >= 0);
+
+                this.evtNodeMgr.step(time);
 
                 this.handlePendingEvents(); // events from pages
 

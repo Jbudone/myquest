@@ -1286,10 +1286,9 @@ define(
 
                         _(The.area.pages)
                             .pick(existingPages)
-                            .forIn((page, pageI) => {
-                                The.area.pathfinding.removePage(page, pageI);
-                                page.unload();
-                                delete The.area.pages[pageI];
+                            .forIn((page, _pageI) => {
+                                const pageI = parseInt(_pageI, 10);
+                                The.area.removePage(page, pageI);
                             });
 
                         // Zoning into one of the new pages

@@ -134,6 +134,7 @@ define(['loggable'], (Loggable) => {
 
                 pageBg.page = null; // Free to use, no page associated with it yet
                 pageBg.needsUpdate = false;
+                pageBg.blit = [];
             }
 
             this.updatePages();
@@ -143,6 +144,16 @@ define(['loggable'], (Loggable) => {
         this.step = (time) => {
             const delta = time - this.lastUpdateTime;
             this.lastUpdateTime = time;
+
+            // Redraw blitted static pages
+            for (let i = 0; i < this.canvasBackgroundPool.length; ++i) {
+                const canvasBgPage = this.canvasBackgroundPool[i];
+                if (canvasBgPage.page && canvasBgPage.blit) {
+                    this.renderPageStatic(canvasBgPage, canvasBgPage.page, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
+                    canvasBgPage.needsUpdate = true;
+                    canvasBgPage.blit = [];
+                }
+            };
 
             for (let i = this.projectiles.length - 1; i >= 0; --i) {
                 const projectile = this.projectiles[i];
@@ -1036,6 +1047,24 @@ define(['loggable'], (Loggable) => {
                 entity: entity,
                 timeToDie: this.settings.ragdoll.life
             });
+        };
+
+        this.redrawPage = (page) => {
+            const canvasBgPage = this.canvasBackgroundPool.find((p) => p.page === page);
+            this.renderPageStatic(canvasBgPage, page, 0, 0, Env.pageWidth, Env.pageHeight, 0, 0);
+            canvasBgPage.needsUpdate = true;
+        };
+        
+        this.blitPage = (page, tileX, tileY) => {
+            const canvasBgPage = this.canvasBackgroundPool.find((p) => p.page === page);
+
+            // Game logic may not be aware that the page is still loaded but not in view, so just ignore the blit
+            // request
+            if (!canvasBgPage) {
+                return;
+            }
+
+            canvasBgPage.blit.push({ x: tileX, y: tileY });
         };
     };
 

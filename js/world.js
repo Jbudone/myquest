@@ -32,6 +32,12 @@ define(['loggable', 'eventful', 'area'], (Loggable, Eventful, Area) => {
             }
         };
 
+        this.start = () => {
+            _.forEach(this.areas, (area, areaID) => {
+                area.start();
+            });
+        };
+
         this.step = (time) => {
             this.handlePendingEvents();
 

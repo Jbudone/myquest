@@ -145,6 +145,7 @@ const errorInGame = (e) => {
     process.exit(e);
 };
 
+global.GLOBAL = global;
 GLOBAL.errorInGame = errorInGame;
 
 // If anything happens make sure we go through the common error/exit routine
@@ -186,31 +187,35 @@ GLOBAL.DEBUGGER = (msg) => {
     if (!msg) msg = 'Debug: ' + e.stack.split('\n')[2];
     console.log(msg);
 
-    // Print out line for error (for quick reference)
-    const stackFrame = ErrorReporter.parseError(e),
-        source       = stackFrame.stack[2].source
+    if (GLOBAL.ErrorReporter) {
+        // Print out line for error (for quick reference)
+        const stackFrame = ErrorReporter.parseError(e),
+            source       = stackFrame.stack[2].source
 
-    let failedCheckSource = "";
-    let startIdx = source.indexOf(msg);
-    let mapSource = null;
-    if (startIdx >= 0) {
+        let failedCheckSource = "";
+        let startIdx = source.indexOf(msg);
+        let mapSource = null;
+        if (startIdx >= 0) {
 
-        let idx = 0, starts = [];
-        for (let i = 0; i < startIdx; ++i) {
-            if (source[i] === '(') starts.unshift(i);
-            else if (source[i] === ')') starts.shift();
+            let idx = 0, starts = [];
+            for (let i = 0; i < startIdx; ++i) {
+                if (source[i] === '(') starts.unshift(i);
+                else if (source[i] === ')') starts.shift();
+            }
+            idx = starts[starts.length - 1] + 1;
+            failedCheckSource = source.substr(idx, startIdx - idx - " || DEBUGGER(".length);
+
+            console.log(`${chalk.bold.red(failedCheckSource)}`);
+                
+            // FIXME: This is working BUT source appended to DEBUGGER is probably wrong (loc isn't accurate in preproAST)
+            console.log(`${chalk.bold.red("WARNING WARNING WARNING: SOURCE PROBABLY INACCURATE -- PLEASE FIX LOC IN preprocessAST.js")}`);
+            mapSource = source.match(/&&\s*"(?<src>((\\")*|[^"])*)"\s*;\s*$/)
+            if (mapSource && mapSource.groups && mapSource.groups.src) {
+                console.log(`${chalk.bold.red(mapSource.groups.src)}`);
+            }
         }
-        idx = starts[starts.length - 1] + 1;
-        failedCheckSource = source.substr(idx, startIdx - idx - " || DEBUGGER(".length);
-
-        console.log(`${chalk.bold.red(failedCheckSource)}`);
-            
-        // FIXME: This is working BUT source appended to DEBUGGER is probably wrong (loc isn't accurate in preproAST)
-        console.log(`${chalk.bold.red("WARNING WARNING WARNING: SOURCE PROBABLY INACCURATE -- PLEASE FIX LOC IN preprocessAST.js")}`);
-        mapSource = source.match(/&&\s*"(?<src>((\\")*|[^"])*)"\s*;\s*$/)
-        if (mapSource && mapSource.groups && mapSource.groups.src) {
-            console.log(`${chalk.bold.red(mapSource.groups.src)}`);
-        }
+    } else {
+        console.log("Crashed before ErrorReporter created, so can't find source");
     }
 
 
@@ -388,7 +393,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             const Resources = (new ResourceMgr());
                             GLOBAL.Resources = Resources;
                             Resources.initialize(
-                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'testing']
+                                ['world', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'testing', 'eventnodes']
                             ).then((assets) => {
 
                                 // Load World
@@ -616,6 +621,9 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 ErrorReporter.report(false, dump, req);
                             };
+
+                            // Start world
+                            The.world.start();
 
                             // The Game Loop
                             const stepTimer         = 100; // TODO: Is this the best step timer?

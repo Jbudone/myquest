@@ -650,7 +650,20 @@ const packageRoutines = {
 
         },
         "finalize": (package) => { }
-    }
+    },
+	"eventnodes": {
+        "prepare": (data) => {},
+        "read": (data) => {
+            return {};
+        },
+        "validate": (data) => {
+            return true;
+        },
+        "updateAsset": (data, assetName, asset) => {
+
+        },
+        "finalize": (package) => { }
+    },
 };
 
 let fileHash = (file) => {

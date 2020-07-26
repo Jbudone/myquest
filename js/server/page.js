@@ -341,6 +341,9 @@ define(
 
                         serialized.movables[entityID] = ent;
                     });
+
+                    // FIXME: Not a movable, maybe we can rename from MOVABLES to DYNAMIC
+                    serialized.evtnodes = this.area.evtNodeMgr.serializePage(this);
                 }
 
                 return JSON.stringify(serialized);

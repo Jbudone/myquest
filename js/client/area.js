@@ -615,6 +615,14 @@ define(
                         });
                     }
 
+                    // Add EventNodes
+                    if (evtPage.evtnodes) {
+
+                        evtPage.evtnodes.forEach((eventnode) => {
+                            this.evtNodeMgr.netInitializeNode(eventnode, eventnode.eventnode, page);
+                        });
+                    }
+
                     // figure out neighbours..
                     if ((pageI % this.pagesPerRow) !== 0 && this.pages[pageI - 1]) { // West Neighbour
                         page.neighbours.west = this.pages[pageI - 1];
@@ -658,6 +666,7 @@ define(
                     }
 
                     this.pathfinding.addPage(page, pageI);
+                    this.evtNodeMgr.addPage(page, pageI);
                 });
             },
 
@@ -672,6 +681,9 @@ define(
                 _.forEach(this.pages, (page) => {
                     page.step(time);
                 });
+
+                this.evtNodeMgr.step(time);
+
                 this.handlePendingEvents(); // events from pages
 
                 const dynamicHandler = this.handler('step');
@@ -687,11 +699,20 @@ define(
                     page.unload();
                 });
 
+                this.evtNodeMgr.unload();
+
                 this.unloadListener();
                 if ('unhookAllHooks' in this) {
                     this.unhookAllHooks();
                 }
                 this.unregisterAllHooks();
+            },
+
+            removePage(page, pageI) {
+                this.pathfinding.removePage(page, pageI);
+                this.evtNodeMgr.removePage(page, pageI);
+                page.unload();
+                delete this.pages[pageI];
             },
 
             hasTile(tile) {

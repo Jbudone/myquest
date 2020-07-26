@@ -118,7 +118,7 @@ define(function(){
             'Player': (logDefault),
             'Resources': (logDefault),
             'ScriptMgr': (logDefault | LOG_INFO),
-            'Script': (logDefault),
+            'Script': (logVerbose),
             'User': (logDefault),
             'Game': (logDefault),
             'Character': (logDefault),
@@ -134,6 +134,8 @@ define(function(){
             'Redis': (logDefault),
             'Pathfinding': (logDefault),
             'Ability': (logDefault),
+            'EventNodeMgr': (logVerbose),
+            'EventNode': (logVerbose),
             'Default': (logDefault),
         };
 

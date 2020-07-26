@@ -2,10 +2,10 @@
 // Area
 define(
     [
-        'eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathfinding'
+        'eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathfinding', 'eventnodemgr'
     ],
     (
-        Eventful, Dynamic, Hookable, Page, Movable, Loggable, Pathfinding
+        Eventful, Dynamic, Hookable, Page, Movable, Loggable, Pathfinding, EventNodeMgr
     ) => {
 
         const Area = function(id) {
@@ -74,6 +74,9 @@ define(
 
             this.movables      = {};
             this.interactables = {};
+
+            this.evtNodeMgr    = new EventNodeMgr(this);
+            this.evtNodeMgr.initialize();
 
 
             this.checkEntityZoned = (entity) => {
