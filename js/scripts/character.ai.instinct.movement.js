@@ -58,7 +58,9 @@ define(
 
                     // We may have not setup our callbacks yet before reaching this. Just early out and use queuedCb to
                     // hit this when we set our callbacks
-                    if (!cbs.succeeded && !cbs.failed) return;
+                    if (!cbs.succeeded && !cbs.failed) {
+                        queuedCb = true;
+                    }
 
                     if (addedPath === ALREADY_THERE) {
                         this.Log("We're already there", LOG_DEBUG);
@@ -68,6 +70,9 @@ define(
                         cbs.failed(addedPath);
                     } else if (addedPath) {
                         addedPath.finished(cbs.succeeded, cbs.failed);
+                    } else if (!character.canMove()) {
+                        // Cannot move
+                        cbs.failed();
                     } else {
                         this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
                         cbs.failed();
@@ -106,6 +111,10 @@ define(
                     }
                 };
 
+                if (!character.canMove()) {
+                    queuedCb = true;
+                    return setCallbacks;
+                }
 
 
                 const playerX = character.entity.position.global.x,

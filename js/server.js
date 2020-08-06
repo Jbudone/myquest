@@ -10,6 +10,9 @@ requirejs.config({
     }
 });
 
+async function loadDebuggingModule(){
+    await import('./debugging.js');
+}; loadDebuggingModule();
 
 // Error in Game
 // If there is any issue whatsoever, crash the server immediately and drop into here. The intention is that any error
@@ -18,79 +21,6 @@ requirejs.config({
 // the investigation
 let shutdownGame = null,
     shuttingDown = false;
-
-const waitForInspector = () => {
-
-    const prompt = () => {
-
-        const fd = fs.openSync('/dev/tty', 'rs');
-
-        const wasRaw = process.stdin.isRaw;
-        if (!wasRaw) { process.stdin.setRawMode(true); }
-
-        let char = null;
-        while (true) {
-            const buf = Buffer.alloc(3);
-            const read = fs.readSync(fd, buf, 0, 3);
-
-            // if it is not a control character seq, assume only one character is read
-            char = buf[read-1];
-
-            // catch a ^C and return null
-            if (char == 3){
-                process.stdout.write('^C\n');
-
-                char = null;
-                break;
-            }
-
-            if (read > 1) { // received a control sequence
-                continue; // any other 3 character sequence is ignored
-            }
-
-            break;
-        }
-
-        fs.closeSync(fd);
-        process.stdin.setRawMode(wasRaw);
-        return char;
-    };
-
-    // Check for an existing connection for the inspector
-    const { spawnSync } = require('child_process');
-    const checkInspectorProc = spawnSync('node', ['./dist/js/checkForInspector.js', '--port', process.debugPort], {
-        cwd: process.cwd(),
-        env: process.env,
-        encoding: 'utf-8'
-    });
-
-    if (checkInspectorProc.status === 2) {
-        // There's already an open connection for the inspector
-        debugger;
-    } else {
-
-        Log(chalk.red.bold("Hit any key to open the inspector"));
-        const n = prompt();
-        if (n !== null) {
-
-            // Spawn a script that can listen for ctrl-c to kill the inspector if we don't want to start the inspector
-            // NOTE: We have to spawnSync otherwise the spawn will wait until after this function to spawn the script.
-            // Consequently we need the spawned script to exit so that we can continue to spark the inspector. That's why we
-            // need to spawnSync a script who's sole purpose is to spawn another script
-            const killProc = spawnSync('node', ['./dist/js/spawnSyncScript.js', './dist/js/killInspector.js', '--master-id', process.pid], {
-                stdio: ['inherit', 'ignore', 'ignore'], // stdin -> child process
-                cwd: process.cwd(),
-                env: process.env,
-                encoding: 'utf-8'
-            });
-
-            Log(chalk.red.bold("Waiting for inspector.."));
-            const inspector = require('inspector');
-            inspector.open(process.debugPort, "127.0.0.1", true); // port, host, block
-            debugger;
-        }
-    }
-};
 
 const errorInGame = (e) => {
 

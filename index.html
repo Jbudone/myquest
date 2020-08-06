@@ -171,7 +171,7 @@ require(['keys', 'environment'], (Keys, Env) => {
 	window['Env'] = (new Env());
     window['_global'] = window;
 
-    require(['jquery','bluebird','lodash','objectmgr','utilities','extensions','event','lib/stacktrace','errors','fsm','openpgp','client/chalk.polyfill'],function($,Promise,_,The,Utils,Ext,Events,Stack,Errors,FSM,openpgp,chalk){
+    require(['jquery','bluebird','lodash','objectmgr','utilities','extensions','event','lib/stacktrace','debugging','errors','fsm','openpgp','client/chalk.polyfill'],function($,Promise,_,The,Utils,Ext,Events,Stack,Debugging,Errors,FSM,openpgp,chalk){
 
         // TODO: why aren't The or Env global?
         window['$']=$;

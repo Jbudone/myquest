@@ -37,7 +37,19 @@ define(() => {
                     });
 
                     this.worker.on('close', (code) => {
-                        Log(`child process exited with code ${code}`, LOG_ERROR);
+                        Log(`child process closed with code ${code}`, LOG_ERROR);
+                        DEBUGGER();
+                    });
+
+                    this.worker.on('disconnect', (code) => {
+                        Log(`child process disconnected with code ${code}`, LOG_ERROR);
+                        DEBUGGER();
+                    });
+
+                    this.worker.on('error', (code) => {
+                        Log(`child process errord with code ${code}`, LOG_ERROR);
+                        Log("WAITING FOR INSPECTOR TO CLOSE ON JOB!");
+                        waitInspectorClosed();
                         DEBUGGER();
                     });
 
@@ -47,6 +59,10 @@ define(() => {
                                 this.cbList[data.__cbId](data);
                                 delete this.cbList[data.__cbId];
                             }
+                        } else if (data.debugging) {
+                            // Worker is debugging, pause until inspector is closed
+                            Log("WAITING FOR INSPECTOR TO CLOSE ON JOB!");
+                            waitInspectorClosed();
                         } else {
                             onMessage(data);
                         }

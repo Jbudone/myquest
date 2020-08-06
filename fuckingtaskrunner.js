@@ -336,7 +336,7 @@ fs.readFile(Settings.cacheFile, (err, bufferData) => {
         cacheData = { "files": {}, "settings": {
             ignore: [ "js/SCRIPT.INJECTION.js" ],
             preprocess: {
-                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js" ]
+                "blacklist": [ "js/keys.js", "js/killInspector.js", "js/hookable.js", "js/fsm.js", "js/extensions.js", "js/profiler.js", "js/SCRIPTINJECT.js", "js/SCRIPTENV.js", "js/scriptmgr.js", "js/errors.js", "js/event.js", "js/environment.js", "js/eventful.js", "js/client/chalk.polyfill.js", "js/errorReporter.js", "js/client/errorReporter.js", "js/server/errorReporter.js", "js/test/errorReporter.js", "js/checkForInspector.js", "js/client/camera.js", "js/test/pseudoUI.js", "js/test/pseudoRenderer.js", "js/test/pseudofxmgr.js", "js/test/bot.js", "js/test/bot2.js", "js/server/db.js", "js/utilities.js", "js/script.js", "js/server.js", "js/test.js", "js/client/webworker.job.js", "js/server/webworker.job.js", "js/debugging.js" ]
             }
         } };
     } else {

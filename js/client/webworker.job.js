@@ -1,6 +1,6 @@
 importScripts('../lib/require.js');
 requirejs.config({
-    "baseUrl": "/dist/js",
+    "baseUrl": self.location.pathname + '/../../',
     "paths": {
         // "jquery": "//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min",
         "jquery": "lib/jquery-2.1.1.min",
@@ -32,46 +32,15 @@ self.onmessage = (message) => {
             }
         };
 
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-        // SHARED CODE FOR ERROR CHECKING
-        self.global = self;
-        global.OBJECT = 'OBJECT';
-        global.FUNCTION = 'FUNCTION';
-        global.HAS_KEY = 'HAS_KEY';
-        global.IS_TYPE = 'IS_TYPE';
-
-        global.OBJECT_TYPES = ['object', 'function', 'string', 'number'];
+        self.IS_WORKER = true;
+        self.LOG = console.log;
 
         var DEBUGGER = (msg) => {
             debugger;
         };
-        global.DEBUGGER = DEBUGGER;
-        global.worker = worker;
-
-        var CHECK = (stuffToCheck) => {
-
-            stuffToCheck.forEach((check) => {
-
-                if (check.checker === IS_TYPE) {
-                    if (check.typeCmp === OBJECT) {
-                        if (typeof check.node !== "object" && typeof check.node !== "function" && typeof check.node !== "string") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
-                    } else if (check.typeCmp === FUNCTION) {
-                        if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE FUNCTION", check);
-                    } else { 
-                        DEBUGGER("Unexpected type comparison", check);
-                    }
-                } else if (check.checker === HAS_KEY) {
-                    if (!(check.property in check.object)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
-                } else {
-                    DEBUGGER("Unexpected check", check);
-                }
-            });
-        };
-
-        global.CHECK = CHECK;
-        // WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        self.DEBUGGER = DEBUGGER;
+        self.worker = worker;
+        self.global = self;
 
 
         // In case we receive messages before the module is loaded
@@ -81,7 +50,7 @@ self.onmessage = (message) => {
         };
 
         // Load worker module
-        requirejs(['lodash'], (_) => {
+        requirejs(['lodash', 'debugging', 'errors'], (_, Debugging, Errors) => {
 
             self['_'] = _;
 
@@ -95,7 +64,12 @@ self.onmessage = (message) => {
                 worker.postMessage({
                     success: true
                 });
+            }, (e) => {
+                DEBUGGER("Error loading module", e);
+                console.error(e);
             });
+        }, (e) => {
+            console.error(e);
         });
     }
 };
