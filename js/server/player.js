@@ -527,6 +527,11 @@ define(
                     response.success = success;
                     response.frameId = The.frameEvtId;
                     if (args) {
+                        // Don't overwrite evt response args
+                        assert(!args.hasOwnProperty('id'));
+                        assert(!args.hasOwnProperty('frameId'));
+                        assert(!args.hasOwnProperty('success'));
+
                         _.extend(response, args);
                     }
                     this.client.send(response.serialize());
