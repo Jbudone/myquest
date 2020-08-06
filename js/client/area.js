@@ -619,7 +619,7 @@ define(
                     if (evtPage.evtnodes) {
 
                         evtPage.evtnodes.forEach((eventnode) => {
-                            this.evtNodeMgr.netInitializeNode(eventnode, eventnode.eventnode, page);
+                            this.evtNodeMgr.netInitializeNode(eventnode, page);
                         });
                     }
 
@@ -683,6 +683,7 @@ define(
                 });
 
                 this.evtNodeMgr.step(time);
+                this.physicsMgr.step(time);
 
                 this.handlePendingEvents(); // events from pages
 

@@ -503,6 +503,7 @@ define(
                 } while (--i >= 0);
 
                 this.evtNodeMgr.step(time);
+                this.physicsMgr.step(time);
 
                 this.handlePendingEvents(); // events from pages
 

@@ -129,6 +129,8 @@ define(function(){
     addKey('EVT_NETSERIALIZE');
     addKey('EVT_NETSERIALIZE_OWNER');
 
+    addKey('EVT_SKILL_MELEE');
+
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Misc. Keys
@@ -224,6 +226,8 @@ define(function(){
     ]);
 
     addKey('EVT_EVTNODEMGR_UPDATES_PAGE');
+
+    addKey('EVTNODE_TYPE');
 
 	return keys;
 });

@@ -1568,6 +1568,13 @@ define(
 
                     onMouseMove(mouse, { buttons: buttonCode });
 
+
+                    if (buttonCode === 2) {
+                        The.user.rightClicked(mouse);
+                        return;
+                    }
+
+
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {
                         if (buttonCode == 2) {

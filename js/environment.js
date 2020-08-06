@@ -136,6 +136,7 @@ define(function(){
             'Ability': (logDefault),
             'EventNodeMgr': (logVerbose),
             'EventNode': (logVerbose),
+            'PhysicsMgr': (logVerbose),
             'Default': (logDefault),
         };
 

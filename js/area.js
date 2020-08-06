@@ -2,10 +2,10 @@
 // Area
 define(
     [
-        'eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathfinding', 'eventnodemgr'
+        'eventful', 'dynamic', 'hookable', 'page', 'movable', 'loggable', 'pathfinding', 'eventnodemgr', 'physicsmgr'
     ],
     (
-        Eventful, Dynamic, Hookable, Page, Movable, Loggable, Pathfinding, EventNodeMgr
+        Eventful, Dynamic, Hookable, Page, Movable, Loggable, Pathfinding, EventNodeMgr, PhysicsMgr
     ) => {
 
         const Area = function(id) {
@@ -77,6 +77,9 @@ define(
 
             this.evtNodeMgr    = new EventNodeMgr(this);
             this.evtNodeMgr.initialize();
+
+            this.physicsMgr    = new PhysicsMgr(this);
+            this.physicsMgr.initialize();
 
 
             this.checkEntityZoned = (entity) => {
