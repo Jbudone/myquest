@@ -68,7 +68,7 @@ define(function(){
           stack = err.stack;
 
       stack = message + "\n" + stack;
-      if (!Env.isServer) {
+      if (!Env.isServer && !Env.isBot) {
           console.error(message);
           console.error(args);
           debugger;
@@ -95,7 +95,7 @@ define(function(){
     _global.HAS_KEY = 'HAS_KEY';
     _global.IS_TYPE = 'IS_TYPE';
 
-    _global.OBJECT_TYPES = ['object', 'function', 'string'];
+    _global.OBJECT_TYPES = ['object', 'function', 'string', 'number'];
 
     var CHECK = (stuffToCheck) => {
 

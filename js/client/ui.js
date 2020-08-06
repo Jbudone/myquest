@@ -388,6 +388,7 @@ define(
             };
 
             this.positionFromMouse = (mouse) => {
+                assert(mouse);
                 const scale = Env.tileScale,
                     bounds  = this.canvas.getBoundingClientRect(),
                     x       = (mouse.clientX - bounds.left) / scale,
@@ -482,11 +483,15 @@ define(
                 });
 
                 this.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    if (lastMouseEvt) {
+                        this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    }
                 });
 
                 this.listenTo(The.player, EVT_MOVING_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    if (lastMouseEvt) {
+                        this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    }
                 });
 
                 // Load UI modules

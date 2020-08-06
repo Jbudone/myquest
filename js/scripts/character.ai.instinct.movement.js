@@ -45,24 +45,44 @@ define(
                     path         = null,
                     pathId       = null;
 
+
+                let queuedCb = null,
+                    queuedStop = null;
+
+                let cbs = {
+                    succeeded: function(){},
+                    failed: function(){},
+                };
+
+                const __then = () => {
+
+                    // We may have not setup our callbacks yet before reaching this. Just early out and use queuedCb to
+                    // hit this when we set our callbacks
+                    if (!cbs.succeeded && !cbs.failed) return;
+
+                    if (addedPath === ALREADY_THERE) {
+                        this.Log("We're already there", LOG_DEBUG);
+                        cbs.succeeded();
+                    } else if (addedPath === PATH_TOO_FAR) {
+                        this.Log("You're too far!", LOG_DEBUG);
+                        cbs.failed(addedPath);
+                    } else if (addedPath) {
+                        addedPath.finished(cbs.succeeded, cbs.failed);
+                    } else {
+                        this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
+                        cbs.failed();
+                    }
+                };
+
                 const setCallbacks = {
 
                     then: (succeeded, failed) => {
 
-                        if (!_.isFunction(succeeded)) succeeded = function(){};
-                        if (!_.isFunction(failed)) failed = function(){};
+                        if (succeeded) cbs.succeeded = succeeded;
+                        if (failed)    cbs.failed = failed;
 
-                        if (addedPath === ALREADY_THERE) {
-                            this.Log("We're already there", LOG_DEBUG);
-                            succeeded();
-                        } else if (addedPath === PATH_TOO_FAR) {
-                            this.Log("You're too far!", LOG_DEBUG);
-                            failed(addedPath);
-                        } else if (addedPath) {
-                            addedPath.finished(succeeded, failed);
-                        } else if (failed) {
-                            this.Log("Chase path was not added -- however we are neither at our destination, nor is it too far away", LOG_WARNING);
-                            failed();
+                        if (queuedCb) {
+                            __then();
                         }
 
                         return setCallbacks;
@@ -78,6 +98,8 @@ define(
                             }
 
                             character.entity.cancelPath();
+                        } else {
+                            queuedStop = pathId;
                         }
 
                         addedPath = null;
@@ -86,61 +108,46 @@ define(
 
 
 
-
                 const playerX = character.entity.position.global.x,
                     playerY   = character.entity.position.global.y,
                     toX       = target.entity.position.global.x,
-                    toY       = target.entity.position.global.y,
-                    fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
-                    toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
-
+                    toY       = target.entity.position.global.y;
 
                 character.entity.cancelPath();
                 character.entity.page.area.pathfinding.workerHandlePath({
                     movableID: character.entity.id,
-                    start: { x: fromTiles[0].x, y: fromTiles[0].y },
-                    destination: { x: toTiles[0].x, y: toTiles[0].y },
                     startPt: { x: playerX, y: playerY },
                     endPt: { x: toX, y: toY }
-                }, (data) => {
+                }).then((data) => {
 
-                    console.log(`Path results received from worker!`);
-
-                    if (!data.success) {
-                        console.error("Could not find path!");
-
-                        const fromTile = character.entity.position.tile,
-                            toTile     = target.entity.position.tile;
-                        //this.Log(`FAILED TO FIND PATH: (${fromTile.x}, ${fromTile.y}) ==> (${toTile.x}, ${toTile.y})`);
-                        console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
-                    } else {
-                        console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
-                        console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
-                        console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
-
-                        if (data.path.ALREADY_THERE) {
-                            // We're already there..
-                            addedPath = ALREADY_THERE;
-                        } else {
-
-                            const path = new Path();
-                            data.path.walks.forEach((walk) => {
-                                path.walks.push(walk);
-                            });
-                            path.start = data.path.start;
-
-                            if (maxWalk && path.length() > maxWalk) {
-                                addedPath = PATH_TOO_FAR;
-                            } else {
-                                path.flag = PATH_CHASE;
-                                addedPath = character.entity.addPath(path);
-                                pathId    = character.entity.path.id;
-
-                                character.entity.recordNewPath(path);
-                            }
-                        }
-
+                    if (queuedStop) {
+                        this.Log("Queued to stop path before we finished fetching path. Just ignore this", LOG_DEBUG);
+                        return;
                     }
+
+                    if (data.path.ALREADY_THERE) {
+
+                        addedPath = ALREADY_THERE;
+                        return;
+                    }
+
+                    const path = data.path;
+                    if (maxWalk && path.length() > maxWalk) {
+                        addedPath = PATH_TOO_FAR;
+                    } else {
+                        path.flag = PATH_CHASE;
+                        addedPath = character.entity.addPath(path);
+                        pathId    = character.entity.path.id;
+
+                        character.entity.recordNewPath(path);
+                    }
+
+                    __then();
+
+                }).catch((data) => {
+                    console.error("Could not find path!");
+                    console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
+                    cbs.failed();
                 });
 
                 return setCallbacks;
@@ -156,7 +163,8 @@ define(
 
                 let reachedTile       = function(){},
                     couldNotReachTile = function(){},
-                    alreadyThere      = false;
+                    alreadyThere      = false,
+                    addedPath         = null;
 
 
                 const playerX = character.entity.position.global.x,
@@ -166,40 +174,28 @@ define(
                     fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
                     toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
+
+
                 character.entity.cancelPath();
                 character.entity.page.area.pathfinding.workerHandlePath({
                     movableID: character.entity.id,
-                    start: { x: fromTiles[0].x, y: fromTiles[0].y },
-                    destination: { x: toTiles[0].x, y: toTiles[0].y },
                     startPt: { x: playerX, y: playerY },
                     endPt: { x: toX, y: toY }
-                }, (data) => {
+                }).then((data) => {
 
-                    console.log(`Path results received from worker!`);
+                    if (data.path.ALREADY_THERE) {
 
-                    if (!data.success) {
-                        console.error("Could not find path!");
+                        alreadyThere = true;
                         return;
-                    } else {
-                        console.log(`Found path from (${playerX}, ${playerY}) -> (${toX}, ${toY})`);
-                        console.log(`FIND PATH TILE TIME: ${data.path.tileTime}`);
-                        console.log(`FIND PATH POINT TIME: ${data.path.ptTime}`);
-
-                        if (data.path.ALREADY_THERE) {
-                            // We're already there..
-                            alreadyThere = true;
-                        } else {
-
-                            const path = new Path();
-                            data.path.walks.forEach((walk) => {
-                                path.walks.push(walk);
-                            });
-                            path.start = data.path.start;
-                            path.flag = PATH_CHASE;
-                            character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
-                            character.entity.recordNewPath(path);
-                        }
                     }
+
+                    const path = data.path;
+                    path.flag = PATH_CHASE;
+                    addedPath = character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
+                    character.entity.recordNewPath(path);
+
+                }).catch((data) => {
+                    console.error("Could not find path!");
                 });
 
                 return {
@@ -213,6 +209,11 @@ define(
 
                         reachedTile       = success || function(){};
                         couldNotReachTile = failed || function(){};
+
+                        // We already have a path
+                        if (addedPath) {
+                            addedPath.finished(reachedTile, couldNotReachTile);
+                        }
                     }
                 };
             };

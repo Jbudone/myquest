@@ -199,7 +199,6 @@ define(
 
                         this.Log(`Entity [${entity.id}] cancelling Path {${path.id}, ${path.flag}}`, LOG_DEBUG);
                     });
-
                 });
 
                 this.listenTo(this, EVT_ZONE_OUT, (page, entity) => {
@@ -337,6 +336,10 @@ define(
 
                         if ('name' in entity) {
                             ent.name = entity.name;
+                        }
+
+                        if ('playerID' in entity) {
+                            ent.playerID = entity.playerID;
                         }
 
                         serialized.movables[entityID] = ent;

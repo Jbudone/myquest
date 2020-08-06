@@ -28,21 +28,20 @@ define(() => {
                     };
 
                     this.worker.stdout.on('data', (data) => {
-                        console.log(`stdout: ${data}`);
+                        Log(`stdout: ${data}`, LOG_INFO);
                     });
 
                     this.worker.stderr.on('data', (data) => {
-                        console.error(`stderr: ${data}`);
+                        Log(`stderr: ${data}`, LOG_ERROR);
                         DEBUGGER();
                     });
 
                     this.worker.on('close', (code) => {
-                        console.log(`child process exited with code ${code}`);
+                        Log(`child process exited with code ${code}`, LOG_ERROR);
                         DEBUGGER();
                     });
 
                     this.worker.on('message', (data) => {
-                        console.log(data);
                         if (data.__cbId) {
                             if (this.cbList[data.__cbId]) {
                                 this.cbList[data.__cbId](data);

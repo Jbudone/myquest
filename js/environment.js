@@ -37,6 +37,7 @@ define(function(){
 
 		this.renderer = {
 			drawBorders: false, // Draws page/entity borders (useful for debugging)
+            drawCollisions: true, // Highlight collision tiles
 
             // Use bg pooled pages by copying their image data into a single bg canvas
             // If this is false then have all active pooled pages as visible, and simply move them around in place of the bg canvas (ie. multiple canvases for bg)
@@ -46,7 +47,8 @@ define(function(){
 		this.assertion = {
 			eventListeningDuplicates: true,
             requiresResources: false, // Testing between computers
-            checkGetImageDataZeroBug: true // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkGetImageDataZeroBug: true, // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkSafePath: true // Confirm path is safe when adding to movable
 		};
 
 		this.game = {
@@ -77,6 +79,10 @@ define(function(){
                     delayPacketsMin: 30,
                      delayPacketsMax: 300
                  }
+            },
+
+            world: {
+                noNpcs: true
             }
 		};
 

@@ -569,6 +569,10 @@ define(
                                     entity.name = movable.name;
                                 }
 
+                                if (movable.playerID) {
+                                    entity.playerID = movable.playerID;
+                                }
+
                                 entity.updatePosition();
 
                                 if (movable.path) {

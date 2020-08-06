@@ -695,6 +695,23 @@ define(['loggable'], (Loggable) => {
                             }
                             this.ctxEntities.lineWidth = this.settings.debugPath.lineWidth;
                             this.ctxEntities.stroke();
+
+                            // Render tiles searched for path
+                            // NOTE: nodes are points (entrance to tile)
+                            if (movable.path.debugCheckedNodes) {
+                                let nodes = movable.path.debugCheckedNodes;
+                                for (let i = 0; i < nodes.length; ++i) {
+                                    const node = nodes[i],
+                                        x = Math.floor(node.x / Env.tileSize),
+                                        y = Math.floor(node.y / Env.tileSize);
+
+                                    this.ctxEntities.strokeRect(
+                                        Env.tileScale * (x * Env.tileSize - The.camera.globalOffsetX),
+                                        Env.tileScale * (y * Env.tileSize + The.camera.globalOffsetY),
+                                        Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize,
+                                    );
+                                }
+                            }
                         }
                     });
                     this.ctxEntities.restore();
@@ -1014,6 +1031,18 @@ define(['loggable'], (Loggable) => {
                 if(!spriteObj.sheet) spriteObj.sheet = sheetData;
                 if (sy!=-1 && sx!=-1 && sprite !== -1 && spriteObj.hasOwnProperty('static')) {
                     pageBg.canvasCtx.drawImage(sheet, tileSize*sx, tileSize*sy, tileSize, tileSize, px, py, scale*Env.tileSize, scale*Env.tileSize);
+
+
+                    if (Env.renderer.drawCollisions) {
+                        const entIdInSheet = sprite - sheetData.gid.first;
+                        if (collisions !== undefined && collisions.indexOf(entIdInSheet) >= 0) {
+                            pageBg.canvasCtx.fillStyle = "#FF0000AA";
+                            pageBg.canvasCtx.fillRect(
+                                px, py,
+                                Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize
+                            );
+                        }
+                    }
                 }
             }
         };

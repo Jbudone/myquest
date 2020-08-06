@@ -41,7 +41,7 @@ self.onmessage = (message) => {
         global.HAS_KEY = 'HAS_KEY';
         global.IS_TYPE = 'IS_TYPE';
 
-        global.OBJECT_TYPES = ['object', 'function', 'string'];
+        global.OBJECT_TYPES = ['object', 'function', 'string', 'number'];
 
         var DEBUGGER = (msg) => {
             debugger;

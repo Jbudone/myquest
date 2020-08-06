@@ -232,7 +232,7 @@ define(
             // NOTE: returns { path: null } if we're already there
             this.findPath = (fromTiles, toTiles, _maxWeight) => {
 
-
+                DEBUGGER(); // ENsure we aren't using this anymore
 
 
 
@@ -449,6 +449,10 @@ define(
                     else if (direction === 's') dir = SOUTH;
                     else if (direction === 'e') dir = EAST;
                     else if (direction === 'w') dir = WEST;
+                    else if (direction === 'nw') dir = NORTHWEST;
+                    else if (direction === 'ne') dir = NORTHEAST;
+                    else if (direction === 'sw') dir = SOUTHWEST;
+                    else if (direction === 'se') dir = SOUTHEAST;
 
                     let walk = new Walk(dir, Env.tileSize, null);
                     path.walks.unshift(walk);
@@ -468,6 +472,10 @@ define(
                             else if (direction === 's') dir = SOUTH;
                             else if (direction === 'e') dir = EAST;
                             else if (direction === 'w') dir = WEST;
+                            else if (direction === 'nw') dir = NORTHWEST;
+                            else if (direction === 'ne') dir = NORTHEAST;
+                            else if (direction === 'sw') dir = SOUTHWEST;
+                            else if (direction === 'se') dir = SOUTHEAST;
 
                             path.walks[0].destination = nextTile.tile;
                             walk = new Walk(dir, Env.tileSize, null);
