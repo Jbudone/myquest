@@ -220,13 +220,15 @@ define(function(){
 
     addKey('EFFECT_BUFF');
 
+    // Netserialized Character Props
     addKeyGroup('N', [
         'NULL',
         'HEALTH_CUR', 'HEALTH_MAX', 'HEALTH_CURMAX',
         'STR_CUR', 'STR_MAX', 'STR_CURMAX',
         'CON_CUR', 'CON_MAX', 'CON_CURMAX',
         'DEX_CUR', 'DEX_MAX', 'DEX_CURMAX',
-        'XP', 'LEVEL'
+        'XP', 'LEVEL',
+        'FEARED'
     ]);
 
     addKey('EVT_EVTNODEMGR_UPDATES_PAGE');
