@@ -757,7 +757,7 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
         // ignore it if its stale
         // NOTE: In weird cases where a movable is removed and another is added in its place (same movableID but
         // separate movables), this will still be fine since the pathID could have any arbitrary starting point
-        this.movablePathID = {};
+        this.movables = {};
 
         this.workerHandlePath = (path, cb) => {
 
@@ -766,14 +766,18 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
             let queuedCb = null;
 
 
-
-
             // Keep track of the movable's current pathID so that we can skip stale paths
-            if (!this.movablePathID[path.movableID]) {
-                this.movablePathID[path.movableID] = 0;
+            if (!this.movables[path.movableID]) {
+                this.movables[path.movableID] = {
+                    pathId: 0
+                };
             }
 
-            path.id = (++this.movablePathID[path.movableID]);
+            path.id = (++this.movables[path.movableID].pathId);
+
+            // We may already have a path queued, waiting for the current in-flight findPath to return. No matter how
+            // this new findPath turns out (worker? immediate?) the pending path is now stale and can be nuked
+            this.movables[path.movableID].queuedPath = null;
 
             const startTileX = Math.floor(path.startPt.x / Env.tileSize),
                 destTileX    = Math.floor(path.endPt.x / Env.tileSize),
@@ -916,27 +920,78 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
 
                 } else {
 
-                    webworker.postMessage({
-                        type: HANDLE_PATH,
-                        path: {
+                    // We can't immediately findPath, need to queue for worker
+                    // We may already have a path inFlight, which is now stale. Unfortunately we can't cancel it but we
+                    // can queue the next path as soon as this one finishes
+
+
+                    if (this.movables[path.movableID].inFlight) {
+                        // findPath in-flight, need to queue this path
+                        this.movables[path.movableID].queuedPath = {
                             movableID: path.movableID,
                             pathID: path.id,
                             startPt: path.startPt,
                             endPt: path.endPt
-                        }
-                    }, (data) => {
-                        if (data.pathID !== this.movablePathID[data.movableID]) {
-                            this.Log("Stale path, ignoring", LOG_DEBUG);
-                            return;
+                        };
+                    } else {
+                        this.movables[path.movableID].inFlight = true;
+
+                        const handlePathCb = (data) => {
+                            this.movables[path.movableID].inFlight = false;
+
+                            // This path is now stale, we already have a queuedPath ready to replace this one
+                            let queuedPath = null;
+                            if (this.movables[path.movableID].queuedPath) {
+                                queuedPath = path;
+                                // NOTE: Do NOT early-out here. Even though this path is stale, its likely similar to
+                                // the new pending one. If we keep replacing it we'll never get an actual path, so just
+                                // use the stale path and replace with the next
+                            } else if (data.pathID !== this.movables[data.movableID].pathId) {
+                                // Stale path, and replaced path is not one that's going to worker. So just ignore this
+                                // one
+                                this.Log("Stale path, ignoring", LOG_DEBUG);
+                                return;
+                            }
+
+
+                            const movable = area.movables[data.movableID];
+                            if (movable && data.success) {
+                                cbThen(data);
+                            } else {
+                                cbCatch(data);
+                            }
+
+                            // Replace callbacks with new path cb AFTER we call callbacks from previous path
+                            if (queuedPath) {
+                                this.movables[queuedPath.movableID].__then = queuedPath.__then;
+                                this.movables[queuedPath.movableID].__catch = queuedPath.__catch;
+
+                                this.movables[queuedPath.movableID].queuedPath = null;
+                                this.movables[queuedPath.movableID].inFlight = true;
+                                webworker.postMessage({
+                                    type: HANDLE_PATH,
+                                    path: {
+                                        movableID: queuedPath.movableID,
+                                        pathID: queuedPath.id,
+                                        startPt: queuedPath.startPt,
+                                        endPt: queuedPath.endPt
+                                    }
+                                }, handlePathCb);
+
+                                path = queuedPath; // TODO: Necessary?
+                            }
                         }
 
-                        const movable = area.movables[data.movableID];
-                        if (movable && data.success) {
-                            cbThen(data);
-                        } else {
-                            cbCatch(data);
-                        }
-                    });
+                        webworker.postMessage({
+                            type: HANDLE_PATH,
+                            path: {
+                                movableID: path.movableID,
+                                pathID: path.id,
+                                startPt: path.startPt,
+                                endPt: path.endPt
+                            }
+                        }, handlePathCb);
+                    }
                 }
             }
 
@@ -952,6 +1007,8 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                 if (!data.path.start || !data.path.end) DEBUGGER();
                 this.Log(`Found path from (${data.path.start.x}, ${data.path.start.y}) -> (${data.path.end.x}, ${data.path.end.y})`, LOG_DEBUG);
                 this.Log(`FIND PATH TIME: ${data.time}`, LOG_DEBUG);
+
+                const movablePath = this.movables[data.movableID];
 
                 // FIXME: What about ALREADY_THERE?
                 if (data.path.ALREADY_THERE) {
@@ -998,36 +1055,52 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                 data.movable = area.movables[data.movableID];
 
 
-
-                if (callbacks.__then) {
-                    callbacks.__then(data);
+                if (movablePath.__then) {
+                    movablePath.__then(data);
                 }
                 
             }, cbCatch = (data) => {
 
-                if (callbacks.__catch) {
-                    callbacks.__catch(data);
+                const movablePath = this.movables[data.movableID];
+                if (movablePath.__catch) {
+                    movablePath.__catch(data);
                 }
             };
 
             const setCallback = (cbType, cb) => {
-                if (cbType === 'then')  {
-                    callbacks.__then = cb;
 
-                    if (queuedCb) {
-                        const movable = area.movables[queuedCb.movableID];
-                        if (movable && queuedCb.success) {
-                            cbThen(queuedCb);
+                // Set callbacks for findPath. Since this is associated directly to the movable, there can only be one
+                // current callback. We could have any one of these situations:
+                //  - First path: Set as __then to use on first return
+                //  - Second path (queued): Set cb to queuedPath so that when we return the firstPath we can use the old
+                //  cb and replace the new cb when we put the queuedPath in-flight
+                //  - Second path (immediate): Set as __then to use immediately. The in-flight path will return and be
+                //  stale, so it'll be ignored
+                const movablePath = this.movables[path.movableID];
+                if (cbType === 'then')  {
+                    if (movablePath.queuedPath) {
+                        movablePath.queuedPath.__then = cb;
+                    } else {
+                        movablePath.__then = cb;
+
+                        if (queuedCb) {
+                            const movable = area.movables[queuedCb.movableID];
+                            if (movable && queuedCb.success) {
+                                cbThen(queuedCb);
+                            }
                         }
                     }
                 } else if (cbType === 'catch') {
-                    callbacks.__catch = cb;
+                    if (movablePath.queuedPath) {
+                        movablePath.queuedPath.__catch = cb;
+                    } else {
+                        movablePath.__catch = cb;
 
-
-                    if (queuedCb) {
-                        const movable = area.movables[queuedCb.movableID];
-                        if (!movable || !queuedCb.success) {
-                            cbCatch(queuedCb);
+                        if (queuedCb) {
+                            const movable = area.movables[queuedCb.movableID];
+                            if (!movable || !queuedCb.success) {
+                                cbCatch(queuedCb);
+                            }
                         }
                     }
                 }
@@ -1038,9 +1111,6 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
             const callbacks = {
                 then: (cb) =>  { return setCallback('then', cb); },
                 catch: (cb) => { return setCallback('catch', cb); },
-
-                __then: null,
-                __catch: null
             };
 
             return callbacks;
