@@ -19,6 +19,33 @@ Client/Server
 
 The game can be split between its client and server portions. However, the primary benefit in using nodejs is the reusability of scripts between client and server side. Obviously there must be some differences between client/server side versions of the scripts, so a little extension script was built to extend objects into their client/server counterparts. This is done by injecting a server/client-specific model of the object into the object itself at runtime.
 
+Task Runner
+---------------
+
+Live Debugger
+---------------
+
+Error Handler
+---------------
+
+Preprocessor
+---------------
+
+Preprocessor which breaks source scripts into its AST, parses it, and adds safety runtime checks to prevent unexpected crashes. Although we can catch unexpected exceptions in a global scope, we won't actually break at the source of the problem, which makes it hard to figure out what went wrong. Runtime checks essentially perform checks that would otherwise throw, eg. calling a function on a non-function, or accessing the member of an undefined variable.
+
+
+FIXME:
+ - Brief explanation of preprocessor
+ - Side-by-side picture of code -> preprocessed -> DEBUGGER hit
+    Could do video of:
+        NOTE: USE Vim and record screen, then add into gimp as frame-by-frame. Then just remove the ones you don't want
+        1) Typing code in left window
+        2) Pause -- "Compiling results.." in right window
+        3) Show results in right window, with coloured regions of source map
+        4) Show simulated code running (stepping through each line) until we hit the assert -- runs in parallel in both windows
+        5) Show assert hitting
+ - Full explanation of loose typed JS, runtime exceptions, AST manipulation, assertions, whitelist, source map
+
 
 Event Handling
 ---------------
