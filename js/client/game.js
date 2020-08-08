@@ -1115,6 +1115,9 @@ define(
 
                         const entity = The.area.movables[data.entityId];
 
+                        console.log("ENTITY HAS TELEPORTED");
+                        console.log(entity.position.tile);
+
                         // If the entity is us, then ignore this message. We've already handled this from onTeleported
                         if (entity === The.player)
                         {
@@ -1134,6 +1137,8 @@ define(
                         };
                         entity.updatePosition(globalPos.x, globalPos.y);
                         entity.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+
+                        entity.triggerEvent(EVT_TELEPORT, newPage.index, { x: tile.x, y: tile.y });
 
                         The.area.checkEntityZoned(entity);
                     };
