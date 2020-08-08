@@ -26,6 +26,11 @@ Event Handling
 This game makes heavy use of event handling (aka the observer pattern). Essentially an object is able to attach a listener to another object to listen for certain events it may invoke (eg. a character listens to its foe invoking the EVT_MOVED event, in case he tries to flee from battle). When an event is invoked, it checks which observers are listening to it, and triggers those observers to handle their callbacks. Those observers will either queue their callback for the next most suitable time, or handle the callback immediately if necessary.
 
 
+Map Editor
+-----------
+
+Browser based map editor for portability and ease of access. Uses webGL for highly efficient redrawing, and a paging system to incorporate blitting so that we only redraw what's necessary. 
+
 
 Screenshots
 -----------
