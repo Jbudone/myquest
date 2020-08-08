@@ -1417,25 +1417,21 @@ define(
                     ui.tileHover = { x: mouse.canvasX, y: mouse.canvasY };
 
                     // New move to position
-                    if (evt && evt.buttons) {
+                    if (evt && evt.buttons && The.player.character.canMove()) {
 
                         // FIXME: For now disable this, until we overhaul pathfinding system and its not so slow
-                        /*
                         //  click to move player creates path for player
-                        const walkTo = { x: mouse.x + parseInt(The.camera.offsetX / Env.tileSize, 10),
-                        y: mouse.y - parseInt(The.camera.offsetY / Env.tileSize, 10) },
-                        walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
-                        toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
-
-
                         // FIXME: This seems correct, however at one point when we transitioned between pages we got a
                         // negative number for y (moving into topleft most page)
-                        const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
+                        const globalPos = {
+                            x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10),
+                            y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10)
+                        };
 
+                        const toTile = new Tile( parseInt(globalPos.x / Env.tileSize, 10), parseInt(globalPos.y / Env.tileSize, 10) );
                         The.user.clickedTile(toTile, globalPos, mouse);
 
                         ui.updateCursor();
-                        */
                         return;
                     }
 
@@ -1543,6 +1539,10 @@ define(
                 ui.onMouseDown = (mouse, buttonCode) => {
 
                     onMouseMove(mouse, { buttons: buttonCode });
+
+                    if (!The.player.character.canMove()) {
+                        return;
+                    }
 
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {
