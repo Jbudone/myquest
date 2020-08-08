@@ -66,6 +66,7 @@ define(
                     this.zone(newPage);
                     ui.updatePages();
                     The.renderer.updatePages();
+                    The.camera.centerCamera();
                 });
 
                 // First time setting up event listeners
@@ -1114,6 +1115,9 @@ define(
 
                         const entity = The.area.movables[data.entityId];
 
+                        console.log("ENTITY HAS TELEPORTED");
+                        console.log(entity.position.tile);
+
                         // If the entity is us, then ignore this message. We've already handled this from onTeleported
                         if (entity === The.player)
                         {
@@ -1133,6 +1137,8 @@ define(
                         };
                         entity.updatePosition(globalPos.x, globalPos.y);
                         entity.triggerEvent(EVT_MOVED_TO_NEW_TILE);
+
+                        entity.triggerEvent(EVT_TELEPORT, newPage.index, { x: tile.x, y: tile.y });
 
                         The.area.checkEntityZoned(entity);
                     };
@@ -1410,25 +1416,21 @@ define(
                     ui.tileHover = { x: mouse.canvasX, y: mouse.canvasY };
 
                     // New move to position
-                    if (evt && evt.buttons) {
+                    if (evt && evt.buttons && The.player.character.canMove()) {
 
                         // FIXME: For now disable this, until we overhaul pathfinding system and its not so slow
-                        /*
                         //  click to move player creates path for player
-                        const walkTo = { x: mouse.x + parseInt(The.camera.offsetX / Env.tileSize, 10),
-                        y: mouse.y - parseInt(The.camera.offsetY / Env.tileSize, 10) },
-                        walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
-                        toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
-
-
                         // FIXME: This seems correct, however at one point when we transitioned between pages we got a
                         // negative number for y (moving into topleft most page)
-                        const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
+                        const globalPos = {
+                            x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10),
+                            y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10)
+                        };
 
+                        const toTile = new Tile( parseInt(globalPos.x / Env.tileSize, 10), parseInt(globalPos.y / Env.tileSize, 10) );
                         The.user.clickedTile(toTile, globalPos, mouse);
 
                         ui.updateCursor();
-                        */
                         return;
                     }
 
@@ -1537,12 +1539,14 @@ define(
 
                     onMouseMove(mouse, { buttons: buttonCode });
 
-
                     if (buttonCode === 2) {
                         The.user.rightClicked(mouse);
                         return;
                     }
 
+                    if (!The.player.character.canMove()) {
+                        return;
+                    }
 
                     // Attack the enemy we're currently hovering
                     if (ui.hoveringEntity) {
@@ -1567,15 +1571,16 @@ define(
                     }
 
 
-                    //  click to move player creates path for player
-                    const walkTo = { x: mouse.x + parseInt(The.camera.offsetX / Env.tileSize, 10),
-                                    y: mouse.y - parseInt(The.camera.offsetY / Env.tileSize, 10) },
-                        walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
-                        toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
+                    // If there's a buttonCode then we've already moved in onMouseMove
+                    if (!buttonCode) {
+                        const globalPos = {
+                            x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10),
+                            y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10)
+                        };
 
-                    const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
-
-                    The.user.clickedTile(toTile, globalPos, mouse);
+                        const toTile = new Tile( parseInt(globalPos.x / Env.tileSize, 10), parseInt(globalPos.y / Env.tileSize, 10) );
+                        The.user.clickedTile(toTile, globalPos, mouse);
+                    }
                 };
 
                 The.user.hook('rightClickedEntity', The.user).after((entity, mouse) => {

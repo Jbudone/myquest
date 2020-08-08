@@ -871,7 +871,7 @@ WORKING ON (was previously working on)
         - Cardinal directions -> include diagonal
         - Get rid of walks
             - Use "I am here, moving here"
-            - Allow running to catch up to position
+            - Allow running to catch up to position (position / simposition)
             - Off screen: moving from 1 unloaded page, through your seen page, to another unloaded page
                 Also moving from local page to unloaded page
                 If we cap path length (ie. want to move from 0 to 1, but say that we're moving from 0 to 0.5) and expand the area of pages that server feeds to user then the only case where this could occur is if they're offscreen and we can't witness their movement anyways
@@ -1031,21 +1031,7 @@ WORKING ON (was previously working on)
             console.log(sandbox.y); // 17
     - Pathfinding ideas:
         - A* by default,  but  as we pathfind over a page frequently, start to load in HPA* or JPS stuff (stuff that takes more memory and shouldn't be loaded in memory constantly); might need to update or rebuild HPA* or JPS or other augmentations because of dynamic collisions. Or even keep a list of dynamic collisions, things that are different from the static for that page, then apply those changes when you load in HPA*. This helps speed up pages that are in use
-        - tiled A* may give bad results; can we use point based A* but have a quick algorithm for determining distance to and point in neighbour? What about points that can't make it to a neighbour from basic cardinal/diagonal movement?
             
-            Path below requires passing through collision tile
-
-            XXXX....
-            XXXX....
-            XXXX....
-            XXXX*...
-            .*......
-            ........
-            ........
-            ........
-
-            Either need to keep track of src point and dst point in neighbour tile, OR need to determine at runtime
-            - First pass of overhaul: can keep track of src pt / dst pt   and see how it affects perf
             
             ISSUES
               - Server validating client position/path
@@ -1062,89 +1048,38 @@ WORKING ON (was previously working on)
                     - Server recalibration path for user is done fast and cheap: only consider 2-3 tiles distance and try to use a straight line. Webworker (high priority) to pathfind new user path
                     - AI chasing: pathfind from previous destination to new destination, then refine in subsequent step (low prior webworker). THe farther away they are the lower the priority
                     - Dynamic collisions and constant updating: keep track of some optimizations for pathfinding (convex regions, HPA*, JPS, etc.) and update as changes come in, OR at runtime as a region becomes used more frequently: eg. user spam clicking, need to keep pathing from position to new position but we create a convex region (room? circle? nav?) and can check if two points are in the same convex area then simply straight-line path. Can also webworker convex region management / creation (mark as stale when collisions come up and they need refinement)
+                    - Cache and re-use high level path, then only need to refine lower level path. Only need to update update nearby part of path, and can sequentially refine the remainder of the path later
 
 
         OVERHAUL
-            - Need to use both tiles (for high-level paths) and points (for position and refined path)
-            - Need to rework paths to use points as positions and movement instead
-            - Allow diagonal movement
-            - Move between points
-            - Volume on entities?
-                - Need to check certain points on collision vol depending on direction: moving NORTHEAST? Check NW/NE/SE points on collision vol
-                - Only need to check points for collision when those points hit a new tile
-            - Types of paths:
-                - Tiled A*
-                - A* but using points as start/end/segments in path
-                - Point A*
-                - Point A* with tiled A* as a hint (refinement)
-            - Optimizations:
-                - Webworker refinement/validation
-                - Server sends "At point A moving to point B", where B is somewhere along the path?
-                - Server teleporting positions
-                - Handling constantly updating paths (user spam clicking, AI chasing, path destination near previous destination)
-                - An area destination (eg. ranged attacking): first pass check if tile in circle radius about center, 2nd pass check hashtable of destinations
-                - Webworker for initial path (can we delay creation of path by a few frames to help perf?)
-                - HPA* / Quadtree / JPS / Dynamic convex regions
-                - IDA* implementation rather than A*
-                - Path smoothing: https://www.gamasutra.com/view/feature/131505/toward_more_realistic_pathfinding.php
-                - sqrt(2) ~ 1.4; 1.4 * 5 == 7;  use cardinal direction as distance 5 and diagonal direction as distance 7
-                - Speed up or slow down entities as needed to keep close to server (within a range about the actual speed, so it shouldn't be noticeable)
-            - Handle edge cases
-                - Client creating paths that goes into pages that we don't have loaded (teleport? ignore?)  IF we really needed we could have the server send point A / point B and distance between the two, as well as wen the path started so that we know where the movable is and when he should reach point B (keep accumulating delta until we can teleport to point B; on new paths received from server just keep list of points/distances)
-                - Prevent diagonal movement from travelling into the neighbour tile as opposed to the destinatino tile
-                    XXXX....
-                    XXXX....
-                    XXXX....
-                    XXXX*...
-                    .*......
-                    ........
-                    ........
-                    ........
-                - Prevent impossible diagonal movement
-
-                    XXXX...*
-                    XXXX....
-                    XXXX....
-                    XXXX....
-                    ....XXXX
-                    ....XXXX
-                    ....XXXX
-                    *...XXXX
-                - Server moving player (auto attack/chase, run (fear buff), etc.)  and sending path to client
-
-        STEPS FOR OVERHAUL
-            -- Switch to point based movement
-                - Replace all pathfinding with webworker system + A* by points; nuke tile search completely
-                - Smoke tests to confirm its working + fix edge cases; eg.
-                    XXXX....
-                    XXXX....
-                    XXXX....
-                    XXXX*...
-                    .*......
-                    ........
-                    ........
-                    ........
-                - Cleanup first pass
-                    - Select pt path, nuke tiled path
-                    - .then: on success/alreadyThere/fail
-                    - create path behind scenes (so we don't have to do it in each instance)
-                    - recalibration: first pass (without worker) if we can easily recalibrate (neighbour tile); otherwise worker
-                    - cleanup pathfindingWorker
-            1) 2nd Pass
-                - FIXME: findPath -> cancelPath -> Find path to cancelled point -> Receive path from first findPath
-                - Hold click/move
-                - Server trust user path and send validation to webworker
-                    - Do we want to recalibrate user paths, or come up with a fresh path?
-                - Properly handle paths: client send path to server, server send path to clients, clients handle paths, recalibrate/alternative paths, pathID, server update user path (combat chasing)
-                - Fix point based hash in pathfinerworker
-            2) Extend pathfinding to allow all varieties of paths
-                - tiles/points in tiles/pure points
-                - diagonal directions
+            2) 3rd Pass
+                - pathfinding.movables needs garbage collection
                 - multiple endpoints
                 - later: HPA*/Quadtree/JPS/Convex regions
-                - Webworker handling
+                - Waypoint graph: distances to adjacent nodes; helps us first pass decide which way to go
                 - Allow refinement + smoothing
                 - Tiled path (eg. interactable with tiles as goto points)
+                - Nuke (or hide) unused old tile search routines   (comment out?)
+                - More accurate diagonal cost: sqrt(2) ~ 1.4; 1.4 * 5 == 7;  use cardinal direction as distance 5 and diagonal direction as distance 7
+                - Server replacing path for movable: client cancelPath (find path to cancel point) -> receive follow-up path. Can we predict incoming path to avoid unnecessary cancelPath handling?
+                - Server trust user path; clients check for collision at runtime (ran into a wall? cancelPath OR look for another route until we receive update from server). This also helps for dynamic collisions
+                - Server use client path as a hint for its own path?  This may be necessary if we want to mimic user path (eg. avoiding traps, etc.)
+                - Webworker "go to random tile" -- also fix this since you could pick an open tile that's impossible to walk to or REALLY far
+                - Optimize finding cheapestWeightClass (frontOfObject and get rid of decimals eg. turnWeight? More clever method since constantly updating array sucks?)
+                - Optimize first pass recalibration attempt (without worker)
+                - Optimize communication w/ worker (eg. path.walks[].walked  unnecessary. In fact we could send something to parse and build path on receive:
+                    "13132_232_116"
+                    1 success
+                    3 walks
+                    walk 0:
+                      direction 1
+                      distance 32
+                    walk 1:
+                      direction 2
+                      distance 32
+                    walk 2:
+                      direction 1
+                      distance 16
 
 
                 PathPlanner.refinePath(path, options)
@@ -1164,11 +1099,55 @@ WORKING ON (was previously working on)
                     - Use 1 (or more) master workers that are constantly running, and we send messages with job requests (path refinements), and receive messages back
                     - On startup create master webworker and send area collision info; on collision changes send to webworker
                     - Returned path either needs callback OR identifier for movableID to set path to
-            3) Walk along points
-                - Server NOTE: If we don't have the path fleshed out yet (start/end point, but not created yet) simply accumulate path delta and spend when we have the path
-            4) Diagonal directions
-            5) Beef up smokes
-                - Constantly clicking around tiles that we want + constantly spawning/despawning enemies/items/interactables (or teleporting) so that preferences change and bots keep moving all over the place
+                - Incomplete (in progress) paths: full path is complete as lower res (higher level graph), but first xx% of path is higher res (lower level graph) so we can immediately begin executing path while refining remainder of path sequentially)
+                - Server delay paths?  If we don't have the path fleshed out yet (start/end point, but not created yet) simply accumulate path delta and spend when we have the path
+                - Beef up smokes: Constantly clicking around tiles that we want + constantly spawning/despawning enemies/items/interactables (or teleporting) so that preferences change and bots keep moving all over the place
+                  Need a map specifically for this type of soak
+                    XXXX....
+                    XXXX....
+                    XXXX....
+                    XXXX*...
+                    .*......
+                    ........
+                    ........
+                    ........
+
+                - Volume on entities?
+                    - Need to check certain points on collision vol depending on direction: moving NORTHEAST? Check NW/NE/SE points on collision vol
+                    - Only need to check points for collision when those points hit a new tile
+                - Optimizations:
+                    - Webworker refinement/validation
+                    - Server sends "At point A moving to point B", where B is somewhere along the path?
+                    - Server teleporting positions
+                    - Handling constantly updating paths (user spam clicking, AI chasing, path destination near previous destination)
+                    - An area destination (eg. ranged attacking): first pass check if tile in circle radius about center, 2nd pass check hashtable of destinations
+                    - Webworker for initial path (can we delay creation of path by a few frames to help perf?)
+                    - HPA* / Quadtree / JPS / Dynamic convex regions
+                    - IDA* implementation rather than A*
+                    - Path smoothing: https://www.gamasutra.com/view/feature/131505/toward_more_realistic_pathfinding.php
+                    - sqrt(2) ~ 1.4; 1.4 * 5 == 7;  use cardinal direction as distance 5 and diagonal direction as distance 7
+                    - Speed up or slow down entities as needed to keep close to server (within a range about the actual speed, so it shouldn't be noticeable)
+                - Handle edge cases
+                    - Client creating paths that goes into pages that we don't have loaded (teleport? ignore?)  IF we really needed we could have the server send point A / point B and distance between the two, as well as wen the path started so that we know where the movable is and when he should reach point B (keep accumulating delta until we can teleport to point B; on new paths received from server just keep list of points/distances)
+                    - Prevent diagonal movement from travelling into the neighbour tile as opposed to the destinatino tile
+                        XXXX....
+                        XXXX....
+                        XXXX....
+                        XXXX*...
+                        .*......
+                        ........
+                        ........
+                        ........
+                    - Prevent impossible diagonal movement
+
+                        XXXX...*
+                        XXXX....
+                        XXXX....
+                        XXXX....
+                        ....XXXX
+                        ....XXXX
+                        ....XXXX
+                        *...XXXX
 
 
 
@@ -1497,6 +1476,10 @@ WORKING ON (was previously working on)
             - Server: node --inspect-brk=0.0.0.0:9229 dist/js/server.js 
 
         - Security: hide tools
+
+    - Smoke Testing
+        - node dist/js/test.js [--debug]
+        - Look for which port the bot is connected to (test.js, options.debug); then chrome://inspect configure add localhost:[port]
 
 
 

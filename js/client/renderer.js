@@ -468,11 +468,23 @@ define(['loggable'], (Loggable) => {
                 const ts = Env.tileScale * Env.tileSize;
                 this.ctxEntities.save();
                 this.ctxEntities.globalAlpha = 0.4;
+
+                // Pt render
                 this.ctxEntities.strokeRect(
                     Env.tileScale * this.ui.tileHover.x - (this.settings.lineWidth / 2),
                     Env.tileScale * this.ui.tileHover.y - (this.settings.lineWidth / 2),
                     1 + (this.settings.lineWidth / 2), 1 + (this.settings.lineWidth / 2)
                 );
+
+                // Tile render
+                const x  = (Math.floor((this.ui.tileHover.x + The.camera.globalOffsetX)  / Env.tileSize) * Env.tileSize - The.camera.globalOffsetX) * Env.tileScale;
+                const y  = (Math.floor((this.ui.tileHover.y - The.camera.globalOffsetY)  / Env.tileSize) * Env.tileSize + The.camera.globalOffsetY) * Env.tileScale;
+                this.ctxEntities.strokeRect(
+                    x, y,
+                    ts - (this.settings.lineWidth / 2),
+                    ts - (this.settings.lineWidth / 2)
+                );
+
 
                 if (this.showJumpPoint) {
                     const width   = 16.0,

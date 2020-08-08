@@ -39,10 +39,11 @@ define(['eventful'], (Eventful) => {
             if (pageId !== The.area.curPage.index) {
 
                 // NOTE: We may not have received the pages where we're zoning to yet. Be patient
-                if (!The.area.pages[pageId]) return;
-
-                localX += (The.area.pages[pageId].x - The.area.curPage.x) * Env.tileSize;
-                localY += (The.area.pages[pageId].y - The.area.curPage.y) * Env.tileSize;
+                 if (!The.area.pages[pageId]) { console.error("DONT HAVE PAGES YET TO CENTER CAMERA"); return; }
+ 
+                 localX += (The.area.pages[pageId].x - The.area.curPage.x) * Env.tileSize;
+                 localY += (The.area.pages[pageId].y - The.area.curPage.y) * Env.tileSize;
+                 console.error("CENTER CAMERA HAD TO UPDATE OFFSET WITHOUT HAVING LATEST PAGE UPDATE");
             }
 
             this.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;

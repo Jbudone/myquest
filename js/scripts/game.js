@@ -621,9 +621,11 @@ define(
                             The.area.pathfinding.workerHandlePath({
                                 movableID: The.player.id,
                                 startPt: { x: playerX, y: playerY },
-                                endPt: { x: toGlobal.x, y: toGlobal.y }
+                                endPt: { x: toGlobal.x, y: toGlobal.y },
+                                immediate: true
                             }).then((data) => {
 
+                                // FIXME: Need to recalibrate from curPos -> nearest point along path?
                                 if (data.path.ALREADY_THERE) {
 
                                     console.log("No path to be created..we're already there!");
