@@ -807,20 +807,32 @@ define(['loggable'], (Loggable) => {
                     // Draw debug pathfinding/position highlights
                     if (Env.renderer.drawBorders) {
                         if (movable.debugging._serverPosition) {
-                            const _x = movable.debugging._serverPosition.tile.x,
-                                _y   = movable.debugging._serverPosition.tile.y,
-                                _toX = movable.debugging._serverPosition.toTile.x,
-                                _toY = movable.debugging._serverPosition.toTile.y;
+                            const _xT = movable.debugging._serverPosition.tile.x,
+                                _yT   = movable.debugging._serverPosition.tile.y,
+                                _toXT = movable.debugging._serverPosition.toTile.x,
+                                _toYT = movable.debugging._serverPosition.toTile.y,
+                                _x    = movable.debugging._serverPosition.global.x,
+                                _y    = movable.debugging._serverPosition.global.y,
+                                _toX  = movable.debugging._serverPosition.toGlobal.x,
+                                _toY  = movable.debugging._serverPosition.toGlobal.y;
 
                             this.ctxEntities.strokeStyle = "gray";
                             this.ctxEntities.strokeRect(
-                                scale * (Env.tileSize * _x - offsetX), scale * (Env.tileSize * _y + offsetY),
+                                scale * (Env.tileSize * _xT - offsetX), scale * (Env.tileSize * _yT + offsetY),
                                 Env.tileSize * scale, Env.tileSize * scale
+                            );
+                            this.ctxEntities.strokeRect(
+                                scale * (_x - offsetX), scale * (_y + offsetY),
+                                scale, scale
                             );
                             this.ctxEntities.strokeStyle = "yellow";
                             this.ctxEntities.strokeRect(
-                                scale * (Env.tileSize * _toX - offsetX), scale * (Env.tileSize * _toY + offsetY),
+                                scale * (Env.tileSize * _toXT - offsetX), scale * (Env.tileSize * _toYT + offsetY),
                                 Env.tileSize * scale, Env.tileSize * scale
+                            );
+                            this.ctxEntities.strokeRect(
+                                scale * (_toX - offsetX), scale * (_toY + offsetY),
+                                scale, scale
                             );
                         }
                     }

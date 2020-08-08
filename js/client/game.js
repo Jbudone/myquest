@@ -721,7 +721,13 @@ define(
                                 y: state.position.tile.y },
                             toTile: {
                                 x: state.position.tile.x,
-                                y: state.position.tile.y }
+                                y: state.position.tile.y },
+                            global: {
+                                x: state.position.global.x,
+                                y: state.position.global.y },
+                            toGlobal: {
+                                x: state.position.global.x,
+                                y: state.position.global.y }
                         };
                     };
 
@@ -800,18 +806,6 @@ define(
                         // of a noticable delay then simply teleport entity to its state position
                         let maxWalk = Env.game.client.maxWalkDelay / entity.moveSpeed; // delayTime / moveSpeed = distance
 
-                        // If this is a path that we've initiated then discard it
-                        if
-                        (
-                            entity === The.player && // The player is me
-                            entity.hasHadPath({ id: event.path.id, flag: event.path.flag }) && // Already added path
-                            event.path.flag === 0 // And the path is a regular path (as opposed to one that could only
-                                                  // be created by the server)
-                        )
-                        {
-                            return; // Discard path
-                        }
-
                         // Build our new path
                         // We're also trying to find where this path will lead us (destination)
                         const walks = event.path.walks;
@@ -852,8 +846,27 @@ define(
                                 y: reqState.position.tile.y },
                             toTile: {
                                 x: pathState.destination.tile.x,
-                                y: pathState.destination.tile.y }
+                                y: pathState.destination.tile.y },
+                            global: {
+                                x: reqState.position.global.x,
+                                y: reqState.position.global.y },
+                            toGlobal: {
+                                x: pathState.position.global.x,
+                                y: pathState.position.global.y },
                         };
+
+
+                        // If this is a path that we've initiated then discard it
+                        if
+                        (
+                            entity === The.player && // The player is me
+                            entity.hasHadPath({ id: event.path.id, flag: event.path.flag }) && // Already added path
+                            event.path.flag === 0 // And the path is a regular path (as opposed to one that could only
+                                                  // be created by the server)
+                        )
+                        {
+                            return; // Discard path
+                        }
 
                         // If this is some progress on a path for an entity which we already have, then its possible
                         // that this path is redundant
