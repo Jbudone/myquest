@@ -11,6 +11,8 @@ const parentDirectory = filepath.dirname(__dirname);
 
 let debugURL = null;
 
+global._global = global;
+
 requirejs.config({
     nodeRequire: require,
     baseUrl: parentDirectory,
@@ -20,24 +22,106 @@ requirejs.config({
 });
 
 const exitingGame = () => {
+    console.log("EXITING GAME");
     process.exit();
 };
 
 let botName = null;
 
+const BOT_EVT_REMOVED_ENTITY = 1,
+      BOT_EVT_ADDED_ENTITY   = 2;
 
-GLOBAL.DEBUGGER = (msg) => {
-    if (!msg) msg = 'Debug: ' + (new Error()).stack.split('\n')[2];
+
+global.DEBUGGER = (msg) => {
+    const e = (new Error());
+    if (!msg) msg = 'Debug: ' + e.stack.split('\n')[2];
     console.log(msg);
+
+    // Print out line for error (for quick reference)
+    const stackFrame = ErrorReporter.parseError(e),
+        source       = stackFrame.stack[2].source
+
+    let failedCheckSource = "";
+    let startIdx = source.indexOf(msg);
+    let mapSource = null;
+    if (startIdx >= 0) {
+
+        // OBJECT_TYPES.includes(typeof path.destination) || DEBUGGER("ERROR MESSAGE HERE: 359 (dist/js/server/player.js)");
+        // (OBJECT_TYPES.includes(typeof The.player.cancelPath) || DEBUGGER("ERROR MESSAGE HERE: 363 (dist/js/scripts/game.js)")) && "The.player.cancelPath();";
+        let idx = 0, starts = [];
+        if (source[0] === '(') {
+            for (let i = 0; i < startIdx; ++i) {
+                if (source[i] === '(') starts.unshift(i);
+                else if (source[i] === ')') starts.shift();
+            }
+            idx = starts[starts.length - 1] + 1;
+        }
+        failedCheckSource = source.substr(idx, startIdx - idx - " || DEBUGGER(".length);
+        console.log(`${chalk.bold.red(failedCheckSource)}`);
+            
+        // FIXME: This is working BUT source appended to DEBUGGER is probably wrong (loc isn't accurate in preproAST)
+        console.log(`${chalk.bold.red("WARNING WARNING WARNING: SOURCE PROBABLY INACCURATE -- PLEASE FIX LOC IN preprocessAST.js")}`);
+        mapSource = source.match(/&&\s*"(?<src>((\\")*|[^"])*)"\s*;\s*$/)
+        if (mapSource && mapSource.groups && mapSource.groups.src) {
+            console.log(`${chalk.bold.red(mapSource.groups.src)}`);
+        }
+    }
+
+
     waitForInspector();
 };
 
 const waitForInspector = () => {
 
-    const inspector = require('inspector');
-    Log(chalk.red.bold("Waiting for inspector.."));
-    inspector.open(9229, "127.0.0.1", true); // port, host, block
-    debugger;
+
+    const prompt = () => {
+
+        const fd = fs.openSync('/dev/tty', 'rs');
+
+        //const wasRaw = process.stdin.isRaw;
+        //if (!wasRaw) { process.stdin.setRawMode(true); }
+
+        let char = null;
+        while (true) {
+            const buf = new Buffer(3);
+            const read = fs.readSync(fd, buf, 0, 3);
+
+            // if it is not a control character seq, assume only one character is read
+            char = buf[read-1];
+
+            // catch a ^C and return null
+            if (char == 3){
+                process.stdout.write('^C\n');
+
+                char = null;
+                break;
+            }
+
+            if (read > 1) { // received a control sequence
+                continue; // any other 3 character sequence is ignored
+            }
+
+            break;
+        }
+
+        fs.closeSync(fd);
+        //process.stdin.setRawMode(wasRaw);
+        return char;
+    };
+
+    console.log("Bark: listening to input now");
+    Bot.tellMaster('input');
+
+    let n = prompt();
+
+    console.log("Bark: I cant haer you");
+    Bot.tellMaster('noinput');
+    if (n !== null) {
+        const inspector = require('inspector');
+        console.log(chalk.red.bold("Waiting for inspector.."));
+        inspector.open(9229, "127.0.0.1", true); // port, host, block
+        debugger;
+    }
 };
 
 const errorInGame = (e) => {
@@ -124,16 +208,17 @@ const util          = require('util'),
     assert          = require('assert'),    // TODO: Disable in production
     SourceMap       = require('source-map');
 
-GLOBAL.util = util;
-GLOBAL._ = _;
-GLOBAL.Promise = Promise;
-GLOBAL.chalk = chalk;
-GLOBAL.prettyjson = prettyjson;
-GLOBAL.assert = assert;
-GLOBAL.WebSocket = WebSocket;
-GLOBAL.fs = fs;
 
-GLOBAL.localStorage = (new function(){
+global.util = util;
+global._ = _;
+global.Promise = Promise;
+global.chalk = chalk;
+global.prettyjson = prettyjson;
+global.assert = assert;
+global.WebSocket = WebSocket;
+global.fs = fs;
+global
+global.localStorage = (new function(){
     this.setItem = () => {};
     this.getItem = () => undefined;
 }());
@@ -143,8 +228,18 @@ const Bot = (new function(){
     this.tellMaster = (msg, args) => {
         // NOTE: Its possible that we've lost our connection with the master
         try {
+            this.log("tellMaster: ");
+            this.log(msg);
+            this.log(args);
             process.send({msg, args});
-        } catch(e) { }
+        } catch(e) {
+            console.error(e);
+        }
+    };
+
+    // NOTE: We may want a different colour for each bot for easier viewing/distinguishing between bots
+    this.log = (msg) => {
+        console.log(`     ${chalk.green(msg)}`);
     };
 
     this.onCommand = (command, callback) => {
@@ -161,7 +256,8 @@ const Bot = (new function(){
     };
 
     process.on('message', (msg) => {
-        console.log(msg);
+        this.log("BOT: Received message from master:");
+        this.log(msg);
         commands[msg.command].callback(msg);
     });
 
@@ -173,7 +269,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
     // Initialize our environment as the server
     const Env = (new Environment());
     Env.isBot = true;
-    GLOBAL.Env = Env;
+    global.Env = Env;
 
     requirejs(
         [
@@ -183,28 +279,28 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
             The, Utils, Ext, Events, Errors, FSM, Profiler
         ) => {
 
-            GLOBAL.Ext = Ext;
-            GLOBAL.The = The;
-            GLOBAL.Profiler = Profiler;
+            global.Ext = Ext;
+            global.The = The;
+            global.Profiler = Profiler;
 
-            GLOBAL.window = GLOBAL;
+            global.window = global;
 
             // TODO: use Object.assign (when you can upgrade node)
-            _.assign(GLOBAL, Utils);
-            _.assign(GLOBAL, Events);
-            _.assign(GLOBAL, Errors);
-            _.assign(GLOBAL, FSM);
+            _.assign(global, Utils);
+            _.assign(global, Events);
+            _.assign(global, Errors);
+            _.assign(global, FSM);
 
             // FIXME: Necessary?
             for(let i = 0; i < FSM['states'].length; ++i) {
-                GLOBAL[FSM.states[i]] = i;
+                global[FSM.states[i]] = i;
             }
 
 
 
             // Load extensions
             // This is our environment context, used to extend loaded classes with their client/server counterpart
-            Ext.ready(Ext.CLIENT | Ext.TEST | Ext.CLIENT_TEST).then(() => {
+            Ext.ready(Ext.CLIENT | Ext.TEST | Ext.CLIENT_TEST | Ext.TEST_USESERVER).then(() => {
 
 
                 // Main module
@@ -213,12 +309,12 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                 requirejs(
                     [
                         'errorReporter',
-                        'resources', 'loggable', 'profiler',
+                        'resources', 'loggable', 'profiler', 'webworker',
                         'client/serverHandler', 'client/user', 'client/game'
                     ],
                     (
                         ErrorReporter,
-                        Resources, Loggable, Profiler,
+                        Resources, Loggable, Profiler, WebWorker,
                         ServerHandler, User, GameClient
                     ) => {
 
@@ -245,16 +341,21 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
 
                             // Assertion
-                            // TODO: Find a better way to coordinate with node assertion
-                            // TODO: Setup option to disable in production
                             const assert = (expr, message) => {
-                                if (!expr) throw Err(message);
+                                if (!expr) {
+                                    console.log(message);
+                                    DEBUGGER();
+                                    throw Err(message);
+                                }
                             };
 
 
-                            window.errorInGame = errorInGame;
-                            window.assert      = assert;
-                            window.Profiler    = Profiler;
+
+                            window.errorInGame   = errorInGame;
+                            window.assert        = assert;
+                            window.Profiler      = Profiler;
+                            window.ErrorReporter = ErrorReporter;
+                            window.WebWorker     = WebWorker;
 
 
                             // ------------------------------------------------------------------------------------------------------ //
@@ -455,14 +556,40 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 Game.onStarted = onGameStarted;
                                 Game.start();
+                                Game.gameStep = stepBot;
                             };
 
                             let onDied = function(){};
+                            let onReloaded = function(){};
+
+                            let timeSinceLastActivity = 0,
+                                isIdle = false;
+
+                            const onCharacterActivity = () => {
+                                timeSinceLastActivity = 0;
+                                isIdle = false;
+                            };
 
                             const onGameStarted = () => {
-                                The.player.character.hook('die', this).after(() => {
-                                    onDied();
+
+                                server.makeRequest(CMD_ADMIN, {
+                                    password: "42"
+                                }).then((data) => {
+                                    Bot.log("Zomg I have admin powers!");
+                                }, (data) => {
+                                    Bot.log("Failed to obtain admin powers");
+                                })
+                                .catch(errorInGame);
+
+                                // We're going to begin reloading scripts and such; watch for our user to be
+                                // reinitialized
+                                The.user.hook('initializedUser', this).after(() => {
+                                    Bot.log("=== Initialized User ===");
+                                    onReloaded();
                                 });
+
+
+                                this.setPlayerEventHandlers();
 
                                 botIsReady();
 
@@ -483,6 +610,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                             };
 
 
+                            let stepBot = function(){};
+
 
                             // Bot Message System
                             startBot = () => {
@@ -490,6 +619,8 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 let bot = null,
                                     username = null,
                                     password = null;
+
+                                this.runningOrder = null;
 
                                 Bot.onCommand(BOT_CONNECT, ({username, password}) => {
 
@@ -551,7 +682,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                 
                                 Bot.onCommand(BOT_MOVE, ({tile}) => {
                                     Log(`I've been ordered to move to ${tile.x}, ${tile.y}`);
-                                        The.bot.clickedTile(new Tile(tile.x, tile.y));
+                                        The.bot.clickedTile(new Tile(tile.x, tile.y), { x: tile.x * Env.tileSize, y: tile.y * Env.tileSize });
 
                                         setTimeout(function(){
                                             if (The.player.path) {
@@ -567,8 +698,308 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
                                         }, 100);
                                 });
 
-                                Bot.onCommand(BOT_INQUIRE, ({detail}) => {
+                                // FIXME: Abstract bot commands into another file (similar to Commands.js)
+                                const walkSomewhere = (options) => {
 
+                                    let callbacks = {
+                                        finishedPath: null,
+                                        failedPath: null,
+                                        badPath: null,
+                                        rerun: null
+                                    };
+
+                                    const handleWalk = () => {
+
+                                        assert(options.aboutEntity, "No entity found to follow");
+
+                                        onCharacterActivity();
+
+                                        // Find an open, nearby tile
+                                        const filterOpenTiles = (tile) => {
+                                            const localCoords = area.localFromGlobalCoordinates(tile.x, tile.y),
+                                                distFromPos   = Math.abs(tile.x - curTile.x) + Math.abs(tile.y - curTile.y);
+                                            return (localCoords.page && distFromPos >= 2);
+                                        };
+
+
+                                        const area     = The.player.page.area,
+                                            curTile    = new Tile(options.aboutEntity.position.tile.x, options.aboutEntity.position.tile.y),
+                                            openTiles  = area.findOpenTilesAbout(curTile, options.numTiles, filterOpenTiles, 1000);
+
+                                        if (openTiles.length > 0) {
+                                            const openTileIdx = Math.floor(Math.random() * (openTiles.length - 1)),
+                                                openTile      = openTiles[openTileIdx];
+
+                                            Bot.log(`I want to go to: ${openTile.x} ${openTile.y}`);
+                                            The.bot.clickedTile(new Tile(openTile.x, openTile.y), { x: openTile.x * Env.tileSize, y: openTile.y * Env.tileSize });
+
+                                            setTimeout(function(){
+                                                if (The.player.path) {
+                                                    The.player.path.onFinished = function(){
+                                                        if (callbacks.finishedPath) callbacks.finishedPath();
+                                                    };
+                                                    The.player.path.onFailed = function(reason){
+
+                                                        if (callbacks.failedPath) callbacks.failedPath(reason);
+                                                    };
+                                                } else {
+
+                                                    // NOTE: Because of timeout something may have happened between this
+                                                    // time (eg. bot dying) -- so may not be a bug
+                                                    if (callbacks.badPath) callbacks.badPath();
+                                                }
+                                            }, 100);
+                                        }
+
+                                    };
+
+                                    callbacks.rerun = handleWalk;
+                                    handleWalk();
+
+                                    return callbacks;
+                                };
+
+                                const orderExplore = () => {
+
+                                    Log(`Current position: ${The.player.position.tile.x}, ${The.player.position.tile.y}`);
+
+                                    const walkSettings = {
+                                        numTiles: 25,
+                                        aboutEntity: The.player
+                                    };
+
+                                    let callbacks = walkSomewhere(walkSettings);
+
+                                    callbacks.finishedPath = () => {
+                                        Bot.log("Finished path");
+                                        callbacks.rerun();
+                                    };
+
+                                    callbacks.failedPath = (reason) => {
+
+                                        if (reason !== EVT_NEW_PATH && reason !== EVT_CANCELLED_PATH) {
+                                            DEBUGGER();
+                                            Bot.log("Failed path");
+                                        }
+                                    };
+
+                                    callbacks.badPath = () => {
+                                        // NOTE: This is called if we attempt to set a path, then after timeout hits we
+                                        // don't have a path. THis could be due to other reasons (pulled away into
+                                        // combat, new orders, died, etc.)
+                                        Bot.log("Bad path");
+                                    };
+
+                                    return callbacks;
+                                };
+
+                                const orderAttack = (args) => {
+
+                                    Bot.log("Ordered to attack");
+
+                                    const entity = The.area.movables[args.entity];
+
+                                    let callbacks = {
+                                        finished: null
+                                    };
+
+                                    if (!entity) {
+                                        return {
+                                            success: false, callbacks
+                                        };
+                                    }
+
+                                    if (entity.character.isAttackable()) {
+                                        entity.character.hook('die', this).after(() => {
+                                            Bot.log("Zomg you died!");
+                                            let id = args.orderId;
+                                            Bot.tellMaster('finishedOrder', {
+                                                id
+                                            });
+                                        });
+
+                                        Bot.log("Clicking entity");
+                                        The.bot.clickedEntity(entity);
+                                    }
+
+                                    this.handleEvent(BOT_EVT_REMOVED_ENTITY, {
+                                        entity: entity
+                                    }).then(() => {
+                                        // Either we killed entity, they ran away somewhere, or we died and lost sight
+                                        // of them
+                                        if (callbacks.finished) callbacks.finished();
+                                    });
+
+                                    return {
+                                        success: true,
+                                        callbacks
+                                    };
+                                };
+
+                                const orderFollow = (args) => {
+
+                                    Log(`Current position: ${The.player.position.tile.x}, ${The.player.position.tile.y}`);
+
+                                    const followingEntity = The.area.movables[args.entity];
+
+                                    const teleportToEntity = () => {
+                                        server.makeRequest(CMD_ADMIN_TELEPORT_TO, {
+                                            id: args.entity,
+                                        }).then((data) => {
+                                            Bot.log("ZOMG I teleported back to you!! I'll never let you go");
+                                        }, (data) => {
+                                            // Failed to teleport to target
+                                            if (callbacks.finished) callbacks.finished();
+                                        })
+                                        .catch(errorInGame);
+                                    };
+
+                                    if (!followingEntity) {
+                                        // We may have gone off to do a higher priority task in the mean time and lost
+                                        // this entity since then..
+                                        teleportToEntity();
+                                    }
+
+
+                                    assert(followingEntity, "No entity found to follow");
+
+                                    let callbacks = walkSomewhere({
+                                        numTiles: 1,
+                                        aboutEntity: followingEntity
+                                    });
+
+                                    let delta = 0;
+
+                                    callbacks.step = (time) => {
+                                        delta += time;
+
+                                        if (delta > 500) {
+                                            callbacks.rerun();
+                                        }
+                                    };
+
+
+                                    callbacks.finishedPath = () => {
+                                        Bot.log("Finished path");
+                                        callbacks.rerun();
+                                    };
+
+                                    callbacks.failedPath = (reason) => {
+
+                                        if (reason !== EVT_NEW_PATH && reason !== EVT_CANCELLED_PATH) {
+                                            DEBUGGER();
+                                            Bot.log("Failed path");
+                                        }
+                                    };
+
+                                    callbacks.badPath = () => {
+                                        Bot.log("Bad path"); // NOTE: Could be we clicked the same place we're currently at
+                                    };
+
+                                    this.handleEvent(BOT_EVT_REMOVED_ENTITY, {
+                                        entity: followingEntity
+                                    }).then(() => {
+
+                                        // Perhaps he's teleported or ran faster than us?
+                                        // FIXME: What if we're busy attacking but we still want to follow this entity?
+                                        // Is this still hit? If so we need to switch our active orders so that we don't
+                                        // care about this now but reload this event hook when we're ready to begin
+                                        // following again
+
+                                        teleportToEntity();
+                                    });
+
+                                    return callbacks;
+                                };
+
+                                this.runAction = (action) => {
+
+                                    if (this.runningOrder) {
+                                        this.runningOrder.cancel();
+                                    }
+
+                                    Bot.log("RUN ACTION: ");
+                                    Bot.log(action);
+                                    this.runningOrder = null;
+                                    if (action.cmd === BOT_EXPLORE) {
+                                        const callbacks = orderExplore();
+                                        callbacks.cancel = () => {
+                                            Bot.log("Cancelling explore");
+                                            callbacks.finishedPath = () => {};
+                                            callbacks.failedPath = () => {};
+                                            callbacks.badPath = () => {};
+                                        };
+                                        this.runningOrder = callbacks;
+                                    } else if (action.cmd === BOT_ATTACK) {
+                                        const { success, callbacks } = orderAttack(action.args);
+                                        callbacks.cancel = () => {
+                                            Bot.log("Cancelling attack");
+                                            callbacks.finished = () => {};
+                                        };
+                                        this.runningOrder = callbacks;
+                                    } else if (action.cmd === BOT_FOLLOW) {
+                                        const callbacks = orderFollow(action.args);
+                                        callbacks.cancel = () => {
+                                            Bot.log("Cancelling follow");
+                                            callbacks.finished = () => {};
+                                            callbacks.finishedPath = () => {};
+                                            callbacks.failedPath = () => {};
+                                            callbacks.badPath = () => {};
+                                        };
+                                        callbacks.step = callbacks.step;
+                                        this.runningOrder = callbacks;
+                                    }
+                                };
+
+                                Bot.onCommand(BOT_EXPLORE, () => {
+                                    Bot.log(`I've been ordered to explore`);
+
+                                    this.runAction({
+                                        cmd: BOT_EXPLORE
+                                    });
+                                });
+
+                                Bot.onCommand(BOT_ATTACK, ({args, id}) => {
+                                    Bot.log(`I've been ordered to attack`);
+
+                                    args.orderId = id;
+                                    this.runAction({
+                                        cmd: BOT_ATTACK,
+                                        args
+                                    });
+                                });
+
+                                Bot.onCommand(BOT_FOLLOW, ({args, id}) => {
+                                    Bot.log(`I've been ordered to follow`);
+
+                                    args.orderId = id;
+                                    this.runAction({
+                                        cmd: BOT_FOLLOW,
+                                        args
+                                    });
+                                });
+
+
+                                Bot.onCommand(BOT_WATCH_FOR, ({args, id}) => {
+                                    Bot.log("Watching for...things");
+                                    Bot.log(args);
+
+                                    if (args.item === BOT_WATCH_FOR_ENEMIES) {
+
+                                        this.handleEvent(BOT_EVT_ADDED_ENTITY).then((entity) => {
+                                            Bot.log("ZOMG I FOUND A THING (ordered to watch)!  " + entity.id);
+                                            Bot.tellMaster('finishedOrder', {
+                                                entityID: entity.id,
+                                                attackable: entity.character.isAttackable() && !entity.character.isPlayer,
+                                                id
+                                            });
+                                        });
+
+                                        Bot.log("Watching for enemies");
+                                    }
+                                });
+
+                                Bot.onCommand(BOT_INQUIRE, ({detail}) => {
                                     if (detail === INQUIRE_MAP) {
                                         let map = Game.getMapName();
                                         Bot.tellMaster('response', { map });
@@ -577,7 +1008,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 Bot.onCommand(BOT_SET_DEBUGURL, ({detail}) => {
                                     debugURL = detail.debugURL;
-                                    Log(`My debugURL is now: ${debugURL}`);
+                                    Bot.log(`My debugURL is now: ${debugURL}`);
                                 });
 
 
@@ -585,12 +1016,204 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                                 onDied = () => {
                                     Bot.tellMaster('ondied');
+                                    this.cancelAllEventHandlers();
                                 };
+
+                                onReloaded = () => {
+                                    Bot.tellMaster('onreloaded');
+                                    this.setPlayerEventHandlers();
+                                    this.reloadAllEventHandlers();
+                                };
+
+                                const handleRemovedEntity = () => {
+
+                                    let interface = {
+                                        addEntity: null,
+                                        cancel: null,
+                                        reload: null
+                                    };
+
+                                    const setupHook = () => {
+
+                                        The.area.hook('removedentity', this).after((entity) => {
+                                            Bot.log("Removing entity: " + entity.id);
+                                            for (let i = 0; i < watchingEntities.length; ++i) {
+                                                if (watchingEntities[i].entity === entity) {
+                                                    if (!watchingEntities[i].cb) DEBUGGER();
+                                                    watchingEntities[i].cb();
+
+                                                    watchingEntities.splice(i, 1);
+                                                    break;
+                                                }
+                                            }
+                                        });
+                                    };
+
+                                    setupHook();
+
+                                    let watchingEntities = [];
+
+                                    interface.addEntity = (entity) => {
+                                        let _cb;
+                                        let cb = (args) => { _cb(args); };
+                                        watchingEntities.push({
+                                            entity: entity,
+                                            cb: cb
+                                        });
+
+                                        return {
+                                            then: (setCb) => {
+                                                Bot.log("Setting cb: " + (watchingEntities.length - 1));
+                                                console.trace();
+                                                _cb = setCb;
+                                            }
+                                        };
+                                    };
+
+                                    interface.cancel = () => {
+                                        The.area.hook('removedentity', this).remove();
+                                        watchingEntities = [];
+                                    };
+
+                                    interface.reload = () => {
+                                        setupHook();
+                                    };
+
+                                    return interface;
+                                };
+
+                                const handleAddedEntity = () => {
+
+                                    let cb = () => {};
+                                    let interface = {
+                                        cancel: null,
+                                        reload: null,
+                                        then: (setCB) => cb = setCB
+                                    };
+
+                                    const setupHook = () => {
+
+                                        The.area.hook('addedentity', this).after((entity) => {
+                                            Bot.log("ZOMG I FOUND A THING!  " + entity.id);
+                                            cb(entity);
+                                        });
+                                    };
+
+                                    setupHook();
+
+                                    interface.cancel = () => {
+                                        The.area.hook('addedentity', this).remove();
+                                        cb = () => {};
+                                    };
+
+                                    interface.reload = () => {
+                                        setupHook();
+                                    };
+
+                                    return interface;
+                                };
+
+
+
+                                this.handleEvent = (evt, options) => {
+
+                                    if (evt === BOT_EVT_REMOVED_ENTITY) {
+                                        if (!this.handlingEvents[BOT_EVT_REMOVED_ENTITY]) {
+                                            this.handlingEvents[BOT_EVT_REMOVED_ENTITY] = handleRemovedEntity();
+                                        }
+                                        return this.handlingEvents[BOT_EVT_REMOVED_ENTITY].addEntity(options.entity);
+                                    } else if (evt === BOT_EVT_ADDED_ENTITY) {
+                                        if (this.handlingEvents[BOT_EVT_ADDED_ENTITY]) {
+
+                                            // FIXME: We may have cancelled the handler already, so this is still set
+                                            // but the cb is blank. Allowing this for now, but is it okay to overwrite
+                                            // another cb??
+
+                                            //console.error("Adding BOT_EVT_ADDED_ENTITY when we already have one in place!");
+                                            //DEBUGGER();
+                                            //return;
+
+                                            return this.handlingEvents[BOT_EVT_ADDED_ENTITY];
+                                        }
+
+                                        this.handlingEvents[BOT_EVT_ADDED_ENTITY] = handleAddedEntity();
+                                        return this.handlingEvents[BOT_EVT_ADDED_ENTITY];
+                                    }
+
+                                };
+
+                                this.cancelAllEventHandlers = () => {
+                                    // Cancel all event listeners in handleEvents
+                                    for (const evtType in this.handlingEvents) {
+                                        this.handlingEvents[evtType].cancel();
+                                    }
+                                };
+
+                                this.setPlayerEventHandlers = () => {
+
+
+                                    The.player.character.hook('die', this).after(() => {
+                                        Bot.log("=== Bot Died ===");
+                                        onDied();
+
+                                    });
+
+                                    // Listen for activity from the bot to determine whether or not he's gone idle
+                                    // Activity includes:
+                                    //  - Moving, Attacking
+
+                                    // FIXME: Is this a problem to use the character for listening to its own event? Need
+                                    // this unless we extend the bot itself to also have event listening capabilities
+
+                                    The.player.character.listenTo(The.player.character, EVT_ATTACKED, () => {
+                                        onCharacterActivity();
+                                    });
+
+                                    The.player.character.listenTo(The.player, EVT_MOVING_TO_NEW_TILE, () => {
+                                        onCharacterActivity();
+                                    });
+
+                                    The.player.character.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, () => {
+                                        onCharacterActivity();
+                                    });
+                                };
+
+                                this.reloadAllEventHandlers = () => {
+                                    // Reload all cancelled event listeners in handleEvents
+                                    for (const evtType in this.handlingEvents) {
+                                        this.handlingEvents[evtType].reload();
+                                    }
+                                };
+
+                                let lastStep = now();
+                                stepBot = (time) => {
+
+                                    const delta = time - lastStep;
+                                    lastStep = time;
+
+                                    if (this.runningOrder) {
+
+                                        if (this.runningOrder.step) this.runningOrder.step(delta);
+                                    }
+
+                                    timeSinceLastActivity += delta;
+
+                                    if (!isIdle && timeSinceLastActivity > 5000) {
+                                        // You've probably gone idle
+                                        Bot.log(`I've gone idle!: ${timeSinceLastActivity}`);
+                                        isIdle = true;
+
+                                        Bot.tellMaster('idle');
+                                    }
+                                };
+
+                                this.handlingEvents = [];
+
+
                             };
 
 
                         } catch (e) {
-                            console.log("TEST TEST HERE");
                             console.error(e.stack);
                         }
                     });
