@@ -58,6 +58,18 @@ define(['loggable'], (Loggable) => {
                 .catch(errorInGame);
             });
 
+            this.addOption("Fear Me", () => {
+                The.scripting.server.request(CMD_ADMIN_GIVE_BUFF, {
+                    buffres: "FearBuff"
+                }).then((data) => {
+                    The.UI.postMessage("Give Fear Command: Success");
+                }, (data) => {
+                    The.UI.postMessage("Give Fear Command: Failed");
+                })
+                .catch(errorInGame);
+            });
+
+
             this.addOption("Clear Buffs", () => {
                 The.scripting.server.request(CMD_ADMIN_CLEAR_BUFFS, { })
                 .then((data) => {
