@@ -277,6 +277,7 @@ define(
             this.direction    = null;
             this.speed        = 50;
             this.moveSpeed    = this.npc.speed;
+            this.moveSpeedDiagonal = this.moveSpeed * 1.5;
             this.invMoveSpeed = 1 / this.npc.speed;
             this.lastMoved    = now();
             this.zoning       = false;
@@ -385,7 +386,7 @@ define(
                         sentInitialPath = true;
                     }
 
-                    while (delta >= this.moveSpeed && this.path && !this.path.finished()) {
+                    while (this.path && !this.path.finished()) {
 
                         if (!_.isArray(this.path.walks) ||
                             this.path.walks.length === 0) {
@@ -400,7 +401,25 @@ define(
                             steps     = (walk.distance - walk.walked),
                             direction = walk.direction;
 
-                        let deltaSteps   = Math.floor(delta * this.invMoveSpeed),
+                        let isCardinal = false;
+                        if
+                        (
+                            direction === NORTH ||
+                            direction === WEST ||
+                            direction === EAST ||
+                            direction === SOUTH
+                        )
+                        {
+                            isCardinal = true;
+                        }
+
+                        const moveSpeed = isCardinal ? this.moveSpeed : this.moveSpeedDiagonal,
+                            invMoveSpeed = 1.0 / moveSpeed;
+
+                        // NOTE: If we're moving diagonally
+                        if (delta < moveSpeed) break;
+
+                        let deltaSteps   = Math.floor(delta * invMoveSpeed),
                             deltaTaken   = null,
                             posX         = this.position.global.x,
                             posY         = this.position.global.y,
@@ -415,7 +434,7 @@ define(
                         }
 
                         // How much delta are we using up in this iteration
-                        deltaTaken = deltaSteps * this.moveSpeed;
+                        deltaTaken = deltaSteps * moveSpeed;
                         delta -= deltaTaken;
 
                         // Movement direction
