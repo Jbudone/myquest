@@ -53,8 +53,8 @@
             "effects": [
                 {
                     "type": "buff",
-                    "buffres": "MinorPoison",
-                    "chance": 0.0
+                    "buffres": "FearBuff",
+                    "chance": 1.0
                 }
             ]
         },
