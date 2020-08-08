@@ -66,6 +66,7 @@ define(
                     this.zone(newPage);
                     ui.updatePages();
                     The.renderer.updatePages();
+                    The.camera.centerCamera();
                 });
 
                 // First time setting up event listeners
