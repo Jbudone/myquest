@@ -1567,15 +1567,16 @@ define(
                     }
 
 
-                    //  click to move player creates path for player
-                    const walkTo = { x: mouse.x + parseInt(The.camera.offsetX / Env.tileSize, 10),
-                                    y: mouse.y - parseInt(The.camera.offsetY / Env.tileSize, 10) },
-                        walkToGlobal = The.area.globalFromLocalCoordinates(walkTo.x, walkTo.y, The.area.curPage),
-                        toTile   = new Tile(walkToGlobal.x, walkToGlobal.y);
+                    // If there's a buttonCode then we've already moved in onMouseMove
+                    if (!buttonCode) {
+                        const globalPos = {
+                            x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10),
+                            y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10)
+                        };
 
-                    const globalPos = { x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10), y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10) };
-
-                    The.user.clickedTile(toTile, globalPos, mouse);
+                        const toTile = new Tile( parseInt(globalPos.x / Env.tileSize, 10), parseInt(globalPos.y / Env.tileSize, 10) );
+                        The.user.clickedTile(toTile, globalPos, mouse);
+                    }
                 };
 
                 The.user.hook('rightClickedEntity', The.user).after((entity, mouse) => {
