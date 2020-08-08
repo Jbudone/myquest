@@ -60,7 +60,7 @@ define(() => {
 
         if (_.isUndefined(options)) options = {};
         _.defaults(options, {
-            maxWeight: 100 * Env.tileSize
+            maxWeight: Env.pageWidth * Env.tileSize * 3
         });
 
 
@@ -95,6 +95,7 @@ define(() => {
 
             const localX = tile.x % Env.pageWidth,
                 localY = tile.y % Env.pageHeight;
+
 
             if (!page) return true; // We don't have this page, so lets just assume its open?
             return !(page.collidables[localY] & (1 << localX));
@@ -199,7 +200,7 @@ define(() => {
         };
 
         //const start             = new Array(1),
-        const maxWeight           = options.maxWeight || (100 * Env.tileSize), // TODO: better place to store this
+        const maxWeight           = options.maxWeight, // TODO: better place to store this
             openNodes             = {},
             neighbours            = {};
 
@@ -262,11 +263,13 @@ define(() => {
 
         };
 
-        //const hashCoordinates = (x, y) => (maxWeight + Env.pageWidth) * y + x;
-        // FIXME: Hash coords are no good because y/x are so large; need to make y/x smaller (relative y/x) or hash tile and
-        // then multiple by Z and hash inner part of tile
         const hashCoordinates = (x, y) => {
-            return (maxWeight * maxWeight + Env.pageWidth * Env.pageWidth * Env.tileSize) * y + x;
+            // Because x/y can be so large we want to convert them into a smaller value. We should never need to
+            // pathFind beyond our maxWeight, so therefore we could hash within the bounds of maxWeight
+            const maxRelWeight = Math.max(Env.tileSize * Env.pageWidth * 3, maxWeight),
+                relY = y % maxRelWeight,
+                relX = x % maxRelWeight;
+            return maxRelWeight * relY + relX;
         };
 
         /*
@@ -496,7 +499,7 @@ define(() => {
         if (nearestEnd) {
 
             // Build path working backwards from this..
-            console.log(`Path found is ${nearestEnd.weight} steps (${totalCostOfPathfind} iterations)`);
+            //console.log(`Path found is ${nearestEnd.weight} steps (${totalCostOfPathfind} iterations)`);
 
             // continue stepping backwards and walk.steps++ until direction changes, then create a new walk
             const path = new Path();
