@@ -942,7 +942,7 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                             // This path is now stale, we already have a queuedPath ready to replace this one
                             let queuedPath = null;
                             if (this.movables[path.movableID].queuedPath) {
-                                queuedPath = path;
+                                queuedPath = this.movables[path.movableID].queuedPath;
                                 // NOTE: Do NOT early-out here. Even though this path is stale, its likely similar to
                                 // the new pending one. If we keep replacing it we'll never get an actual path, so just
                                 // use the stale path and replace with the next
@@ -972,7 +972,7 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                                     type: HANDLE_PATH,
                                     path: {
                                         movableID: queuedPath.movableID,
-                                        pathID: queuedPath.id,
+                                        pathID: queuedPath.pathID,
                                         startPt: queuedPath.startPt,
                                         endPt: queuedPath.endPt
                                     }
