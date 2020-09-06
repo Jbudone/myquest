@@ -27,7 +27,8 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
         const attackInfo  = _character.entity.npc.attackInfo,
             chaseDistance = attackInfo.chaseDistance,
             attackTime    = attackInfo.attackTime,
-            range         = attackInfo.range;
+            range         = 32,//attackInfo.range * Env.tileSize;
+            rangeWidth    = 8;
 
 
         if (!attackInfo) throw Err(`No attack info found for NPC`, arguments, _character.entity.npc);
@@ -42,14 +43,33 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
             // init
             this.Log("Attempting to chase you..", LOG_DEBUG);
 
-            // Stop our current chasing
-            if(isChasing || activeMovement){
-                isChasing = false;
-                this.Log("Cancelling chase first", LOG_DEBUG);
-                // movement.stopChasing(target);
+            // NOTE: We do NOT want to stop the current movement, otherwise if we keep getting ChaseTarget inputs then
+            // we'll never actually get a chance to move. Better to keep the current movement and stomp over it with the
+            // new path when it comes in, it will likely be in the same direciton anyways
+            // NOTE: We do however need to clear the callback from the previous movement in case we run into a situation
+            // where the new movement doesn't get set, then we continue w/ the old movement (okay) but don't want the
+            // old cb anymore
+            if(activeMovement){
+                activeMovement.clearCb();
+            }
 
-                activeMovement.stop();
-                activeMovement = null;
+            const options = { range: range, rangeWidth: rangeWidth, shootThrough: melee.canAttackThroughShootable };
+            //options.filterFunc = melee.inRangeFilterFunc;
+            if (movement.inRangeOf(this.target, options)) {
+                this.Log("You're already in range -- attacking", LOG_DEBUG);
+
+                // Stop chasing in case we were previously chasing the target
+                if(isChasing || activeMovement){
+                    isChasing = false;
+                    this.Log("Cancelling chase first", LOG_DEBUG);
+                    // movement.stopChasing(target);
+
+                    activeMovement.stop(false);
+                    activeMovement = null;
+                }
+
+                this.input(INPUT_TARGET_INRANGE, this.target);
+                return;
             }
 
             const fromTile = _character.entity.position.tile,
