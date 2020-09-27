@@ -10,6 +10,7 @@ define(
 
         addKey('PATH_CHASE');
 
+
         const Movement = function(game, brain) {
 
             Instinct.call(this, game, brain);
@@ -285,49 +286,33 @@ define(
                         if ((Math.abs(xDistance) <= options.range && Math.abs(yDistance) <= options.rangeWidth) ||
                             (Math.abs(yDistance) <= options.range && Math.abs(xDistance) <= options.rangeWidth)) {
 
-                            // FIXME: Need to rewrite this to work as non-tile based
+                            const xTileDist = Math.floor(xDistance / Env.tileSize),
+                                yTileDist = Math.floor(yDistance / Env.tileSize),
+                                tile = { x: 0, y: 0 };
 
-                            // Check each tile along the direction to ensure that there is no collision
-                            // TODO: If we could store/cache collisions in the page as a bitmask in both X/Y directions
-                            // then we could simply turn this into a bitwise operation (may need 2 ops if it goes across
-                            // the page)
-                            // TODO: Could cache those bitwise operations between points
-                            const x  = character.entity.position.tile.x,
-                                y    = character.entity.position.tile.y,
-                                tile = { x, y };
-                            let dist = null,
-                                dir  = null;
-
-                            if (xDistance !== 0) {
-                                dist = Math.abs(xDistance);
-                                dir = xDistance > 0 ? 1 : -1;
-                            } else if (yDistance !== 0) {
-                                dist = Math.abs(yDistance);
-                                dir = yDistance > 0 ? 1 : -1;
-                            } else {
-                                // Well this is awkward... we're both ontop of each other
-                                return true;
-                            }
+                            // Adjacent tile? No need to check for collisions in between
+                            if (xTileDist <= 1 && yTileDist <= 1) return true;
 
                             let tileFilterFunc = null;
                             if (options.tileFilterFunc) {
                                 tileFilterFunc = options.tileFilterFunc;
                             }
 
-                            for (let i = 0; i < dist; ++i) {
-                                if (xDistance) tile.x += dir;
-                                else tile.y += dir;
+                            // Check for collisions between us and the target
+                            for (let y = 0; y <= Math.abs(yTileDist); ++y) {
+                                tile.y = character.entity.position.tile.y + y * (yTileDist > 0 ? 1 : -1);
+                                for (let x = 0; x <= Math.abs(xTileDist); ++x) {
+                                    tile.x = character.entity.position.tile.x + x * (xTileDist > 0 ? 1 : -1);
 
-                                if (tileFilterFunc) {
-                                    if (!tileFilterFunc(tile)) {
-                                        return false;
-                                    }
-                                } else {
-                                    // TODO: Can we shoot through a tile which we don't know about?
-                                    if (!character.entity.page.area.hasTile(tile) || !character.entity.page.area.isTileOpen(tile)) {
-                                        if (!options.shootThrough || !character.entity.page.area.isShootableTile(tile)) {
-                                            return false;
+                                    if (!tileFilterFunc) {
+                                        // TODO: Can we shoot through a tile which we don't know about?
+                                        if (!character.entity.page.area.hasTile(tile) || !character.entity.page.area.isTileOpen(tile)) {
+                                            if (!options.shootThrough || !character.entity.page.area.isShootableTile(tile)) {
+                                                return false;
+                                            }
                                         }
+                                    } else if (!tileFilterFunc(tile)) {
+                                        return false;
                                     }
                                 }
                             }
