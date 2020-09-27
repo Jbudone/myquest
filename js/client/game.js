@@ -1094,10 +1094,6 @@ define(
                                 //entity.tilePath.destination = entity.tilePath.walks[entity.tilePath.walks.length - 1].destination;
 
 
-                                delete entity.ptPath;
-                                entity.ptPath = alternativePath;
-                                entity.ptPath.destination = alternativePath.walks[alternativePath.walks.length - 1].destination;
-
                                 // movable state may be stale by now
                                 movableState.position.global.x = entity.position.global.x;
                                 movableState.position.global.y = entity.position.global.y;
