@@ -1639,7 +1639,7 @@ define(
                         return;
                     }
 
-                    if (!The.player.character.canMove()) {
+                    if (!The.player.character || !The.player.character.canMove()) {
                         return;
                     }
 
