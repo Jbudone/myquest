@@ -462,7 +462,7 @@ define(
                         this.Log("Could not find path");
                         this.Log(pathState);
                         this.Log(movableState);
-                        this.Log(localPath);
+                        this.Log(data);
 
                         if (this.isConnected) {
 
@@ -484,7 +484,7 @@ define(
 
 
                         console.error("Could not find path!");
-                        this.Log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`, LOG_INFO);
+                        this.Log(`FAILED TO FIND PATH: (${fromPt.x}, ${fromPt.x}) -> (${toPt.x}, ${toPt.y})`, LOG_INFO);
                     });
 
                     return;
