@@ -443,6 +443,10 @@ define(
                 this.evtNodeMgr.activate();
             },
 
+            smokeTest() {
+                this.pathfinding.smokeTestPaths();
+            },
+
             initialSpawn() {
                 _.forEach(this.pages, (page) => {
                     page.initialSpawn();

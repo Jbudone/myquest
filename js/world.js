@@ -38,6 +38,12 @@ define(['loggable', 'eventful', 'area'], (Loggable, Eventful, Area) => {
             });
         };
 
+        this.smokeTest = () => {
+            _.forEach(this.areas, (area, areaID) => {
+                area.smokeTest();
+            });
+        };
+
         this.step = (time) => {
             this.handlePendingEvents();
 

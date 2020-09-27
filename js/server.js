@@ -109,6 +109,7 @@ GLOBAL.chalk = chalk;
 GLOBAL.prettyjson = prettyjson;
 GLOBAL.WebSocketServer = WebSocketServer;
 GLOBAL.__dirname = __dirname; // FIXME: For some reason ErrorReporter  require('path').dirname('')  returns an empty string
+GLOBAL.SourceMap = SourceMap;
 
 GLOBAL.fs = fs;
 
@@ -554,6 +555,7 @@ requirejs(['keys', 'environment'], (Keys, Environment) => {
 
                             // Start world
                             The.world.start();
+                            The.world.smokeTest();
 
                             // The Game Loop
                             const stepTimer         = 100; // TODO: Is this the best step timer?

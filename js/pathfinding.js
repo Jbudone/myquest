@@ -1362,8 +1362,6 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
 
 
         this.testPath = (path, cb) => {
-            //this.workerHandlePath(path, cb);
-
             const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
             assert(foundPath);
             assert(foundPath.path);
@@ -1372,20 +1370,22 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
         this.smokeTestPaths = () => {
 
             const paths = [
-                //{
-                //    movableID: The.player.id,
-                //    startPt: { x: 1104, y: 1372 },
-                //    endPt: { x: 1105, y: 1398 },
-                //    immediate: true
-                //},
                 {
-                    movableID: The.player.id,
+                    startPt: { x: 1104, y: 1372 },
+                    endPt: { x: 1105, y: 1398 },
+                    immediate: true
+                },
+                {
+                    startPt: {x: 1056, y: 1331 },
+                    endPt: {x: 1039, y: 1344 },
+                    immediate: true
+                },
+                {
                     startPt: {x: 1106, y: 1053},
                     endPt: {x: 1128, y: 1032},
                     immediate: true
                 },
                 {
-                    movableID: The.player.id,
                     startPt: { x: 1166, y: 1055 },
                     endPt: { x: 1164, y: 1055 },
                     immediate: true
