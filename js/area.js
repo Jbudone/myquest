@@ -82,6 +82,10 @@ define(
             this.physicsMgr.initialize();
 
 
+            // CheckEntityZoned
+            // Is the entity's position now in a new page?
+            // NOTE: Client's area.curPage may not match entity.page since we may have zoned on the server but are still
+            // catching up on the client (or vice versa when criss-crossing between pages)
             this.checkEntityZoned = (entity) => {
 
                 assert(entity instanceof Movable, `Zoning entity is not a movable type`);

@@ -51,7 +51,17 @@ define(['loggable'], (Loggable) => {
             debugPath: {
                 alpha: 0.2,
                 stroke: 'blue',
-                lineWidth: 6
+                lineWidth: 6,
+                recalibratedWalks: {
+                    alpha: 0.4,
+                    stroke: 'yellow',
+                    lineWidth: 8
+                },
+                discardedWalks: {
+                    alpha: 0.1,
+                    stroke: 'red',
+                    lineWidth: 2
+                }
             },
 
             movableHighlight: {
@@ -710,8 +720,8 @@ define(['loggable'], (Loggable) => {
 
                             // Render tiles searched for path
                             // NOTE: nodes are points (entrance to tile)
-                            if (movable.path.debugCheckedNodes) {
-                                let nodes = movable.path.debugCheckedNodes;
+                            if (movable.path.debugging.debugCheckedNodes) {
+                                let nodes = movable.path.debugging.debugCheckedNodes;
                                 for (let i = 0; i < nodes.length; ++i) {
                                     const node = nodes[i],
                                         x = Math.floor(node.x / Env.tileSize),
@@ -723,6 +733,51 @@ define(['loggable'], (Loggable) => {
                                         Env.tileScale * Env.tileSize, Env.tileScale * Env.tileSize,
                                     );
                                 }
+                            }
+
+                            if (movable.path.debugging.prefixPath) {
+                                this.ctxEntities.save();
+                                this.ctxEntities.globalAlpha = this.settings.debugPath.recalibratedWalks.alpha;
+                                this.ctxEntities.strokeStyle = this.settings.debugPath.recalibratedWalks.stroke;
+                                this.ctxEntities.beginPath();
+                                const drawPoints = movable.path.debugging.prefixPath;
+                                for (let i = 0; i < drawPoints.length; ++i) {
+                                    const point = drawPoints[i],
+                                        x       = Env.tileScale * (point.x - The.camera.globalOffsetX),
+                                        y       = Env.tileScale * (point.y + The.camera.globalOffsetY);
+
+                                    if (i === 0) {
+                                        this.ctxEntities.moveTo(x, y);
+                                    } else {
+                                        this.ctxEntities.lineTo(x, y);
+                                    }
+                                }
+                                this.ctxEntities.lineWidth = this.settings.debugPath.recalibratedWalks.lineWidth;
+                                this.ctxEntities.stroke();
+                                this.ctxEntities.restore();
+                            }
+
+                            if (movable.path.debugging.discardedPath) {
+                                this.ctxEntities.save();
+                                this.ctxEntities.globalAlpha = this.settings.debugPath.discardedWalks.alpha;
+                                this.ctxEntities.strokeStyle = this.settings.debugPath.discardedWalks.stroke;
+                                this.ctxEntities.beginPath();
+                                const drawPoints = movable.path.debugging.prefixPath;
+                                for (let i = 0; i < drawPoints.length; ++i) {
+                                    const point = drawPoints[i],
+                                        x       = Env.tileScale * (point.x - The.camera.globalOffsetX),
+                                        y       = Env.tileScale * (point.y + The.camera.globalOffsetY);
+
+                                    if (i === 0) {
+                                        this.ctxEntities.moveTo(x, y);
+                                    } else {
+                                        this.ctxEntities.lineTo(x, y);
+                                    }
+                                }
+                                this.ctxEntities.lineWidth = this.settings.debugPath.discardedWalks.lineWidth;
+                                this.ctxEntities.stroke();
+                                this.ctxEntities.restore();
+
                             }
                         }
                     });
@@ -814,24 +869,33 @@ define(['loggable'], (Loggable) => {
                                 _x    = movable.debugging._serverPosition.global.x,
                                 _y    = movable.debugging._serverPosition.global.y,
                                 _toX  = movable.debugging._serverPosition.toGlobal.x,
-                                _toY  = movable.debugging._serverPosition.toGlobal.y;
+                                _toY  = movable.debugging._serverPosition.toGlobal.y,
+                                _xLocal = movable.position.global.x,
+                                _yLocal = movable.position.global.y,
+                                _xLocalT = movable.position.tile.x,
+                                _yLocalT = movable.position.tile.y;
 
                             this.ctxEntities.strokeStyle = "gray";
-                            this.ctxEntities.strokeRect(
-                                scale * (Env.tileSize * _xT - offsetX), scale * (Env.tileSize * _yT + offsetY),
-                                Env.tileSize * scale, Env.tileSize * scale
-                            );
+                            //this.ctxEntities.strokeRect(
+                            //    scale * (Env.tileSize * _xT - offsetX), scale * (Env.tileSize * _yT + offsetY),
+                            //    Env.tileSize * scale, Env.tileSize * scale
+                            //);
                             this.ctxEntities.strokeRect(
                                 scale * (_x - offsetX), scale * (_y + offsetY),
                                 scale, scale
                             );
                             this.ctxEntities.strokeStyle = "yellow";
-                            this.ctxEntities.strokeRect(
-                                scale * (Env.tileSize * _toXT - offsetX), scale * (Env.tileSize * _toYT + offsetY),
-                                Env.tileSize * scale, Env.tileSize * scale
-                            );
+                            //this.ctxEntities.strokeRect(
+                            //    scale * (Env.tileSize * _toXT - offsetX), scale * (Env.tileSize * _toYT + offsetY),
+                            //    Env.tileSize * scale, Env.tileSize * scale
+                            //);
                             this.ctxEntities.strokeRect(
                                 scale * (_toX - offsetX), scale * (_toY + offsetY),
+                                scale, scale
+                            );
+                            this.ctxEntities.strokeStyle = "red";
+                            this.ctxEntities.strokeRect(
+                                scale * (_xLocal - offsetX), scale * (_yLocal + offsetY),
                                 scale, scale
                             );
                         }

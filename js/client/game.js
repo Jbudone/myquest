@@ -1044,8 +1044,15 @@ define(
                             fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
                             toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
-
                         entity.cancelPath();
+                        if (playerX === toX && playerY === toY) {
+                            // Already there
+                            // This could happen if the path happens to back track to an old position, and locally we
+                            // still have the npc at that position
+                            return;
+                        }
+
+
                         The.area.pathfinding.workerHandlePath({
                             movableID: entity.id,
                             startPt: { x: playerX, y: playerY },
@@ -1102,6 +1109,75 @@ define(
                             //entity.addPath(path);
                             //entity.recordNewPath(path, pathState);
                         });
+                    };
+
+
+                    server.onEntityPathFinished = (page, event) => {
+
+                        assert(!_.isNaN(event.id), `Expected valid entity id: ${event.id}`);
+
+                        // Its possible that we're receiving an event from a page which we were previously in but
+                        // locally not in anymore.
+                        // eg. we've just zoned to another page, however the server is slightly behind and sees us in
+                        // the previous page and sends us an event from a previously viewable page
+                        if (!(page in The.area.pages)) {
+                            this.Log(`server.onEntityPathFinished(${page}) from a page which is not loaded`, LOG_DEBUG);
+                            return;
+                        }
+
+                        page = The.area.pages[page];
+
+                        const entity   = The.area.movables[event.id],
+                            reqState = event.state;
+
+                        this.Log(`Entity ${event.id} onEntityPathProgress`, LOG_DEBUG);
+                        if (!entity) {
+                            this.Log("  Entity not found", LOG_DEBUG);
+                            return;
+                        }
+
+                        const entPage  = entity.page;
+
+                        const movableState = {
+                                position: {
+                                    global: {
+                                        x: entity.position.global.x,
+                                        y: entity.position.global.y },
+                                    tile: {
+                                        x: entity.position.tile.x,
+                                        y: entity.position.tile.y }
+                                }
+                            },
+                            pathState = {
+                                position: {
+                                    global: {
+                                        x: reqState.position.global.x,
+                                        y: reqState.position.global.y },
+                                    tile: {
+                                        x: reqState.position.tile.x,
+                                        y: reqState.position.tile.y }
+                                },
+
+                                destination: {
+                                    global: {},
+                                    tile: {}
+                                }
+                            };
+
+                        entity.debugging._serverPosition = {
+                            tile: {
+                                x: reqState.position.tile.x,
+                                y: reqState.position.tile.y },
+                            toTile: {
+                                x: reqState.position.tile.x,
+                                y: reqState.position.tile.y },
+                            global: {
+                                x: reqState.position.global.x,
+                                y: reqState.position.global.y },
+                            toGlobal: {
+                                x: reqState.position.global.x,
+                                y: reqState.position.global.y },
+                        };
                     };
 
                     // We've just teleported somewhere
@@ -1282,6 +1358,9 @@ define(
                         // Zoning into one of the new pages
                         The.area.addPages(pages, true);
 
+                        // WARNING: This zone could be stale, since we zone across pages locally before receiving onZone
+                        // from server. We could zone across a page, then backtrack to the previous page, then receive
+                        // the (stale) onZone from the server
                         if (The.area.curPage.index !== page) {
                             The.area.zone(The.area.pages[page]);
 
@@ -1424,17 +1503,18 @@ define(
                 // -------------------------------------------------------------------------------------------------- //
                 // -------------------------------------------------------------------------------------------------- //
 
+                let lastMouseMoveRepath = 0;
                 const onMouseMove = function(mouse, evt) {
                     //ui.tileHover = new Tile(mouse.x, mouse.y);
                     ui.tileHover = { x: mouse.canvasX, y: mouse.canvasY };
 
                     // New move to position
-                    if (evt && evt.buttons && The.player.character.canMove()) {
+                    // NOTE: Provide some delay between repaths otherwise the user may "click" and start moving before
+                    // onMouseUp comes in, so that we repath again after moving already, and end up somewhere else
+                    let timeSinceRepath = now() - lastMouseMoveRepath;
+                    if (evt && evt.buttons && evt.buttons !== 2 && The.player.character && The.player.character.canMove() && timeSinceRepath > 150) {
+                        lastMouseMoveRepath = now();
 
-                        // FIXME: For now disable this, until we overhaul pathfinding system and its not so slow
-                        //  click to move player creates path for player
-                        // FIXME: This seems correct, however at one point when we transitioned between pages we got a
-                        // negative number for y (moving into topleft most page)
                         const globalPos = {
                             x: parseInt(mouse.canvasX + The.camera.offsetX + The.area.curPage.x * Env.tileSize, 10),
                             y: parseInt(mouse.canvasY - The.camera.offsetY + The.area.curPage.y * Env.tileSize, 10)

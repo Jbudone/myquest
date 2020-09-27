@@ -386,6 +386,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
+                            else if (evtType == EVT_FINISHED_PATH) this.onEntityPathFinished( page, event.data );
                             else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
                             else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
                             else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
@@ -542,6 +543,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityRemoved        = function(){};
         this.onEntityNetserialize   = function(){};
         this.onEntityPathProgress   = function(){};
+        this.onEntityPathFinished   = function(){};
         this.onEntityPathCancelled  = function(){};
         this.onEntityDamaged        = function(){};
         this.onEntityDied           = function(){};
@@ -615,7 +617,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                 this.websocket.send(event.serialize());
                 this.requestBuffer.addEvent(event);
-
             });
         };
     };

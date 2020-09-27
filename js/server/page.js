@@ -199,7 +199,36 @@ define(
 
                         this.Log(`Entity [${entity.id}] cancelling Path {${path.id}, ${path.flag}}`, LOG_DEBUG);
                     });
+
+                    this.listenTo(entity, EVT_FINISHED_PATH, (entity, path) => {
+
+                        assert(_.isFinite(entity.position.global.y) && _.isFinite(entity.position.global.x), "Illegal entity global position");
+
+                        const state = {
+                            page: this.index,
+                            position: {
+                                global: {
+                                    x: entity.position.global.x,
+                                    y: entity.position.global.y },
+                                tile: {
+                                    x: entity.position.tile.x,
+                                    y: entity.position.tile.y }
+                            }
+                        };
+
+                        const data = {
+                            id: entity.id,
+                            state,
+                        };
+
+                        this.eventsBuffer.push({
+                            evtType: EVT_FINISHED_PATH,
+                            data,
+                            frameId: (++The.frameEvtId)
+                        });
+                    });
                 });
+
 
                 this.listenTo(this, EVT_ZONE_OUT, (page, entity) => {
                     assert(_.isFinite(entity.id), "Entity does not have a legal id");

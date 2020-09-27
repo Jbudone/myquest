@@ -25,13 +25,10 @@ define(['eventful'], (Eventful) => {
             let localY = The.player.position.global.y % Env.pageRealHeight,
                 localX = The.player.position.global.x % Env.pageRealWidth;
 
-            // NOTE: We may have remotely zoned into another page, but locally
-            // we're still catching up (eg. we've zoned to another page from
-            // the server, but our local player is still walking to that page,
-            // so our curPage is not what we think our curPage is). Determine
-            // our expected curPage from the player's position, and if its
-            // different from the actual curPage then offset to our expected
-            // curPage
+            // NOTE: We may have remotely zoned into another page, but locally we're still catching up (eg. we've zoned
+            // to another page from the server, but our local player is still walking to that page, so our curPage is
+            // not what we think our curPage is). Determine our expected curPage from the player's position, and if its
+            // different from the actual curPage then offset to our expected curPage
             const pageX = Math.floor(The.player.position.global.x / Env.pageRealWidth),
                 pageY   = Math.floor(The.player.position.global.y / Env.pageRealHeight),
                 pageId  = The.area.pageIndex(pageX, pageY);
@@ -39,11 +36,10 @@ define(['eventful'], (Eventful) => {
             if (pageId !== The.area.curPage.index) {
 
                 // NOTE: We may not have received the pages where we're zoning to yet. Be patient
-                 if (!The.area.pages[pageId]) { console.error("DONT HAVE PAGES YET TO CENTER CAMERA"); return; }
+                 if (!The.area.pages[pageId]) { return; }
  
                  localX += (The.area.pages[pageId].x - The.area.curPage.x) * Env.tileSize;
                  localY += (The.area.pages[pageId].y - The.area.curPage.y) * Env.tileSize;
-                 console.error("CENTER CAMERA HAD TO UPDATE OFFSET WITHOUT HAVING LATEST PAGE UPDATE");
             }
 
             this.offsetY = -localY + Env.pageHeight * Env.tileSize / 2;

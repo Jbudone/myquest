@@ -63,6 +63,9 @@ define(() => {
                             // Worker is debugging, pause until inspector is closed
                             Log("WAITING FOR INSPECTOR TO CLOSE ON JOB!");
                             waitInspectorClosed();
+                        } else if (data.error) {
+                            Log("Error on webworker:");
+                            Log(data.error);
                         } else {
                             onMessage(data);
                         }

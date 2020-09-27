@@ -428,6 +428,11 @@ define(
                     return false;
                 });
 
+                this.canvas.addEventListener('mouseup', (evt) => {
+                    lastMouseEvt = evt;
+                    return false;
+                });
+
                 // Prevent browser context-menu on anything inside the canvas
                 $('#canvas *').on('contextmenu', (e) => {
                     e.preventDefault();
@@ -697,14 +702,21 @@ define(
 
                 // NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
                 this.listenTo(page, EVT_ADDED_ENTITY, (page, entity) => {
-                    if (this.movables[entity.id]) {
-                        this.detachMovable(entity);
+
+                    if (entity === The.player) {
+                    } else {
+                        if (this.movables[entity.id]) {
+                            this.detachMovable(entity);
+                        }
+                        this.attachMovable(entity);
                     }
-                    this.attachMovable(entity);
                 });
 
                 this.listenTo(page, EVT_REMOVED_ENTITY, (page, entity) => {
-                    this.detachMovable(entity);
+                    if (entity === The.player) {
+                    } else {
+                        this.detachMovable(entity);
+                    }
                 });
             };
 

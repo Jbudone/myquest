@@ -31,7 +31,8 @@ define(
 
                 if (!options) options = {};
                 _.defaults(options, {
-                    range: 1,
+                    range: 32,
+                    rangeWidth: 8,
                     excludeTile: false, // Exclude the center/from tiles?
                     shootThrough: false // Can we shoot through shootable tiles? (used for range combat or long-range melee)
                 });
@@ -41,10 +42,9 @@ define(
                 // TODO: on path recalculating; consider using the current path and stepping backwards through the
                 // path, then using A* on each tile along the path to see if there's a faster path update. This
                 // would avoid a full A* recalculation
-                let addedPath    = null,
-                    path         = null,
-                    pathId       = null;
 
+                let addedPath, pathId;
+                let _addedPath = null, _pathId = null;
 
                 let queuedCb = null,
                     queuedStop = null;
@@ -96,6 +96,7 @@ define(
                     onPathUpdate: () => { return setCallbacks; }, // TODO: when target moves tile and path changes (to check for path distance > care-factor distance)
 
                     stop: (keepCallbacks) => {
+
                         if (addedPath && character.entity.path && character.entity.path.id === pathId && character.entity.path.flag === PATH_CHASE) {
                             if (!keepCallbacks) {
                                 character.entity.path.onFinished = function(){};
@@ -104,11 +105,37 @@ define(
 
                             character.entity.cancelPath();
                         } else {
-                            queuedStop = pathId;
+                            // Path still in flight, need to queue cancel
+                            queuedStop = true;
+
+                            // chase request -> add chase path -> chase request -> target moved in range -> cancel
+                            // previous chase. Previous chase is still in flight so we have no current path in
+                            // movement, but the movable still has the old/stale path
+                            if (character.entity.path && character.entity.path.flag === PATH_CHASE) {
+                                // Cancel stale path
+                                if (!keepCallbacks) {
+                                    character.entity.path.onFinished = function(){};
+                                    character.entity.path.onFailed = function(){};
+                                }
+
+                                character.entity.cancelPath();
+                            }
                         }
 
                         addedPath = null;
-                    }
+                    },
+
+                    clearCb: () => {
+                        if (addedPath && character.entity.path && character.entity.path.id === pathId && character.entity.path.flag === PATH_CHASE) {
+                            character.entity.path.onFinished = function(){};
+                            character.entity.path.onFailed = function(){};
+                        }
+
+                        cbs.succeeded = function(){};
+                        cbs.failed = function(){};
+                    },
+
+                    getPath: ()  => { return addedPath; }
                 };
 
                 if (!character.canMove()) {
@@ -122,15 +149,19 @@ define(
                     toX       = target.entity.position.global.x,
                     toY       = target.entity.position.global.y;
 
-                character.entity.cancelPath();
                 character.entity.page.area.pathfinding.workerHandlePath({
                     movableID: character.entity.id,
                     startPt: { x: playerX, y: playerY },
-                    endPt: { x: toX, y: toY }
+                    endPt: { x: toX, y: toY },
+                    options: {
+                        range: options.range,
+                        rangeWidth: options.rangeWidth
+                    }
                 }).then((data) => {
 
                     if (queuedStop) {
                         this.Log("Queued to stop path before we finished fetching path. Just ignore this", LOG_DEBUG);
+                        queuedStop = false;
                         return;
                     }
 
@@ -149,6 +180,7 @@ define(
                         pathId    = character.entity.path.id;
 
                         character.entity.recordNewPath(path);
+                        this.Log(addedPath, LOG_DEBUG);
                     }
 
                     __then();
@@ -173,7 +205,8 @@ define(
                 let reachedTile       = function(){},
                     couldNotReachTile = function(){},
                     alreadyThere      = false,
-                    addedPath         = null;
+                    addedPath         = null,
+                    pathId            = null;
 
 
                 const playerX = character.entity.position.global.x,
@@ -201,6 +234,7 @@ define(
                     const path = data.path;
                     path.flag = PATH_CHASE;
                     addedPath = character.entity.addPath(path).finished(function(){reachedTile();}, function(){couldNotReachTile();});
+                    pathId    = character.entity.path.id;
                     character.entity.recordNewPath(path);
 
                 }).catch((data) => {
@@ -233,7 +267,8 @@ define(
 
                 if (!options) options = {};
                 options = _.defaults(options, {
-                    range: 1,
+                    range: Env.tileSize,
+                    rangeWidth: 0,
                     rangeRule: ADJACENT_RANGE,
                     shootThrough: false // Can we shoot through shootable tiles? (used for range combat or long-range melee)
                 });
@@ -245,10 +280,12 @@ define(
                 } else {
                     if (options.rangeRule === ADJACENT_RANGE) {
 
-                        const xDistance = target.entity.position.tile.x - character.entity.position.tile.x,
-                            yDistance   = target.entity.position.tile.y - character.entity.position.tile.y;
-                        if ((Math.abs(xDistance) <= options.range && yDistance === 0) ||
-                            (Math.abs(yDistance) <= options.range && xDistance === 0)) {
+                        const xDistance = target.entity.position.global.x - character.entity.position.global.x,
+                            yDistance   = target.entity.position.global.y - character.entity.position.global.y;
+                        if ((Math.abs(xDistance) <= options.range && Math.abs(yDistance) <= options.rangeWidth) ||
+                            (Math.abs(yDistance) <= options.range && Math.abs(xDistance) <= options.rangeWidth)) {
+
+                            // FIXME: Need to rewrite this to work as non-tile based
 
                             // Check each tile along the direction to ensure that there is no collision
                             // TODO: If we could store/cache collisions in the page as a bitmask in both X/Y directions

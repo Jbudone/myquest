@@ -65,6 +65,7 @@ define(['pathfinding.base'], (PathfindingBase) => {
                         start: path.startPt,
                         end: path.startPt,
                         debugCheckedNodes: [],
+                        options: path.options,
                         ALREADY_THERE: true
                     };
                 } else {
@@ -73,7 +74,8 @@ define(['pathfinding.base'], (PathfindingBase) => {
                         walks: path.ptPath.walks,
                         start: path.startPt,
                         end: path.ptPath.walks[path.ptPath.walks.length - 1].destination,
-                        debugCheckedNodes: path.debugCheckedNodes
+                        debugCheckedNodes: path.debugCheckedNodes,
+                        options: path.options
                     };
                 }
 
@@ -109,12 +111,13 @@ define(['pathfinding.base'], (PathfindingBase) => {
         //  - from/to (points) and tiled path as hint,  need to refine path to points
 
         let time = -Date.now();
-        const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
+        const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt, path.options);
         time += Date.now();
 
         if (foundPath) {
             path.time = time;
             path.debugCheckedNodes = foundPath.debugCheckedNodes;
+            path.options = foundPath.options;
             if (!foundPath.path) {
                 path.ALREADY_THERE = true;
             } else {

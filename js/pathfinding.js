@@ -855,6 +855,7 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                         start: path.startPt,
                         end: ptPath.walks[ptPath.walks.length - 1].destination,
                         walks: ptPath.walks,
+                        debugging: {}
                     };
 
                     if (Env.assertion.checkSafePath) {
@@ -884,7 +885,13 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
 
                     if (foundPath) {
                         path.time = time;
-                        path.debugCheckedNodes = foundPath.debugCheckedNodes;
+
+                        if (foundPath.debugCheckedNodes) {
+                            path.debugging = {
+                                debugCheckedNodes: foundPath.debugCheckedNodes
+                            };
+                        }
+
                         if (!foundPath.path) {
                             path.ALREADY_THERE = true;
                         } else {
@@ -893,8 +900,12 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                                 start: foundPath.path.start,
                                 end: foundPath.path.walks[foundPath.path.walks.length - 1].destination,
                                 walks: foundPath.path.walks,
-                                debugCheckedNodes: path.debugCheckedNodes
+                                debugging: {}
                             };
+
+                            if (foundPath.debugCheckedNodes) {
+                                path.ptPath.debugging.debugCheckedNodes = foundPath.debugCheckedNodes;
+                            }
                         }
 
 
@@ -931,17 +942,25 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                             movableID: path.movableID,
                             pathID: path.id,
                             startPt: path.startPt,
-                            endPt: path.endPt
+                            endPt: path.endPt,
+                            options: path.options,
+                            chaseId: path.options ? path.options.chaseId : -1,
+                            time: now()
                         };
+                        this.Log(`Path in flight -- queueing path: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
                     } else {
-                        this.movables[path.movableID].inFlight = true;
+                        this.movables[path.movableID].inFlight = now();
 
                         const handlePathCb = (data) => {
-                            this.movables[path.movableID].inFlight = false;
+                            const timeSincePath = now() - this.movables[path.movableID].inFlight;
+                            this.movables[path.movableID].inFlight = 0;
+
+                            this.Log(`Path returned: ${data.success ? data.path.options.chaseId : 'x'}`, LOG_DEBUG);
 
                             // This path is now stale, we already have a queuedPath ready to replace this one
                             let queuedPath = null;
                             if (this.movables[path.movableID].queuedPath) {
+                                this.Log(`Prepping queuedPath: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
                                 queuedPath = this.movables[path.movableID].queuedPath;
                                 // NOTE: Do NOT early-out here. Even though this path is stale, its likely similar to
                                 // the new pending one. If we keep replacing it we'll never get an actual path, so just
@@ -949,13 +968,182 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                             } else if (data.pathID !== this.movables[data.movableID].pathId) {
                                 // Stale path, and replaced path is not one that's going to worker. So just ignore this
                                 // one
-                                this.Log("Stale path, ignoring", LOG_DEBUG);
+                                this.Log(`Stale path, ignoring:  ${data.pathID} !== ${this.movables[data.movableID].pathId}; chaseId: ${data.path.options.chaseId}`, LOG_DEBUG);
                                 return;
                             }
 
 
                             const movable = area.movables[data.movableID];
                             if (movable && data.success) {
+
+                                // Path succeeded
+                                // May need to adjust in case the path was delayed
+
+                                const movablePath = this.movables[data.movableID],
+                                    movable = area.movables[data.movableID];
+
+                                if (!movable) {
+                                    assert(false); // FIXME: This is reasonable, movable could have died before receiving callback. How do we handle this gracefully
+                                    return;
+                                }
+
+                                // Since the path may have been delayed, we could have been running a stale path while
+                                // this one was in flight. This means we may have moved, so this path's start pos
+                                // won't match our current pos, and we need to repath from our current pos to the
+                                // nearest point in the path
+                                if (data.path.start.x !== movable.position.global.x || data.path.start.y !== movable.position.global.y) {
+
+
+                                    // Find the nearest (reasonable) point in the path that we can re-path to
+                                    // We don't want to re-path to the beginning of the path since the path may be going
+                                    // in the same direction that we were already travelling, which means we'd be
+                                    // walking backwards to the start. Instead we want to take a maxWalked delta into
+                                    // account (how far could we have travelled since requesting this path), and re-path
+                                    // to that delta within the path
+                                    let nearestPoint = null,
+                                        nearestDist = null,
+                                        nearestPointI = 0;
+                                    if (data.path.ALREADY_THERE) {
+                                        // Go-to point is the end point, which may or may not be where we're at already
+                                        nearestPoint = data.path.end;
+                                        nearestDist = Math.abs(nearestPoint.x - movable.position.global.x) + Math.abs(nearestPoint.y - movable.position.global.y);
+                                        nearestPointI = 0;
+                                    } else {
+
+                                        // By pathing from our current position to a point within the path, we could end
+                                        // up going down a radically different route that will result in a teleport if
+                                        // we repath part way through. 
+                                        //
+                                        //   
+                                        //   Original path
+                                        //
+                                        //    ####   #
+                                        //           #*
+                                        //       #   #|
+                                        //       #   #|
+                                        //       #   #|
+                                        //      ######|
+                                        //      X-----|
+                                        //
+                                        //   Re-path
+                                        //     Server-decision   Local-decision
+                                        //
+                                        //          ---           
+                                        //    ####  |#|              ####   # 
+                                        //          *#|                ----*# 
+                                        //       #   #|                |#   # 
+                                        //       #   #A                |#   # 
+                                        //       #   #:                |#   # 
+                                        //       #####:                |##### 
+                                        //           X:                |----X 
+                                        //
+                                        //
+                                        // We could either re-path from our current position to the nearest point in a
+                                        // path which will result in less delay from the server (we reach the
+                                        // destination around the same time as the server), or re-path to the minDelta
+                                        // point in the path (the max distance possibly travelled since requesting the
+                                        // path) which results in a path more accurate to the server but longer to
+                                        // reach.
+                                        //
+                                        // We want to pick the most accurate path since we could re-path again and end
+                                        // up completely desynchronized from the server. There's also the added benefit
+                                        // of perf gain by only re-pathing to the most crucial/furthest possibly point
+                                        // (minDelta)
+                                        let deltaWalk = 0,
+                                            walkPt = movable.position.global,
+                                            minDelta = timeSincePath / movable.moveSpeed,// Expected max distance travelled since path was requested
+                                            pointI = 0;
+                                        for (let i = 0; i < data.path.walks.length; ++i) {
+                                            const walk = data.path.walks[i],
+                                                dest = walk.destination,
+                                                dist = Math.abs(dest.x - movable.position.global.x) + Math.abs(dest.y - movable.position.global.y);
+
+                                            deltaWalk += Math.abs(dest.x - walkPt.x) + Math.abs(dest.y - walkPt.y);
+                                            walkPt = dest;
+                                            ++pointI;
+
+                                            if (deltaWalk < minDelta) continue;
+
+                                            //if (nearestPoint === null || dist < nearestDist) {
+                                                nearestDist = dist;
+                                                nearestPoint = dest;
+                                                nearestPointI = pointI;
+                                            //}
+
+                                            break;
+                                        }
+
+                                        // We may not have a nearestPoint if the walk delta is less than our minDelta;
+                                        // just use the endpoint
+                                        // NOTE: If this happens we've effectively run findPath twice which sucks, so
+                                        // ideally this never happens. For short paths (where this could occur) we
+                                        // should run findPath as immediate
+                                        if (!nearestPoint) {
+                                            assert(deltaWalk < minDelta);
+                                            
+                                            nearestPointI = data.path.walks.length;
+                                            nearestPoint = data.path.walks[nearestPointI - 1].destination;
+                                            nearestDist = Math.abs(nearestPoint.x - movable.position.global.x) + Math.abs(nearestPoint.y - movable.position.global.y);
+                                        }
+                                    }
+
+                                    if (nearestDist === 0) {
+                                        data.path.ALREADY_THERE = true;
+                                    } else {
+                                        const foundPath = PathfindingBase.findPath(area, { x: movable.position.global.x, y: movable.position.global.y }, { x: nearestPoint.x, y: nearestPoint.y });
+
+                                        let prefixData = null, prefixPath = {};
+
+                                        // Doesn't make sense that we moved to a position since requesting this path,
+                                        // where we can't get back to the beginning of that path.  If something changed
+                                        // (dynamic collision, teleport, etc.) then it should cancel the path in flight
+                                        assert(foundPath);
+
+                                        // We can't already be at our destination since we already checked nearestDist
+                                        assert(foundPath.path);
+
+
+                                        // Build up path from prefix + original path
+                                        const path = new Path();
+                                        path.debugging.prefixPath = [foundPath.path.start];
+                                        path.debugging.discardedPath = [data.path.start];
+                                        foundPath.path.walks.forEach((walk) => {
+                                            path.walks.push(walk);
+                                            path.debugging.prefixPath.push(walk.destination);
+                                        });
+
+                                        for (let i = 0; i < nearestPointI; ++i) {
+                                            path.debugging.discardedPath.push(data.path.walks[i].destination);
+                                        }
+
+                                        for (let i = nearestPointI; i < data.path.walks.length; ++i) {
+                                            path.walks.push(data.path.walks[i]);
+                                        }
+                                        path.start = foundPath.path.start;
+                                        path.end = foundPath.path.walks[foundPath.path.walks.length - 1].destination;
+
+                                        if (data.path.debugCheckedNodes) {
+                                            path.debugging.debugCheckedNodes = foundPath.debugCheckedNodes.concat(data.path.debugCheckedNodes);
+                                        }
+
+                                        if (data.path.options) {
+                                            path.options = data.path.options;
+                                        }
+
+                                        this.Log("Path:", LOG_DEBUG);
+                                        this.Log(path, LOG_DEBUG);
+
+                                        data.path = path;
+                                        data.movable = area.movables[data.movableID];
+                                    }
+                                } else {
+                                    data.path.debugging = {
+                                        debugCheckedNodes: data.path.debugCheckedNodes
+                                    }
+
+                                    delete data.path.debugCheckedNodes;
+                                }
+
                                 cbThen(data);
                             } else {
                                 cbCatch(data);
@@ -967,14 +1155,18 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                                 this.movables[queuedPath.movableID].__catch = queuedPath.__catch;
 
                                 this.movables[queuedPath.movableID].queuedPath = null;
-                                this.movables[queuedPath.movableID].inFlight = true;
+                                this.movables[queuedPath.movableID].inFlight = queuedPath.time;
+                                assert(queuedPath.time);
+
+                                this.Log(`HANDLE_PATH -- queuedPath: ${queuedPath.options ? queuedPath.options.chaseId : -1};  ${queuedPath.chaseId}`, LOG_DEBUG);
                                 webworker.postMessage({
                                     type: HANDLE_PATH,
                                     path: {
                                         movableID: queuedPath.movableID,
                                         pathID: queuedPath.pathID,
                                         startPt: queuedPath.startPt,
-                                        endPt: queuedPath.endPt
+                                        endPt: queuedPath.endPt,
+                                        options: queuedPath.options
                                     }
                                 }, handlePathCb);
 
@@ -982,13 +1174,15 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                             }
                         }
 
+                        this.Log(`HANDLE_PATH: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
                         webworker.postMessage({
                             type: HANDLE_PATH,
                             path: {
                                 movableID: path.movableID,
                                 pathID: path.id,
                                 startPt: path.startPt,
-                                endPt: path.endPt
+                                endPt: path.endPt,
+                                options: path.options
                             }
                         }, handlePathCb);
                     }
@@ -1008,20 +1202,31 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                 this.Log(`Found path from (${data.path.start.x}, ${data.path.start.y}) -> (${data.path.end.x}, ${data.path.end.y})`, LOG_DEBUG);
                 this.Log(`FIND PATH TIME: ${data.time}`, LOG_DEBUG);
 
-                const movablePath = this.movables[data.movableID];
+                const movablePath = this.movables[data.movableID],
+                    movable = area.movables[data.movableID];
 
-                // FIXME: What about ALREADY_THERE?
+                if (!movable) {
+                    assert(false); // FIXME: This is reasonable, movable could have died before receiving callback. How do we handle this gracefully
+                    return;
+                }
+
                 if (data.path.ALREADY_THERE) {
 
+                    // FIXME: What about ALREADY_THERE?
+                    data.movable = area.movables[data.movableID];
+
+
+                    if (movablePath.__then) {
+                        movablePath.__then(data);
+                    }
                 } else {
 
-
-                //const movable = area.movables[data.movableID];
-                //if (!movable) {
-                //    console.error("Movable no longer exists in area!");
-                //} else if (!data.path.walks) {
-                //    throw Err("Bad tile walk");
-                //} else {
+                    //const movable = area.movables[data.movableID];
+                    //if (!movable) {
+                    //    console.error("Movable no longer exists in area!");
+                    //} else if (!data.path.walks) {
+                    //    throw Err("Bad tile walk");
+                    //} else {
 
                     const path = new Path();
                     data.path.walks.forEach((walk) => {
@@ -1029,8 +1234,10 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                     });
                     path.start = data.path.start;
 
-                    if (data.path.debugCheckedNodes) {
-                        path.debugCheckedNodes = data.path.debugCheckedNodes;
+                    path.debugging = data.path.debugging || {};
+
+                    if (data.path.options) {
+                        path.options = data.path.options;
                     }
 
                     // FIXME: cb w/ path so we don't have to create each time
@@ -1048,7 +1255,7 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                     this.Log(path, LOG_DEBUG);
 
                     data.path = path;
-                //}
+                    //}
 
                 }
 
@@ -1058,6 +1265,11 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
                 if (movablePath.__then) {
                     movablePath.__then(data);
                 }
+
+
+
+
+
                 
             }, cbCatch = (data) => {
 
@@ -1147,6 +1359,48 @@ define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, Pathfind
         };
 
         this.initializeWorker();
+
+
+        this.testPath = (path, cb) => {
+            //this.workerHandlePath(path, cb);
+
+            const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
+            assert(foundPath);
+            assert(foundPath.path);
+        };
+
+        this.smokeTestPaths = () => {
+
+            const paths = [
+                //{
+                //    movableID: The.player.id,
+                //    startPt: { x: 1104, y: 1372 },
+                //    endPt: { x: 1105, y: 1398 },
+                //    immediate: true
+                //},
+                {
+                    movableID: The.player.id,
+                    startPt: {x: 1106, y: 1053},
+                    endPt: {x: 1128, y: 1032},
+                    immediate: true
+                },
+                {
+                    movableID: The.player.id,
+                    startPt: { x: 1166, y: 1055 },
+                    endPt: { x: 1164, y: 1055 },
+                    immediate: true
+                }
+            ];
+
+            let pathI = 0;
+            const runNextPath = () => {
+                if (pathI >= paths.length) return;
+                const path = paths[pathI++];
+                this.testPath(path, runNextPath);
+            };
+
+            runNextPath();
+        };
     };
 
     return Pathfinding;

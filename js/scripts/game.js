@@ -617,7 +617,6 @@ define(
                             const fromTiles = nearestTiles,
                                 toTiles = [toTile];
 
-                            The.player.cancelPath();
                             The.area.pathfinding.workerHandlePath({
                                 movableID: The.player.id,
                                 startPt: { x: playerX, y: playerY },

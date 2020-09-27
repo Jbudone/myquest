@@ -677,6 +677,10 @@ define(
             zoning: false,
             zone(newPage) {
                 this.curPage = newPage;
+
+                // TODO: Gross to do this here, but we HAVE to center the camera when we change area.curPage
+                // Camera position is primarily based off curPage
+                The.camera.centerCamera();
             },
 
             step(time) {
