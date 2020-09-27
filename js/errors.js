@@ -74,7 +74,7 @@ define(function(){
           debugger;
       } else {
           const msg = stack.split('\n')[3];
-          DEBUGGER('Err: ' + msg);
+          DEBUGGER(message); // DEBUGGER will attempt to find this error message in uglified src and sourcemap back
       }
     return { message: message, args: args, stack: stack };
   }

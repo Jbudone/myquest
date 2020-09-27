@@ -111,18 +111,41 @@ define(() => {
                     if (frame && frame.length === 7) {
                         let file   = frame[4],
                             func   = frame[1],
-                            line   = frame[5],
-                            col    = frame[6];
+                            line   = parseInt(frame[5], 10),
+                            col    = parseInt(frame[6], 10);
 
                         let inWorkingDir = false;
                         
                         let source = "", sourceLine = "";
+                        let sourceMapper = null, rawSource = "";
                         if (file) {
                             inWorkingDir = file.indexOf(reportDir) >= 0;
 
                             try {
                                 source = fs.readFileSync(file) || "";
                                 sourceLine = "";
+
+                                // Read sourcemap and original file, and link
+                                //# sourceMappingURL=character.ai.combat.strategy.basic_melee.js.map
+                                
+                                let sourceMapComment = source.slice(-1024).toString(),
+                                    sourceMapPrefix = "\/\/# sourceMappingURL=";
+                                if (sourceMapComment.indexOf(sourceMapPrefix) >= 0) {
+                                    const mappingURL = sourceMapComment.substr(sourceMapComment.indexOf(sourceMapPrefix) + sourceMapPrefix.length),
+                                        rawSourceMap = fs.readFileSync(file.substr(0, file.lastIndexOf('/') + 1) + mappingURL) || "";
+
+                                    if (rawSourceMap) {
+                                        sourceMapper = SourceMap.SourceMapConsumer(rawSourceMap.toString()); // FIXME: Cache per file
+                                    }
+
+                                    if (sourceMapper) {
+                                        const rawSourceFile = file.substr(0, file.length - 2) + 'pre.js';
+                                        rawSource = fs.readFileSync(rawSourceFile);
+                                        if (rawSource) {
+                                            rawSource = rawSource.toString();
+                                        }
+                                    }
+                                }
                             } catch(e) {
                                 // Silently do nothing, probably an invalid file (which is okay)
                                 //return;
@@ -140,11 +163,34 @@ define(() => {
                             sourceLine = source.toString('utf8', sourceIndex, sourceEnd).trim();
                         }
 
-                        parsedError.stack.push({
+                        let stackPoint = {
                             file, func, line, col, inWorkingDir,
                             source: sourceLine,
                             rawFrame: s.trim()
-                        });
+                        };
+
+                        if (sourceMapper && rawSource) {
+
+                            let mapping = sourceMapper.originalPositionFor({ line: line, column: col });
+                            if (mapping.line) {
+
+                                let sourceIndex = -1;
+                                for (let i = 0; i < (line-1); ++i) {
+                                    sourceIndex = source.indexOf('\n', sourceIndex + 1);
+                                }
+                                let sourceEnd = source.indexOf('\n', sourceIndex + 1);
+
+                                let rawSourceLine = source.toString('utf8', sourceIndex, sourceEnd).trim();
+
+                                stackPoint.original = {
+                                    line: mapping.line - 1,
+                                    col: mapping.column - 1,
+                                    source: rawSourceLine
+                                };
+                            }
+                        }
+
+                        parsedError.stack.push(stackPoint);
                     } else {
 
                         parsedError.stack.push({
@@ -168,6 +214,8 @@ define(() => {
 
             console.log(`${chalk.bold.red(parsedError.error)}`);
 
+            console.log(parsedError);
+
             let level = 0;
             for (let i = 0; i < parsedError.stack.length; ++i) {
 
@@ -181,6 +229,12 @@ define(() => {
                         line       = frame.line,
                         col        = frame.col,
                         source     = frame.source;
+
+                    if (frame.original) {
+                        line   = frame.original.line;
+                        col    = frame.original.col;
+                        //source = frame.original.source;
+                    }
 
                     let spacer = "    ";
                     for (let i = 1; i < level; ++i) {

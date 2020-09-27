@@ -22,7 +22,7 @@ if (serverSide) {
         // Print out line for error (for quick reference)
         if (typeof ErrorReporter !== 'undefined') {
             const stackFrame = ErrorReporter.parseError(e),
-                source       = stackFrame.stack[2].source
+                source       = stackFrame.stack[2].source;
 
             let failedCheckSource = "";
             let startIdx = source.indexOf(msg);
@@ -49,11 +49,21 @@ if (serverSide) {
                 if (mapSource && mapSource.groups && mapSource.groups.src) {
                     console.log(`${chalk.bold.red(mapSource.groups.src)}`);
                 }
+            } else {
+                // Natural error
+                ErrorReporter.printStack(e);
             }
         } else {
             // FIXME: If this is in worker then ErrorReporter isn't loaded ever
-            console.log("Debugger hit before ErrorReporter started. Stackframe parse not available yet");
-            console.log(`${chalk.bold.red(e)}`);
+            if (global.IS_WORKER) {
+                console.log(e);
+                worker.postMessage({
+                    error: msg
+                });
+            } else {
+                console.log("Debugger hit before ErrorReporter started. Stackframe parse not available yet");
+                console.log(`${chalk.bold.red(e)}`);
+            }
         }
 
 
@@ -148,7 +158,7 @@ if (serverSide) {
                     });
                 }
 
-                Log(chalk.red.bold("Waiting for inspector.."));
+                if (!global.IS_WORKER) Log(chalk.red.bold("Waiting for inspector.."));
                 const inspector = require('inspector');
                 inspector.open(process.debugPort, "127.0.0.1", true); // port, host, block
                 debugger;
