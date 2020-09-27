@@ -19,8 +19,6 @@ define(
             extendClass(this).with(Loggable);
             this.setLogGroup('Character');
 
-            this._instincts = ['movement', 'combat', 'boredom'];
-
             this.entity      = entity;
             this.brain       = null;
             this.inventory   = null;
@@ -29,6 +27,12 @@ define(
             this.entity.character = this;
             this.initialized = false;
             this.isPlayer = (entity.playerID ? true : false);
+
+            if (this.isPlayer) {
+                this._instincts = ['movement'];
+            } else {
+                this._instincts = ['movement', 'combat', 'boredom'];
+            }
 
             this.setLogPrefix(`char: ${entity.id}`);
             this.Log(`Setting character on entity ${entity.id}`, LOG_DEBUG);
