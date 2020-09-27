@@ -1098,6 +1098,12 @@ define(
                                 entity.ptPath = alternativePath;
                                 entity.ptPath.destination = alternativePath.walks[alternativePath.walks.length - 1].destination;
 
+                                // movable state may be stale by now
+                                movableState.position.global.x = entity.position.global.x;
+                                movableState.position.global.y = entity.position.global.y;
+                                movableState.position.tile.x = entity.position.tile.x;
+                                movableState.position.tile.y = entity.position.tile.y;
+
                                 this.Log("Adding alternative path", LOG_DEBUG);
                                 entity.addPath(alternativePath);
                                 entity.recordNewPath(alternativePath, movableState);
