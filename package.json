@@ -51,6 +51,7 @@
     "chalk": "~1.0.0",
     "chokidar": "^2.1.6",
     "hiredis": "*",
+    "jshint": "^2.11.0",
     "jszip": "^3.2.1",
     "l1-path-finder": "*",
     "lz4": "^0.5.3",
