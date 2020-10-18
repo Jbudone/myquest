@@ -64,10 +64,11 @@ const InteractionMgr = (function(){
 
     const onMouseMove = (evt) => {
 
-        //console.log(evt.layerY);
-        //console.log(evt.pageY);
-        //console.log(evt.offsetY);
         const worldPt = mouseToCanvasCoords(evt);
+
+        //const offset = $(this.canvasEl).offset();
+        //const preWorldPt = { x: evt.pageX - offset.left, y: evt.pageY - offset.top };
+        //console.log(`OnMouseMove: ${worldPt.x}, ${worldPt.y}    (raw: ${preWorldPt.x}, ${preWorldPt.y})`);
 
         let couldDrag = false;
 
@@ -178,6 +179,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseUp();
             }
         });
 
@@ -208,6 +210,7 @@ const InteractionMgr = (function(){
         hoveringInteractables.forEach((interactable) => {
             if (hittingInteractable(worldPt, interactable)) {
                 hitInteractions.push(interactable);
+                interactable.onMouseDown(evt);
             }
         });
 
@@ -339,6 +342,8 @@ const InteractionMgr = (function(){
             onHoverIn: () => {},
             onHoverOut: () => {},
             onClick: () => {},
+            onMouseDown: () => {},
+            onMouseUp: () => {},
             onBeginDrag: () => {},
             onEndDrag: () => {},
             onDrag: () => {},
@@ -355,6 +360,8 @@ const InteractionMgr = (function(){
             onDrag: (cb) => { interaction.onDrag = cb; return interactionFunctions; },
             onBeginDrag: (cb) => { interaction.onBeginDrag = cb; return interactionFunctions; },
             onEndDrag: (cb) => { interaction.onEndDrag = cb; return interactionFunctions; },
+            onMouseDown: (cb) => { interaction.onMouseDown = cb; return interactionFunctions; },
+            onMouseUp: (cb) => { interaction.onMouseUp = cb; return interactionFunctions; },
 
             // Functions
             setCanDrag: (canDrag) => { interaction.canDrag = canDrag; return interactionFunctions; },
@@ -382,6 +389,8 @@ const InteractionMgr = (function(){
     };
 
     this.onMouseMove = () => {};
+    this.onMouseDown = () => {};
+    this.onMouseUp = () => {};
     this.onMiddleMouseClick = () => {};
     this.onMiddleMouseDrag = () => {};
     this.onRightMouseClick = () => {};

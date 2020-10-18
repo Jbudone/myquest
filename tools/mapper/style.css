@@ -18,13 +18,9 @@ body {
 	width: 100%;
 }
 
-#mapEditorCanvas {
+#glcanvas {
     width: 100%;
     height: 800px;
-}
-
-#mapEditorCanvas.holdingSprite {
-    cursor: none;
 }
 
 /*******************************/
@@ -36,7 +32,6 @@ body {
     right: 0px;
 
     width: 400px;
-    min-height: 200px;
     margin: 20px;
 }
 
@@ -298,4 +293,15 @@ body {
 
 .spawnProfile:hover {
 	filter: brightness(1.75);
+}
+
+/*******************************/
+/*          Tools              */
+
+#controlsTools {
+
+}
+
+.controlsTool {
+
 }

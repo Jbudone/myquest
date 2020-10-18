@@ -156,9 +156,15 @@ define(
                     // This is stuff like difficulty rating (eg. lower/higher level? player? boss? attackable?)
                     this.updateMovableClass = function(userLevel){
 
-                        const myLevel = movable.isPlayer ? movable.character.level : movable.npc.level;
+                        const myLevel = movable.isPlayer ? movable.character.level : movable.npc.level,
+                            levelClasses = ['movable-class-difficult', 'movable-class-equal', 'movable-class-easy'];
 
                         if (!myLevel) return; // We may not have initialized your level yet
+
+                        // Reset class
+                        levelClasses.forEach((levelClass) => {
+                            this.ui.removeClass(levelClass);
+                        });
 
                         // FIXME: Take more into consideration -- player? attackable? boss? Level ranges
                         if (myLevel > userLevel) {
@@ -382,6 +388,7 @@ define(
             };
 
             this.positionFromMouse = (mouse) => {
+                assert(mouse);
                 const scale = Env.tileScale,
                     bounds  = this.canvas.getBoundingClientRect(),
                     x       = (mouse.clientX - bounds.left) / scale,
@@ -410,7 +417,7 @@ define(
 
                 this.canvas.addEventListener('mousemove', (evt) => {
                     lastMouseEvt = evt;
-                    this.onMouseMove( this.positionFromMouse(evt) );
+                    this.onMouseMove( this.positionFromMouse(evt), lastMouseEvt );
                 });
 
                 this.canvas.addEventListener('mousedown', (evt) => {
@@ -418,6 +425,11 @@ define(
 
                     _UI.entityMenu.hide();
                     this.onMouseDown( this.positionFromMouse(evt), evt.button );
+                    return false;
+                });
+
+                this.canvas.addEventListener('mouseup', (evt) => {
+                    lastMouseEvt = evt;
                     return false;
                 });
 
@@ -476,11 +488,15 @@ define(
                 });
 
                 this.listenTo(The.player, EVT_MOVED_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
+                    if (lastMouseEvt) {
+                        this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    }
                 });
 
                 this.listenTo(The.player, EVT_MOVING_TO_NEW_TILE, (entity) => {
-                    this.onMouseMove( this.positionFromMouse(lastMouseEvt) );
+                    if (lastMouseEvt) {
+                        this.onMouseMove( this.positionFromMouse(lastMouseEvt), lastMouseEvt );
+                    }
                 });
 
                 // Load UI modules
@@ -686,14 +702,21 @@ define(
 
                 // NOTE: EVT_ADDED_ENTITY is called on initialization of page for each entity
                 this.listenTo(page, EVT_ADDED_ENTITY, (page, entity) => {
-                    if (this.movables[entity.id]) {
-                        this.detachMovable(entity);
+
+                    if (entity === The.player) {
+                    } else {
+                        if (this.movables[entity.id]) {
+                            this.detachMovable(entity);
+                        }
+                        this.attachMovable(entity);
                     }
-                    this.attachMovable(entity);
                 });
 
                 this.listenTo(page, EVT_REMOVED_ENTITY, (page, entity) => {
-                    this.detachMovable(entity);
+                    if (entity === The.player) {
+                    } else {
+                        this.detachMovable(entity);
+                    }
                 });
             };
 

@@ -19,8 +19,6 @@ define(
             extendClass(this).with(Loggable);
             this.setLogGroup('Character');
 
-            this._instincts = ['movement', 'combat', 'boredom'];
-
             this.entity      = entity;
             this.brain       = null;
             this.inventory   = null;
@@ -29,6 +27,12 @@ define(
             this.entity.character = this;
             this.initialized = false;
             this.isPlayer = (entity.playerID ? true : false);
+
+            if (this.isPlayer) {
+                this._instincts = ['movement'];
+            } else {
+                this._instincts = ['movement', 'combat', 'boredom'];
+            }
 
             this.setLogPrefix(`char: ${entity.id}`);
             this.Log(`Setting character on entity ${entity.id}`, LOG_DEBUG);
@@ -138,6 +142,9 @@ define(
                 netSerializeEnabled = enabled;
             };
 
+            // Character Properties
+            // Used for storing a hidden property in an object, and providing a callback on change, as well as
+            // netSerialize functionality
             this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback, ownerOnly) => {
 
                 assert(_.isFinite(propKey), `Passed bad property key: ${propKey} for property ${propName}`);
@@ -261,6 +268,7 @@ define(
                 }
             };
 
+
             this.charComponent = function(name) {
                 return this.charComponents.find((c) => c.name === name);
             };
@@ -316,6 +324,14 @@ define(
                 }
             };
 
+            // Character state
+            this.state = {};
+            this.loadState = () => {
+                this.addProperty('feared', N_FEARED, this.state, false, true, (oldValue, newValue) => {
+                    this.doHook('StateEvt_Feared').post();
+                }, true);
+            };
+
             // FIXME: Should rename this to loadNPC and initially load all stats/etc. here
             // Will also need to rename to something other than NPC, since it applies to all characters
             this.reloadNPC = () => {
@@ -338,6 +354,7 @@ define(
             };
 
             this.loadStats();
+            this.loadState();
 
             Object.defineProperties(this, {
                 health: {
@@ -383,6 +400,10 @@ define(
                 damageData.amount = amount;
 
                 this.entity.page.broadcast(EVT_DAMAGED, damageData);
+
+                if (from) {
+                    from.triggerEvent(EVT_ATTACKED, this, amount);
+                }
 
                 if (this.health <= 0) {
                     this.die(from);
@@ -591,6 +612,12 @@ define(
                     return false;
                 }
 
+                return true;
+            };
+
+            this.canMove = () => {
+                // FIXME: Right now canMove is only used for deciding if you can move on your own volition
+                if (this.state.feared) return false;
                 return true;
             };
 
@@ -1230,5 +1257,5 @@ define(
             };
         };
 
-        return Character;
+        return Character; 
     });

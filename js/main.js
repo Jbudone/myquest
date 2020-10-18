@@ -5,12 +5,12 @@
 define(
     [
         'errorReporter',
-        'resources', 'loggable', 'profiler',
+        'resources', 'loggable', 'profiler', 'webworker',
         'client/serverHandler', 'client/user', 'client/game'
     ],
     (
         ErrorReporter,
-        Resources, Loggable, Profiler,
+        Resources, Loggable, Profiler, WebWorker,
         ServerHandler, User, GameClient
     ) => {
 
@@ -54,16 +54,13 @@ define(
                 if (!expr) { debugger; throw Err(message); }
             };
 
-            window.DEBUGGER = () => {
-                debugger;
-            };
 
 
-
-            window.errorInGame = errorInGame;
-            window.assert      = assert;
-            window.Profiler    = Profiler;
+            window.errorInGame   = errorInGame;
+            window.assert        = assert;
+            window.Profiler      = Profiler;
             window.ErrorReporter = ErrorReporter;
+            window.WebWorker     = WebWorker;
 
             window.addEventListener('error', (e) => {
                 errorInGame(e.error);
@@ -242,7 +239,7 @@ define(
 
                 Resources = (new Resources());
                 window.Resources = Resources;
-                Resources.initialize(['media', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx', 'testing']).then((assets) => {
+                Resources.initialize(['media', 'sheets', 'npcs', 'rules', 'items', 'buffs', 'quests', 'interactions', 'interactables', 'scripts', 'components', 'fx', 'testing', 'eventnodes']).then((assets) => {
                     loaded('resources');
                 })
                 .catch((e) => { errorInGame(e); });

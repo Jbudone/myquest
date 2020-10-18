@@ -1,6 +1,6 @@
 
 // Pathfinding
-define(['movable', 'loggable'], (Movable, Loggable) => {
+define(['movable', 'loggable', 'pathfinding.base'], (Movable, Loggable, PathfindingBase) => {
 
     const Pathfinding = function(area) {
 
@@ -72,6 +72,9 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
         // For movables, the pathfinder will automatically find their nearest tiles and consider each as a possible
         // to/from point.
         this.findPath = (from, to, options) => {
+
+            DEBUGGER(); // Ensure we aren't using this anymore 
+
             if (_.isUndefined(from) || _.isUndefined(to)) throw Err(`Either from/to was not defined`);
 
             if (!_.isArray(from)) from = [from];
@@ -327,6 +330,8 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
 
         this.recalibratePath = (path, fromPosition) => {
 
+            DEBUGGER(); // Assuming recalibratePath can be nuked
+
             // inject walk to beginning of path depending on where player is relative to start tile
             const startTile = path.start.tile,
                 position    = {
@@ -501,7 +506,7 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
             checkStr += `(${tile.x}, ${tile.y}) `;
             if (!area.isTileOpen(tile)) {
                 checkStr += "NOPE";
-                this.Log(checkStr, LOG_DEBUG);
+                this.Log(checkStr, LOG_INFO);
                 return false;
             }
 
@@ -509,47 +514,47 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
                 let walk = path.walks[i],
                     dist = walk.distance - walk.walked;
 
-                let vert      = walk.direction === NORTH || walk.direction === SOUTH,
-                    positive  = (walk.direction === SOUTH || walk.direction === EAST) ? 1 : -1;
-                let d;
+
+                const isNorth = walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST,
+                    isSouth   = walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST,
+                    isWest    = walk.direction === WEST  || walk.direction === NORTHWEST || walk.direction === SOUTHWEST,
+                    isEast    = walk.direction === EAST  || walk.direction === NORTHEAST || walk.direction === SOUTHEAST;
+
+                
+
                 this.Log(`Checking from (${globalX}, ${globalY}) for walk (${walk.direction}}, ${dist})`, LOG_DEBUG);
-                for (d = Math.min(dist, Env.tileSize); d <= dist; d += Env.tileSize) {
+                for (let t = 0; t < dist; ) {
+
+                    let dX = 0, dY = 0;
+                    if (isNorth) dY = globalY % Env.tileSize + 1;
+                    else if (isSouth) dY = Env.tileSize - (globalY % Env.tileSize);
+
+                    if (isWest) dX = globalX % Env.tileSize + 1;
+                    else if (isEast) dX = Env.tileSize - (globalX % Env.tileSize);
+
+                    // Shortest path to next tile (note we may only be moving in cardinal direction, so 0 means not in
+                    // that direction)
+                    if (dX === 0) dX = 999999;
+                    if (dY === 0) dY = 999999;
+                    let d = Math.min(dX, dY, dist - t);
+                    t += d;
+
+                    if (isNorth) globalY -= d;
+                    else if (isSouth) globalY += d;
+
+                    if (isWest) globalX -= d;
+                    else if (isEast) globalX += d;
+
                     this.Log("d: " + d, LOG_DEBUG);
-                    if (vert) {
-                        tile.y = Math.floor((globalY + positive * d) / Env.tileSize);
-                    } else {
-                        tile.x = Math.floor((globalX + positive * d) / Env.tileSize);
-                    }
+                    tile.x = Math.floor(globalX / Env.tileSize);
+                    tile.y = Math.floor(globalY / Env.tileSize);
 
                     checkStr += `(${tile.x}, ${tile.y}) `;
                     if (!area.isTileOpen(tile)) {
                         checkStr += "NOPE";
-                        this.Log(checkStr, LOG_DEBUG);
+                        this.Log(checkStr, LOG_INFO);
                         return false;
                     }
-                }
-
-                let leftover = d - dist;
-                if (leftover > 0) {
-                    this.Log("leftover: " + leftover, LOG_DEBUG);
-                    if (vert) {
-                        tile.y = Math.floor((globalY + positive * dist) / Env.tileSize);
-                    } else {
-                        tile.x = Math.floor((globalX + positive * dist) / Env.tileSize);
-                    }
-
-                    checkStr += `(${tile.x}, ${tile.y}) `;
-                    if (!area.isTileOpen(tile)) {
-                        checkStr += "NOPE";
-                        this.Log(checkStr, LOG_DEBUG);
-                        return false;
-                    }
-                }
-
-                if (vert) {
-                    globalY += positive * dist;
-                } else {
-                    globalX += positive * dist;
                 }
             }
 
@@ -683,6 +688,718 @@ define(['movable', 'loggable'], (Movable, Loggable) => {
             }
 
             return safePath;
+        };
+
+
+
+
+        let webworker;
+
+        const ADD_PAGE  = 1,
+            REMOVE_PAGE = 2,
+            HANDLE_PATH = 3,
+            SETUP_AREA  = 4;
+
+        const RESULT_ERROR = 1,
+            RESULT_PATH    = 2;
+
+        this.initializeWorker = () => {
+            webworker = new WebWorker("pathfindingWorker");
+            webworker.initialize().then(() => {
+
+                webworker.onMessage = (data) => {
+
+                    this.Log(`Message received from worker`, LOG_INFO); 
+                    this.Log(data, LOG_INFO);
+
+                    const resultType = data.result;
+                    if (!resultType) {
+                        console.error("Unknown resultType from worker");
+                        return;
+                    } else if (resultType === RESULT_ERROR) {
+                        console.error(`Error from worker: ${data.error}`);
+                        return;
+                    } else if (resultType === RESULT_PATH) {
+                    }
+                };
+            });
+
+            const pathfindingKeys = {
+                ADD_PAGE,
+                REMOVE_PAGE,
+                HANDLE_PATH,
+                SETUP_AREA,
+
+                RESULT_ERROR,
+                RESULT_PATH,
+
+                NORTH,
+                WEST,
+                SOUTH,
+                EAST,
+
+                NORTHWEST,
+                NORTHEAST,
+                SOUTHWEST,
+                SOUTHEAST,
+            };
+
+
+            webworker.postMessage({
+                type: 'SETUP_KEYS',
+                keys: pathfindingKeys
+            });
+        };
+
+        // List of movables and their most recent path identifier
+        // This protects us in cases where a movable finds a path twice in a row before receiving the original path.
+        // The original path will eventually come through and compare its pathID with the movable's current pathID, and
+        // ignore it if its stale
+        // NOTE: In weird cases where a movable is removed and another is added in its place (same movableID but
+        // separate movables), this will still be fine since the pathID could have any arbitrary starting point
+        this.movables = {};
+
+        this.workerHandlePath = (path, cb) => {
+
+
+            // In case we have an immediate return value
+            let queuedCb = null;
+
+
+            // Keep track of the movable's current pathID so that we can skip stale paths
+            if (!this.movables[path.movableID]) {
+                this.movables[path.movableID] = {
+                    pathId: 0
+                };
+            }
+
+            path.id = (++this.movables[path.movableID].pathId);
+
+            // We may already have a path queued, waiting for the current in-flight findPath to return. No matter how
+            // this new findPath turns out (worker? immediate?) the pending path is now stale and can be nuked
+            this.movables[path.movableID].queuedPath = null;
+
+            const startTileX = Math.floor(path.startPt.x / Env.tileSize),
+                destTileX    = Math.floor(path.endPt.x / Env.tileSize),
+                startTileY   = Math.floor(path.startPt.y / Env.tileSize),
+                destTileY    = Math.floor(path.endPt.y / Env.tileSize);
+
+            if
+            (
+                startTileX === destTileX &&
+                startTileY === destTileY
+            )
+            {
+                // Already on same tile
+                if
+                (
+                    path.startPt.x === path.endPt.x &&
+                    path.startPt.y === path.endPt.y
+                )
+                {
+                    // Already at point
+                    const retPath = {
+                        start: path.startPt,
+                        end: path.startPt,
+                        ALREADY_THERE: true
+                    };
+
+                    queuedCb = {
+                        result: RESULT_PATH,
+                        success: true,
+
+                        movableID: path.movableID,
+                        pathID: path.id,
+                        time: -1,
+
+                        path: retPath
+                    }
+                }
+                else
+                {
+
+                    const ptPath = new Path(),
+                        globalDiffX = path.endPt.x - path.startPt.x;
+                        globalDiffY = path.endPt.y - path.startPt.y;
+
+                    let dir, dist, walk;
+
+                    if (globalDiffY !== 0) {
+                        dir = SOUTH;
+                        dist = globalDiffY;
+                        if (dist < 0) {
+                            dir = NORTH;
+                            dist = dist * -1;
+                        }
+                        walk = new Walk(dir, dist, null);
+                        walk.destination = { x: path.startPt.x, y: path.endPt.y };
+                        ptPath.walks.unshift(walk);
+                    }
+
+                    if (globalDiffX !== 0) {
+                        dir = EAST;
+                        dist = globalDiffX;
+                        if (dist < 0) {
+                            dir = WEST;
+                            dist = dist * -1;
+                        }
+                        walk = new Walk(dir, dist, null);
+                        walk.destination = { x: path.endPt.x, y: path.endPt.y };
+                        ptPath.walks.unshift(walk);
+                    }
+
+
+
+
+                    const retPath = {
+                        start: path.startPt,
+                        end: ptPath.walks[ptPath.walks.length - 1].destination,
+                        walks: ptPath.walks,
+                        debugging: {}
+                    };
+
+                    if (Env.assertion.checkSafePath) {
+                        const startTile = new Tile(Math.floor(path.startPt.x / Env.tileSize), Math.floor(path.startPt.y / Env.tileSize));
+                        assert(this.checkSafePath({ tile: startTile, global: path.startPt }, ptPath));
+                    }
+
+                    queuedCb = {
+                        result: RESULT_PATH,
+                        success: true,
+
+                        movableID: path.movableID,
+                        pathID: path.id,
+                        time: -1,
+                        path: retPath
+                    };
+                }
+            } else {
+
+
+                if (path.immediate) {
+                    // Do not offload to worker! We need this path immediately
+
+                    let time = -Date.now();
+                    const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
+                    time += Date.now();
+
+                    if (foundPath) {
+                        path.time = time;
+
+                        if (foundPath.debugCheckedNodes) {
+                            path.debugging = {
+                                debugCheckedNodes: foundPath.debugCheckedNodes
+                            };
+                        }
+
+                        if (!foundPath.path) {
+                            path.ALREADY_THERE = true;
+                        } else {
+                            path.ALREADY_THERE = false;
+                            path.ptPath = {
+                                start: foundPath.path.start,
+                                end: foundPath.path.walks[foundPath.path.walks.length - 1].destination,
+                                walks: foundPath.path.walks,
+                                debugging: {}
+                            };
+
+                            if (foundPath.debugCheckedNodes) {
+                                path.ptPath.debugging.debugCheckedNodes = foundPath.debugCheckedNodes;
+                            }
+                        }
+
+
+                        queuedCb = {
+                            result: RESULT_PATH,
+                            success: true,
+
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            time: path.time,
+                            path: path.ptPath
+                        };
+                    } else {
+                        queuedCb = {
+                            result: RESULT_PATH,
+                            success: false,
+
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            time: path.time
+                        };
+                    }
+
+                } else {
+
+                    // We can't immediately findPath, need to queue for worker
+                    // We may already have a path inFlight, which is now stale. Unfortunately we can't cancel it but we
+                    // can queue the next path as soon as this one finishes
+
+
+                    if (this.movables[path.movableID].inFlight) {
+                        // findPath in-flight, need to queue this path
+                        this.movables[path.movableID].queuedPath = {
+                            movableID: path.movableID,
+                            pathID: path.id,
+                            startPt: path.startPt,
+                            endPt: path.endPt,
+                            options: path.options,
+                            chaseId: path.options ? path.options.chaseId : -1,
+                            time: now()
+                        };
+                        this.Log(`Path in flight -- queueing path: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
+                    } else {
+                        this.movables[path.movableID].inFlight = now();
+
+                        const handlePathCb = (data) => {
+                            const timeSincePath = now() - this.movables[path.movableID].inFlight;
+                            this.movables[path.movableID].inFlight = 0;
+
+                            this.Log(`Path returned: ${data.success ? data.path.options.chaseId : 'x'}`, LOG_DEBUG);
+
+                            // This path is now stale, we already have a queuedPath ready to replace this one
+                            let queuedPath = null;
+                            if (this.movables[path.movableID].queuedPath) {
+                                this.Log(`Prepping queuedPath: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
+                                queuedPath = this.movables[path.movableID].queuedPath;
+                                // NOTE: Do NOT early-out here. Even though this path is stale, its likely similar to
+                                // the new pending one. If we keep replacing it we'll never get an actual path, so just
+                                // use the stale path and replace with the next
+                            } else if (data.pathID !== this.movables[data.movableID].pathId) {
+                                // Stale path, and replaced path is not one that's going to worker. So just ignore this
+                                // one
+                                this.Log(`Stale path, ignoring:  ${data.pathID} !== ${this.movables[data.movableID].pathId}; chaseId: ${data.path.options.chaseId}`, LOG_DEBUG);
+                                return;
+                            }
+
+
+                            const movable = area.movables[data.movableID];
+                            if (movable && data.success) {
+
+                                // Path succeeded
+                                // May need to adjust in case the path was delayed
+
+                                const movablePath = this.movables[data.movableID],
+                                    movable = area.movables[data.movableID];
+
+                                if (!movable) {
+                                    assert(false); // FIXME: This is reasonable, movable could have died before receiving callback. How do we handle this gracefully
+                                    return;
+                                }
+
+                                // Since the path may have been delayed, we could have been running a stale path while
+                                // this one was in flight. This means we may have moved, so this path's start pos
+                                // won't match our current pos, and we need to repath from our current pos to the
+                                // nearest point in the path
+                                if (data.path.start.x !== movable.position.global.x || data.path.start.y !== movable.position.global.y) {
+
+
+                                    // Find the nearest (reasonable) point in the path that we can re-path to
+                                    // We don't want to re-path to the beginning of the path since the path may be going
+                                    // in the same direction that we were already travelling, which means we'd be
+                                    // walking backwards to the start. Instead we want to take a maxWalked delta into
+                                    // account (how far could we have travelled since requesting this path), and re-path
+                                    // to that delta within the path
+                                    let nearestPoint = null,
+                                        nearestDist = null,
+                                        nearestPointI = 0;
+                                    if (data.path.ALREADY_THERE) {
+                                        // Go-to point is the end point, which may or may not be where we're at already
+                                        nearestPoint = data.path.end;
+                                        nearestDist = Math.abs(nearestPoint.x - movable.position.global.x) + Math.abs(nearestPoint.y - movable.position.global.y);
+                                        nearestPointI = 0;
+                                    } else {
+
+                                        // By pathing from our current position to a point within the path, we could end
+                                        // up going down a radically different route that will result in a teleport if
+                                        // we repath part way through. 
+                                        //
+                                        //   
+                                        //   Original path
+                                        //
+                                        //    ####   #
+                                        //           #*
+                                        //       #   #|
+                                        //       #   #|
+                                        //       #   #|
+                                        //      ######|
+                                        //      X-----|
+                                        //
+                                        //   Re-path
+                                        //     Server-decision   Local-decision
+                                        //
+                                        //          ---           
+                                        //    ####  |#|              ####   # 
+                                        //          *#|                ----*# 
+                                        //       #   #|                |#   # 
+                                        //       #   #A                |#   # 
+                                        //       #   #:                |#   # 
+                                        //       #####:                |##### 
+                                        //           X:                |----X 
+                                        //
+                                        //
+                                        // We could either re-path from our current position to the nearest point in a
+                                        // path which will result in less delay from the server (we reach the
+                                        // destination around the same time as the server), or re-path to the minDelta
+                                        // point in the path (the max distance possibly travelled since requesting the
+                                        // path) which results in a path more accurate to the server but longer to
+                                        // reach.
+                                        //
+                                        // We want to pick the most accurate path since we could re-path again and end
+                                        // up completely desynchronized from the server. There's also the added benefit
+                                        // of perf gain by only re-pathing to the most crucial/furthest possibly point
+                                        // (minDelta)
+                                        let deltaWalk = 0,
+                                            walkPt = movable.position.global,
+                                            minDelta = timeSincePath / movable.moveSpeed,// Expected max distance travelled since path was requested
+                                            pointI = 0;
+                                        for (let i = 0; i < data.path.walks.length; ++i) {
+                                            const walk = data.path.walks[i],
+                                                dest = walk.destination,
+                                                dist = Math.abs(dest.x - movable.position.global.x) + Math.abs(dest.y - movable.position.global.y);
+
+                                            deltaWalk += Math.abs(dest.x - walkPt.x) + Math.abs(dest.y - walkPt.y);
+                                            walkPt = dest;
+                                            ++pointI;
+
+                                            if (deltaWalk < minDelta) continue;
+
+                                            //if (nearestPoint === null || dist < nearestDist) {
+                                                nearestDist = dist;
+                                                nearestPoint = dest;
+                                                nearestPointI = pointI;
+                                            //}
+
+                                            break;
+                                        }
+
+                                        // We may not have a nearestPoint if the walk delta is less than our minDelta;
+                                        // just use the endpoint
+                                        // NOTE: If this happens we've effectively run findPath twice which sucks, so
+                                        // ideally this never happens. For short paths (where this could occur) we
+                                        // should run findPath as immediate
+                                        if (!nearestPoint) {
+                                            assert(deltaWalk < minDelta);
+                                            
+                                            nearestPointI = data.path.walks.length;
+                                            nearestPoint = data.path.walks[nearestPointI - 1].destination;
+                                            nearestDist = Math.abs(nearestPoint.x - movable.position.global.x) + Math.abs(nearestPoint.y - movable.position.global.y);
+                                        }
+                                    }
+
+                                    if (nearestDist === 0) {
+                                        data.path.ALREADY_THERE = true;
+                                    } else {
+                                        const foundPath = PathfindingBase.findPath(area, { x: movable.position.global.x, y: movable.position.global.y }, { x: nearestPoint.x, y: nearestPoint.y });
+
+                                        let prefixData = null, prefixPath = {};
+
+                                        // Doesn't make sense that we moved to a position since requesting this path,
+                                        // where we can't get back to the beginning of that path.  If something changed
+                                        // (dynamic collision, teleport, etc.) then it should cancel the path in flight
+                                        assert(foundPath);
+
+                                        // We can't already be at our destination since we already checked nearestDist
+                                        assert(foundPath.path);
+
+
+                                        // Build up path from prefix + original path
+                                        const path = new Path();
+                                        path.debugging.prefixPath = [foundPath.path.start];
+                                        path.debugging.discardedPath = [data.path.start];
+                                        foundPath.path.walks.forEach((walk) => {
+                                            path.walks.push(walk);
+                                            path.debugging.prefixPath.push(walk.destination);
+                                        });
+
+                                        for (let i = 0; i < nearestPointI; ++i) {
+                                            path.debugging.discardedPath.push(data.path.walks[i].destination);
+                                        }
+
+                                        for (let i = nearestPointI; i < data.path.walks.length; ++i) {
+                                            path.walks.push(data.path.walks[i]);
+                                        }
+                                        path.start = foundPath.path.start;
+                                        path.end = foundPath.path.walks[foundPath.path.walks.length - 1].destination;
+
+                                        if (data.path.debugCheckedNodes) {
+                                            path.debugging.debugCheckedNodes = foundPath.debugCheckedNodes.concat(data.path.debugCheckedNodes);
+                                        }
+
+                                        if (data.path.options) {
+                                            path.options = data.path.options;
+                                        }
+
+                                        this.Log("Path:", LOG_DEBUG);
+                                        this.Log(path, LOG_DEBUG);
+
+                                        data.path = path;
+                                        data.movable = area.movables[data.movableID];
+                                    }
+                                } else {
+                                    data.path.debugging = {
+                                        debugCheckedNodes: data.path.debugCheckedNodes
+                                    }
+
+                                    delete data.path.debugCheckedNodes;
+                                }
+
+                                cbThen(data);
+                            } else {
+                                cbCatch(data);
+                            }
+
+                            // Replace callbacks with new path cb AFTER we call callbacks from previous path
+                            if (queuedPath) {
+                                this.movables[queuedPath.movableID].__then = queuedPath.__then;
+                                this.movables[queuedPath.movableID].__catch = queuedPath.__catch;
+
+                                this.movables[queuedPath.movableID].queuedPath = null;
+                                this.movables[queuedPath.movableID].inFlight = queuedPath.time;
+                                assert(queuedPath.time);
+
+                                this.Log(`HANDLE_PATH -- queuedPath: ${queuedPath.options ? queuedPath.options.chaseId : -1};  ${queuedPath.chaseId}`, LOG_DEBUG);
+                                webworker.postMessage({
+                                    type: HANDLE_PATH,
+                                    path: {
+                                        movableID: queuedPath.movableID,
+                                        pathID: queuedPath.pathID,
+                                        startPt: queuedPath.startPt,
+                                        endPt: queuedPath.endPt,
+                                        options: queuedPath.options
+                                    }
+                                }, handlePathCb);
+
+                                path = queuedPath; // TODO: Necessary?
+                            }
+                        }
+
+                        this.Log(`HANDLE_PATH: ${path.options ? path.options.chaseId : -1}`, LOG_DEBUG);
+                        webworker.postMessage({
+                            type: HANDLE_PATH,
+                            path: {
+                                movableID: path.movableID,
+                                pathID: path.id,
+                                startPt: path.startPt,
+                                endPt: path.endPt,
+                                options: path.options
+                            }
+                        }, handlePathCb);
+                    }
+                }
+            }
+
+
+
+
+
+            let cbThen = (data) => {
+
+                this.Log(`Path results received from worker!`, LOG_DEBUG);
+
+                assert(data.path.start || data.path.end);
+                if (!data.path.start || !data.path.end) DEBUGGER();
+                this.Log(`Found path from (${data.path.start.x}, ${data.path.start.y}) -> (${data.path.end.x}, ${data.path.end.y})`, LOG_DEBUG);
+                this.Log(`FIND PATH TIME: ${data.time}`, LOG_DEBUG);
+
+                const movablePath = this.movables[data.movableID],
+                    movable = area.movables[data.movableID];
+
+                if (!movable) {
+                    assert(false); // FIXME: This is reasonable, movable could have died before receiving callback. How do we handle this gracefully
+                    return;
+                }
+
+                if (data.path.ALREADY_THERE) {
+
+                    // FIXME: What about ALREADY_THERE?
+                    data.movable = area.movables[data.movableID];
+
+
+                    if (movablePath.__then) {
+                        movablePath.__then(data);
+                    }
+                } else {
+
+                    //const movable = area.movables[data.movableID];
+                    //if (!movable) {
+                    //    console.error("Movable no longer exists in area!");
+                    //} else if (!data.path.walks) {
+                    //    throw Err("Bad tile walk");
+                    //} else {
+
+                    const path = new Path();
+                    data.path.walks.forEach((walk) => {
+                        path.walks.push(walk);
+                    });
+                    path.start = data.path.start;
+
+                    path.debugging = data.path.debugging || {};
+
+                    if (data.path.options) {
+                        path.options = data.path.options;
+                    }
+
+                    // FIXME: cb w/ path so we don't have to create each time
+
+                    //delete movable.path;
+                    //const path = new Path();
+                    //data.path.walks.forEach((walk) => {
+                    //    path.walks.push(walk);
+                    //});
+                    //path.start = data.path.start;
+                    //movable.path = path;
+                    //path.destination = path.walks[path.walks.length - 1].destination;
+
+                    this.Log("Path:", LOG_DEBUG);
+                    this.Log(path, LOG_DEBUG);
+
+                    data.path = path;
+                    //}
+
+                }
+
+                data.movable = area.movables[data.movableID];
+
+
+                if (movablePath.__then) {
+                    movablePath.__then(data);
+                }
+
+
+
+
+
+                
+            }, cbCatch = (data) => {
+
+                const movablePath = this.movables[data.movableID];
+                if (movablePath.__catch) {
+                    movablePath.__catch(data);
+                }
+            };
+
+            const setCallback = (cbType, cb) => {
+
+                // Set callbacks for findPath. Since this is associated directly to the movable, there can only be one
+                // current callback. We could have any one of these situations:
+                //  - First path: Set as __then to use on first return
+                //  - Second path (queued): Set cb to queuedPath so that when we return the firstPath we can use the old
+                //  cb and replace the new cb when we put the queuedPath in-flight
+                //  - Second path (immediate): Set as __then to use immediately. The in-flight path will return and be
+                //  stale, so it'll be ignored
+                const movablePath = this.movables[path.movableID];
+                if (cbType === 'then')  {
+                    if (movablePath.queuedPath) {
+                        movablePath.queuedPath.__then = cb;
+                    } else {
+                        movablePath.__then = cb;
+
+                        if (queuedCb) {
+                            const movable = area.movables[queuedCb.movableID];
+                            if (movable && queuedCb.success) {
+                                cbThen(queuedCb);
+                            }
+                        }
+                    }
+                } else if (cbType === 'catch') {
+                    if (movablePath.queuedPath) {
+                        movablePath.queuedPath.__catch = cb;
+                    } else {
+                        movablePath.__catch = cb;
+
+                        if (queuedCb) {
+                            const movable = area.movables[queuedCb.movableID];
+                            if (!movable || !queuedCb.success) {
+                                cbCatch(queuedCb);
+                            }
+                        }
+                    }
+                }
+
+                return callbacks;
+            };
+
+            const callbacks = {
+                then: (cb) =>  { return setCallback('then', cb); },
+                catch: (cb) => { return setCallback('catch', cb); },
+            };
+
+            return callbacks;
+        };
+
+        this.removePage = (page, pageI) => {
+            webworker.postMessage({
+                type: REMOVE_PAGE,
+                pageI: pageI
+            });
+        };
+
+        this.addPage = (page, pageI) => {
+            webworker.postMessage({
+                type: ADD_PAGE,
+                page: {
+                    i: pageI,
+                    x: page.x,
+                    y: page.y,
+                    collidables: _.clone(page.collidables)
+                }
+            });
+        };
+
+        this.setupArea = () => {
+            webworker.postMessage({
+                type: SETUP_AREA,
+                area: {
+                    width: area.areaWidth,
+                    height: area.areaHeight,
+                    pagesPerRow: area.pagesPerRow
+                }
+            });
+        };
+
+        this.initializeWorker();
+
+
+        this.testPath = (path, cb) => {
+            const foundPath = PathfindingBase.findPath(area, path.startPt, path.endPt);
+            assert(foundPath);
+            assert(foundPath.path);
+        };
+
+        this.smokeTestPaths = () => {
+
+            const paths = [
+                {
+                    startPt: { x: 1104, y: 1372 },
+                    endPt: { x: 1105, y: 1398 },
+                    immediate: true
+                },
+                {
+                    startPt: {x: 1056, y: 1331 },
+                    endPt: {x: 1039, y: 1344 },
+                    immediate: true
+                },
+                {
+                    startPt: {x: 1106, y: 1053},
+                    endPt: {x: 1128, y: 1032},
+                    immediate: true
+                },
+                {
+                    startPt: { x: 1166, y: 1055 },
+                    endPt: { x: 1164, y: 1055 },
+                    immediate: true
+                }
+            ];
+
+            let pathI = 0;
+            const runNextPath = () => {
+                if (pathI >= paths.length) return;
+                const path = paths[pathI++];
+                this.testPath(path, runNextPath);
+            };
+
+            runNextPath();
         };
     };
 

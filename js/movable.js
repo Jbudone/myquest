@@ -122,12 +122,19 @@ define(
                     let walk = path.walks[i];
                     this.walks.push({ direction: walk.direction, distance: walk.distance, walked: walk.walked });
 
+                    const isNorth = (walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST),
+                        isSouth   = (walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST),
+                        isWest    = (walk.direction === WEST || walk.direction === NORTHWEST || walk.direction === SOUTHWEST),
+                        isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
+
+
                     // TODO: What about putting walk.walked into consideration? But then we would need to consider
                     // the start state's global position as opposed to tile (I think?)
-                         if (walk.direction === NORTH) globalY -= walk.distance - walk.walked;
-                    else if (walk.direction === SOUTH) globalY += walk.distance - walk.walked;
-                    else if (walk.direction === WEST) globalX -= walk.distance - walk.walked;
-                    else if (walk.direction === EAST) globalX += walk.distance - walk.walked;
+                         if (isNorth) globalY -= walk.distance - walk.walked;
+                    else if (isSouth) globalY += walk.distance - walk.walked;
+
+                         if (isWest) globalX -= walk.distance - walk.walked;
+                    else if (isEast) globalX += walk.distance - walk.walked;
                 }
 
                 this.destination.x = Math.floor(globalX / Env.tileSize);
@@ -270,6 +277,7 @@ define(
             this.direction    = null;
             this.speed        = 50;
             this.moveSpeed    = this.npc.speed;
+            this.moveSpeedDiagonal = this.moveSpeed * 1.5;
             this.invMoveSpeed = 1 / this.npc.speed;
             this.lastMoved    = now();
             this.zoning       = false;
@@ -291,6 +299,8 @@ define(
                     else if (direction == SOUTH) dir = "down";
                     else if (direction == WEST)  dir = "left";
                     else if (direction == EAST)  dir = "right";
+                    else if (direction === NORTHWEST || direction === NORTHEAST) dir = 'up';
+                    else if (direction === SOUTHWEST || direction === SOUTHEAST) dir = 'down';
                     if (dir) {
                         this.sprite.idle('walk_'+dir);
                     }
@@ -376,7 +386,7 @@ define(
                         sentInitialPath = true;
                     }
 
-                    while (delta >= this.moveSpeed && this.path && !this.path.finished()) {
+                    while (this.path && !this.path.finished()) {
 
                         if (!_.isArray(this.path.walks) ||
                             this.path.walks.length === 0) {
@@ -391,9 +401,28 @@ define(
                             steps     = (walk.distance - walk.walked),
                             direction = walk.direction;
 
-                        let deltaSteps   = Math.floor(delta * this.invMoveSpeed),
+                        let isCardinal = false;
+                        if
+                        (
+                            direction === NORTH ||
+                            direction === WEST ||
+                            direction === EAST ||
+                            direction === SOUTH
+                        )
+                        {
+                            isCardinal = true;
+                        }
+
+                        const moveSpeed = isCardinal ? this.moveSpeed : this.moveSpeedDiagonal,
+                            invMoveSpeed = 1.0 / moveSpeed;
+
+                        // NOTE: If we're moving diagonally
+                        if (delta < moveSpeed) break;
+
+                        let deltaSteps   = Math.floor(delta * invMoveSpeed),
                             deltaTaken   = null,
-                            posK         = (walk.direction==NORTH||walk.direction==SOUTH?this.position.global.y:this.position.global.x),
+                            posX         = this.position.global.x,
+                            posY         = this.position.global.y,
                             finishedWalk = false,
                             hasZoned     = false;
 
@@ -405,12 +434,17 @@ define(
                         }
 
                         // How much delta are we using up in this iteration
-                        deltaTaken = deltaSteps * this.moveSpeed;
+                        deltaTaken = deltaSteps * moveSpeed;
                         delta -= deltaTaken;
 
                         // Movement direction
-                        if (direction == EAST || direction == SOUTH) posK += deltaSteps;
-                        else                                         posK -= deltaSteps;
+                        if (direction === WEST || direction === NORTHWEST || direction === SOUTHWEST) posX -= deltaSteps;
+                        if (direction === EAST || direction === NORTHEAST || direction === SOUTHEAST) posX += deltaSteps;
+                        if (direction === NORTH || direction === NORTHWEST || direction === NORTHEAST) posY -= deltaSteps;
+                        if (direction === SOUTH || direction === SOUTHWEST || direction === SOUTHEAST) posY += deltaSteps;
+                        // FIXME: Northwest ==> posX -= delta, posY -= delta.  We're moving 2x delta, is this correct?
+                        // Or divide by 2?
+
 
                         //Log(`(${path.id}, ${path.flag}) Moving ${keyStrings[direction]} ${deltaSteps}  TO: ${posK}  (${steps} steps)`, LOG_DEBUG);
 
@@ -423,6 +457,27 @@ define(
                                 else if (direction==WEST)  { this.sprite.animate('walk_left', true);  this.sprite.curDirection = 'left'; }
                                 else if (direction==SOUTH) { this.sprite.animate('walk_down', true);  this.sprite.curDirection = 'down'; }
                                 else if (direction==NORTH) { this.sprite.animate('walk_up', true);    this.sprite.curDirection = 'up'; }
+                                else if (walk.destination || this.path.walks[this.path.walks.length - 1].destination) {
+
+                                    // Base off target direction and cur direction (are we facing more vertical or
+                                    // horizontal?)
+                                    const destination = walk.destination || this.path.walks[ this.path.walks.length - 1].destination;
+
+                                    const xDiff = Math.abs(destination.x - this.position.tile.x),
+                                          yDiff = Math.abs(destination.y - this.position.tile.y);
+
+                                    if (xDiff >= yDiff) {
+
+                                        if (direction === NORTHWEST || direction === SOUTHWEST) { this.sprite.animate('walk_left', true);    this.sprite.curDirection = 'left'; }
+                                        else                                                    { this.sprite.animate('walk_right', true);   this.sprite.curDirection = 'right'; }
+                                    } else {
+                                        if (direction === NORTHWEST || direction === NORTHEAST) { this.sprite.animate('walk_up', true);     this.sprite.curDirection = 'up'; }
+                                        else                                                    { this.sprite.animate('walk_down', true);   this.sprite.curDirection = 'down'; }
+                                    }
+                                } else {
+
+                                    // FIXME: No destination tile
+                                }
                             }
 
                             this.triggerEvent(EVT_PREPARING_WALK, walk);
@@ -455,52 +510,38 @@ define(
                         // Note that these are the only two possible rounding cases. If tile rounded down and
                         // rounded are the same, and not equal to our current tile, then we've finished moving to
                         // this new tile
-                        const tile = posK * Env.invTileSize;
-                        if (direction==NORTH || direction==SOUTH) {
-                            if (Math.floor(tile) !== this.position.tile.y || Math.ceil(tile) !== this.position.tile.y) {
-                                if ((direction==NORTH && tile < this.position.tile.y) ||
-                                    (direction==SOUTH && tile >= (this.position.tile.y + 1))) {
-                                    // Moved to new tile
-                                    this.updatePosition(this.position.global.x, posK);
-                                    this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
-                                } else {
-                                    // Moving to new tile
-                                    this.updatePosition(this.position.global.x, posK);
-                                    this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
-                                }
-                            } else {
-                                // Moved back to center of current tile (changed direction of path)
-                                this.position.global.y = posK;
+                        const tileX = posX * Env.invTileSize,
+                              tileY = posY * Env.invTileSize;
+                        if
+                        (
+                            Math.floor(tileX) !== this.position.tile.x ||
+                            Math.ceil(tileX)  !== this.position.tile.x ||
+                            Math.floor(tileY) !== this.position.tile.y ||
+                            Math.ceil(tileY)  !== this.position.tile.y
+                        )
+                        {
+                            if
+                            (
+                                tileX !== this.position.tile.x ||
+                                tileY !== this.position.tile.y
+                            )
+                            {
+                                // Moved
+                                this.updatePosition(posX, posY);
+                                this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
                             }
-                        } else {
-                            if (Math.floor(tile) !== this.position.tile.x || Math.ceil(tile) !== this.position.tile.x) {
-                                if ((direction==WEST && tile < this.position.tile.x) ||
-                                    (direction==EAST && tile >= (this.position.tile.x + 1))) {
-                                    // FIXME: use >= (this.position.tile.x+0.5) to allow reaching new tile while walking to it
-                                    //          NOTE: need to consider walking west and reaching next tile too early
-
-                                    // Moved to new tile
-                                    this.updatePosition(posK, this.position.global.y);
-                                    this.triggerEvent(EVT_MOVED_TO_NEW_TILE);
-                                } else {
-                                    // Moving to new tile
-                                    this.updatePosition(posK, this.position.global.y);
-                                    this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
-                                }
-                            } else {
-                                // Moved back to center of current tile (changed direction of path)
-                                this.position.global.x = posK;
+                            else
+                            {
+                                // Moving
+                                this.updatePosition(posX, posY);
+                                this.triggerEvent(EVT_MOVING_TO_NEW_TILE);
                             }
                         }
-
-                        if (this.position.global.x % Env.tileSize !== 0 && this.position.global.y % Env.tileSize !== 0) {
-                            Log("Moved outside of both the horizontal and vertical center of the tile", LOG_ERROR);
-                            Log(`I am: ${this.id}`, LOG_ERROR);
-                            Log(this.position.global, LOG_ERROR);
-                            Log(this.getPathHistoryString(), LOG_ERROR);
-                            assert(false, "Moved outside of both the horizontal and vertical center of the tile");
+                        else
+                        {
+                            this.position.global.x = posX;
+                            this.position.global.y = posY;
                         }
-
 
                         hasZoned = this.hasOwnProperty('isZoning');
                         if (!hasZoned) {
@@ -541,9 +582,11 @@ define(
                         if (this.path.finished()) {
                             // FIXME
                             this.triggerEvent(EVT_FINISHED_PATH, this.path.id);
-                            if (_.isFunction(this.path.onFinished)) this.path.onFinished();
-                            this.recordFinishedPath(this.path);
+
+                            const finishedPath = this.path;
                             this.path = null;
+                            if (_.isFunction(finishedPath.onFinished)) finishedPath.onFinished();
+                            this.recordFinishedPath(finishedPath);
 
                             // Finished moving
                             this.moving = false; // TODO: necessary?
@@ -588,6 +631,9 @@ define(
 
             this.addPath = (path) => {
 
+                if (Env.assertion.checkSafePath) {
+                    assert(this.page.area.pathfinding.checkSafePath(this.position, path), "Adding an unsafe path!");
+                }
 
                 // add/replace path
 
@@ -616,7 +662,9 @@ define(
                 }
 
                 if (this.path && _.isFunction(this.path.onFailed)) {
-                    this.path.onFailed(EVT_NEW_PATH);
+                    const oldPath = this.path;
+                    this.path = null;
+                    oldPath.onFailed(EVT_NEW_PATH);
                 }
 
                 let x = this.position.global.x,
@@ -631,23 +679,19 @@ define(
                     // walk in the path that takes us to a tile center
                     if (remainingWalk === 0) continue;
 
-                         if (walk.direction === NORTH) y -= remainingWalk;
-                    else if (walk.direction === SOUTH) y += remainingWalk;
-                    else if (walk.direction === WEST)  x -= remainingWalk;
-                    else if (walk.direction === EAST)  x += remainingWalk;
-                    else throw Err(`Bad direction: ${walk.direction}`);
+                    const isNorth = (walk.direction === NORTH || walk.direction === NORTHWEST || walk.direction === NORTHEAST),
+                        isSouth   = (walk.direction === SOUTH || walk.direction === SOUTHWEST || walk.direction === SOUTHEAST),
+                        isWest    = (walk.direction === WEST || walk.direction === NORTHWEST || walk.direction === SOUTHWEST),
+                        isEast    = (walk.direction === EAST || walk.direction === NORTHEAST || walk.direction === SOUTHEAST);
 
-                    let onX = x % Env.tileSize === 0,
-                        onY = y % Env.tileSize === 0;
 
-                    if (!onX && !onY) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    } else if (!onX && (walk.direction === NORTH || walk.direction === SOUTH)) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    } else if (!onY && (walk.direction === WEST || walk.direction === EAST)) {
-                        throw Err("Added path which will surely get us off center of tile!");
-                    }
+                         if (isNorth) y -= remainingWalk;
+                    else if (isSouth) y += remainingWalk;
+
+                         if (isWest)  x -= remainingWalk;
+                    else if (isEast)  x += remainingWalk;
                 }
+
                 Log(`Position: (${this.position.global.x}, ${this.position.global.y}) ==> (${x}, ${y})`, LOG_DEBUG);
                 Log(path, LOG_DEBUG);
 
@@ -657,6 +701,7 @@ define(
                 for (let j = 0; j < path.walks.length; ++j) {
                     path.walks[j].started = false; // in case walk has already started on server
                     path.walks[j].steps   = 0;
+                    assert(path.walks[j].destination);
                 }
 
 
@@ -675,7 +720,7 @@ define(
             this.cancelPath = () => {
                 if (this.path) {
                     if (_.isFunction(this.path.onFailed)) {
-                        this.path.onFailed();
+                        this.path.onFailed(EVT_CANCELLED_PATH);
                     }
 
                     this.triggerEvent(EVT_CANCELLED_PATH, { id: this.path.id, flag: this.path.flag });

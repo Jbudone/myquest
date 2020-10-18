@@ -129,6 +129,8 @@ define(function(){
     addKey('EVT_NETSERIALIZE');
     addKey('EVT_NETSERIALIZE_OWNER');
 
+    addKey('EVT_SKILL_MELEE');
+
 
 	/// %%%%%%%%%%%%%%%%%%%%%
 	/// %%%%%% Misc. Keys
@@ -147,6 +149,10 @@ define(function(){
 	addKey('EAST');
 	addKey('SOUTH');
 	addKey('WEST');
+    addKey('NORTHWEST');
+    addKey('NORTHEAST');
+    addKey('SOUTHWEST');
+    addKey('SOUTHEAST');
 
 	addKey('EVT_CHAT');
 
@@ -214,14 +220,20 @@ define(function(){
 
     addKey('EFFECT_BUFF');
 
+    // Netserialized Character Props
     addKeyGroup('N', [
         'NULL',
         'HEALTH_CUR', 'HEALTH_MAX', 'HEALTH_CURMAX',
         'STR_CUR', 'STR_MAX', 'STR_CURMAX',
         'CON_CUR', 'CON_MAX', 'CON_CURMAX',
         'DEX_CUR', 'DEX_MAX', 'DEX_CURMAX',
-        'XP', 'LEVEL'
+        'XP', 'LEVEL',
+        'FEARED'
     ]);
+
+    addKey('EVT_EVTNODEMGR_UPDATES_PAGE');
+
+    addKey('EVTNODE_TYPE');
 
 	return keys;
 });

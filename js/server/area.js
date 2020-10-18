@@ -47,6 +47,7 @@ define(
                     area           = this.area.data.pages,
                     zones          = this.area.data.zones,
                     interactables  = this.area.data.interactables,
+                    eventnodes     = this.area.data.eventnodes,
                     areaPageHeight = this.area.properties.pageHeight,
                     areaPageWidth  = this.area.properties.pageWidth,
                     pages          = this.pages,
@@ -57,7 +58,6 @@ define(
                 // a sprite from that sheet and then not be able to find the sheet. Temporarily keep a list of discarded
                 // sheets so that we can throw warning
                 let badSheets = [];
-
 
                 this.sheets = [];
                 this.area.properties.tilesets.forEach((tileset) => {
@@ -88,6 +88,7 @@ define(
                 this.areaWidth   = areaWidth;
                 this.areaHeight  = areaHeight;
 
+                this.pathfinding.setupArea();
                 if (Env.game.useJPS) {
                     this.jumpPoints       = new Int16Array(this.area.data.jumpPoints);
                     this.forcedNeighbours = this.area.data.forcedNeighbours;
@@ -293,6 +294,10 @@ define(
 
                 // Setup Spawns
                 this.spawns = spawns;
+                if (Env.game.world.noNpcs) {
+                    this.Log("Preventing npcs from spawning: Env.game.world.noNpcs");
+                    this.spawns = null;
+                }
                 const pagesWithSpawns = {};
                 _.forEach(this.spawns, (spawn, spawnCoord) => {
                     const ty   = parseInt(spawnCoord / areaWidth, 10),
@@ -339,6 +344,20 @@ define(
                         // Add to page
                         tile.page.interactables[localY * Env.pageWidth + localX] = interactableID;
                     });
+                });
+
+                // Add EventNodes
+                eventnodes.forEach((eventnode) => {
+                    const region = eventnode.region[0], // FIXME: Only 1 tile for position now
+                        globalY  = Math.floor(region / areaWidth),
+                        globalX  = region - globalY * areaWidth,
+                        pageY    = parseInt(globalY / Env.pageHeight, 10),
+                        pageX    = parseInt(globalX / Env.pageWidth, 10),
+                        pageI    = this.pagesPerRow * pageY + pageX,
+                        page     = this.pages[pageI];
+
+
+                    this.evtNodeMgr.addNode(eventnode, page, false);
                 });
 
 
@@ -406,7 +425,10 @@ define(
                     page.hook('addcharacterlessentity', this).before((entity) => {
                         this.doHook('addcharacterlessentity').pre(entity);
                     });
+
+                    this.pathfinding.addPage(page, i);
                 });
+
 
                 if (Env.game.usePathPlanner) {
                     this.pathfinding.setupGrid();
@@ -415,6 +437,14 @@ define(
 
                 // We're finished intiializion with sheets
                 badSheets = null;
+            },
+
+            start() {
+                this.evtNodeMgr.activate();
+            },
+
+            smokeTest() {
+                this.pathfinding.smokeTestPaths();
             },
 
             initialSpawn() {
@@ -479,6 +509,9 @@ define(
                     const page = this.pagesList[i];
                     page.step(time);
                 } while (--i >= 0);
+
+                this.evtNodeMgr.step(time);
+                this.physicsMgr.step(time);
 
                 this.handlePendingEvents(); // events from pages
 

@@ -37,6 +37,7 @@ define(function(){
 
 		this.renderer = {
 			drawBorders: false, // Draws page/entity borders (useful for debugging)
+            drawCollisions: true, // Highlight collision tiles
 
             // Use bg pooled pages by copying their image data into a single bg canvas
             // If this is false then have all active pooled pages as visible, and simply move them around in place of the bg canvas (ie. multiple canvases for bg)
@@ -46,7 +47,8 @@ define(function(){
 		this.assertion = {
 			eventListeningDuplicates: true,
             requiresResources: false, // Testing between computers
-            checkGetImageDataZeroBug: true // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkGetImageDataZeroBug: true, // Renderer: GetImageData from pooled pages sometimes returns all zeroes. This looks like a bug in Chromium w/ #disable-accelerated-2d-canvas disabled
+            checkSafePath: true // Confirm path is safe when adding to movable
 		};
 
 		this.game = {
@@ -68,7 +70,19 @@ define(function(){
             },
 
             debugPath: {
-                pathHistory: 100 // History count of paths for movables
+                pathHistory: 100, // History count of paths for movables
+                draw: true // Draw path
+            },
+
+            server: {
+                simulateLag: { // null to turn off
+                    delayPacketsMin: 30,
+                     delayPacketsMax: 300
+                 }
+            },
+
+            world: {
+                noNpcs: true
             }
 		};
 
@@ -110,7 +124,7 @@ define(function(){
             'Player': (logDefault),
             'Resources': (logDefault),
             'ScriptMgr': (logDefault | LOG_INFO),
-            'Script': (logDefault),
+            'Script': (logVerbose),
             'User': (logDefault),
             'Game': (logDefault),
             'Character': (logDefault),
@@ -126,6 +140,9 @@ define(function(){
             'Redis': (logDefault),
             'Pathfinding': (logDefault),
             'Ability': (logDefault),
+            'EventNodeMgr': (logVerbose),
+            'EventNode': (logVerbose),
+            'PhysicsMgr': (logVerbose),
             'Default': (logDefault),
         };
 

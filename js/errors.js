@@ -1,4 +1,4 @@
-define(['lib/stacktrace'], function(Stack){
+define(function(){
 
 	var GenericError = function(error, data) {
 		this.name    = "Error";
@@ -68,54 +68,18 @@ define(['lib/stacktrace'], function(Stack){
           stack = err.stack;
 
       stack = message + "\n" + stack;
-      if (!Env.isServer) {
+      if (!Env.isServer && !Env.isBot) {
           console.error(message);
           console.error(args);
           debugger;
       } else {
           const msg = stack.split('\n')[3];
-          DEBUGGER('Err: ' + msg);
+          DEBUGGER(message); // DEBUGGER will attempt to find this error message in uglified src and sourcemap back
       }
     return { message: message, args: args, stack: stack };
   }
 
     allErrors['Err'] = Err;
-
-
-
-
-
-
-    // FIXME: Clean this up, yuck
-    const _global = typeof GLOBAL === "undefined" ? window : GLOBAL;
-    _global.OBJECT = 'OBJECT';
-    _global.FUNCTION = 'FUNCTION';
-    _global.HAS_KEY = 'HAS_KEY';
-    _global.IS_TYPE = 'IS_TYPE';
-
-    var CHECK = (stuffToCheck) => {
-
-        console.log(stuffToCheck);
-        stuffToCheck.forEach((check) => {
-
-            if (check.checker === IS_TYPE) {
-
-                if (check.typeCmp === OBJECT) {
-                    if (typeof check.node !== "object") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
-                } else if (check.typeCmp === FUNCTION) {
-                    if (typeof check.node !== "function") DEBUGGER("TYPE EXEPCTED TO BE OBJECT", check);
-                } else { 
-                    DEBUGGER("Unexpected type comparison", check);
-                }
-            } else if (check.checker === HAS_KEY) {
-                if (!check.object.hasOwnProperty(check.property)) DEBUGGER("OBJECT EXPECTED TO HAVE KEY", check);
-            } else {
-                DEBUGGER("Unexpected check", check);
-            }
-        });
-    };
-
-    _global.CHECK = CHECK;
 
   /*
 	// An extendable error class

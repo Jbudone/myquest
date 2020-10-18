@@ -70,6 +70,16 @@ define(
                 // Add to new page
                 // NOTE: if newPage === null then this is probably a client w/out the page loaded
                 if (!newPage && Env.isServer) throw Err("No new page given for entity zoning");
+
+                if (Env.isServer) {
+                    this.eventsBuffer.push({
+                        evtType: EVT_ZONE,
+                        entity: { id: entity.id },
+                        newPage: newPage.index,
+                        frameId: (++The.frameEvtId)
+                    });
+                }
+
                 if (newPage) {
                     newPage.addEntity(entity);
                 }

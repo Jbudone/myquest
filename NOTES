@@ -12,6 +12,7 @@ http://www.realm667.com/index.php/en/beastiary-mainmenu-136-69621/heretic-hexen-
 http://www.spriters-resource.com/pc_computer/heretic/
 http://www.spriters-resource.com/pc_computer/heroes3/
 https://forums.rpgmakerweb.com/index.php?threads/avys-mv-stuff.53317/
+Doom style meshes in isometric? https://www.youtube.com/watch?v=YqWWeb5nitc
 
 https://opengameart.org/content/pine-tree-tiles
 https://opengameart.org/content/lpc-snowy-tree
@@ -147,275 +148,275 @@ Quests
 
 
 WORKING ON (was previously working on)
-	- Error handling
-	  	- Never return errors (please keep note where it may seem useful); ALWAYS test and throw as much as possible
-		- throw Err(`Bad coordinates (${x}, ${y})`, requestPos, curPos)  // Always throw Err (not new) with a templated string describing as much as possible, with as many args as possible (NOTE: can't pass arguments because of strict mode)
-	- Walking out of sync (testing with bot)
-	- Performance on walking/AI/players/scripts (profiler; check movable.js delta's; allocate X time per timestep to AI, may need to have a queue of AI updates and round-robin update -- on AI callback, commit update/details and round-robin update)
-	- client/game.js checkNewPages
-	- offload page/map sending to another process
-	- sleep/wake entities/pages/maps
-	- Loop issue in map-step: http://pastebin.com/fFrwmKA6
-	- Page stepping << Map stepping???  (possibly set pages to sleep?)
-	- Fix camera (currently resets every frame)
-	- Fix clicking to attack enemies (in lots-of-npcs maps?)
-	- Recycle Tile
-	- UI: Defer updates when too much time already spent in UI (round-robin update? webworkers?)
-	- UI: Hide/Redraw/Show html (to avoid redrawing after every css/html change)
-	- Clean Profiler mess
-	- Clean update/step mess
-	- Player send path (or path progress) rather than walk (inefficient otherwise). Make note of possibility of compressing (dir/dist pair compressed into 1 byte, then path is a string of walks)
-	  	- NOTE: NEED To identify map (otherwise if we request a path which has a similar starting point to another map, and we happen to zone into that map on the server right before the request comes through..weird shit happens)
-	- Clean pathfinding + partial progress mess
-	- Show "Still logged in.. can't login"
-	- Idle (animation) goblins when they get bored and finish walking back to spawn
-	- Debugging:
-	  	- Print current brain/neuralnet
-		- Draw current path (pos/dest & path + actual path written out on the right + recalibration)
-	- Neural network fixes
-	  	- Provide interface to neuralnet: get, has, remove
-		- Interface to neuron: property (es6 getter/setter)
-		- On any changes print out current neuralnet state
-	- Fix: movement new chase calls stop on previous movement which calls cancelPath EVERY time (and broadcasts event to everyone) 
-	- Ranged combat
-		- Ranged attack (vs. melee) -- show sprite
-		- filterFunc:
-		  			- Option 1: Circular tile expansion, considering collision along expansion
-					- Option 2: Use precomputed Manhattan heuristic to determine each endpoint which could be reached, and their starting points. The paths between start to end will share common ancestor paths (NOTE: This means we HAVE to have each endpoint always take the same path which correctly shares its ancestor path). We could go through each ancestor path (beginning part) and see which tiles are accepted/unacceptable, then spawn the child paths if accepted, and continue on for however long the range is. 
-					  			Actually we could spawn from the multiple different ancestors in certain cases.
-								Rule: Only allowed to follow 2 cardinal directions from startpoint to endpoint, from the startpoint we cna travel 1 direction for a max of X distance, but the first turn disables that and we have to make a turn every tile after
-	- Fix: entity uses alternate path which takes a completely different path; then path way through the new path (at a point which is much further away than the server position) the entity walks off in another direction. CurPosition & path start position could be drastically different
-	- Fix player attacks goblin 2 tiles away.. both walk towards each other and end up on top of each other  (on evt move could be worth it to check if you could recalibrate to previous tile)
-	- Fix goblin bored walking back doesn't have sight enabled (ignores users running beside them)
-	- Setup build pipeline, concat, uglify, minify, SourceMaps, babeljs, jslint/eslint/jsint/jscs, smoke test (Jasmine?), flow
-	  - Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
-	        0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
-	        0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
-	- eslint: spaces (4x)
-	- server.js: clean requirejs (should only require once)
-	- Logging: output to file, UI, colouring, store in buffer to flush together (or only print if a crash comes up)
-	- CLEAN: spam clicking movement lags out the entire game (server should ignore noisy players; client should temporarily ignore input between processing); should probably also have client-side check if the near-path has even changed, then only send the later part (updated) path when necessary
-	- CLEAN: clicking to move while zoning (disallow)
-	- CLEAN: remove server animations; auto client animations (facing target, etc.)
-	- CLEAN: Movable setting params before/after Ext
-	- CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
-	- CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages; clean static rendering; abstract rendering operations
-	- CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
-	- CLEAN: convert server tiles to Uint8Array; each references an index of tileRefs which specify the gid; cache and send page data as a blob (for compression/throughput)
-	- CLEAN: switch from loops to maps/forEach/...
-	- CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
-	- CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
-	- CLEAN: replace .hasOwnProperty: use property access (eg. obj['id']) which is significantly faster; unless we can expect undefined/null/0 then use `in` (eg.  id in obj)
-	- CLEAN: switch parseInt w/ Math.floor where necessary: https://jsperf.com/math-floor-vs-math-round-vs-parseint/
-	- render background canvas as ALL neighbour pages; then simply translate the canvas as you walk around (NOTE: drawImage on background takes up the most CPU in profiling; this would fix that completely)
-	- server & client initialize gid's separately (in arbitrary order), and then server overwrites client gid for necessary tilesheets. So king sheet has same gid.first as items.sheet in house since house doesn't overwrite items.gid. SHOULD precalculate all sheets gids' into sheets.json
-	- Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
-	- Server jump to client's current path position (ie. server receives client path 0.1s later, so jump to the position that he should be at)
-	- Client path out of sync: speed avatars up when too far, otherwise teleport
-	- Clean commenting style (top of file/class, splitting between members/public/private properties of classes, methods)
-	- Resources.js using 'dist/' directory, should abstract this
-	- http://bluebirdjs.com/docs/install.html : look at node installation debugging techniques
-	- Tool for .myquest-globals.json (js script to load globals json, go through game to get keys & "GLOBALS['...']=", add keys if not found in globals, then write to globals)
-	- player.disconnectPlayer()  should unhook everything which may be listening to it.. "Entity page does not contain entity" when user attempted to d/c while a bunch of npcs were attacking
-	- server.js: Make players an array; also improve eventBuffer (object of mapID, pageID)  should be arrays. Perhaps we could map  (map,page)  pairs to indices which the player could contain? Although maps will soon be threaded anyways
-	- Look into https://www.joyent.com/node-js/production/debug for debugging techniques    http://stackoverflow.com/questions/1911015/how-do-i-debug-node-js-applications/16512303#16512303
-	- Assertion testing: find a good assertion library (should be easily extendable, readable, minimalistic, compatible through browser+node using native assert) and find a way to easily remove (or disable) asserts from prod. eg. `assert(XXX)` ==> `if (!prod) assert(XXX)`. Assert ALL type checking on functions as much as possible; how to coordinate this with if(XXX) throw Err ??  We may want some asserts to remain in prod and only most of them to be in debug
-	- Add option to disable asserts in production.. NOTE: NEED To either remove asserts, or prepend (if !prod) to them, otherwise it'll still call the expression before calling the assertion
-	- Confirm that we can remove onEntityWalking, and focus entirely on onPathProgress
-	- Fix hooks to not require context (could use arrow functions intead)
-	- CLEAN: switch from errorInGame to shutdownGame to shutdown server (unless there's an error)
-	- assert(HiddenClassChecker(1, arg), "...")   .. HiddenClassChecker uses the caller/num as an identifier, then checks every property of the arg to determine if the last recorded arg had the exact same hidden class (otherwise throw)
-	- Area vs. Region?
-	- Aggro: attacking one person then another person walks right beside you, you ignore them
-	- Client pathfinding - prefer to move the same direction you're already going (weight of +1 for immediate turn)
-	- Loggable time; also allow server to extend messages with time (or ID) and client can print out received event (time/id) before handling
-	- Client loads serialized page/movables w/ path in progress and disregards current walked amount; should shorten walks by amount that has already been walked (to avoid entity walking more than necessary)
-	- Fix Strategy loading/handling in combat (be conscious of memory); should be able to abstract functionality; should be able to extend w/ Logs
-	- 2D spritesheets out of 3D models
-	- 2D texture synthesis https://github.com/mxgmn/WaveFunctionCollapse  https://github.com/mxgmn/SynTex
-	- Can we remove 'static' property? A bunch of scripts are using them but doesn't seem to do anything
-	- Script initialize should pass itself as the 1st parameter to allow initialize as an arrow function (this context to be what we expect)
-	- "use strict"
-	- if checks on north/west/south/east have an else case and throw error
-	- AbilityState vs Instinct?
-	- Path Sync: If receiving path for an entity that's out of view, and the path position is also out of view, then teleport entity to that position
-	- Update "var" to let or const (lots of files still using var)
-	- Path/Walk destination tile (some places are using it, some aren't.. need to either go all the way and do it or not at all)
-	- Merge walks w/ same direction (seems to be more than recalibration; and messed up locally)
-	- On crash dump as much debugging details as possible (.dump() for entities, characters, etc.)
-	- Cancel character path on respawn: Is this a good idea?
-	- Clean ServerHandler response from server (loops through entire event archive from 0..n, this seems unecessary)
-	- Scripts are being loaded twice on startup: client/game.js initialize, then loadAreaIntoGame.. Find a way to only load once on startup
-	- Debugging
-	  	- Open Chromium for bot/server debug (exec chromium)
-		- Run bots with both --inspect and debug to auto break on debugger statements, but also leave room to debug through dev-tools later
-		- Error Report: Webpage that takes a report.json and displays it accordingly
-		- If live: email error reports to me
-		- Error Report: Fix dumps, and add dumps to *EVERYTHING*
-	- Cleanup player requests / error checking
-	  	- 1) Confirm we have expected and valid args
-		  2) Call handler: handler checks valid args, then attempts to run
-		  If there is any issue in the handler or caller respond to the user with the err msg and return false; do NOT allow subroutines to throw errors, check input before then
-		  Need a routine like,  confirm( [dataAssertion], "Invalid argument" )   where confirm acts like an assertion and auto responds to player evt
-	- Smoke Test
-	  	CLIENT: bot.js (loaded via Karma)  should load Game as expected (strip renderer/ui)
-			- Read from some test file
-			- Server takes in arg to specify that its for testing. If testing then load test world (NOTE: want to do all startup routines at beginning to speed testing up). Extend Player class to accept args from Bot (if in testing mode) rather than loading/saving from DB. Otherwise maybe we could have a test DB/Redis?
-			- Bot loads test file, sends necessary args to server, then runs through test cases
-			- Server should run at varying speeds to allow quick testing
-			- Can we make it so the bot can load/reload in the same instance? eg. new player / map / etc.   without reloading base modules?
-				- Maybe we can have Test framework load base modules, then individual bots under the Test framework are loaded/unloaded as necessary. This way we can also have multiple bots doing things in parallel and even interacting with each other
-	    Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
+    - Error handling
+        - Never return errors (please keep note where it may seem useful); ALWAYS test and throw as much as possible
+        - throw Err(`Bad coordinates (${x}, ${y})`, requestPos, curPos)  // Always throw Err (not new) with a templated string describing as much as possible, with as many args as possible (NOTE: can't pass arguments because of strict mode)
+    - Walking out of sync (testing with bot)
+    - Performance on walking/AI/players/scripts (profiler; check movable.js delta's; allocate X time per timestep to AI, may need to have a queue of AI updates and round-robin update -- on AI callback, commit update/details and round-robin update)
+    - client/game.js checkNewPages
+    - offload page/map sending to another process
+    - sleep/wake entities/pages/maps
+    - Loop issue in map-step: http://pastebin.com/fFrwmKA6
+    - Page stepping << Map stepping???  (possibly set pages to sleep?)
+    - Fix camera (currently resets every frame)
+    - Fix clicking to attack enemies (in lots-of-npcs maps?)
+    - Recycle Tile
+    - UI: Defer updates when too much time already spent in UI (round-robin update? webworkers?)
+    - UI: Hide/Redraw/Show html (to avoid redrawing after every css/html change)
+    - Clean Profiler mess
+    - Clean update/step mess
+    - Player send path (or path progress) rather than walk (inefficient otherwise). Make note of possibility of compressing (dir/dist pair compressed into 1 byte, then path is a string of walks)
+        - NOTE: NEED To identify map (otherwise if we request a path which has a similar starting point to another map, and we happen to zone into that map on the server right before the request comes through..weird shit happens)
+    - Clean pathfinding + partial progress mess
+    - Show "Still logged in.. can't login"
+    - Idle (animation) goblins when they get bored and finish walking back to spawn
+    - Debugging:
+        - Print current brain/neuralnet
+        - Draw current path (pos/dest & path + actual path written out on the right + recalibration)
+    - Neural network fixes
+        - Provide interface to neuralnet: get, has, remove
+        - Interface to neuron: property (es6 getter/setter)
+        - On any changes print out current neuralnet state
+    - Fix: movement new chase calls stop on previous movement which calls cancelPath EVERY time (and broadcasts event to everyone) 
+    - Ranged combat
+        - Ranged attack (vs. melee) -- show sprite
+        - filterFunc:
+                    - Option 1: Circular tile expansion, considering collision along expansion
+                    - Option 2: Use precomputed Manhattan heuristic to determine each endpoint which could be reached, and their starting points. The paths between start to end will share common ancestor paths (NOTE: This means we HAVE to have each endpoint always take the same path which correctly shares its ancestor path). We could go through each ancestor path (beginning part) and see which tiles are accepted/unacceptable, then spawn the child paths if accepted, and continue on for however long the range is. 
+                                Actually we could spawn from the multiple different ancestors in certain cases.
+                                Rule: Only allowed to follow 2 cardinal directions from startpoint to endpoint, from the startpoint we cna travel 1 direction for a max of X distance, but the first turn disables that and we have to make a turn every tile after
+    - Fix: entity uses alternate path which takes a completely different path; then path way through the new path (at a point which is much further away than the server position) the entity walks off in another direction. CurPosition & path start position could be drastically different
+    - Fix player attacks goblin 2 tiles away.. both walk towards each other and end up on top of each other  (on evt move could be worth it to check if you could recalibrate to previous tile)
+    - Fix goblin bored walking back doesn't have sight enabled (ignores users running beside them)
+    - Setup build pipeline, concat, uglify, minify, SourceMaps, babeljs, jslint/eslint/jsint/jscs, smoke test (Jasmine?), flow
+      - Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
+            0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
+            0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
+    - eslint: spaces (4x)
+    - server.js: clean requirejs (should only require once)
+    - Logging: output to file, UI, colouring, store in buffer to flush together (or only print if a crash comes up)
+    - CLEAN: spam clicking movement lags out the entire game (server should ignore noisy players; client should temporarily ignore input between processing); should probably also have client-side check if the near-path has even changed, then only send the later part (updated) path when necessary
+    - CLEAN: clicking to move while zoning (disallow)
+    - CLEAN: remove server animations; auto client animations (facing target, etc.)
+    - CLEAN: Movable setting params before/after Ext
+    - CLEAN: player/NPC moves to edge of new page; they are still able to attack across pages, but this may cause issues for other clients who don't have the other page/movables in memory
+    - CLEAN: renderer.js, rendering page & sprites & movables; render only visible portion of pages; clean static rendering; abstract rendering operations
+    - CLEAN: rendering (set base tile, and sparse sprite/base/items/movables (obj w/ key as coordinate); each tile contains the tile_id and a reference to its sheet)
+    - CLEAN: convert server tiles to Uint8Array; each references an index of tileRefs which specify the gid; cache and send page data as a blob (for compression/throughput)
+    - CLEAN: switch from loops to maps/forEach/...
+    - CLEAN: clean up Promises:   Promse.then(...).then(...).then(...).catch(...)
+    - CLEAN: fix up .call .apply .bind for performance: http://jsperf.com/function-calls-direct-vs-apply-vs-call-vs-bind/6
+    - CLEAN: replace .hasOwnProperty: use property access (eg. obj['id']) which is significantly faster; unless we can expect undefined/null/0 then use `in` (eg.  id in obj)
+    - CLEAN: switch parseInt w/ Math.floor where necessary: https://jsperf.com/math-floor-vs-math-round-vs-parseint/
+    - render background canvas as ALL neighbour pages; then simply translate the canvas as you walk around (NOTE: drawImage on background takes up the most CPU in profiling; this would fix that completely)
+    - server & client initialize gid's separately (in arbitrary order), and then server overwrites client gid for necessary tilesheets. So king sheet has same gid.first as items.sheet in house since house doesn't overwrite items.gid. SHOULD precalculate all sheets gids' into sheets.json
+    - Safe spot: if entity logs in or respawns to bad tile, relocate to the safe spot instead
+    - Server jump to client's current path position (ie. server receives client path 0.1s later, so jump to the position that he should be at)
+    - Client path out of sync: speed avatars up when too far, otherwise teleport
+    - Clean commenting style (top of file/class, splitting between members/public/private properties of classes, methods)
+    - Resources.js using 'dist/' directory, should abstract this
+    - http://bluebirdjs.com/docs/install.html : look at node installation debugging techniques
+    - Tool for .myquest-globals.json (js script to load globals json, go through game to get keys & "GLOBALS['...']=", add keys if not found in globals, then write to globals)
+    - player.disconnectPlayer()  should unhook everything which may be listening to it.. "Entity page does not contain entity" when user attempted to d/c while a bunch of npcs were attacking
+    - server.js: Make players an array; also improve eventBuffer (object of mapID, pageID)  should be arrays. Perhaps we could map  (map,page)  pairs to indices which the player could contain? Although maps will soon be threaded anyways
+    - Look into https://www.joyent.com/node-js/production/debug for debugging techniques    http://stackoverflow.com/questions/1911015/how-do-i-debug-node-js-applications/16512303#16512303
+    - Assertion testing: find a good assertion library (should be easily extendable, readable, minimalistic, compatible through browser+node using native assert) and find a way to easily remove (or disable) asserts from prod. eg. `assert(XXX)` ==> `if (!prod) assert(XXX)`. Assert ALL type checking on functions as much as possible; how to coordinate this with if(XXX) throw Err ??  We may want some asserts to remain in prod and only most of them to be in debug
+    - Add option to disable asserts in production.. NOTE: NEED To either remove asserts, or prepend (if !prod) to them, otherwise it'll still call the expression before calling the assertion
+    - Confirm that we can remove onEntityWalking, and focus entirely on onPathProgress
+    - Fix hooks to not require context (could use arrow functions intead)
+    - CLEAN: switch from errorInGame to shutdownGame to shutdown server (unless there's an error)
+    - assert(HiddenClassChecker(1, arg), "...")   .. HiddenClassChecker uses the caller/num as an identifier, then checks every property of the arg to determine if the last recorded arg had the exact same hidden class (otherwise throw)
+    - Area vs. Region?
+    - Aggro: attacking one person then another person walks right beside you, you ignore them
+    - Client pathfinding - prefer to move the same direction you're already going (weight of +1 for immediate turn)
+    - Loggable time; also allow server to extend messages with time (or ID) and client can print out received event (time/id) before handling
+    - Client loads serialized page/movables w/ path in progress and disregards current walked amount; should shorten walks by amount that has already been walked (to avoid entity walking more than necessary)
+    - Fix Strategy loading/handling in combat (be conscious of memory); should be able to abstract functionality; should be able to extend w/ Logs
+    - 2D spritesheets out of 3D models
+    - 2D texture synthesis https://github.com/mxgmn/WaveFunctionCollapse  https://github.com/mxgmn/SynTex
+    - Can we remove 'static' property? A bunch of scripts are using them but doesn't seem to do anything
+    - Script initialize should pass itself as the 1st parameter to allow initialize as an arrow function (this context to be what we expect)
+    - "use strict"
+    - if checks on north/west/south/east have an else case and throw error
+    - AbilityState vs Instinct?
+    - Path Sync: If receiving path for an entity that's out of view, and the path position is also out of view, then teleport entity to that position
+    - Update "var" to let or const (lots of files still using var)
+    - Path/Walk destination tile (some places are using it, some aren't.. need to either go all the way and do it or not at all)
+    - Merge walks w/ same direction (seems to be more than recalibration; and messed up locally)
+    - On crash dump as much debugging details as possible (.dump() for entities, characters, etc.)
+    - Cancel character path on respawn: Is this a good idea?
+    - Clean ServerHandler response from server (loops through entire event archive from 0..n, this seems unecessary)
+    - Scripts are being loaded twice on startup: client/game.js initialize, then loadAreaIntoGame.. Find a way to only load once on startup
+    - Debugging
+        - Open Chromium for bot/server debug (exec chromium)
+        - Run bots with both --inspect and debug to auto break on debugger statements, but also leave room to debug through dev-tools later
+        - Error Report: Webpage that takes a report.json and displays it accordingly
+        - If live: email error reports to me
+        - Error Report: Fix dumps, and add dumps to *EVERYTHING*
+    - Cleanup player requests / error checking
+        - 1) Confirm we have expected and valid args
+          2) Call handler: handler checks valid args, then attempts to run
+          If there is any issue in the handler or caller respond to the user with the err msg and return false; do NOT allow subroutines to throw errors, check input before then
+          Need a routine like,  confirm( [dataAssertion], "Invalid argument" )   where confirm acts like an assertion and auto responds to player evt
+    - Smoke Test
+        CLIENT: bot.js (loaded via Karma)  should load Game as expected (strip renderer/ui)
+            - Read from some test file
+            - Server takes in arg to specify that its for testing. If testing then load test world (NOTE: want to do all startup routines at beginning to speed testing up). Extend Player class to accept args from Bot (if in testing mode) rather than loading/saving from DB. Otherwise maybe we could have a test DB/Redis?
+            - Bot loads test file, sends necessary args to server, then runs through test cases
+            - Server should run at varying speeds to allow quick testing
+            - Can we make it so the bot can load/reload in the same instance? eg. new player / map / etc.   without reloading base modules?
+                - Maybe we can have Test framework load base modules, then individual bots under the Test framework are loaded/unloaded as necessary. This way we can also have multiple bots doing things in parallel and even interacting with each other
+        Testing: use various test scripts  (NOTE: there should be test maps for test cases so that we can isolate individual test scenarios)
 
 
-		- Fix error reporting in bots (throw)
-		- Setup test resources
-		  	path/recalibration, signup/login/logout (also double logins) + chat
-			- rock-recalibrater: spam click around a rock that's between pages
-			- page-running: runs between neighbouring tiles on the corner of 4 pages
-			- zoner: zones in/out
-			- train: many bots running through large map (lots of ents)
-		- Bot interface to Game/test
-		- Close server test websocket
-		- Test framework: Loggable
-		- Test framework: Do base module loading here instead of on bot
-		- Bot: Move renderer/ui and clean
-		- Clean Client/Server testing overrides (messy testing stuff)
-		- Bot: Debugger option
-		- Bot interface + tons of tests
-	        0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
-	        0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
-		- Need to find a way to organize bot logs
-		- Integrate into Grunt
-		- Integrate Mocha
-		- Fix error reporting
-		- Abstract stacktrace/error report from client/server/bots
-		- Timeout on tests
-		- Consider multiple bots running at the same time: most importantly would be one bot loading or zoning into a page or map where another bot is already doing stuff (running around, attacking, etc.)
+        - Fix error reporting in bots (throw)
+        - Setup test resources
+            path/recalibration, signup/login/logout (also double logins) + chat
+            - rock-recalibrater: spam click around a rock that's between pages
+            - page-running: runs between neighbouring tiles on the corner of 4 pages
+            - zoner: zones in/out
+            - train: many bots running through large map (lots of ents)
+        - Bot interface to Game/test
+        - Close server test websocket
+        - Test framework: Loggable
+        - Test framework: Do base module loading here instead of on bot
+        - Bot: Move renderer/ui and clean
+        - Clean Client/Server testing overrides (messy testing stuff)
+        - Bot: Debugger option
+        - Bot interface + tons of tests
+            0:00:00 - Jasmine( world.maps['main'].movables[1].move(4, NORTH) )
+            0:04:00 - Jasmine.assert( movable[1].position.y == 4 )
+        - Need to find a way to organize bot logs
+        - Integrate into Grunt
+        - Integrate Mocha
+        - Fix error reporting
+        - Abstract stacktrace/error report from client/server/bots
+        - Timeout on tests
+        - Consider multiple bots running at the same time: most importantly would be one bot loading or zoning into a page or map where another bot is already doing stuff (running around, attacking, etc.)
 
-		- Debugging:
-	        - Area draw map; server.test should be able to return pages/data to test framework, and bot can draw both maps side-by-side to show differences
-			- Store history of paths for entity: path id/flag, to/from, received path and current state (if client); print this out nicely, potentially with visuals (tiled on left, and zoom-in of recalibration on right)
-			- Enable log buffering on client
-			- Add times on logs (min/sec? no need for large timestamps)
-			- Make requests to server for history of paths on entity; log timestamps (between ranges)
-			- When bot (or server?) crashes, enter interactive console to allow debugging (eg. printing path history, etc.)
+        - Debugging:
+            - Area draw map; server.test should be able to return pages/data to test framework, and bot can draw both maps side-by-side to show differences
+            - Store history of paths for entity: path id/flag, to/from, received path and current state (if client); print this out nicely, potentially with visuals (tiled on left, and zoom-in of recalibration on right)
+            - Enable log buffering on client
+            - Add times on logs (min/sec? no need for large timestamps)
+            - Make requests to server for history of paths on entity; log timestamps (between ranges)
+            - When bot (or server?) crashes, enter interactive console to allow debugging (eg. printing path history, etc.)
 
 
-	- BUG: If you're queued to d/c and then die before you have a chance to d/c, your queued request will still trigger and crash the server (since dying removes your player from the map and the d/c attempts to get your character)
-	- BUG: Start test bot then load in part way through; when receiving PathCancelled messages and bot is out of sight shit gets crazy
-	- BUG: Client throw Err doesn't actually print thrown message, just "uncaught exception"  eg. server handler functions (onPathCancelled)  (temporarily added console.error in Err class)
-	- BUG: Disconnecting player says, "Successfully updated player (5) position"
-	- BUG: Bot: server adds path for player which has its own onFailed function so we lose our onFailed callback
-	- BUG: On browser when running bots, open console and notice the lag, then we start hitting "Recalibration is longer than our maxwalk"; try suppressing logs to see if that fixes lag, and also turn this error into a warning
-	- BUG? Clients should not set combat/melee target since server paths will take over and cancel your current paths thus resetting the target
-	- BUG: UI offset on entities (possibly due to old page and local offset?)
-	- BUG: DB saves position without open tile checking
-	- BUG: Suppressed logs w/ LOG_INFO aren't being logged afterwards
-	- Check Promise/Deprecation errors:  --trace-warnings --trace-deprecation
-	- Roaming bot: preprocess map to build a nav graph; have the bot go between nav points on graph to satisfy his roaming goal
-	- BUG: Recalibration (working but need to finish)
-		- Merge walks (note: need to coordinate with ordering recalibrations too. eg. recalibrate north, recalibrate east, path goes south):
-		  	1) Prune walked walks
-		  	2) Take the 1st (non-walked) walk of the path and subtract its distance from the recalibration + add to that walk distance -- NOTE: This should ONLY be on the recalibrationEnd recalibration
-			3) Path.PushWalk(..)  which unshifts the new walk or otherwise merges it with the current front of array walk
-		- Fix walks of 0 distance (probably because walk.walked == walk.distance)
-	   - Max Path check (used to be maxWalk)
-	   - List ideas for avoiding spam clicking: request timout (spam click 3x, each path request replaces the previous and the most recent one is used during path check), path check cache (point A -> B checked and cached), map regions (convex hulls) then cache path checks from region A -> B. Otherwise we could accept all paths from people and simply cancel them if they're about to move into a collidable tile (this also helps with dynamic tiles!), then remote players could check the path for collision and if there's a collision simply walk up to that point?
-	   - Complex test: Have variable number of bots zoning in/out of house
-	- Change item "types" to "attributes", and add a "type" property for abstracted data: eg. "potion" has stack == 8, has attributes "USE" and "PICKUP", etc.
-	- Try converting AOE triggers into circles added to a trigger list in each page; then just listen to EVT_MOVE_NEW_TILE on the page and check the position against the point/radius
-	- Get rid of .before on hooks, and just have a 'hookX-pre', 'hookX-post' instead for those specific cases
-	- Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
-	- BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
-	- Respawning/Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker); Also should pause renderer
-	- FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login. Currently using .initialization to prevent multiple reloads
-	- FIXME: Find a better name for charComponents on character. We can't use components since character is a script and depends on components (see scripts/game.js using components)
-	- Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
-	- Cleanup component serialization/restoring, currently its an array on character but object in db/netSerialize, and we have to find the component name by npc index. Overall gross and needs some cleanup
-	- FIXME: Cleanup server login control flow to create your character before sending you character info, that way we can netSerialize your character rather than send your serialized db state -- afterwards would be nice to remove netInitialize and use netRestore instead
-	- Look into async/defer scripts: https://bitsofco.de/async-vs-defer/
-	- Merge Character/Components netRestore and restore common code somehow (sucks to duplicate code)
-	- Buff Fading: Death sickness fade (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
-	- Look into image rendering tricks for building anims: https://css-tricks.com/almanac/properties/i/image-rendering/
-	- FIXME: ToolUI.effects tooltip can't get height while its not visible
-	- Abstract loot into a character component for npcs
-	- Buff stacking
-	- Add an icons json; allow spritesheets
-	- Look into a better solution for Components referencing The.scripting stuff
-	- Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
-	- Fix interactables: currently we invoke from Resources interactables list, which runs new every invocation. We should only instantiate the base once, then treat it as a static from then on
-	- Fix catch on requirejs errors (OR switch to another AMD loader, but still need to catch on script errors)
-	- QUESTS: How to handle events which affect later quests? Perhaps the quest could be opened/initialized, and then store the questkey or flip some flags in order to 
-	- Quests/Interaction: Client side execution for nodes (eg. killing boss npc, "You feel the evil spirit has disappeared")
-	- Quests/Interaction: Abstract conditions/executions between interaction/quest (and other stuff later); perhaps some scripting functionality (similar to The.scripting)
-	- Quests: Listening to other events on character (certain NPCs could have an array of events they trigger on character that kills them; how can quests listen to that? should we save those event keys on questmgr in case later quests depend on it (ie. not needing to kill some boss character again after initiating the quest)).. To prevent unnecessary over-listening, we could instead emit EVT_QUESTKEY with some value which the questmgr forwards to the corresponding quest
-	- Quests: If quests need to listen to events independently: Might need to store non-active questing stuff in db, and only load quests when necessary: quest node isn't listening to anything, so only load quest into component when we talk to guy. We can improve this later to only load quests from db when we enter the map which affects this quest, or only load parts of the quest from the db as they become necessary (eg. list of steps in the quest which I've achieved)
-	- Interaction: Conversation shows in UI; able to select options (text on top, spacing, then links underneath for responses)
-	- Interaction: After running an action don't display dialog options again (ie. repeatedly clicking the interactable shouldn't flood your messagebox with the dialog)
-	- ExportMap: Support new data format (zlib compression, currently using CSV)
-	- Interaction: Hook interaction fsm into interactable
-	- Periodic saving: look into partial saves on dirty components for characters; and saving all players at once. Dirty position when you near a new "safe" checkpoint?
-	- Projectiles: Add shooting bone/offset from archer's sprite
-	- Projectiles: Find a better way to determine if the attacker is firing a projectile, and the projectile type
-	- Projectiles: Better time-to-die calculation for projectile (per projectile number?)
-	- Map Exporter: If tileset was not embedded in the map (eg. we imported or saved an external tileset) server/area.js cannot read external tileset
-	- Sprite state (anim) should be maintained on the server. This is sent to clients when they zone in, and prevents from seeing sprites which are attacking when really they're in the middle of attacking
-	- Pack/Compress/Encrypt resources (in case any are purchased)
-	- Look into tossing pathfinding / other stuff onto another thread (child process); child processes can access parents, can this help with executing event callbacks?
-	- Can we netSerialize once on changes, cache the results, and send those cached results to everyone on changes? Or should netSerialize only be done on initial load
-	  	- would RMI a netSerialize w/ flags indicating what members have changed
+    - BUG: If you're queued to d/c and then die before you have a chance to d/c, your queued request will still trigger and crash the server (since dying removes your player from the map and the d/c attempts to get your character)
+    - BUG: Start test bot then load in part way through; when receiving PathCancelled messages and bot is out of sight shit gets crazy
+    - BUG: Client throw Err doesn't actually print thrown message, just "uncaught exception"  eg. server handler functions (onPathCancelled)  (temporarily added console.error in Err class)
+    - BUG: Disconnecting player says, "Successfully updated player (5) position"
+    - BUG: Bot: server adds path for player which has its own onFailed function so we lose our onFailed callback
+    - BUG: On browser when running bots, open console and notice the lag, then we start hitting "Recalibration is longer than our maxwalk"; try suppressing logs to see if that fixes lag, and also turn this error into a warning
+    - BUG? Clients should not set combat/melee target since server paths will take over and cancel your current paths thus resetting the target
+    - BUG: UI offset on entities (possibly due to old page and local offset?)
+    - BUG: DB saves position without open tile checking
+    - BUG: Suppressed logs w/ LOG_INFO aren't being logged afterwards
+    - Check Promise/Deprecation errors:  --trace-warnings --trace-deprecation
+    - Roaming bot: preprocess map to build a nav graph; have the bot go between nav points on graph to satisfy his roaming goal
+    - BUG: Recalibration (working but need to finish)
+        - Merge walks (note: need to coordinate with ordering recalibrations too. eg. recalibrate north, recalibrate east, path goes south):
+            1) Prune walked walks
+            2) Take the 1st (non-walked) walk of the path and subtract its distance from the recalibration + add to that walk distance -- NOTE: This should ONLY be on the recalibrationEnd recalibration
+            3) Path.PushWalk(..)  which unshifts the new walk or otherwise merges it with the current front of array walk
+        - Fix walks of 0 distance (probably because walk.walked == walk.distance)
+       - Max Path check (used to be maxWalk)
+       - List ideas for avoiding spam clicking: request timout (spam click 3x, each path request replaces the previous and the most recent one is used during path check), path check cache (point A -> B checked and cached), map regions (convex hulls) then cache path checks from region A -> B. Otherwise we could accept all paths from people and simply cancel them if they're about to move into a collidable tile (this also helps with dynamic tiles!), then remote players could check the path for collision and if there's a collision simply walk up to that point?
+       - Complex test: Have variable number of bots zoning in/out of house
+    - Change item "types" to "attributes", and add a "type" property for abstracted data: eg. "potion" has stack == 8, has attributes "USE" and "PICKUP", etc.
+    - Try converting AOE triggers into circles added to a trigger list in each page; then just listen to EVT_MOVE_NEW_TILE on the page and check the position against the point/radius
+    - Get rid of .before on hooks, and just have a 'hookX-pre', 'hookX-post' instead for those specific cases
+    - Look into if V8 uses symbol tables for strings, or should we implement this? (particularly necessary for hooks in fast str cmp)
+    - BUG: Change SCRIPT.INJECTION, ./grunt doesn't update all scripts
+    - Respawning/Zoning should fadeout, then fadein when all scripts have loaded and are ready (mostly so that we don't see UI flicker); Also should pause renderer
+    - FIXME: Fix SetAsPlayer() on server -- script/game.js calls this everytime the character enters an area, resulting in restoring and re-hooking and other initialization stuff which is unecessary. Should be setting player outside of this, on login. Currently using .initialization to prevent multiple reloads
+    - FIXME: Find a better name for charComponents on character. We can't use components since character is a script and depends on components (see scripts/game.js using components)
+    - Look into possibility for utilizing netSerialize/netRestore for dynamic changes on character without having to send events
+    - Cleanup component serialization/restoring, currently its an array on character but object in db/netSerialize, and we have to find the component name by npc index. Overall gross and needs some cleanup
+    - FIXME: Cleanup server login control flow to create your character before sending you character info, that way we can netSerialize your character rather than send your serialized db state -- afterwards would be nice to remove netInitialize and use netRestore instead
+    - Look into async/defer scripts: https://bitsofco.de/async-vs-defer/
+    - Merge Character/Components netRestore and restore common code somehow (sucks to duplicate code)
+    - Buff Fading: Death sickness fade (slowly regain con/curMax health) :: fade/tick, send BUFF_MODIFIED_PRIVATE to client
+    - Look into image rendering tricks for building anims: https://css-tricks.com/almanac/properties/i/image-rendering/
+    - FIXME: ToolUI.effects tooltip can't get height while its not visible
+    - Abstract loot into a character component for npcs
+    - Buff stacking
+    - Add an icons json; allow spritesheets
+    - Look into a better solution for Components referencing The.scripting stuff
+    - Fix server synchronous error reporting: currently sync because if the server crashed and writes, it exits before finishing writing and therefore ends up wtih empty reports. But sync is completely unecessary if the server isn't crashing (for client/bot reports)
+    - Fix interactables: currently we invoke from Resources interactables list, which runs new every invocation. We should only instantiate the base once, then treat it as a static from then on
+    - Fix catch on requirejs errors (OR switch to another AMD loader, but still need to catch on script errors)
+    - QUESTS: How to handle events which affect later quests? Perhaps the quest could be opened/initialized, and then store the questkey or flip some flags in order to 
+    - Quests/Interaction: Client side execution for nodes (eg. killing boss npc, "You feel the evil spirit has disappeared")
+    - Quests/Interaction: Abstract conditions/executions between interaction/quest (and other stuff later); perhaps some scripting functionality (similar to The.scripting)
+    - Quests: Listening to other events on character (certain NPCs could have an array of events they trigger on character that kills them; how can quests listen to that? should we save those event keys on questmgr in case later quests depend on it (ie. not needing to kill some boss character again after initiating the quest)).. To prevent unnecessary over-listening, we could instead emit EVT_QUESTKEY with some value which the questmgr forwards to the corresponding quest
+    - Quests: If quests need to listen to events independently: Might need to store non-active questing stuff in db, and only load quests when necessary: quest node isn't listening to anything, so only load quest into component when we talk to guy. We can improve this later to only load quests from db when we enter the map which affects this quest, or only load parts of the quest from the db as they become necessary (eg. list of steps in the quest which I've achieved)
+    - Interaction: Conversation shows in UI; able to select options (text on top, spacing, then links underneath for responses)
+    - Interaction: After running an action don't display dialog options again (ie. repeatedly clicking the interactable shouldn't flood your messagebox with the dialog)
+    - ExportMap: Support new data format (zlib compression, currently using CSV)
+    - Interaction: Hook interaction fsm into interactable
+    - Periodic saving: look into partial saves on dirty components for characters; and saving all players at once. Dirty position when you near a new "safe" checkpoint?
+    - Projectiles: Add shooting bone/offset from archer's sprite
+    - Projectiles: Find a better way to determine if the attacker is firing a projectile, and the projectile type
+    - Projectiles: Better time-to-die calculation for projectile (per projectile number?)
+    - Map Exporter: If tileset was not embedded in the map (eg. we imported or saved an external tileset) server/area.js cannot read external tileset
+    - Sprite state (anim) should be maintained on the server. This is sent to clients when they zone in, and prevents from seeing sprites which are attacking when really they're in the middle of attacking
+    - Pack/Compress/Encrypt resources (in case any are purchased)
+    - Look into tossing pathfinding / other stuff onto another thread (child process); child processes can access parents, can this help with executing event callbacks?
+    - Can we netSerialize once on changes, cache the results, and send those cached results to everyone on changes? Or should netSerialize only be done on initial load
+        - would RMI a netSerialize w/ flags indicating what members have changed
     - Rendering background: could probably render each page background to a hidden texture/image/canvas, then when redrawing the background just render each prerendered page to one canvas; moving around the map only involves moving the background canvas. Zoning into another page could involve asynchronously rendering to a buffer background, and then switching the two background canvases when its ready
-	  	- Cleanup
-	  	- Async render (for new neighbours and buffer background)
-	- Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
-	    - CacheBuilder
-			  need: cached? encrypted? packed (image/sound) w/ coordinates (x/y? time? data json)? compressed (manually -- png -> webp)
-				5) assetHash
-			- Cache data files (data/json files)
-		    - Check for changes to cache options (stringify cache options -> hash -> compare to previous cacheOptionsHash)
-			- Gruntfile watch for changes to raw assets / cache file; rebuild cache
-		- Client
-		  	- Works for headless (server/bot)
-			- Async (WebWorkers?)
-			- Decompress
-			- Webstorage?
-		- Update git w/ cachefiles
+        - Cleanup
+        - Async render (for new neighbours and buffer background)
+    - Storing assets: encrypted assets; should pack things together (for now; later we could look into packing things that would likely only change together, or otherwise keep packs small so its a short download); compression; headers in packed assets
+        - CacheBuilder
+              need: cached? encrypted? packed (image/sound) w/ coordinates (x/y? time? data json)? compressed (manually -- png -> webp)
+                5) assetHash
+            - Cache data files (data/json files)
+            - Check for changes to cache options (stringify cache options -> hash -> compare to previous cacheOptionsHash)
+            - Gruntfile watch for changes to raw assets / cache file; rebuild cache
+        - Client
+            - Works for headless (server/bot)
+            - Async (WebWorkers?)
+            - Decompress
+            - Webstorage?
+        - Update git w/ cachefiles
         - All PGP -- look into PGP for best solution + architecture for this
         - Look into filestreams and if fs.read/write or streams/pipes are better
         - Compress (Brotli? Gzip?) + browser to auto ungzip; okay to use XHR request for automating this?
         - Pack some sheets together; Pack sounds; reference by cache file + offset + width/height
-		  	- How can we handle this w/ static elements whose img src changes (eg. mute/unmute image changing on element). If we create copy of image initially + cache, then we have to make a copy of the image every time we want to change our element image. This copy is probably super inefficient since we're copying a new image every time?  Is the only option to have multiple images for each img src, and only switch out the visible image? Could be bad if we plan on having many dynamic icons popping up (eg. buffs over entities heads where we could have utilized an image element pool)
-			- Look into http2 changes which may make packing images pointless
+            - How can we handle this w/ static elements whose img src changes (eg. mute/unmute image changing on element). If we create copy of image initially + cache, then we have to make a copy of the image every time we want to change our element image. This copy is probably super inefficient since we're copying a new image every time?  Is the only option to have multiple images for each img src, and only switch out the visible image? Could be bad if we plan on having many dynamic icons popping up (eg. buffs over entities heads where we could have utilized an image element pool)
+            - Look into http2 changes which may make packing images pointless
     - BUG: Map Exporter: Adding avatar to base/sprite layer doesn't result in gid error (it should!); should confirm gid's so it doesn't result in a confusing error when starting up server
     - Bake Spritesheet: Add / Modify sheets.json (option)
     - Sheetedit: adding a new tilesheet but not setting any data yet (no collisions/floating/etc.) results in no data object, which crashes startup
-	- Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
-	- /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
-	- ctrl+c kill not working; or resulting in bug in errorReport
-	- /teleport to another area
+    - Adding new tilesheet/spritesheet ==> automatically add empty cache; OR merge cachefile and sheets file
+    - /teleport zone to another page that we already have: we should only fadeOut if we're teleporting to a spot where we'll be near neighbour pages that we don't have yet (need to wait for onZone pages). However, if we teleport like 3x tiles away that happens to be on another page, that probably doesnt warrant a fadeOut
+    - ctrl+c kill not working; or resulting in bug in errorReport
+    - /teleport to another area
     - Map Editor: Switch spawns from object layer to normal layer (easier for placement)
     - FIXME: sheetedit get rid of tilesize and avatar setup/manipulation
     - Clean sprites folder;   cache/sprites/scrawnyGoblin.webp  , sprites/goblin/{scrawnyGoblin.png,goblin.json}
-	- Right click on entity; admin features enabled
-		- Improve appearance
-	- Server watch for json changes and autoreload those parts? (Specifically npc.json)
-	- Admin toolbelt
-	  	- Improve appearance
-		- Abstract where we add options (shouldn't be done within the toolbelt ui)
- 	    - Command: Reset AI -- specfically remove yourself from enemy neuralnet
+    - Right click on entity; admin features enabled
+        - Improve appearance
+    - Server watch for json changes and autoreload those parts? (Specifically npc.json)
+    - Admin toolbelt
+        - Improve appearance
+        - Abstract where we add options (shouldn't be done within the toolbelt ui)
+        - Command: Reset AI -- specfically remove yourself from enemy neuralnet
     - Autocomplete: show "..." ellipses if there's more commands; tab cycles through extra commands
-	- Admin Commands: Abstract out of player
-	- Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
+    - Admin Commands: Abstract out of player
+    - Take periodic snapshots of world state; record all player input + time; randomness could come from a class that chooses random numbers (and stores them for later). When we crash we can take the most recent snapshot and playback input w/ provided random numbers. For perf we could only save delta in snapshots, and rebuild from very first snapshot
 *   - BUG: Reloading files (npcs): sometimes doesn't trigger; sometimes triggers multiple times for 1 change
-	- BUG: UI.unload -- removeEventListener requires cb to remove; maybe jquery to add/remove/manage events?
-	- Reloading npcs: need to update players w/ changes? -- need to netRestore changed characters OR trigger an event (similar to regen) w/ reloaded shiz
+    - BUG: UI.unload -- removeEventListener requires cb to remove; maybe jquery to add/remove/manage events?
+    - Reloading npcs: need to update players w/ changes? -- need to netRestore changed characters OR trigger an event (similar to regen) w/ reloaded shiz
     - netSerialize/Restore overhaul
-		- Consider removing EVT_REGEN (can just use this system now)
-		- netSerialize only sends stats to owner; Should stats not be netVars? Or should we also netSerialize stats?
-		- Look into character.stats usage elsewhere (to fix): db, buffs.statbuff (eg. deathsickness, levelling), client/game, ui.stats
+        - Consider removing EVT_REGEN (can just use this system now)
+        - netSerialize only sends stats to owner; Should stats not be netVars? Or should we also netSerialize stats?
+        - Look into character.stats usage elsewhere (to fix): db, buffs.statbuff (eg. deathsickness, levelling), client/game, ui.stats
         - LOOK INTO: Reloading character for clients when movable moves out of PVS of player, but character is not(?) removed, and then comes back to PVS -- how do we handle this for updating health so far?
-		- Look into building netSerialize functions by string rather than hand building every permutation
+        - Look into building netSerialize functions by string rather than hand building every permutation
     - BUG: Firefox sometimes doesn't start (timeout)
     - BUG: Hitch zoning between pages (particularly in Firefox) -- could continue temp pooled page rendering trick + webworker rendering new pages
     - Renderer: Look into UI (movable name/health) rendering options; CSS restyling/recalculations causing hitches
@@ -432,9 +433,9 @@ WORKING ON (was previously working on)
     - Modify assert (or roll out our own) to make use of waitForInspector
     - NPC inheritance
     - NPCs: get rid of "damage"
-	- Fix: statBuff is not very flexible (eg. cannot have max/cur multiplier for same stat in same buff; tick seems questionable), should validate buffRes on startup to confirm its good. Cleaning this up for scalability could instead allow us to overcomplicate buffs
+    - Fix: statBuff is not very flexible (eg. cannot have max/cur multiplier for same stat in same buff; tick seems questionable), should validate buffRes on startup to confirm its good. Cleaning this up for scalability could instead allow us to overcomplicate buffs
 *   - Combat: debuff effects (eg. poison arrows, thrown potions, etc.); how to add this to NPCs too? (NOTE: NPCs we want it % of time to happen)
-		- Handle for ranged
+        - Handle for ranged
     - Map: Layers that auto flatten into sprites layer (eg. fenced off area which is in another area, so we can easily modify fence layer later)
     - Idle anim; between attack animations also go to idle anim (in same direction)
     - Mesh setup:
@@ -511,7 +512,7 @@ WORKING ON (was previously working on)
                 - ./resourceBuilder --checkNeedsRebuild (or a bash script)   to go through all cache and see if a rebuild is required (without doing anything); resources.json contains rawAssetHash for each data, sheets.json, sounds.json, etc.   so we can just compare hash w/ file to see if rebuild is needed. Run this on server startup, and don't start if rebuild is needed. Grunt watch resources folder for changes and run this script to see if rebuild is needed, and if so then rebuild. NOTE: Need to run resources.json last since updating a sheet will change sheets.json hash which in turn will update resources.json
             -- resources/sprites: bunnyrat.json, bat.json, etc.     resources/sprites/models/bunnyrat (actual model here);  .gitignore  resources/sprites/models
         - OUTPUT param to override output (for testing/checking)
-	- Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
+    - Look into achievedXP: seems like we could surpass our achievedXP while not reaching our achievedLevel, and start messing with our achievedXP. Might even be worth it to netSerialize(owner) for the achievedXP/Level
     - Fix model -> spritesheet camera/size issue:
         - Sprite moving particularly far in one animation: we don't want to extend the sprite size, instead we want to
           offset the sprite in-game (by some scale of the actual offset). Since this is on a per-frame-per-anim
@@ -530,7 +531,7 @@ WORKING ON (was previously working on)
     - Spawn bodyguard: spawns a bodyguard (w/ some characterTemplate) w/ AI that follows you and aggros enemies -- could have different AI strategies for different bodyguard types
 *   - Sheet Editor
         - Large canvas: move the avatar options to the right and allow avatars list to collapse (if we have a not very wide screen: laptop)
-		- Large canvas: automatically determine maxWidth (should stretch from left -> avatar options box)
+        - Large canvas: automatically determine maxWidth (should stretch from left -> avatar options box)
         - Anim preview overflows
         - Anim flipX
     - Scroll up in chatbox, when something new is added it automatically scrolls down (if we manually scroll up then should disable that)
@@ -540,20 +541,20 @@ WORKING ON (was previously working on)
     - Add character template, buffs, etc. to autoreload
     - Validate JSON on startup: validate all JSON data files on startup to ensure we don't run into unexpected issues
 *   - Combat feel:
-		- Running towards enemy, they start running towards you, then realize that you're in range and need to move back to center
+        - Running towards enemy, they start running towards you, then realize that you're in range and need to move back to center
             - If we have a target who's moving towards us, then stand still OR only move to the next tile if we think we can make it there before they get there?  This helps with cases where they may not be attacking us, just walking within our aggro range
         - damage feels too late: you get hit at the same time that you kill the enemy?
         - Animation go back to first idle pos in between hits?
         - Animation: Can we anticipate attacks and begin anim early?
-		- Initial attack (anim issues):
-		  	- We receive attack events before entity finishes walking locally
-			  	- Could we queue anim? No because its repeating....although what if we stop the walk anim?   This may look weird that our health changes BEFORE the animation runs
-				- We could force the attack anim (higher priority), which would look like attacking while floating/moving
+        - Initial attack (anim issues):
+            - We receive attack events before entity finishes walking locally
+                - Could we queue anim? No because its repeating....although what if we stop the walk anim?   This may look weird that our health changes BEFORE the animation runs
+                - We could force the attack anim (higher priority), which would look like attacking while floating/moving
     - Reloading npcs:
         - We *CANNOT* cache values from old npcs, or npcs in general, otherwise we keep a stale npcs
         - brain/components/etc. of character need to have an initializeNPC routine (find a suitable name!) that runs on startup and when we reload NPCs
     - Add all media assets (tilesheets, spritesheets, sounds, images), maybe even all assets entirely? to a global assets list for quick lookup
-	- Look into media storage for git for dist/  (eg. git-lfs); worth it?
+    - Look into media storage for git for dist/  (eg. git-lfs); worth it?
     - Colour NPC names based off of their level difference
     - Players need to start with some piece of armor (at least 1 AC) and already worn
 *   - canLoseItems for level: cannot lose items < level 5
@@ -579,8 +580,8 @@ WORKING ON (was previously working on)
 *   - BUG: cancelPath w/ no path (also happened for player when you're alive -- see screenshot in ~/Pictures) -- Should only be an issue for current player, but probably not an actual issue? (Just need to check if we don't currently have a path, and handle accordingly)
 *   - Setup server to automatically restart (new server instance) BUT leave the old one running for debugger? -- runserver can check processes to see how many node servers are running (likely paused) and start another one if possible; can current node process disconnect from bash script in some way to allow it to realize its disconnected? Otherwise do we need to use some communication medium, or even have the server touch a file when its either about to shutdown OR waiting for inspector; Could use JQ
 *   - BUG: 2 users login next to each other, 1st user won't see 2nd user login
-			- Is this due to server having 2nd character already in game, sends 1st player all movables (including 2nd player), this while the 2nd player is somewhere in the process of disconnecting and loads in
-			- Possibly due to handling events before we've initialized our client (callbacks for EVT_REMOVED_ENTITY, etc.)
+            - Is this due to server having 2nd character already in game, sends 1st player all movables (including 2nd player), this while the 2nd player is somewhere in the process of disconnecting and loads in
+            - Possibly due to handling events before we've initialized our client (callbacks for EVT_REMOVED_ENTITY, etc.)
 *   - BUG: One user levels up, other user hears levelUp ding
 *   - BUG: One user waiting in page, other user continuously refreshes to load back in, at one point the 1st user witnesses two copies of the same 2nd player (2 separate entities!)
 *   - BUG: Form autofill doesn't work?
@@ -594,63 +595,63 @@ WORKING ON (was previously working on)
         - web: same as above?
         - script to ssh into server + web and run the above deploy commands? watch for errors and halt if there's an issue
 *   - fuckingtaskrunner running out of memory....why?
-*	- BUG: Have a goblin chasing you while you /suicide while running, hit onEntityCancelledPath w/ no path on entity
-*	- FIXME: Netcode rework
-			-- CHECK: Dynamic Handler (outside of page): Is this a thing? If there's an evtid associated w/ it then queue for frame (not always necessary, eg. chat); player.registerHandler ==> wrap this in some way to add event if necessary
-			-- CHECK: requests -- Do these need to be queued?
-			-- CHECK: Zone out / respawn into a different page, where the page indices are the same where you were before; could this be an issue for handling events from stale pages? Stale pages could probably also send an area id
-			- Requests/DynamicHandlers need frameId
-			- BUG: Died (from buff deactivating -- 44dmg), handled EVT_DIED on character (removed self from area) then NETSERIALIZE for self (same area)
-			  	- Not sure if we handled respawn, but it didn't seem like it -- if we got respawn then maybe we respawned -> handled evt_died afterwards (stale page? bad cursor?) -> didn't receive EVT_ADD_ENTITY?
-				  1) Receive respawn (on same page)   (frameId: 5)
-				  2) Receive DeathSickness            (frameId: 6)
-				  3) Receive PageEvents:
-				  		- EVT_DAMAGED                 (frameId: 1)
-						- EVT_NETSERIALIZE            (frameId: 2)
-						- EVT_DIED                    (frameId: 3)
-						- EVT_REGENERATE              (frameId: 4)
-				  4) Receive FRAME_END
+*   - BUG: Have a goblin chasing you while you /suicide while running, hit onEntityCancelledPath w/ no path on entity
+*   - FIXME: Netcode rework
+            -- CHECK: Dynamic Handler (outside of page): Is this a thing? If there's an evtid associated w/ it then queue for frame (not always necessary, eg. chat); player.registerHandler ==> wrap this in some way to add event if necessary
+            -- CHECK: requests -- Do these need to be queued?
+            -- CHECK: Zone out / respawn into a different page, where the page indices are the same where you were before; could this be an issue for handling events from stale pages? Stale pages could probably also send an area id
+            - Requests/DynamicHandlers need frameId
+            - BUG: Died (from buff deactivating -- 44dmg), handled EVT_DIED on character (removed self from area) then NETSERIALIZE for self (same area)
+                - Not sure if we handled respawn, but it didn't seem like it -- if we got respawn then maybe we respawned -> handled evt_died afterwards (stale page? bad cursor?) -> didn't receive EVT_ADD_ENTITY?
+                  1) Receive respawn (on same page)   (frameId: 5)
+                  2) Receive DeathSickness            (frameId: 6)
+                  3) Receive PageEvents:
+                        - EVT_DAMAGED                 (frameId: 1)
+                        - EVT_NETSERIALIZE            (frameId: 2)
+                        - EVT_DIED                    (frameId: 3)
+                        - EVT_REGENERATE              (frameId: 4)
+                  4) Receive FRAME_END
 
-				- NOTE: I *think* we're handling everything in order, just that we haven't created the character yet. Check where we're creating character, maybe its worth it to createCHaracter sooner? (on respawn)
-				  	- 1) Need to halt processingQueue part way through (after respawn/zone/etc.) (probably done already in client/game?); buffer remaining events, and process leftover queue; NOTE: Need to purge remaining stale page events that happen AFTER respawn/zone/etc.
-			- TODO: (later) ALL messages need to be handled in order, and possibly together. This includes zone/respawn stuff (ie. handle stale pages, then zone/respawn, then current page events starting from cursor when zoned/respawned there)
-			  	1) Respawn: use frameEvt on client to purge remaining pageEvents
-				2) Respawn should include page events cursor; NOTE: if we're purging the same page events that we're loading again, we can splice out the events between frameEvt and cursorPoint
-					- Can we get away w/ marking all events after frameEvt invalid?
-					  	- NOTE: We probably want this for teleport/zone-out as well
-				3) Respawn is received BEFORE pageEvents, but processed in the same queue; so we probably receive pageEvents from new pages that we haven't loaded yet. Need to check for unexpected pages and store them somewhere else until we reach an event that makes them valid (eg. zone, respawn, teleport). In case we receive multiple events (eg. respawn -> immediately teleport from cleric bringing you back) that change our pages unexpectedly, its probably better to do this during processing time rather than before
-					- 1) Process some page shiz
-					  2) Process respawn
-					      - new pages: look through queued msg list (NOTE: these haven't been added to frameEvents because unexpected page); add events from this frameEvt point forwards
-						  - old pages: go through frameEvents and remove anything from page from this point forwards
-					  3) Process some more page shiz
-					  4) Process teleport
-					  	  - old pages: go through frameEvents, remove events from this point forwards
-					      - new pages: (NOTE: Possibly ones we had just removed from respawn) go through queued msg list (still held here) and add back necessary events from this point
-					  5) Process more events
+                - NOTE: I *think* we're handling everything in order, just that we haven't created the character yet. Check where we're creating character, maybe its worth it to createCHaracter sooner? (on respawn)
+                    - 1) Need to halt processingQueue part way through (after respawn/zone/etc.) (probably done already in client/game?); buffer remaining events, and process leftover queue; NOTE: Need to purge remaining stale page events that happen AFTER respawn/zone/etc.
+            - TODO: (later) ALL messages need to be handled in order, and possibly together. This includes zone/respawn stuff (ie. handle stale pages, then zone/respawn, then current page events starting from cursor when zoned/respawned there)
+                1) Respawn: use frameEvt on client to purge remaining pageEvents
+                2) Respawn should include page events cursor; NOTE: if we're purging the same page events that we're loading again, we can splice out the events between frameEvt and cursorPoint
+                    - Can we get away w/ marking all events after frameEvt invalid?
+                        - NOTE: We probably want this for teleport/zone-out as well
+                3) Respawn is received BEFORE pageEvents, but processed in the same queue; so we probably receive pageEvents from new pages that we haven't loaded yet. Need to check for unexpected pages and store them somewhere else until we reach an event that makes them valid (eg. zone, respawn, teleport). In case we receive multiple events (eg. respawn -> immediately teleport from cleric bringing you back) that change our pages unexpectedly, its probably better to do this during processing time rather than before
+                    - 1) Process some page shiz
+                      2) Process respawn
+                          - new pages: look through queued msg list (NOTE: these haven't been added to frameEvents because unexpected page); add events from this frameEvt point forwards
+                          - old pages: go through frameEvents and remove anything from page from this point forwards
+                      3) Process some more page shiz
+                      4) Process teleport
+                          - old pages: go through frameEvents, remove events from this point forwards
+                          - new pages: (NOTE: Possibly ones we had just removed from respawn) go through queued msg list (still held here) and add back necessary events from this point
+                      5) Process more events
 
-			-- DOCS for NetCode stuff
-	- FIXME: Get rid of finishedRespawning (see scripts/game.js); need to add entity to page within respawned, or move that to part of respawning
-	- FIXME: Manually deleting a file doesn't trigger fuckingtaskrunner to rebuild on next init
-	- FIXME: Look into server/player.js changedPages -- if we add the same stale page multiple times; at least assert this or something
-*	- Start smoke tests again & run continuously
-	  	- Cleanup bots old debug -> new debugger protocol
+            -- DOCS for NetCode stuff
+    - FIXME: Get rid of finishedRespawning (see scripts/game.js); need to add entity to page within respawned, or move that to part of respawning
+    - FIXME: Manually deleting a file doesn't trigger fuckingtaskrunner to rebuild on next init
+    - FIXME: Look into server/player.js changedPages -- if we add the same stale page multiple times; at least assert this or something
+*   - Start smoke tests again & run continuously
+        - Cleanup bots old debug -> new debugger protocol
         - allow admin/commands; run commands through smokes (buffs, suicide, give_item + wear/drop/unwear)
         - chat
         - have bots run around aimlessly and randomly kill anything in sight
         - Connect online? (for more realistic results/lag)
         - More abstracted test script for bots; to take options or JSON that describes behavior of bots (zoning, attacking, running around, etc.), movement areas, waypoints, exploration, etc.
-		- FIXME: Bot dying breaks responding to some orders?
+        - FIXME: Bot dying breaks responding to some orders?
 *   - Client error -- halt game
         - Fix always send error report (sometimes doesn't send)
         - Setup dumps to dump *everything*; including serverHandler stuff
         - "Gee ghad, Brain! We seem to have broken the game"
     - Unsupported browsers:
         - Edge: "Stop trying to make edge happen, its never going to happen!"
-		- fix DEBUGGER in bot: if we call DEBUGGER we force wait until inspector connects, and cannot kill the bot until we connect AND continue/close the inspector
-		  	- Manually kill test: also kill debugger?
+        - fix DEBUGGER in bot: if we call DEBUGGER we force wait until inspector connects, and cannot kill the bot until we connect AND continue/close the inspector
+            - Manually kill test: also kill debugger?
 *    - Client error -- halt game
-		- Synchronous blocking call?
+        - Synchronous blocking call?
 *   - BUG: Player 2 zones away from Player 1's PVS, NetSerializes some changes, zones back to Player 1's PVS (eg. health change, etc.)
         - What do we send? If its minimal we could just include it all in _character; perhaps that's what we're already doing?
     - We hold onto entities once they've left our PVS, even if they die/dc/zone out, so we need to find a way to be smart about removing these eventually. Probably worth it to just destroy them though (same as what we do when we witness them dying or leaving the area)
@@ -663,14 +664,14 @@ WORKING ON (was previously working on)
 *    - Entities roaming around
 *    - BUG: Player hits max level and levels up again -- should stop gaining XP at max level
 *    - God Mode
-*	 - FXMgr: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample/bank? limit to X number of sounds on an entity? etc.)
-	 - FIXME: renderer movable highlight: creates new canvas/ctx every time; we could easily cache multiple of these (most recently used) and simply re-use the same cached images
-	 - BUG: Pathing error:
-	   		Path: [West 1, ...] first recalibrates;    Local recalibration:  [West 2, North, ...]    so we recalibrate horizontally to the 
-			Local state: {74, 69}   (1187, 1104)
-			Path state:  {74, 68}   (1185, 1088)
+*    - FXMgr: Conditions (new sound stops previous instance of sample? limit to X number of instances of sample/bank? limit to X number of sounds on an entity? etc.)
+     - FIXME: renderer movable highlight: creates new canvas/ctx every time; we could easily cache multiple of these (most recently used) and simply re-use the same cached images
+     - BUG: Pathing error:
+            Path: [West 1, ...] first recalibrates;    Local recalibration:  [West 2, North, ...]    so we recalibrate horizontally to the 
+            Local state: {74, 69}   (1187, 1104)
+            Path state:  {74, 68}   (1185, 1088)
 
-			Want recalibration:   3 west, 16 north, 1 east -> 1 west == 0
+            Want recalibration:   3 west, 16 north, 1 east -> 1 west == 0
      - FIXME: When zoning out I think you update an area/page which passes an event to another area/page. Its possible to first update area B, then area A where player zones from area A -> B, now B appends EVT_ADDED_ENTITY to eventsBuffer w/ current frameId, and at the end of the frame we reset global frameId to 0 but still have the old evt w/ old frameId. When clients receive this evt in the next frame they'll think it happened later than it did
      - FIXME: Need to send frameId w/ NetSerialize in case the page has no other events, then we have nothing to offset from for netSerialize
      - CHECK: Does it matter that our netserializes are offset from the page rather than from the area/server? Can we reorder these on the client and get bad ordering?
@@ -683,56 +684,56 @@ WORKING ON (was previously working on)
      - Add cursor icons: (eg. https://opengameart.org/content/pointers-part-5)
      - Background (w/ moving clouds): (eg. https://bevouliin.com/peaceful-forest-game-background/)
      - New icon sprites: (eg. https://opengameart.org/content/recolor-all-the-items , https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg , https://opengameart.org/content/painterly-spell-icons-part-1 , https://ravenmore.itch.io/ )
-	 - Game font: https://opengameart.org/content/pixel-fonts-by-pix3m
+     - Game font: https://opengameart.org/content/pixel-fonts-by-pix3m
 *    - Spritesheet tool: pass tilesheet through imagemagick filtering, resizing; merge tilesheets into 1 tilesheet; Go through maps (or some metadata for maps) to find if any reference this output tilesheet, and update them if necessary (eg. reordering) -- should run ps aux to check if tiled is open and disallow continuing if its open; Autodetect sprite size & rescale % to match existing sprites
         - Probably better just to redo the webtool already:
-		    - Tilesheet (autogenerated - layers)
-				- Folder hierarchy: sort selected images to top of filelist
-				- "extendedSpriteGroup" and "boundarySprite" no longer mean what they did before, rename these
-				- For now disable tilesize changing in generated sheets (must be 16x16)
-				- Perms
-					- sid (chmod g+s) on parent folder to force setting group of folder on files
-					- set mode on writeFile in node 0o777
+            - Tilesheet (autogenerated - layers)
+                - Folder hierarchy: sort selected images to top of filelist
+                - "extendedSpriteGroup" and "boundarySprite" no longer mean what they did before, rename these
+                - For now disable tilesize changing in generated sheets (must be 16x16)
+                - Perms
+                    - sid (chmod g+s) on parent folder to force setting group of folder on files
+                    - set mode on writeFile in node 0o777
 
-				- Scaling spriteGroups: update collisions/etc.  (do this in modTilesheets so we can see updates w/out having to save/rebuild)
-				- Allow the same dependency to show up twice
-				  	- sprite/spriteGroup finds its dep by imageSrc (can't do this) -- add procIdx
-					- Allow easily adding/removing spriteGroup as opposed to dependency
-					- Dep {
-						{
-							// Image Based Dependency
-							imageSrc,
-							processing: [
-								{ "proc 1", previewSrc },
-								{ "proc 2", previewSrc },
-								{ "proc 3", previewSrc },
-								...
-							]
-						}
-					}
-					- spriteGroup {
-						// Image Based Sprite Group
-						imageSrc,
-						procIdx,
-						dstX, dstY,          // real coordinates
-						width, height
-					  }
-					- fs.php on build new temp image: rm previous proc (if exists) as opposed to /resources/temp/imagePrefix*
-				- Sprite group controls: container for like-objects, drop all similar objects here and then click sort for that group to auto place them together
-					- This is probably fine as a one time thing, as opposed to saving these groups for later
-				- Perf: Only redraw when necessary
-				- Perf: Blitting: Redraw virtual canvas on moving/processing spriteGroup, just erase moved spriteGroups and redraw it
-				- Perf: We can have 1 interactable for image dep (not necessary for each sprite)
-				- Scaling generated sheet's tilesize should update dst/tilesize for extracted spriteGroups/sprites (but not image spriteGroups!)
-				- Store hash of image dep, see if its changed  (imageSrcHash), then dirty resource (look for imageSrcHash in resourceBuilder.js)
-				- Build output preview img to a better place than temp?
-				- Extraction sprites/spriteGroups in sheet.json are stored twice, once from dep and once on generated sheet. We do this so resouceBuilder can determine if there's new assets, but instead we could build up the dependencies list (as we already do), hash it, and then compare the hash to a stored dep hash on the generated res
-				- Can we get rid of resource.sprites in favour of resource.spriteGroups[].spriteIsland[].sprite?  (possibly even store oldSprites in here)
-				- We can probably get rid of loadedResource
-				- Scaling spriteGroups up could cause collision, see if we can move the spriteGroup rather than nuke it
-				- FIXME: Extraction groups not working
-					 - Fix in saving sprite group
-					 - Fix ResourceBuilder: copy spriteGroup correctly
+                - Scaling spriteGroups: update collisions/etc.  (do this in modTilesheets so we can see updates w/out having to save/rebuild)
+                - Allow the same dependency to show up twice
+                    - sprite/spriteGroup finds its dep by imageSrc (can't do this) -- add procIdx
+                    - Allow easily adding/removing spriteGroup as opposed to dependency
+                    - Dep {
+                        {
+                            // Image Based Dependency
+                            imageSrc,
+                            processing: [
+                                { "proc 1", previewSrc },
+                                { "proc 2", previewSrc },
+                                { "proc 3", previewSrc },
+                                ...
+                            ]
+                        }
+                    }
+                    - spriteGroup {
+                        // Image Based Sprite Group
+                        imageSrc,
+                        procIdx,
+                        dstX, dstY,          // real coordinates
+                        width, height
+                      }
+                    - fs.php on build new temp image: rm previous proc (if exists) as opposed to /resources/temp/imagePrefix*
+                - Sprite group controls: container for like-objects, drop all similar objects here and then click sort for that group to auto place them together
+                    - This is probably fine as a one time thing, as opposed to saving these groups for later
+                - Perf: Only redraw when necessary
+                - Perf: Blitting: Redraw virtual canvas on moving/processing spriteGroup, just erase moved spriteGroups and redraw it
+                - Perf: We can have 1 interactable for image dep (not necessary for each sprite)
+                - Scaling generated sheet's tilesize should update dst/tilesize for extracted spriteGroups/sprites (but not image spriteGroups!)
+                - Store hash of image dep, see if its changed  (imageSrcHash), then dirty resource (look for imageSrcHash in resourceBuilder.js)
+                - Build output preview img to a better place than temp?
+                - Extraction sprites/spriteGroups in sheet.json are stored twice, once from dep and once on generated sheet. We do this so resouceBuilder can determine if there's new assets, but instead we could build up the dependencies list (as we already do), hash it, and then compare the hash to a stored dep hash on the generated res
+                - Can we get rid of resource.sprites in favour of resource.spriteGroups[].spriteIsland[].sprite?  (possibly even store oldSprites in here)
+                - We can probably get rid of loadedResource
+                - Scaling spriteGroups up could cause collision, see if we can move the spriteGroup rather than nuke it
+                - FIXME: Extraction groups not working
+                     - Fix in saving sprite group
+                     - Fix ResourceBuilder: copy spriteGroup correctly
             - Spritesheet editor
                 - Grid view, manipulate grid size
                 - Modify options
@@ -746,6 +747,66 @@ WORKING ON (was previously working on)
                 - Spritesheet editor
                     - Options to manipulate sprite settings, and quickly run export-model/bakespritesheet for preview of changes  (eg. camera angle, imagemagick settings, textures, etc.) -- NOTE: We're likely going 3D in the near future, so keep this in consideration for what to spend time on
             - Map editor (not yet, but ready for this in the near future -- also consider the 3D overhaul + pathfinding (diagonal movement) changes soon w/ map editor)
+                1) Place sprites (group, eg. tree)
+                    - Should have an icon/image list of assets
+                2) Paint biome: water, grass, ice, etc.
+                3) Blend sprites
+                4) Automatic art placement (foliage/decos/etc.)
+                    - Perhaps prefabs? eg. tree A could have 10x different prefabs of leaves surrounding it; water near edge has 6x different prefabs w/ shells/etc. around it
+                5) Place spawns
+
+
+                - Terrain editor (part of map editor, but global and allows all spritesheets)
+                    - Define which sprites are terrain
+                    - Define groups of sprites (eg. tree, cliff, multiple sprites that act as 1 in-game sprite)
+                    - Terrain height: going up left -> right? going down top -> bottom? etc.
+                    - Biome properties (checkbox of various properties: water, dessert, forest)
+                    - Density properties (higher level for leaves, etc.)
+                    - Sprites that you're likely to see near other sprites
+                        - The base of a tree spritegroup attracts leave sprites
+                    - Blends
+                        - Put sprites next to each other to describe what's allowed
+                        - Describe sprites which are interchangable (this could include a group of sprites that are interchangeable w/ another group of sprites) eg. a long cliff could have 6 different vertical strips of sprites that are all similar, but some parts are interchangable w/ another
+                - Paint area properties
+                    NOTE: There should be a default for the level, and then we simply paint offsets to that default
+                    - Biomes/properties
+                    - Water
+                    - Density of "stuff"  (eg. forest would be trees/plants, etc.)
+                    - Height
+                        - Maybe instead of height we can draw where a cliff is
+                    - Spawns
+                    - Level of enemies
+                - NOTE: If blending, heights, etc. don't work for biome then we can use what we've got (eg. ignore height/blend) and highlight red area in editor there
+                - Right click sprite: d3 style graph/nodes of potential prefabs for that sprite; above that a list of preset styles (eg. right clicking a tree? a bunch of different tree sprites)
+                - Draw areas for particular zones (like paint, but 0 or 1 / no in-between)
+                    - town (music starts playing, "town discovered" reward)
+                    - dynamic quests
+                    - event trigger (boss)
+                    - fxmgr (snow, etc.)
+                - Spawns automatically determined at runtime based off area properties
+                    - Should also consider special camps (like Albion online mob camps, bosses, etc.)
+                - Draw walls (walls connected, randomness, etc.)
+                - Dungeons: draw tunnels through walls
+                - Harvesting areas
+                - Smaller tiles for next-gen movement updates
+                - Auto-nav creation
+                    - Consider statically dynamic areas too (doors that will open/close)
+                    - Convex regions, way-points
+                - Rules for art
+                    - Trees are likely to have leaves around it
+                - Manual placement
+                    - Select tree as a whole rather than individual tiles
+                - Allow automated updating map afterwards
+                    - Baking the level
+                        - New avatars/spawn rules for area
+                        - New prefabs
+                        - Rules for art changed (less leaves under tree; new trees for this biome, etc.)
+                - Should be easy enough + isolated so that other people can help out with this
+                - Updating sheets/etc. should trigger updates in map editor (if open, or starting since last time), eg. resizing/moving sprites in tilesheets
+                - Keep tile sizes in mind: game tiles are 4x4 (for movement) and may change again. But we don't want to needlessly specify a 16x16 tile in 4*4=16 sprites
+                - Infinite world; show world edges
+                - Updating sheets (eg. resize sprites, move sprites): update map automatically (and quickly), including if mapper is already open
+                - Can probably optimize maps: ground tiles (maps, etc.) and some decos can probably be determined on load for player. Map editor can simply export "grass tiles here"
             - Data sheet editing
                 - NPC, Media, FX, Buffs, Rules, Items
             - Icons/Sounds: preview + data editing
@@ -777,152 +838,470 @@ WORKING ON (was previously working on)
         - https://github.com/thlorenz/v8-perf
         - v8 args that allow you to view optimizations, bytecode, GC, etc.
         - node args
+    - Client error -- halt game
+    - BUG: Player 2 zones away from Player 1's PVS, NetSerializes some changes, zones back to Player 1's PVS (eg. health change, etc.)
+        - What do we send? If its minimal we could just include it all in _character; perhaps that's what we're already doing?
+    - BUG: Player 2 zones out of Player 1's PVS, disconnects, logs back in and zones back to Player 1's PVS:  player 1 has retained player 2 from earlier, and now has 2 copies of player 2
+        - We could send all zone-out, d/c, death, etc. across the map
+        - We could send/store playerID and check if we already have that playerID, then if so remove the previous player (NOTE: This should ONLY happen if the stale copy is out of our PVS) and reload the new copy
+    - Use machine learning colourize tool to assist w/ spritesheet colouring
 
 
-	- Browser Debugging Snippets
-			var scaryTiles = [];
-			for (var x=13; x<=17; ++x) {
-				for (var y=27; y<=30; ++y) {
-					if (The.area.isTileOpen({x,y})) { scaryTiles.push({ x, y }); }
-				}
-			}
-			var times = 200;
-			var doTheDance = () => {
-				var randTile = scaryTiles[Math.floor(Math.random() * scaryTiles.length)];
-				The.user.clickedTile(new Tile(randTile.x, randTile.y));
-				if (--times > 0) setTimeout(doTheDance, 120);
-	 - CHECK: We ALWAYS flush ALL events from everywhere in the same frame (no dynamic handlers after flush before end of frame)
-	 - CHECK: Pathfinding fix works and fixes all cases; also look into if there's a cleaner way or if going through the other codepath will 100% work
-	 - BUG: Players have .isPlayer === false for each other
-	 - If there's a syntax error w/ bot2.js (probably test and server stuff too), no syntax warning is given and shit just won't work
-	 - FIXME: Issue w/ netserializing some stuff on entity, then they zone out of our PVS (locally? remotely?), we've removed them already and then receive page event w/ netserialize on entity
-	 - FIXME: Bot teleports w/ you -- stuck in old position or something? "Bad path -- want to go to..."
-	 - Input to test to indicate increase/decrease error/debug level (pop into debug for minor errors)
-	 - FIXME: Recalibration issue -- player 2 teleports to player 1 then walks; it seems like player 1 may have an incorrect position for player 2 (possibly a position that's outside of their PVS)
-	 - FIXME: Character walks out of PVS, but we don't receive an event of them leaving -- path doesn't continue on to next page (perhaps no path progress?), no removal event from servef (--times > 0) setTimeout(doTheDance, 120);
-			}
-
-	- BUG? What if client / local player zones then receives a delayed packet that we had a server path to remain in the page? (We should only process zoning stuff of adding/removing pages and movables when we receive the zone event from server; also will we teleport/walk back to position?) Something to look into/test later 
-	- On client error: repro immediate environment in node? Could auto spawn a script that has this sandbox from dump, and the code the user was about to run
-			const vm = require('vm');
-			const sandbox = { x: 2 };
-			vm.createContext(sandbox); // Contextify the sandbox.
-
-			const code = 'x += 40; var y = 17;';
-			// `x` and `y` are global variables in the sandboxed environment.
-			// Initially, x has the value 2 because that is the value of sandbox.x.
-			vm.runInContext(code, sandbox);
-
-			console.log(sandbox.x); // 42
-			console.log(sandbox.y); // 17
 
 
-		[requires]
-
-		[Comment] 
-
-		[class]
-
-			[members]
-
-			[comment-splitter]
-
-			[methods group]
-
-	- Go through every file and clean with the following things in mind:
-	  	- Error handling / throwing (Err)
-		  	Acorn AST parse
-				AST approach: could prepro build checks before every statement that could possibly throw an exception:
-					  obj.f(); // add if (!obj || !_.IsObject(obj) || !obj.f || !_.IsFunction(obj.f)) DEBUG();
-					  This would help with bots, client without console open, debug mode in playtests, etc.
-		- Proper function/arrow function
-		- Commenting on class, function, blocks
-		- const/let
-		- Logging as much as possible (error/warning/info/debug)
-		- Class/Object toString
-		- Functional coding
-		  	- Array: every, some, forEach, map, filter, reduce, reduceRight,
-			  		from/of/fill/copyWithin, for..of, find/includes, keys/entries, 
-					destructuring
-			- Map/Set, WeakMap/WeakSet
-			- in, default param, rest, spread
-			- Symbol: toPrimitive, iterator, hasInstance
-			- Generators / yield
-		- Promises
-		  	- PromisifyAll, resolve, then/catch/finally
-			- Collections: .each, .map, etc.
-		- lodash stuff
-		- Performance
-		  	- for..in, copying objects: slow
-			- hidden classes: make sure objects use the same hidden class
-			  	- don't add dynamic properties
-				- use the constructor only for objects
-			- Arrays:
-			  	- mixed types
-				- holes in arrays
-				- try to use arrays over objects
-				- use contiguous keys (don't do  x[n] = 1; where n > x.length)
-			- call functions with the same expected types
-			- Strings are immutable
-			- Only use `new Function()` if absolutely necessary
-			- GC
-			  	- Log makes an alloc for every string (message, prefix + message); can we 
-				- We could have preprocessor strip out all hardcoded strings in Logs into a static string pool, then log simply needs to console.log(strings[54])
-				- We could also offload console.log to WebWorker, then just send message to webworker to log X (with extra params)
-				- To avoid making copies of those params each time we could have a static pool of uint8Arrays, then rotate through those, set args -> uint8Array[0...x], then send uint8Array to WebWorker (need to check that this doesn't perform a copy). Then when we know its safe we can set that array as free for use. String preprocessor can recognize that some strings will expect extra args and know how to handle the args for that string idx
-			- SIMD operations
-			- Compute shaders: offload operations to WebGL to compute tasks
-			- WebWorkers + Shared Array Buffers + Atomic access
 
 
-		Linted/Cleaned files list
-		-------------------------
 
-		js/main.js                                                ✓
-		js/server.js                                              ✓
-		js/client/game.js                                         ✓
-		js/area.js                                                ✓
-		js/client/area.js                                         ✓
-		js/server/area.js                                         ✓
-		js/pathfinding.js                                         ✓
-		js/page.js                                                ✓
-		js/server/page.js                                         ✓
-		js/client/renderer.js                                     ✓
-		js/scripts/character.ai.instinct.combat.js                ✓
-		js/scripts/game.js                                        ✓
-		js/scripts/character.js                                   ✓
-		js/server/player.js                                       ✓
-		js/movable.js                                             ✓
-		js/client/ui.js                                           ✓
-		js/scripts/character.ai.js                                ✓
-		js/scripts/character.ai.combat.strategy.basic_melee.js    ✓
-		js/scripts/character.ai.instinct.range.js                 ✓
-		js/scripts/character.ai.instinct.movement.js              ✓
-		js/scripts/character.ai.combat.strategy.js                ✓
-		js/scripts/character.ai.combat.sight.js                   ✓
-		js/hookable.js                                            ✓
-		js/client/serverHandler.js                                ✓
-		js/script.js                                              ✓
-		js/utilities.js          								  ✓
-		js/scripts/character.ai.instinct.bored.js                 ✓
-		js/scripts/game.chat.js    								  ✓
-		js/scriptmgr.js 									      ✓
-		js/scripts/character.ai.combat.melee.js                   ✓
-		js/serializable.js                                        ✓
-		js/scripts/interactables.lookat.js                        ✓
-        js/spritesheet.js										  ✓
+    - Browser Debugging Snippets
+            var scaryTiles = [];
+            for (var x=13; x<=17; ++x) {
+                for (var y=27; y<=30; ++y) {
+                    if (The.area.isTileOpen({x,y})) { scaryTiles.push({ x, y }); }
+                }
+            }
+            var times = 200;
+            var doTheDance = () => {
+                var randTile = scaryTiles[Math.floor(Math.random() * scaryTiles.length)];
+                The.user.clickedTile(new Tile(randTile.x, randTile.y));
+                if (--times > 0) setTimeout(doTheDance, 120);
+     - CHECK: We ALWAYS flush ALL events from everywhere in the same frame (no dynamic handlers after flush before end of frame)
+     - CHECK: Pathfinding fix works and fixes all cases; also look into if there's a cleaner way or if going through the other codepath will 100% work
+     - BUG: Players have .isPlayer === false for each other
+     - If there's a syntax error w/ bot2.js (probably test and server stuff too), no syntax warning is given and shit just won't work
+     - FIXME: Issue w/ netserializing some stuff on entity, then they zone out of our PVS (locally? remotely?), we've removed them already and then receive page event w/ netserialize on entity
+     - FIXME: Bot teleports w/ you -- stuck in old position or something? "Bad path -- want to go to..."
+     - Input to test to indicate increase/decrease error/debug level (pop into debug for minor errors)
+     - FIXME: Recalibration issue -- player 2 teleports to player 1 then walks; it seems like player 1 may have an incorrect position for player 2 (possibly a position that's outside of their PVS)
+     - FIXME: Character walks out of PVS, but we don't receive an event of them leaving -- path doesn't continue on to next page (perhaps no path progress?), no removal event from servef (--times > 0) setTimeout(doTheDance, 120);
+            }
+
+    - BUG? What if client / local player zones then receives a delayed packet that we had a server path to remain in the page? (We should only process zoning stuff of adding/removing pages and movables when we receive the zone event from server; also will we teleport/walk back to position?) Something to look into/test later 
+    - On client error: repro immediate environment in node? Could auto spawn a script that has this sandbox from dump, and the code the user was about to run
+            const vm = require('vm');
+            const sandbox = { x: 2 };
+            vm.createContext(sandbox); // Contextify the sandbox.
+
+            const code = 'x += 40; var y = 17;';
+            // `x` and `y` are global variables in the sandboxed environment.
+            // Initially, x has the value 2 because that is the value of sandbox.x.
+            vm.runInContext(code, sandbox);
+
+            console.log(sandbox.x); // 42
+            console.log(sandbox.y); // 17
+
+
+
+            
+            
+
+    ====== PATHFINDING SYSTEM
+        - PRIORITY
+            - FIXME
+                - Cleanup/Submit
+                - Smoke test many many paths (server; on startup w/ "smoke" args? -- smoke can be apart of startup routine for smoke testing basic funcs)
+                - Fix delayed path coming in after dying/respawning (player + npc?)
+
+
+            - Short paths should be immediate (especially due to delay and recalibrate from moved position -> beginning of path, this would be far slower than just immediate for short path)
+            - Optimize end point recalibration (click to move somewhere: can use a range about point since we unlikely need exact point; maybe even the whole tile?) -- the larger the distance the higher the endpoint range?
+                - WARNING: We can only do this in some cases; eg. can't do this when we recalibrate from position to delayed path w/ stale beginning
+            - Re-path to delayed path: we could re-path to a point along the path that's really far (eg. first walk a one long jump in direction), would using the path as a hint help?
+            - Initial/End(?) tile weights  (distance to edge of tile) only for initial/last tiles??
+
+
+        - OPTIMIZATIONS
+
+            - Dynamic collisions and constant updating: keep track of some optimizations for pathfinding (convex regions, HPA*, JPS, etc.) and update as changes come in, OR at runtime as a region becomes used more frequently: eg. user spam clicking, need to keep pathing from position to new position but we create a convex region (room? circle? nav?) and can check if two points are in the same convex area then simply straight-line path. Can also webworker convex region management / creation (mark as stale when collisions come up and they need refinement)
+            - Cache and re-use high level path, then only need to refine lower level path. Only need to update update nearby part of path, and can sequentially refine the remainder of the path later
+            - AI chasing: pathfind from previous destination to new destination, then refine in subsequent step (low prior webworker). THe farther away they are the lower the priority. Can use current path as hint for new path
+            - Minimize path/walk object size
+                - Store path as: [ startPt, (dist, nextTile/nextPt), (dist, direction/endTileFromStraightLine/endPtFromStraightLine), (dist, direction/endTileFromStraightLine/endPtFromStraightLine) ]
+            - A* by default,  but  as we pathfind over a page frequently, start to load in HPA* or JPS stuff (stuff that takes more memory and shouldn't be loaded in memory constantly); might need to update or rebuild HPA* or JPS or other augmentations because of dynamic collisions. Or even keep a list of dynamic collisions, things that are different from the static for that page, then apply those changes when you load in HPA*. This helps speed up pages that are in use
+            - Could store all movement operations in 1 single gigantic array that's all processed in a webworker, all at once (cache coherency/etc.)
+                - Includes: { position/leftover/delta, path }
+            - Peer-to-peer: users could send "I am here, moving here" messages to both server AND other players in nearby area
+            - User has full map (load pages from indexdb)
+                - Server feeds changes from default (eg. broken walls, open doors, etc.)
+            - Server could blindly trust user paths, and check at runtime for collision; or webworker for validating path
+            - neighbours[neighbourHash] can probably optimize by using an array of array of bitmasks?  largeBlockRegions[smallBlockRegions[bitmasks]]  masks whether or not neighbour exists, then we can neighbours[neighbourHash] to fetch actual neighbour; could even do a non-guaranteed first-pass check for faster results
+            - pathfinding.movables needs garbage collection
+            - multiple endpoints
+            - A* iteration: checking neighbours on tile, we can fetch collision mask (or convex regions) and queue multiple neighbours that we know have an open straight path
+            - later: HPA*/Quadtree/JPS/Convex regions
+                - "Hierarchical Dynamic Pathfinding for Large Voxel Worlds" GDC18
+                - Quadtree https://www.youtube.com/watch?v=sn6P7xCTvvc
+                - Can add waypoints and portals as highest level graph (for long paths) if necessary
+                - Can sequentially calculate path across multiple frames; pass unrefined path to clients if necessary, clients can either determine OR shouldn't have to render character yet (out of view)
+                - Can batch spatially nearby paths together to be calculated at the same time: fetch same collisions/etc., then calculate these paths, then move on to next path batch
+                - Can use JPS in pages where it makes more sense (eg. maze-like dungeons, tight corridors, etc.)
+            - Waypoint graph: distances to adjacent nodes; helps us first pass decide which way to go
+            - Allow refinement + smoothing
+            - Tiled path (eg. interactable with tiles as goto points)
+            - Nuke (or hide) unused old tile search routines   (comment out?)
+            - More accurate diagonal cost: sqrt(2) ~ 1.4; 1.4 * 5 == 7;  use cardinal direction as distance 5 and diagonal direction as distance 7
+            - Server replacing path for movable: client cancelPath (find path to cancel point) -> receive follow-up path. Can we predict incoming path to avoid unnecessary cancelPath handling?
+            - Server trust user path; clients check for collision at runtime (ran into a wall? cancelPath OR look for another route until we receive update from server). This also helps for dynamic collisions
+            - Server use client path as a hint for its own path?  This may be necessary if we want to mimic user path (eg. avoiding traps, etc.)
+            - Webworker "go to random tile" -- also fix this since you could pick an open tile that's impossible to walk to or REALLY far
+            - Optimize finding cheapestWeightClass (frontOfObject and get rid of decimals eg. turnWeight? More clever method since constantly updating array sucks?)
+            - Optimize first pass recalibration attempt (without worker)
+            - Optimize communication w/ worker (eg. path.walks[].walked  unnecessary. In fact we could send something to parse and build path on receive:
+                "13132_232_116"
+                1 success
+                3 walks
+                walk 0:
+                  direction 1
+                  distance 32
+                walk 1:
+                  direction 2
+                  distance 32
+                walk 2:
+                  direction 1
+                  distance 16
+            - Optimize target "safe" area where we don't need to update path until target moves outside safe area. That safe area may need to narrow down as we get closer to the target
+
+
+            PathPlanner.refinePath(path, options)
+            - Path can come in as any of these states:
+                { startTile/Pt, endTile/Pt } -- build actual path
+                { start/end, partial path } -- HPA* path that needs to be sequentially fleshed out, OR refined at beginning stages
+                { start/end, tiled path } -- path finished but needs refining (down to points) or smoothing
+                { start/end, stale path, new end point } -- recycle same path when we know the destination is close to the previous destination
+            - Options describe what sort of refinement we're looking for
+                - Sequentially building path (HPA*)
+                - Tiles -> Points
+                - Path smoothing
+                - New end point / start point  (user spam clicking, AI chasing)
+            - Webworker
+                - RefinePath creates job and either has callback or frame update checks if job has finished then sets path
+                - Might need to set current path as stale when we pend a new one, or otherwise nuke current path
+                - Use 1 (or more) master workers that are constantly running, and we send messages with job requests (path refinements), and receive messages back
+                - On startup create master webworker and send area collision info; on collision changes send to webworker
+                - Returned path either needs callback OR identifier for movableID to set path to
+            - Incomplete (in progress) paths: full path is complete as lower res (higher level graph), but first xx% of path is higher res (lower level graph) so we can immediately begin executing path while refining remainder of path sequentially)
+            - Server delay paths?  If we don't have the path fleshed out yet (start/end point, but not created yet) simply accumulate path delta and spend when we have the path
+            - Beef up smokes: Constantly clicking around tiles that we want + constantly spawning/despawning enemies/items/interactables (or teleporting) so that preferences change and bots keep moving all over the place
+              Need a map specifically for this type of soak
+                XXXX....
+                XXXX....
+                XXXX....
+                XXXX*...
+                .*......
+                ........
+                ........
+                ........
+
+            - Volume on entities?
+                - Need to check certain points on collision vol depending on direction: moving NORTHEAST? Check NW/NE/SE points on collision vol
+                - Only need to check points for collision when those points hit a new tile
+            - Optimizations:
+                - Webworker refinement/validation
+                - Server sends "At point A moving to point B", where B is somewhere along the path?
+                - Server teleporting positions
+                - Handling constantly updating paths (user spam clicking, AI chasing, path destination near previous destination)
+                - An area destination (eg. ranged attacking): first pass check if tile in circle radius about center, 2nd pass check hashtable of destinations
+                - Webworker for initial path (can we delay creation of path by a few frames to help perf?)
+                - HPA* / Quadtree / JPS / Dynamic convex regions
+                - IDA* implementation rather than A*
+                - Path smoothing: https://www.gamasutra.com/view/feature/131505/toward_more_realistic_pathfinding.php
+                - sqrt(2) ~ 1.4; 1.4 * 5 == 7;  use cardinal direction as distance 5 and diagonal direction as distance 7
+                - Speed up or slow down entities as needed to keep close to server (within a range about the actual speed, so it shouldn't be noticeable)
+            - Handle edge cases
+                - Client creating paths that goes into pages that we don't have loaded (teleport? ignore?)  IF we really needed we could have the server send point A / point B and distance between the two, as well as wen the path started so that we know where the movable is and when he should reach point B (keep accumulating delta until we can teleport to point B; on new paths received from server just keep list of points/distances)
+                - Prevent diagonal movement from travelling into the neighbour tile as opposed to the destinatino tile
+                    XXXX....
+                    XXXX....
+                    XXXX....
+                    XXXX*...
+                    .*......
+                    ........
+                    ........
+                    ........
+                - Prevent impossible diagonal movement
+
+                    XXXX...*
+                    XXXX....
+                    XXXX....
+                    XXXX....
+                    ....XXXX
+                    ....XXXX
+                    ....XXXX
+                    *...XXXX
+
+
+
+    ====== COMBAT + EVENTS
+        - Event object which subscribes to area for ticks, and on startup hooks to events (AnimEvents, nearby Page events, etc.)
+        "TickEnt", "LogicEnt", "EvtNode", "LogicNode", "EvtObj", "TickObj"
+        - Registers subobjects to systems: renderable object to render system, physics object to physics system. Then those systems can do a wide cache-friendly sweep of those objects to process all at once. Physics collisions maybe add collided objects to array, then after sweep go through all collided objects and find their parent to trigger/queue collision event. Can probably webworker physics/renderable system ticks, or split long-term (worker) vs. short-term (main) work. Object has array for userdata so that all objects are the same size and can fit in the same place w/out chaining to high level object. Bucket similar higher level types together for better cacheline grabbing
+        - Skill system responsible for rule logic: can I use this skill? Is another skill blocking? Do I have enough mana? etc.
+        - Area has its own logic system running in background to spawn area events
+        - Skills
+            - Melee swing: renderable object (effect), speed manipulated by attack speed, graphics + physics changes hooked to animevent (draw sword -> begin swing (collision check) -> end swing (end collision)), change properties on Character (Character.isAttacking; Character.canMove ? isAttacking -> false; Character.canAttack ? isAttacking -> false)
+            - Grappling hook: renderable object (grapple shot) + attach to character so you can move while its firing, collides -> pulling, character properties (Character.beingPulled; Character.canMove false, Character.canAttack false), moving results in sliding / skidding and turning the grapple pull
+            - 
+        - Scripted events
+            - Town under attack: area FSM/logic leads to random event occuring (event object), send behavior instructions to a group (some individuals of that group may be dead, or busy with something else at the moment), use various hooks (collisions, group dying, chased off, path blocked, etc.) to determine next steps
+            - Arena CTF: NPC dialog leads to beginning arena, swap AI on NPCs, use a gamerules FSM/logic
+            - Dungeon crawl for treasure: similar to arena
+        - Object interaction
+            - Electrifying water: interactable object in world has property water; electrical thing collides with object; object combination logic: water + electricity; other entities collide with object -> (flesh | metal armour) * (water | electricity) --> rust armour, electrify armour, shock flesh
+        - AI
+            - Boss with minions: Boss AI wakes and spawns script; script signals various control groups, and waits for triggers (eg. boss getting to 50% hp) to proceed to next stage
+        - Netcode
+            - Similar to buffs for client/server code?
+            - Simulate client side before receiving and linking from server: eg. clicking to attack shouldn't wait for server response; assume success -> create evt -> on server response/creation link with created evt?
+            - Restore? -- gamerules restore when server restarts; client effects restore when changing levels; 
+
+
+
+         
+
+        STEPS FOR SYSTEM
+         2) Setup subdata w/ renderData & physicsData
+            - pseudoActivate/pseudoDeactivate on client side while waiting for server approval/confirmation/handling
+            - Modify combat system for user + npcs to use melee swings
+            - TEST: Melee swing
+                - FIX ENEMY CHASING / POSITION BEFORE ATTACKING
+                    - Chase closer than max range?
+                    - Link range/rangeWidth (currently hardcoded in places)
+                    - Rework inRangeOf to work for non-tiles
+                    - Fix minor minute movements causing npc to chase even while in range?? AND resulting in weird movements in pathfind (assert opposing directions in walk)
+                        - Need to precheck if already in range before pathfinding
+                - Clean up player AI / combat; would rather have no combat, but ai.combat.melee; maybe separate combat logic to separate (singleton) system, and get rid of player AI/instincts/combat entirely
+                - Skill system: cooldown, state (can't attack while attacking); interrupt melee on move? (need to send to server too, but what if server already attacked? maybe free hit anyways)
+                    - Skill system state
+                    - Skill cooldowns
+                    - Interrupt active skills (may or may not be allowed)
+                    - Server checking (dead? busy? etc.)
+                    - Cancel on client if request denied by server
+                    - FSM logic?
+                - AI attack using this logic?
+                    - Link to evtNode finishing attack before resuming FSM logic
+                    - Chase to distance of melee
+                - Test on other clients
+                - Attack/impulse from player -> npc
+                - UI skills; show cooldown; click to activate
+                - Melee: stop moving, sync stopped position on server/users, animate in correct direction (walking right, then stop and attack north)
+                - Get rid of current melee / autoattack system
+                - Clean/submit
+                - Abstract to basic combat: bow/arrow attack (w/out aiming), staff/magic, spear, hand-to-hand, etc.
+         3) More complex skills
+            TEST: Grenade (aimed/charge for distance)  (include AI)
+            TEST: Bow/arrow  (include AI)
+            TEST: Blink
+            TEST: Spell area effect (aimed)  (include AI)
+            TEST: Woodcutting, mining, carving (meat)
+            TEST: Firemaking, cooking
+         4) Extra
+            TEST: Town event
+            TEST: AI Boss
+         -- Next steps
+            - Event node volume region (rather than single tile)
+            - Skill system
+            - Town logic
+            - Containers w/ varying priorities
+                - Stored in Area under varying priority containers  (ice wall melting in a page that nobody is in can go to sleep and only tick when somebody comes nearby and wakes the page)
+            - Optimizations
+                - Fat array in area (and other systems for components eg. render data, physics data) to tick all at once in cache-friendly way
+                - Minimize user data (arbitrary data of X size for all EvtNodes) which can be parsed/handled by callbacks, or extra data stored elsewhere during callback stage
+                - Freeze parts of evtNode if unecessary (eg. fire animation when off screen; don't even need to tick evtNode at all)
+            - Improve node/event based system (check out blueprints?) for describing eventNodes in json (rather than 100 args for 1 base eventNode)
+            - EventNodes in Mapper
+            - sprite/collision/etc. w/ multiple evtNode controllers
+            - Renderer blitting / renderPageStatic(blitted area)  eg. for campfire   -- blitPage -> renderPageStatic(regionReion) -> renderBg(blitRegion)
+            - Serialize/updates to specific users
+            - Don't create new Base(..) for each instance, only need 1 and make it static
+            - Better physics collision detection
+            - Server startup -- game start before step: The.world.initialize -> area.initialize -> eventnodemgr.initialize -> activate queued nodes. I think initial spawns here too?
+            - Improve rendering effects for perf (sucks to if check every sprite) -- renderer.addSprite/addEffect? Would be client only since server pages don't contain these
+            - evtUpdateArray: [evt0_key,arg0,arg1,evt1_key,arg0,...]
+            - Accumulated delta in server evtNode.step varies on particular evtNode type/state (inactive? step less often)
+            - InputMgr for mapping inputs to skills/actions
+            - AnimEvents: Take future 3d transition into consideration, as well as blending. May need a single animation (melee) and 3d model to be able to face any direction. Each animation has list of anim events at different times
+                - Take lag into consideration: main anim event (melee: hit) takes longer to reach on client, faster on server (due to delay), and even faster on receiving clients, to attempt to keep in sync for visual anim events
+
+
+
+            Skill System
+                - Character component (similar to buffmgr)
+                - Input -> Attempt to use ability -> Skill system checks requirements / cooldowns
+                - Cooldowns/blocking/cancelling
+                    - Harvesting/Mining/Fishing set states: { canMove: false, canCancel: true, channelling: true }
+                    - Melee attack: { canMove: true, canCancel: true }
+                    - Read Scroll (eg. teleport): { canMove: false, canCancel: false, channelling: true }
+                - Update: update timer of active skills
+                - More complex skills get a full script that gets updated/managed
+                - Server/Client similar to buffs
+                - Adding skills from levelling, buff abilities, skills that add new skills temporarily, items that give skills
+                    - List of skills mapped to inputs:
+                        - Rocks: 'mining', Fishing: 'fishing', Trees: 'woodcutting'
+                            - Interacting w/ rocks uses interaction script to bring you within range and then trigger event 'mining' IF the rocks exist
+                        - Attack: 'attack'
+                            - Based off current weapon equipped and distance of target it'll decide on what to do (bow vs. dagger)
+                        - Skills slotted in UI which can be shifted around -> 'blink', 'fire_bolt', etc.
+                    - Multi-input skills:
+                        - Channelled bow: { key: 'fire_bow', evt: 'channel_arrow', direction: 90deg }
+                                          { key: 'fire_bow', evt: 'release_arrow' }
+                    - Component of character which can serialize/load/etc. skills
+                    - Level-up -> Skill tree (pick a new skill) -> Hidden quest that rewards a new skill -> character.hook('AddSkill', this) 
+                    - Equip dagger -> 'AddSkill';  Unequip dagger -> character.doHook('RemoveSkill').post({ dependency: item }) -> abilities.forEach((a) => if (a.dependsOn === data.dependency) removeAbility(a)
+                - Preventing activites while skill active (unequipping dagger while attacking; moving; etc.)
+                    - Inventory state: { preventUnequip: [3,85,283] } ;  skill complete event -> inventory.clearState('preventUnequip', 283)   -- stateId = inventory.setState('preventUnequip') // 283
+                        - This allows other things to prevent unequip too (debuff, item cursed)
+                        - Really unfortunate when we're attacking a lot and continuously setting/unsetting state when we rarely want to unequip
+                    - Inventory check:
+                        - item: { canUnequip: [...], canUse: [...] }   checks with callbacks
+                        - On skill created from item equip:  item.checks.canUnequip.push(() => !skill.isActive)
+                        - Can be expensive for memory and context switching
+                        - If this is too expensive for memory (one copy of function for every player/weapon pair)  we could hardcode some expected checks:   weapon.canUnequip = () => baseItem.canUnequip() && abilities.forEach((a) => check skill system for ability and ask if its active
+                    - We might consider both options to help tradeoff memory/perf
+            AI
+                - Bosses/Scripted AI can use EvtNode for logic
+                - Regular AI don't need skill system since they can use simple strategy scripts w/ cooldown args
+
+
+
+
+
+    ====== FINAL ENGINE STUFF
+        
+    - AI considerations
+        - AI is too complex, decision making could be simpler and user may find that more entertaining when they understand it better
+        - Could introduce factions similar to Grim Dawn: you're hated by XXXX syndicate, so they prefer you over the rest of the party. Also damage received main factor in who target is
+
+    - UI overhaul
+        - Fullscreen
+        - Similar layout to Hero Siege, Survivalist, Undermine, Pathway, Wizard of Legend
+
+    - Multi-tiled movables (cthulu, boats)
+    - boat: walk on & off, can't get off on water, walk on boat while boat moving, walk on boat while boat zoning (pages, maps)
+    - dynamic collidables (drawbridge, shifting walls) -- NOTE: If we modify pathfinding such that clients send a full path, server broadcasts path without checking and everybody blindly accepts the path until a collision occurs, then they could halt from dynamic collisions. The server would only need to relay paths and broadcast halts, and could spend less timeprocessing paths
+        - modification to page: find all nearby entities and check if their paths go through the page, if so then possibly repath
+            - Could webworker and prioritize entities, so that ones that are further away are updated later
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        [requires]
+
+        [Comment] 
+
+        [class]
+
+            [members]
+
+            [comment-splitter]
+
+            [methods group]
+
+    - Go through every file and clean with the following things in mind:
+        - Error handling / throwing (Err)
+            Acorn AST parse
+                AST approach: could prepro build checks before every statement that could possibly throw an exception:
+                      obj.f(); // add if (!obj || !_.IsObject(obj) || !obj.f || !_.IsFunction(obj.f)) DEBUG();
+                      This would help with bots, client without console open, debug mode in playtests, etc.
+        - Proper function/arrow function
+        - Commenting on class, function, blocks
+        - const/let
+        - Logging as much as possible (error/warning/info/debug)
+        - Class/Object toString
+        - Functional coding
+            - Array: every, some, forEach, map, filter, reduce, reduceRight,
+                    from/of/fill/copyWithin, for..of, find/includes, keys/entries, 
+                    destructuring
+            - Map/Set, WeakMap/WeakSet
+            - in, default param, rest, spread
+            - Symbol: toPrimitive, iterator, hasInstance
+            - Generators / yield
+        - Promises
+            - PromisifyAll, resolve, then/catch/finally
+            - Collections: .each, .map, etc.
+        - lodash stuff
+        - Performance
+            - for..in, copying objects: slow
+            - hidden classes: make sure objects use the same hidden class
+                - don't add dynamic properties
+                - use the constructor only for objects
+                - preprocessor check if property already exists before assigning/modifying property
+            - Arrays:
+                - mixed types
+                - holes in arrays
+                - try to use arrays over objects
+                - use contiguous keys (don't do  x[n] = 1; where n > x.length)
+            - call functions with the same expected types
+            - Strings are immutable
+            - Only use `new Function()` if absolutely necessary
+            - GC
+                - Log makes an alloc for every string (message, prefix + message); can we 
+                - We could have preprocessor strip out all hardcoded strings in Logs into a static string pool, then log simply needs to console.log(strings[54])
+                - We could also offload console.log to WebWorker, then just send message to webworker to log X (with extra params)
+                - To avoid making copies of those params each time we could have a static pool of uint8Arrays, then rotate through those, set args -> uint8Array[0...x], then send uint8Array to WebWorker (need to check that this doesn't perform a copy). Then when we know its safe we can set that array as free for use. String preprocessor can recognize that some strings will expect extra args and know how to handle the args for that string idx
+            - SIMD operations
+            - Compute shaders: offload operations to WebGL to compute tasks
+            - WebWorkers + Shared Array Buffers + Atomic access
+
+
+        Linted/Cleaned files list
+        -------------------------
+
+        js/main.js                                                ✓
+        js/server.js                                              ✓
+        js/client/game.js                                         ✓
+        js/area.js                                                ✓
+        js/client/area.js                                         ✓
+        js/server/area.js                                         ✓
+        js/pathfinding.js                                         ✓
+        js/page.js                                                ✓
+        js/server/page.js                                         ✓
+        js/client/renderer.js                                     ✓
+        js/scripts/character.ai.instinct.combat.js                ✓
+        js/scripts/game.js                                        ✓
+        js/scripts/character.js                                   ✓
+        js/server/player.js                                       ✓
+        js/movable.js                                             ✓
+        js/client/ui.js                                           ✓
+        js/scripts/character.ai.js                                ✓
+        js/scripts/character.ai.combat.strategy.basic_melee.js    ✓
+        js/scripts/character.ai.instinct.range.js                 ✓
+        js/scripts/character.ai.instinct.movement.js              ✓
+        js/scripts/character.ai.combat.strategy.js                ✓
+        js/scripts/character.ai.combat.sight.js                   ✓
+        js/hookable.js                                            ✓
+        js/client/serverHandler.js                                ✓
+        js/script.js                                              ✓
+        js/utilities.js                                           ✓
+        js/scripts/character.ai.instinct.bored.js                 ✓
+        js/scripts/game.chat.js                                   ✓
+        js/scriptmgr.js                                           ✓
+        js/scripts/character.ai.combat.melee.js                   ✓
+        js/serializable.js                                        ✓
+        js/scripts/interactables.lookat.js                        ✓
+        js/spritesheet.js                                         ✓
         js/sprite.js                                              ✓
-        js/entity.js											  ✓
-        js/client/user.js										  ✓
-        js/dynamic.js											  ✓
-        js/client/page.js										  ✓
+        js/entity.js                                              ✓
+        js/client/user.js                                         ✓
+        js/dynamic.js                                             ✓
+        js/client/page.js                                         ✓
         js/client/camera.js                                       ✓
-		js/animable.js											  ✓
-		js/scripts/character.ai.combat.state.js                   ✓
-		js/world.js        										  ✓
+        js/animable.js                                            ✓
+        js/scripts/character.ai.combat.state.js                   ✓
+        js/world.js                                               ✓
 
 
-		js/scripts/interactables.talkto.js
+        js/scripts/interactables.talkto.js
         js/scripts/items.heal.js
 
 
@@ -931,35 +1310,35 @@ WORKING ON (was previously working on)
   Been a while?
 ========
 
-	== Been a while? ==
-	
-	A few reminders if you're just coming back after a while
-
-	- Running game:
-	   - ./grunt && ./grunt watch   # to watch the directory and transpile to the working directory
-	   - node dist/server.js --test # run the server w/ test environment
+    == Been a while? ==
     
-	- Debugging:
-	   - node --inspect dist/server.js --test  # open chrome://inspect to find the remote target and inspect it
-		 									   # NOTE: If server hits a debugger statement, will pause there even if you don't have the inspector open yet
+    A few reminders if you're just coming back after a while
 
-	   - Watch a variable for change:
-				   Object.defineProperty(The.player.character.brain, 'state', {
-					get: () => { return The.player.character.brain._state; },
-					set: (v) => { debugger; The.player.character.brain._state = v; }
-				   })
-	
-	- Admin:
-	   - /admin 42
+    - Running game:
+       - ./grunt && ./grunt watch   # to watch the directory and transpile to the working directory
+       - node dist/server.js --test # run the server w/ test environment
+    
+    - Debugging:
+       - node --inspect dist/server.js --test  # open chrome://inspect to find the remote target and inspect it
+                                               # NOTE: If server hits a debugger statement, will pause there even if you don't have the inspector open yet
 
-	- Troubleshooting:
-	   - Client slow w/ web developer tools open
-		 	- Disable breakpoints
-			- Disable verbose logging
+       - Watch a variable for change:
+                   Object.defineProperty(The.player.character.brain, 'state', {
+                    get: () => { return The.player.character.brain._state; },
+                    set: (v) => { debugger; The.player.character.brain._state = v; }
+                   })
+    
+    - Admin:
+       - /admin 42
 
-	   - Debugging
-		 	- Client: Break on exceptions https://developers.google.com/web/tools/chrome-devtools/javascript/breakpoints#exceptions
-			- Server: ndb dist/js/server.js
+    - Troubleshooting:
+       - Client slow w/ web developer tools open
+            - Disable breakpoints
+            - Disable verbose logging
+
+       - Debugging
+            - Client: Break on exceptions https://developers.google.com/web/tools/chrome-devtools/javascript/breakpoints#exceptions
+            - Server: ndb dist/js/server.js
 
        - Sprites not updating
             - node cacheBuilder.js  (also, add sprite to cache)
@@ -967,23 +1346,23 @@ WORKING ON (was previously working on)
        - Map/Spritesheets look crazy after updating sprite_size
             - node cacheBuilder.js  (also restart server)
 
-	- Mapping
-	   - New map
-		    - Orthogonal/CSV; 100x100 map; 16x16 tiles   # NOTE: Larger maps seem to be a problem, so trying out smaller maps for now
-			- Tilesheets: Map -> New Tileset -> tilesheet   16x16
-			  									npcs (tools/sheetedit/avatars.png)  32x32
+    - Mapping
+       - New map
+            - Orthogonal/CSV; 100x100 map; 16x16 tiles   # NOTE: Larger maps seem to be a problem, so trying out smaller maps for now
+            - Tilesheets: Map -> New Tileset -> tilesheet   16x16
+                                                npcs (tools/sheetedit/avatars.png)  32x32
                                                 Embed Tilesheet!  (this simply references the image file rather than creating a separate .tsx file)
-			- Tile Layers: base, sprites
-			- Object Layers: zoning, spawns, interactables
-			- Add map
-			  	- add map to world.json
-				- run tools/export-map
+            - Tile Layers: base, sprites
+            - Object Layers: zoning, spawns, interactables
+            - Add map
+                - add map to world.json
+                - run tools/export-map
 
         - Updating map
             - tools/export-map
-			- run tools/export-map.js
+            - run tools/export-map.js
 
-	- Adding a New Mesh
+    - Adding a New Mesh
         - Create a single .blend file w/ all of the animations included (each anim can be in a separate frame if necessary)
         - Create a sprite.json file describing the mesh view and animations
         - tools/export-model --blender-file [Blender file] --sprite-sheet [Sprite.json file] --render  # Renders the model
@@ -997,6 +1376,10 @@ WORKING ON (was previously working on)
         - Copy resources:  scp -i "/path/to/aws.key.pem" /path/to/local/file [user]@[server]:/path/to/remote/
         - Update environment.js for 'testingLocal', update websocket/http IP
         - Start mongo: sudo service mongod start
+            In case mongo wasn't setup properly:
+            
+            use myquest
+            db.createCollection('players')
         - Start redis: sudo service redis start
 
         - Debugging:
@@ -1006,10 +1389,14 @@ WORKING ON (was previously working on)
 
         - Security: hide tools
 
+    - Smoke Testing
+        - node dist/js/test.js [--debug]
+        - Look for which port the bot is connected to (test.js, options.debug); then chrome://inspect configure add localhost:[port]
+
 
 
 Next Priority
-	== Design
+    == Design
 *   - Enemy placement; story/gameplay -- where players go to level up; how levelling works (eg. quad kiting tricks, group-only camps, quests, exploration), do we want multiple areas for each level, themed areas, etc.
         - Places of interest (eg. epic quest areas -- epic quests also partially necessary for obtaining new skills?, high level gear, crafting items, rare raw material (eg. ore for
           mining, trees for chopping), keeps to be captured/held, raid content, runes (powerups w/ extended timers that
@@ -1104,61 +1491,61 @@ Next Priority
     - Add NPC levels (for xp), AC, con
     - XP Gained formula: their level vs. your level, how much of their XP do you gain?
     - Clever way to have weapon/armor for npcs without actually using weapons/inventory
-	- Level rewards (gain xp, statIncrease)
-		- { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
+    - Level rewards (gain xp, statIncrease)
+        - { "rewards": [ { "statIncrease": { "strength": 1 } }, "message": "You feel stronger" ] }
                            s/d/c str/dex/con
         - Level 1: 20 hp,  2/2/2                -- 3x base XP
         - Level 2: 24 hp,  3/3/2
         - Level 3: 30 hp,  4/3/3
 
-	- Level XP loss calculation
-	- Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
-	   	Skill in weapon? (warrior skill)
+    - Level XP loss calculation
+    - Health/Level/Armor/Dmg/AttackSpeed: stats (max, curMax, cur)   Also str/dex/con  for everyone -- use con for regen
+        Skill in weapon? (warrior skill)
 
-		str -- strengthen base damage                                   <-|  Str/Dex should be equivalent in terms of effectiveness
-		dex -- larger damage range? (potential to hit for more damage)  <-|
-			- able to crit
-		wep dmg -- base damage
-		wep spd -- attack speed
-		speed -- improve attack speed
-		skill -- improve effectiveness of str/dex/speed towards particular weapon type
+        str -- strengthen base damage                                   <-|  Str/Dex should be equivalent in terms of effectiveness
+        dex -- larger damage range? (potential to hit for more damage)  <-|
+            - able to crit
+        wep dmg -- base damage
+        wep spd -- attack speed
+        speed -- improve attack speed
+        skill -- improve effectiveness of str/dex/speed towards particular weapon type
 
-		Determine: enemy AC, con, wpn spd, speed? wpn dmg, wpn skill?
-
-
-
-
-		Weapon Damage = Dmg * Str ^ X * [0.8,1.2]
-			Dex: influences % of getting a higher score in the [0.8,1.2] crit range
-				0.8 + (1.2 - 0.8) * (Dex / MaxDex) ^ Y
-			X: Influenced by skill
-			Dex: also influenced by skill
-
-			E(Str=X, Dex=0) = E(Str=X-1, Dex=1) = ... = E(Str=0, Dex=X)
-
-			Check the derivative of Str == derivative of Dex  (ie. rate of change is equal for both variables; and set peaks equal)
-			
-
-	 - Combat: smarter target selection
-	 - Combat: attack/speed formula (level/stats/randomness)
-
-
-	   Stats + Resists + Hinderances (eating/blindness/stun/confusion)
-	   Items
-	   Enemies / Toughness
-	    Determine time-to-kill for each pair of levels (your level vs. enemy level), with expected health at the end (high/low health within 1/2 standard deviation)
-		Draw out bell curve to determine direction (change between levels), and your expected damage + enemy expected damage at level
-	   	- Level 1: 15 seconds to kill something at the same level; should finish with 60-70% health
-		  		   Should be able to attack level 2, finish with 30-40% health  (30 seconds)
-				   Attacking level 3, finish with -20-10% health (die in most cases)  (50 seconds)
-		- Level 2: 10 seconds to kill a level 1; finish with 80-90% health; 10 seconds
-		  		   25 seconds to kill a level 2; finish with 60-70% health; 
+        Determine: enemy AC, con, wpn spd, speed? wpn dmg, wpn skill?
 
 
 
 
-	   Quests
-	   Exploration
+        Weapon Damage = Dmg * Str ^ X * [0.8,1.2]
+            Dex: influences % of getting a higher score in the [0.8,1.2] crit range
+                0.8 + (1.2 - 0.8) * (Dex / MaxDex) ^ Y
+            X: Influenced by skill
+            Dex: also influenced by skill
+
+            E(Str=X, Dex=0) = E(Str=X-1, Dex=1) = ... = E(Str=0, Dex=X)
+
+            Check the derivative of Str == derivative of Dex  (ie. rate of change is equal for both variables; and set peaks equal)
+            
+
+     - Combat: smarter target selection
+     - Combat: attack/speed formula (level/stats/randomness)
+
+
+       Stats + Resists + Hinderances (eating/blindness/stun/confusion)
+       Items
+       Enemies / Toughness
+        Determine time-to-kill for each pair of levels (your level vs. enemy level), with expected health at the end (high/low health within 1/2 standard deviation)
+        Draw out bell curve to determine direction (change between levels), and your expected damage + enemy expected damage at level
+        - Level 1: 15 seconds to kill something at the same level; should finish with 60-70% health
+                   Should be able to attack level 2, finish with 30-40% health  (30 seconds)
+                   Attacking level 3, finish with -20-10% health (die in most cases)  (50 seconds)
+        - Level 2: 10 seconds to kill a level 1; finish with 80-90% health; 10 seconds
+                   25 seconds to kill a level 2; finish with 60-70% health; 
+
+
+
+
+       Quests
+       Exploration
 
     - Map
         - Finish tidying area
@@ -1175,8 +1562,8 @@ Next Priority
 
     - BUG: Off tile error (look into FORME_CRASH_OFFTILE)
 
-	- NOTE: User logs in, server loads player from db and sends to player (no netSerialize since no character exists yet). NEED To netInitialize?
-	- NOTE: User dies, respawns, after setting self to alive we call hook('respawning').post()  which triggers deathmgr to add death sickness (since we're now alive). Which means we'll send buff to user. The trick is to unload the buffmgr so the user doesn't handle the EVT_BUFF_PRIVATE evt
+    - NOTE: User logs in, server loads player from db and sends to player (no netSerialize since no character exists yet). NEED To netInitialize?
+    - NOTE: User dies, respawns, after setting self to alive we call hook('respawning').post()  which triggers deathmgr to add death sickness (since we're now alive). Which means we'll send buff to user. The trick is to unload the buffmgr so the user doesn't handle the EVT_BUFF_PRIVATE evt
 
     - Vector art sprites for static npcs? https://craftpix.net/freebies/2d-fantasy-seller-free-character-sprite/   https://craftpix.net/freebies/wizard-character-free-sprite/
 
@@ -1184,88 +1571,88 @@ Next Priority
 
 
 Future
-	- Skills
+    - Skills
     - Magic
-	- Better interaction (right click entities/avatars, conversation tree)
-	- Better UI
-	  	- Store messages in localization files & packages which slot messages & UI effects into UI
+    - Better interaction (right click entities/avatars, conversation tree)
+    - Better UI
+        - Store messages in localization files & packages which slot messages & UI effects into UI
         - Look into full screen(ish) game canvas: #canvas turn off overflow
-	- Gameplay system/scripts, triggers/traps
-	- Quest rewards: faction / opening up conversations with other npcs; epic quest; class quest; keys to locked areas (need key to get in, but lose key on death -- key quests should be weekly/different quests so you're punished for losing your key)
-	- Groups or smarter XP (eg. people who assisted in killing, gave buffs, healing, etc.)
-	- Animated static sprites
-	- Multi-tiled movables (cthulu, boats)
-	- boat: walk on & off, can't get off on water, walk on boat while boat moving, walk on boat while boat zoning (pages, maps)
-	- dynamic collidables (drawbridge, shifting walls) -- NOTE: If we modify pathfinding such that clients send a full path, server broadcasts path without checking and everybody blindly accepts the path until a collision occurs, then they could halt from dynamic collisions. The server would only need to relay paths and broadcast halts, and could spend less timeprocessing paths
-	- Entity idle animation
-	- /admin
-	- Electron desktop application
-	- Replace Eventful w/ node.js native EventEmitter? (use Browserify event for browser)
-	- Performance
-	  	- Sleep/Wake entities/pages/maps
-		- Cluster maps, use zeroMQ for IPC
-		- JobList w/ Workers  (either self-contained processes)
-		- WebRTC/UDP
-		- db sharding
-		- https://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
-		- Chasing (pathfinding): NPCs can check player's destination tile and determine their own path (NOTE: Need to make it appear realistic, like the NPC is guessing where you're going, but able to optimize by only re-determining during changed paths, and potentially only if the changed path goes far off of where you would have met up with them anyways)
-		- Pathfinding regions: open convex regions in map (able to immediately create [north,south]/[west,east] path w/out checking for collisions); could store "portals" (open edges) from regions and have cached paths between neighbouring region portals
-		- Could store groups of convex collisions then connect a line to the nearest vertex and walk along the edge, etc.  like that one algorithm from computational geometry
- 		- Trust player: only check for collision when player next tile changes (is your next tile about to be a collision?)
- 		- Tile based: server only concerned about tile x,y; look at time since arrival at tile & possibly entrance into tile (left/right?) to help consider how much time to reach next tile; only update tileXY when that time has elapsed; send that tile reached time to other players so they can calculate real x,y; this must be completely synchronized though
-		- Immutable arguments
-		- Avoid for..in
-		- JPS pathfinding for suitable maps/regions? (eg. dungeons, tight corridors)
-		- Chasing (pathfinding): We can probably get away with only sending the target that we're chasing after rather than continuously sending updates paths (since our path continuously changes); or perhaps continue to use the same path and continue expanding on it assuming its a simple update (extending the end of the path rather than changing the path mid-way), then this is likely a deterministic operation that clients can be in sync with. We'd simply need to periodically send position updates of the movable if its been a while? Or path progress if its been a while?
-		  - Write a module to compress EVT messages into arrays: { evt: EVT_GAIN_XP, data: { entityId: 54, killedId: 32, XP: 10 } }  ==>  [EVT_GAIN_XP,54,32,10]  then based off the event format table, reconvert it back to its object format
-		  - Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
-		  - Look into canvas perf: https://www.html5rocks.com/en/tutorials/canvas/performance
-	- Fault tolerance
-	  	- On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
-		- Could add preprocessors in "parent" functions which act as a safety check, eg. #CHECK( ExpectObjectFormat(data.args.container.s, { numbers: ForEach(IsNumber), evt: IsValidEvent }) )  on retail converts to:
-		  		if (!_.isObject(data) || !_.isObject(data.args) || !_.isObject(data.args.container) || !_.isObject(data.args.container.s) || !_.isArray(data.args.container.s.numbers) || .....) { return } // Early out of function because of unexpected input, and log the error
-			This sucks but would save us from any crashing
-		- https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
-		- Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
-		- Look into webassembly, or C++ based modules for the server to run perf-intensive code
-	- Debugging/Testing
-	  	- Agent bots which follow player around, have sight to attack nearby enemies, use precomputed waypoints to catch up to player (if died)
-	- Tracking variables during stack unwinding/crashes: could have a preprocessor go through scripts and recognize all variable assignments in scripts, then append global['STACK.FUNC.var']=var
-	- Look into WebAssembly components for high performance operations (eg. pathfinding)
-	- FXMgr:
-		entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
-		Improve sound buffer loader: promise/load all, then set FX as ready when everything is loaded
-		Utilize WebStorage to store/load sounds (need some way to determine if sounds have changed on the server)
-		Conditions (new sound stops previous instance of sample? limit to X number of instances of sample? limit to X number of sounds on an entity? etc.)
-		Sound groups (weapon -> combat -> world -> global); each group can have its own settings
-		Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
-		UI Settings (volume)
-		Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely. Draw trigger areas in map to define areas, have map exporter expand it out slightly more for an outside/middle/inside area (for better fading)
-		Music fade: Cancelling current music (music -> null), Pushing Music FX when another instance of that same sample is already playing (if fading out then fade back in, cancel new push)
-	- Bug system
-	  	- Object Dump()
-		- ErrorReport tool
-		  	- Server/Client side-by-side
-			- Logging colours
-			- Header show error (should only be one)
-			- Report list: "Report 05/02/2017 10:01 PM -- Client Report:  ASSERT: Cannot divide by 0"
-			- Syntax highlighting on source
-			- Select source line, loads code region (NOTE: may need reports to include git details, so we can load file from certain timeframe)
-			- Interactive JSON for client/server dumps (highlight dump region a different bg colour depending on client/server)
-			- Get rid of source parse from game errorReporter, integrate entirely into tool w/ git support
-			- Setup grid for error stack (Chrome 57)
-			- Log: if JSON then prettify log
-			- Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
-	- Admin commands from client -- to open server REPL
-	  	- Request login to server
-		- Commands
-		   - Set health/stats (cur)
-		   - Drop items around you
-		   - Put items in inventory
-		   - Add buff
-		   - Godmode
-		- Enable admin on login
-		- Twitter plugin for autocomplete
+    - Gameplay system/scripts, triggers/traps
+    - Quest rewards: faction / opening up conversations with other npcs; epic quest; class quest; keys to locked areas (need key to get in, but lose key on death -- key quests should be weekly/different quests so you're punished for losing your key)
+    - Groups or smarter XP (eg. people who assisted in killing, gave buffs, healing, etc.)
+    - Animated static sprites
+    - Multi-tiled movables (cthulu, boats)
+    - boat: walk on & off, can't get off on water, walk on boat while boat moving, walk on boat while boat zoning (pages, maps)
+    - dynamic collidables (drawbridge, shifting walls) -- NOTE: If we modify pathfinding such that clients send a full path, server broadcasts path without checking and everybody blindly accepts the path until a collision occurs, then they could halt from dynamic collisions. The server would only need to relay paths and broadcast halts, and could spend less timeprocessing paths
+    - Entity idle animation
+    - /admin
+    - Electron desktop application
+    - Replace Eventful w/ node.js native EventEmitter? (use Browserify event for browser)
+    - Performance
+        - Sleep/Wake entities/pages/maps
+        - Cluster maps, use zeroMQ for IPC
+        - JobList w/ Workers  (either self-contained processes)
+        - WebRTC/UDP
+        - db sharding
+        - https://www.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+        - Chasing (pathfinding): NPCs can check player's destination tile and determine their own path (NOTE: Need to make it appear realistic, like the NPC is guessing where you're going, but able to optimize by only re-determining during changed paths, and potentially only if the changed path goes far off of where you would have met up with them anyways)
+        - Pathfinding regions: open convex regions in map (able to immediately create [north,south]/[west,east] path w/out checking for collisions); could store "portals" (open edges) from regions and have cached paths between neighbouring region portals
+        - Could store groups of convex collisions then connect a line to the nearest vertex and walk along the edge, etc.  like that one algorithm from computational geometry
+        - Trust player: only check for collision when player next tile changes (is your next tile about to be a collision?)
+        - Tile based: server only concerned about tile x,y; look at time since arrival at tile & possibly entrance into tile (left/right?) to help consider how much time to reach next tile; only update tileXY when that time has elapsed; send that tile reached time to other players so they can calculate real x,y; this must be completely synchronized though
+        - Immutable arguments
+        - Avoid for..in
+        - JPS pathfinding for suitable maps/regions? (eg. dungeons, tight corridors)
+        - Chasing (pathfinding): We can probably get away with only sending the target that we're chasing after rather than continuously sending updates paths (since our path continuously changes); or perhaps continue to use the same path and continue expanding on it assuming its a simple update (extending the end of the path rather than changing the path mid-way), then this is likely a deterministic operation that clients can be in sync with. We'd simply need to periodically send position updates of the movable if its been a while? Or path progress if its been a while?
+          - Write a module to compress EVT messages into arrays: { evt: EVT_GAIN_XP, data: { entityId: 54, killedId: 32, XP: 10 } }  ==>  [EVT_GAIN_XP,54,32,10]  then based off the event format table, reconvert it back to its object format
+          - Convert GainedXP, GainedLevel, Regen, etc. into Symbols, store in a global symbol table. If we make sure this is consistent between client/server then we could translate between symbol and id, then just pass the id in net code
+          - Look into canvas perf: https://www.html5rocks.com/en/tutorials/canvas/performance
+    - Fault tolerance
+        - On server crash, before stopping the process start a new server and tell it to restore from the current process (will need to recursively send/load everything) or otherwise for..of all recursively the members in the class; I wonder if there's a scalable solution to automatically register class members when declaring them on initialization (so that they're automatically able to serialize and load in the new process); process can probably be on a per-map (or group of maps?) basis so that if 1 map goes down the rest are still fine; then allow all clients on the crashed process to reconnect automatically
+        - Could add preprocessors in "parent" functions which act as a safety check, eg. #CHECK( ExpectObjectFormat(data.args.container.s, { numbers: ForEach(IsNumber), evt: IsValidEvent }) )  on retail converts to:
+                if (!_.isObject(data) || !_.isObject(data.args) || !_.isObject(data.args.container) || !_.isObject(data.args.container.s) || !_.isArray(data.args.container.s.numbers) || .....) { return } // Early out of function because of unexpected input, and log the error
+            This sucks but would save us from any crashing
+        - https://www.smashingmagazine.com/2012/11/writing-fast-memory-efficient-javascript/  "Cached functions in the module pattern"  using mixins for classes which have many copies (eg. Tiles)
+        - Consider cache misses and instruction misses in the compiled code from the JIT, and ensure that we're minimizing those by reusing the same codepaths and objects in the same places (ie. batch processing with minimal instructions, or, SIMD type coding)
+        - Look into webassembly, or C++ based modules for the server to run perf-intensive code
+    - Debugging/Testing
+        - Agent bots which follow player around, have sight to attack nearby enemies, use precomputed waypoints to catch up to player (if died)
+    - Tracking variables during stack unwinding/crashes: could have a preprocessor go through scripts and recognize all variable assignments in scripts, then append global['STACK.FUNC.var']=var
+    - Look into WebAssembly components for high performance operations (eg. pathfinding)
+    - FXMgr:
+        entity type + traits (HurtGoblin, ArcherGoblin -> Goblin -> NPC -> Avatar); Each of these could have some settings, and the most derived types + traits override settings. Should be able to use this for everything not just sound
+        Improve sound buffer loader: promise/load all, then set FX as ready when everything is loaded
+        Utilize WebStorage to store/load sounds (need some way to determine if sounds have changed on the server)
+        Conditions (new sound stops previous instance of sample? limit to X number of instances of sample? limit to X number of sounds on an entity? etc.)
+        Sound groups (weapon -> combat -> world -> global); each group can have its own settings
+        Effects -- positional nodes, impulse response (environmental effects) -- dynamic & settings; look into other effects/nodes
+        UI Settings (volume)
+        Music: Different areas trigger 'EnterArea', 'ExitArea' which trigger music to enable/disable. Takes some time to enable to full or disable completely. Draw trigger areas in map to define areas, have map exporter expand it out slightly more for an outside/middle/inside area (for better fading)
+        Music fade: Cancelling current music (music -> null), Pushing Music FX when another instance of that same sample is already playing (if fading out then fade back in, cancel new push)
+    - Bug system
+        - Object Dump()
+        - ErrorReport tool
+            - Server/Client side-by-side
+            - Logging colours
+            - Header show error (should only be one)
+            - Report list: "Report 05/02/2017 10:01 PM -- Client Report:  ASSERT: Cannot divide by 0"
+            - Syntax highlighting on source
+            - Select source line, loads code region (NOTE: may need reports to include git details, so we can load file from certain timeframe)
+            - Interactive JSON for client/server dumps (highlight dump region a different bg colour depending on client/server)
+            - Get rid of source parse from game errorReporter, integrate entirely into tool w/ git support
+            - Setup grid for error stack (Chrome 57)
+            - Log: if JSON then prettify log
+            - Code region: Button to left of code area to expand into full source code (centered about line) fully highlighted
+    - Admin commands from client -- to open server REPL
+        - Request login to server
+        - Commands
+           - Set health/stats (cur)
+           - Drop items around you
+           - Put items in inventory
+           - Add buff
+           - Godmode
+        - Enable admin on login
+        - Twitter plugin for autocomplete
 
 
 
@@ -1273,20 +1660,20 @@ Future
 ========
  Pathfinding Perf
 ========
-	- l1-clarkson w/ option to turn on/off; best from/to tile
-	- compress path/walks
-	- get rid of JPS (turn off)
-	- Start path from last point
-	- Only search every X turns (dependant on how far the player is)
+    - l1-clarkson w/ option to turn on/off; best from/to tile
+    - compress path/walks
+    - get rid of JPS (turn off)
+    - Start path from last point
+    - Only search every X turns (dependant on how far the player is)
 
-	- http://www.redblobgames.com/pathfinding/l1-clarkson/
-	- https://github.com/mikolalysenko/l1-path-finder
-	- http://www.redblobgames.com/pathfinding/visibility-graphs/
-	- http://www.redblobgames.com/pathfinding/heuristics/differential.html
-	- http://www.redblobgames.com/pathfinding/tower-defense/
-	- http://www.gdcvault.com/play/1022094/JPS-Over-100x-Faster-than
-	- Start path from last point
-	- Only search every X turns (dependant on how far the player is)
+    - http://www.redblobgames.com/pathfinding/l1-clarkson/
+    - https://github.com/mikolalysenko/l1-path-finder
+    - http://www.redblobgames.com/pathfinding/visibility-graphs/
+    - http://www.redblobgames.com/pathfinding/heuristics/differential.html
+    - http://www.redblobgames.com/pathfinding/tower-defense/
+    - http://www.gdcvault.com/play/1022094/JPS-Over-100x-Faster-than
+    - Start path from last point
+    - Only search every X turns (dependant on how far the player is)
 
 
 
@@ -1473,93 +1860,93 @@ Future
  
 
 SERVER
-	* Updating server
-		- major update:
-		  	git branch vX
-			git checkout vX   (or, git checkout --  to clear unstaged changes)
-			git pull origin master
-			update testingLocal in Environment.js
+    * Updating server
+        - major update:
+            git branch vX
+            git checkout vX   (or, git checkout --  to clear unstaged changes)
+            git pull origin master
+            update testingLocal in Environment.js
 
-			kill processes (ps -ef)
-			(update db)
+            kill processes (ps -ef)
+            (update db)
 
-			nohup ./runserver &
-			(update jbud.me)
+            nohup ./runserver &
+            (update jbud.me)
 
 DB
-	* Setup (from scratch)
-		- use myquest   -- will create db myquest
-		- db.players.insert({ id: 1, position: { y: 60, x: 53 }, respawn: { map: "main", position: { y: 60, x: 53 }}, map: "main" })
+    * Setup (from scratch)
+        - use myquest   -- will create db myquest
+        - db.players.insert({ id: 1, position: { y: 60, x: 53 }, respawn: { map: "main", position: { y: 60, x: 53 }}, map: "main" })
 
 ====== Promises
 
-	* Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
-	* Not error safe; must throw and use .catch() on promise
-	* .catch() will not be received from nested callbacks
-		return new Promise() {
-			Tacos.onFailedTaco = function(evt){
-				throw new Err("Error failed to make taco!");  // This will not be caught by promsie catch
-			};
-		}
-	* Continues on after calling resolve() or reject()  (must explicitly return after calling those unless you want to continue)
+    * Promises only allow for 1 argument for .then(..); hence for multiple args wrap in { }
+    * Not error safe; must throw and use .catch() on promise
+    * .catch() will not be received from nested callbacks
+        return new Promise() {
+            Tacos.onFailedTaco = function(evt){
+                throw new Err("Error failed to make taco!");  // This will not be caught by promsie catch
+            };
+        }
+    * Continues on after calling resolve() or reject()  (must explicitly return after calling those unless you want to continue)
 
 ====== Eventful
 
-	* triggeredEvents will append the event callback to the CONTEXT's event_callback_queue
-	* REQUIRES an update function to handle pending requests regularly
-	* Not error safe; must throw errors
-	* Because triggerEvent loops through an array of listeners, you can only run stopListeningTo on the callback object during the trigger; however, if you run stopListeningTo on another object then this WILL break things. If this is a desirable feature later on, we can implement it by adding a "lastCalled" id to callbacks and readjusting the loop at each iteration to the next callback
+    * triggeredEvents will append the event callback to the CONTEXT's event_callback_queue
+    * REQUIRES an update function to handle pending requests regularly
+    * Not error safe; must throw errors
+    * Because triggerEvent loops through an array of listeners, you can only run stopListeningTo on the callback object during the trigger; however, if you run stopListeningTo on another object then this WILL break things. If this is a desirable feature later on, we can implement it by adding a "lastCalled" id to callbacks and readjusting the loop at each iteration to the next callback
 
 ====== Subscription
-	
-	* Essentially Eventful, but the Eventful is all handled within the scriptmgr and propagated to the script
-	* Not error safe; must throw errors
+    
+    * Essentially Eventful, but the Eventful is all handled within the scriptmgr and propagated to the script
+    * Not error safe; must throw errors
 
 ====== Dynamic
 
-	* Only ONE handler
-	* Error safe: return Error and the caller will be able to handle it accordingly
-	- registerHandler, handler set
+    * Only ONE handler
+    * Error safe: return Error and the caller will be able to handle it accordingly
+    - registerHandler, handler set
 
 ====== Hookable
 
-	* Can only have 1 (id, context) pair per hook
-	* MUST provide context
-	* Not error safe; must throw errors
-	- triggerer: registerHook('name'), unregisterHook('name'),  doHook('name').pre|post()
-	- listener: hook('name', this).before|after|removePre|removePost|remove()
-	- Cleanup: make sure to run  hookable.unhook(this)  when unloading this  (eg. map.unhook(this))
-	- Hooker Cleanup: if X is unloading then it needs to call hookable.unhook(this) on everything its hooked into; OR this.unhookAllHooks() for everything
+    * Can only have 1 (id, context) pair per hook
+    * MUST provide context
+    * Not error safe; must throw errors
+    - triggerer: registerHook('name'), unregisterHook('name'),  doHook('name').pre|post()
+    - listener: hook('name', this).before|after|removePre|removePost|remove()
+    - Cleanup: make sure to run  hookable.unhook(this)  when unloading this  (eg. map.unhook(this))
+    - Hooker Cleanup: if X is unloading then it needs to call hookable.unhook(this) on everything its hooked into; OR this.unhookAllHooks() for everything
 
 ====== Prototype
 
-	* http://jsfiddle.net/vauovfyd/
-	* Type A Prototyping: Essentially a base class, except that this base class is a Singleton (ALL classes using this class as a prototype will share the same properties)
+    * http://jsfiddle.net/vauovfyd/
+    * Type A Prototyping: Essentially a base class, except that this base class is a Singleton (ALL classes using this class as a prototype will share the same properties)
 
-	* https://jsfiddle.net/jc24s7b4/ 
-	* Type B Prototyping: Essentially a copy of the prototype; other classes won't share the same context
+    * https://jsfiddle.net/jc24s7b4/ 
+    * Type B Prototyping: Essentially a copy of the prototype; other classes won't share the same context
 
 ====== Base
 
 ====== Scripting
 
-	* Various scripts could be attached to an object in the Engine (eg. Character & Movable)
-	* Engine object should NEVER listen to or access scripts
+    * Various scripts could be attached to an object in the Engine (eg. Character & Movable)
+    * Engine object should NEVER listen to or access scripts
 
 ====== Script
 
-	* components: initialization is bound to the parent script; use _self for dynamic handlers and such
-	* Scripts are reloaded (recreated) upon zoning, dying, etc. -- beware of this for outside sources that reference scripts
+    * components: initialization is bound to the parent script; use _self for dynamic handlers and such
+    * Scripts are reloaded (recreated) upon zoning, dying, etc. -- beware of this for outside sources that reference scripts
 
 ====== Character Component
-	
-	* Initialized on character (depends on npc components)
-	* Uses serialize/restore (server db, client script reloads), and netSerialize/netRestore for receiving state from server
-	* Components are loaded once per character. When the character is reloaded, a new component is created from it
-	* The component file is only loaded once, so cannot use SCRIPTINJECT (otherwise we hold onto stale vars and prolong their lifetime)
-	* Be careful with serializing/restoring extra information on client, since if the character dies we netRestore and lose all local data
-	* Make sure to unload
-	* firstTimeSetup override this if you expect some default values for new player/character
+    
+    * Initialized on character (depends on npc components)
+    * Uses serialize/restore (server db, client script reloads), and netSerialize/netRestore for receiving state from server
+    * Components are loaded once per character. When the character is reloaded, a new component is created from it
+    * The component file is only loaded once, so cannot use SCRIPTINJECT (otherwise we hold onto stale vars and prolong their lifetime)
+    * Be careful with serializing/restoring extra information on client, since if the character dies we netRestore and lose all local data
+    * Make sure to unload
+    * firstTimeSetup override this if you expect some default values for new player/character
 
 ====== NetCode
 
@@ -1578,108 +1965,108 @@ DB
 
 ====== Functions
 
-	reference: https://rainsoft.io/when-not-to-use-arrow-functions-in-javascript/
-	never ever use `new Function()`: Fixed long wait time for node-inspector (https://github.com/nodejs/node/issues/7853)
+    reference: https://rainsoft.io/when-not-to-use-arrow-functions-in-javascript/
+    never ever use `new Function()`: Fixed long wait time for node-inspector (https://github.com/nodejs/node/issues/7853)
 
-	* function(){}  creates its own context. NOTE: this can be an issue with vars
-		function Tacos(){
-			this.cheesy = true;
+    * function(){}  creates its own context. NOTE: this can be an issue with vars
+        function Tacos(){
+            this.cheesy = true;
 
-			var CookThatTaco = function(){
-				console.log("cheesy? " + this.cheesy); // cheesy? undefined
-			};
+            var CookThatTaco = function(){
+                console.log("cheesy? " + this.cheesy); // cheesy? undefined
+            };
 
-			this.MakeATaco = function(){
-				CookThatTaco(); // CookThatTaco is being called with no context, so its context is global
-			};
-		};
+            this.MakeATaco = function(){
+                CookThatTaco(); // CookThatTaco is being called with no context, so its context is global
+            };
+        };
 
-		var tacos = new Tacos();
-		tacos.MakeATaco();
+        var tacos = new Tacos();
+        tacos.MakeATaco();
 
-	* () => {}  uses context of the places its been defined. NOTE: this can be an issue with objects:
-		var Tacos = {
-			cheesy: true,
-			MakeATaco: () => { console.log("cheesy? " + this.cheesy); } // cheesy? undefined
-		}
-		Tacos.MakeATaco(); // since MakeATaco is defined inside of the object, the context is window (undefined?) at the time
+    * () => {}  uses context of the places its been defined. NOTE: this can be an issue with objects:
+        var Tacos = {
+            cheesy: true,
+            MakeATaco: () => { console.log("cheesy? " + this.cheesy); } // cheesy? undefined
+        }
+        Tacos.MakeATaco(); // since MakeATaco is defined inside of the object, the context is window (undefined?) at the time
 
-	* () => {}  is also bad with defining an object:
-		var Tacos = () => { this.cheesy = true; }
-		var tacos = new Tacos(); // Error: Tacos is not a constructor
-
-
-	1) Defining a function/object:  use function
-	2) function in an object literal: use function
-		var Tacos = {
-			MakeATaco: function(){}
-		}
-	3) method in an object: use function
-		var Tacos = function(){
-			this.MakeATaco = function(){}
-		}
-	4) var in an object: use arrow
-		var Tacos = function(){
-			var MakeATaco = () => {}
-		}
-	5) callback function: use arrow   (unless explicitly binding to something)
-		player.hook('EVT_DIED').after(() => {})
-	6) global function: use arrow
-	7) callback within function literal: use arrow
-		var Tacos = {
-			MakeATaco: function(){
-				user.hook('EVT_CANCEL_ORDER', () => {
-					this.cancelOrder();
-				});
-			}
-		}
-	8) function within object within class: use arrow
-		var Taco = function(){
-		   this.toppings = { cheese: true, beef: true }
-		   this.manage = {
-			  printToppings: () => { console.log(this.toppings); }
-		   }
-		}
-	9) function within function within object within class: use function
-		var Taco = function(){
-			const _Taco = this;
-			this.manage = {
-
-				// NOTE: initialize is called from another context
-				initialize() {
-
-					var giveCheese = function() { this.cheese++; };
-
-					_Taco.giveCheese();
-				}
-			}
-		}
+    * () => {}  is also bad with defining an object:
+        var Tacos = () => { this.cheesy = true; }
+        var tacos = new Tacos(); // Error: Tacos is not a constructor
 
 
+    1) Defining a function/object:  use function
+    2) function in an object literal: use function
+        var Tacos = {
+            MakeATaco: function(){}
+        }
+    3) method in an object: use function
+        var Tacos = function(){
+            this.MakeATaco = function(){}
+        }
+    4) var in an object: use arrow
+        var Tacos = function(){
+            var MakeATaco = () => {}
+        }
+    5) callback function: use arrow   (unless explicitly binding to something)
+        player.hook('EVT_DIED').after(() => {})
+    6) global function: use arrow
+    7) callback within function literal: use arrow
+        var Tacos = {
+            MakeATaco: function(){
+                user.hook('EVT_CANCEL_ORDER', () => {
+                    this.cancelOrder();
+                });
+            }
+        }
+    8) function within object within class: use arrow
+        var Taco = function(){
+           this.toppings = { cheese: true, beef: true }
+           this.manage = {
+              printToppings: () => { console.log(this.toppings); }
+           }
+        }
+    9) function within function within object within class: use function
+        var Taco = function(){
+            const _Taco = this;
+            this.manage = {
+
+                // NOTE: initialize is called from another context
+                initialize() {
+
+                    var giveCheese = function() { this.cheese++; };
+
+                    _Taco.giveCheese();
+                }
+            }
+        }
 
 
-	Arrow functions don't have arguments: https://jsfiddle.net/5daundpr/
 
-	const Taco = function(initialToppings, cookingTime){
 
-		this.setToppings = function(){};
-		
-		this.MakeATaco = () => {
-			this.setToppings(arguments); // arguments: [initialToppings, cookingTime]  
-		}
-	}
+    Arrow functions don't have arguments: https://jsfiddle.net/5daundpr/
+
+    const Taco = function(initialToppings, cookingTime){
+
+        this.setToppings = function(){};
+        
+        this.MakeATaco = () => {
+            this.setToppings(arguments); // arguments: [initialToppings, cookingTime]  
+        }
+    }
 
 };
 
 ====== Declaration
 
-	reference: http://stackoverflow.com/questions/762011/let-keyword-vs-var-keyword
+    reference: http://stackoverflow.com/questions/762011/let-keyword-vs-var-keyword
 
-	* var: scoped to the nearest function block
-	* let: scoped to the nearest enclosing block
+    * var: scoped to the nearest function block
+    * let: scoped to the nearest enclosing block
 
-	var vs. let: use let
-	let vs const: use const
+    var vs. let: use let
+    let vs const: use const
 
 
 MAP EDITING
@@ -1687,13 +2074,13 @@ MAP EDITING
 
 ==== NPCs
 
-	* add spritesheet in tools editor to automatically update the avatars.png image
-	* create a tilesheet called 'npcs' it must be called npcs otherwise it will be parsed as a tilesheet
-	* if possible, prefer to set static npcs as sprites
+    * add spritesheet in tools editor to automatically update the avatars.png image
+    * create a tilesheet called 'npcs' it must be called npcs otherwise it will be parsed as a tilesheet
+    * if possible, prefer to set static npcs as sprites
 
 ==== Sprites
 
-	* Sprites will be drawn out as 16x16; to get larger objects you need to specify the sheets as smaller tiles and draw each sprite as multiple tiles
+    * Sprites will be drawn out as 16x16; to get larger objects you need to specify the sheets as smaller tiles and draw each sprite as multiple tiles
 
 
 
@@ -1704,14 +2091,14 @@ BLENDER
 ==== Modelling
 
     * Image as background: https://blender.stackexchange.com/questions/118/how-do-i-set-a-background-image-while-i-am-editing
-	* Be sure to line up images so that it can mirror well
-	* Add a plane at a good starting point (center of face); center the plane along the axis, edge cut (ctrl+r) along that axis and delete the other sides face, then add a mirror modifier (test that the plane was perfectly centered by trying to move the center vert)
-	* Enable clipping on the mirror modifier (verts going passed the axis will snap to the axis)
-	*
+    * Be sure to line up images so that it can mirror well
+    * Add a plane at a good starting point (center of face); center the plane along the axis, edge cut (ctrl+r) along that axis and delete the other sides face, then add a mirror modifier (test that the plane was perfectly centered by trying to move the center vert)
+    * Enable clipping on the mirror modifier (verts going passed the axis will snap to the axis)
+    *
 
 ==== Contour Lines (edge highlighting)
 
-	* https://www.youtube.com/watch?v=s13yr-kN_CI
+    * https://www.youtube.com/watch?v=s13yr-kN_CI
 
 
 EXTERNAL ASSETS

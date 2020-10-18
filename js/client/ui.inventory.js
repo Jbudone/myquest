@@ -145,7 +145,7 @@ define(['loggable'], (Loggable) => {
                             uiSlot.addClass('hover');
                         }
 
-                        FX.event('click', $(this), {});
+                        FX.event('click', this, {});
                     }).mouseleave(() => {
                         slotContainer.removeClass('hover');
                         uiSlot.removeClass('hover');

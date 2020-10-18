@@ -5,6 +5,48 @@ const t = require('@babel/types');
 const fs = require('fs');
 
 const prettier = require('prettier');
+const jshint = require('jshint').JSHINT;
+
+let __FIXME_ERRCNT = 0;
+
+// NOTE:
+//  Here's the current state of PreprocessAST for future me:
+//      - Dynamic whitelisting isn't fool proof, its completely basic in favour of better static and runtime perf + less
+//      complexity
+//
+//          Code:
+//              do.a.thing();
+//              do.a.thingTwo();
+//
+//          Basic dynamic whitelisting
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thing);
+//              do.a.thing();
+//              CHECK(do.a.thingTwo);
+//              do.a.thingTwo();
+//
+//          Safer dynamic whitelisting
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thing);
+//              do.a.thing();
+//              CHECK(do) && CHECK(do.a) && CHECK(do.a.thingTwo);
+//              do.a.thingTwo();
+//
+//
+//         This considers if our whitelist has changed in other code. If we really wanted to do that we would want to
+//         preprocess *all* code and keep an obj-like file that provides a whitelist for functions across the scope of
+//         the project. Unfortunately because of JS typeless nature its not easy to determine which function is being
+//         called, so its not easy to point to the right function when whitelisting. Worse this makes things far more
+//         complicated and more perf heavy. I think having a basic whitelisting mode is better. If we really needed we
+//         could simply provide an option to make whitelisting less trustworthy so that we only whitelist safe types
+//         (Env, Math, Array, Object, etc.) and use that mode for soak tests or something
+//
+//
+//      - I'm not sure how much I trust the loc for sourcemaps; that may need some cleaning
+//      - Further preprocess would be nice: SCRIPT_INJECT, Assert, LOG_DEBUG, etc.
+//      - Profiling/optimizations: I haven't done any profiling, so I'm not sure how well this performs and if there's
+//      any easy speed ups
+
+
+
 
 
 // TODO:
@@ -12,7 +54,33 @@ const prettier = require('prettier');
 //      - Have to check leadingComments on all nodes for this
 //      - Could take an argument that specifies if we need to check for SCRPIT_INJECT; also could only look until we
 //      find it, then stop looking
+//  - MACRO files for shared code across client/server/webworkers/test
+//      - eg. Error checking in Errors.js:  OBJECT_TYPES, CHECK;  requirejs configs (between client/client-worker, and server/server-worker), etc.
 //  - FIXME: Do we need CHeckNode(topNode === true) to be a block statement? If so we should Assert this
+//  * FIXME: Dependency Graph / re-ordering nodes
+//      * CallExpression currying
+//          - var s = GetTile().LocalPos().x
+//          - if(GetTile(isPlayer ? x : y).SwapPlayer().LocalPos(isPlayer ? y : x).x < 0)
+//
+//          The solution is probably to recursively check the node and inject these dependency nodes BEFORE the dependent node
+//
+//          var __RESULTS = GetTile();
+//          __RESULTS = __RESULTS.LocalPos();
+//          __RESULTS = __RESULTS.x;
+//          var s = __RESULTS;
+//
+//
+//          var __RESULTS = isPlayer ? x : y;
+//          __RESULTS = GetTile(__RESULTS);
+//          __RESULTS = __RESULTS.SwapPlayer();
+//          __RESULTS2 = isPlayer ? y : x;
+//          __RESULTS = __RESULTS.LocalPos(__RESULTS2);
+//          __RESULTS = __RESULTS.x;
+//          if (__RESULTS < 0)
+//
+//
+//          First we'd have to order the dependency graph and swap our nodes with dependent-ordered nodes. Then we'd go
+//          through and check each node
 //  * FIXME: LocalExpression, BinaryExpression
 //      These are allowed to fail since we may have previous checks:
 //          _.isObject(notAnObj) && notAnObj.a.b.c.d()
@@ -21,10 +89,10 @@ const prettier = require('prettier');
 //      With binary/logical expressions we could include them as so:
 //          { (CHECK(a) && { CHECK(a.b) || CHECK(a.c) }) || (CHECK(b) }
 //
+//  - Inline static functions: DEBUGGER, etc.
 //      We could inline with the expression:
 //          (_.isObject(notAnObj) && (CHECK(notAnObj) && CHECK(notAnObj.a) && CHECK(notAnObj.a.b) &&
 //          CHECK(notAnObj.a.b.c) && CHECK(notAnObj.a.b.c.d) && notAnObj.a.b.c.d()))
-//  * FIXME: ConditionalExpression
 //  - Smoke tests would be nice for this. Parse & CHECK code that's supposed to fail at parts, and will only crash if
 //  preprocessed incorrectly
 //  - Lint for less safe code / unable to check code
@@ -42,14 +110,11 @@ const prettier = require('prettier');
 //
 //  - How would we prevent checks if we've already done a manual check?
 //      if (a && a.b && a.b.c) { ... }
-//  - How do we carry over checks later?
-//      a.b.c.d = 1 // checks a.b.c
-//      a.b.c.e = 2 // re-checks a.b.c
-//
-//      Would also need to protect against mutations in-between
-//      a.b.c.d = 1
-//      Transform(a)
-//      a.b.c.e = 2
+//  - Whitelist check: be ready for mutations in-between:
+//     
+//     a.b.c.d = 1
+//     if (x) Transform(a)
+//     a.b.c.e = 2
 //
 //
 //      Maybe we can keep track of type intrinsic while parsing, and then when a call is made we kill nuke any
@@ -57,8 +122,8 @@ const prettier = require('prettier');
 //
 //      Would need this to also be safe with block scope (conditions/etc.)
 //
-//      How could we carry over checks / store global intrinics?  CHECK(IS_FUNCTION, assert), CHECK(IS_OBJECT, Env)
-//
+//      - Profile to determine overhead for extra assertion checking (no whitelist? nuke part of whitelist after
+//      mutation call)
 //
 //  - Profiler speeds for larger files
 //  - Could keep track of all available variables based off scope as we traverse through node. For any CHECK(..) points
@@ -104,14 +169,71 @@ const prettier = require('prettier');
 //                return this.charComponents.find((c) => c.name === name);\
 //            }; }";
 //let code = "{ f((c) => c.name === name); }";
-let code = "{ const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',\n\
-    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
-    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
+//let code = "{ const fxmgrPath = Env.isBot ? 'test/pseudofxmgr' : 'client/fxmgr',\n\
+//    rendererPath = Env.isBot ? 'test/pseudoRenderer' : 'client/renderer',\n\
+//    uiPath = Env.isBot ? 'test/pseudoUI' : 'client/ui'; }";
+//let code = "{ ( ( typeof defensiveInfo == 'object' || DEBUGGER('a') ) && ( typeof target == 'object' || DEBUGGER('b') ) && ( typeof target.entity == 'object' || DEBUGGER('c') ) && ( typeof target.entity.npc == 'object' || DEBUGGER('d') ) ) }";
+//let code = "{ var OBJECT_TYPES = ['object', 'function']; var a = 1; OBJECT_TYPES.includes(typeof a); }";
+//let code = "{ The.area.pathfinding.workerHandlePath({\
+//                    movableID: character.entity.id,\
+//                    start: { x: fromTiles[0].x, y: fromTiles[0].y },\
+//                }); }";
+/*
+let code = "{\
+    character.entity.cancelPath();\n\
+    character.entity.page.area.pathfinding.workerHandlePath({\
+        movableID: The.player.id,\
+        startPt: { x: playerX, y: playerY },\
+        endPt: { x: toGlobal.x, y: toGlobal.y }\
+    }).then((data) => {\
+        if (data.ptPath.ALREADY_THERE) {\
+            addedPath = ALREADY_THERE;\
+            return;\
+        }\
+        const path = new Path();\
+        data.ptPath.walks.forEach((walk) => {\
+            path.walks.push(walk);\
+        });\
+        path.start = { x: playerX, y: playerY };\
+        if (maxWalk && path.length() > maxWalk) {\
+            addedPath = PATH_TOO_FAR;\
+        } else {\
+            path.flag = PATH_CHASE;\
+            addedPath = character.entity.addPath(path);\
+            pathId    = character.entity.path.id;\
+            character.entity.recordNewPath(path);\
+        }\
+    }).catch((data) => {\
+        console.log(`FAILED TO FIND PATH: (${playerX}, ${playerY}) -> (${toX}, ${toY})`);\
+    });\
+}";
+*/
+//let code = "{\
+//    workerHandlePath().then((data) => {\
+//        Taco.bell();\
+//    });\
+//}";
+//let code = "{ let taco = [1,2,3].filter((i) => i > 1).map((i) => i * 2); }";
+//let code = "{\
+//      server.handler(EVT_REGENERATE).set(function (evt, data) {\
+//        UI.postMessage(`Regenerating ${data.entityId} to health ${data.health}`, MESSAGE_INFO);\
+//        The.area.movables[data.entityId].character.doHook(RegenerateEvt).post(data);\
+//      });\
+//}";
+//let code = "{ const area = this.entity.page.area; }";
+//let code = "{ var t = (mouse) => { const x = (mouse.clientX - taco.bell.meat); }; }";
+let code = "{ this.Log(`e == ${e}`, LOG_DEBUG);\n\
+            this.Log(`Do we have a target? ${this.target ? 1 : 2}`, LOG_DEBUG);\n\
+            this.Log(`Does our target have a character? ${this.target.character.a.b.c ? target.character.a.b.c : target.character.a.b()}`, LOG_DEBUG); }";
+
+
+
 
 
 const Settings = {
     output: null,
     verbose: true
+    //checkSyntax: true
 };
 
 const ModifyNode = function() {
@@ -135,6 +257,7 @@ for (let i = 0; i < process.argv.length; ++i) {
     }
 }
 
+const codeLines = code.split('\n');
 
 const OBJECT_TYPE = "OBJECT",
     FUNCTION_TYPE = "FUNCTION";
@@ -164,6 +287,8 @@ const cloneNode = (node) => {
         //if (clonedNode.property.type === 'MemberExpression') {
         //    clonedNode.computed = true;
         //}
+    } else if (node.type === 'ThisExpression') {
+        clonedNode.type = node.type;
     } else if (node.type === 'CallExpression') {
 
         clonedNode.type = node.type;
@@ -185,6 +310,12 @@ const cloneNode = (node) => {
     } else if (node.type === 'ThisExpression') {
 
         clonedNode.type = node.type;
+    } else if (node.type === 'BinaryExpression') {
+
+        clonedNode.type = node.type;
+        clonedNode.operator = node.operator;
+        clonedNode.left = cloneNode(node.left);
+        clonedNode.right = cloneNode(node.right);
     } else {
         console.error(`FIXME: Unexpected cloning type ${node.type}`);
         for (let key in node) {
@@ -232,6 +363,7 @@ const blockChildNode = (node, prop) => {
 // eg. { checker: IS_TYPE, args: [node, OBJECT_TYPE] }
 const buildNodeFromCheck = (checkItem, loc) => {
 
+
     const setNodeLoc = (node) => {
         //node.start = 0;
         //node.end = 0;
@@ -248,59 +380,54 @@ const buildNodeFromCheck = (checkItem, loc) => {
         }
     };
 
-    const checkNodeArr = [];
+    //const checkNodeArr = [];
     const checkNodeExpr = {
         type: 'ExpressionStatement',
         expression: {
-            type: 'CallExpression',
-            callee: {
-                type: 'Identifier',
-                name: 'CHECK'
-            },
-            arguments: [
-                {
-                    type: 'ArrayExpression',
-                    elements: checkNodeArr
-                }
-            ]
+            type: 'LogicalExpression',
+            NODE_CHECKTYPE: true,
+            left: {},
+            operator: '||',
+            right: {
+                type: 'CallExpression',
+                callee: {
+                    type: 'Identifier',
+                    name: 'DEBUGGER'
+                },
+                arguments: [{
+                    type: 'StringLiteral',
+                    value: `ERROR MESSAGE HERE: ${++__FIXME_ERRCNT} (${Settings.output})` // FIXME
+                }]
+            }
         }
+    };
+
+    const canCheckType = (node) => {
+
+        if (node.type === 'Identifier' || node.type === 'ThisExpression') {
+            return true;
+        } else if (node.type === 'MemberExpression') {
+            return canCheckType(node.object) && canCheckType(node.property);
+        }
+
+        return false;
     };
 
     setNodeLoc(checkNodeExpr);
 
-    const checkItemNode = {
-        type: 'ObjectExpression',
-        properties: [
-            {
-                type: 'ObjectProperty',
-                key: {
-                    type: 'Identifier',
-                    name: 'checker'
-                },
-                value: {
-                    // FIXME: We'll change this to numeric literal later
-                    //type: 'NumericLiteral',
-                    //value: 1
-
-                    type: 'Identifier',
-                    name: checkItem.checker
-                },
-                kind: 'init'
-            }
-        ]
-    };
-
+    const checkItemNode = {};
+    checkNodeExpr.expression.left = checkItemNode;
     setNodeLoc(checkItemNode);
 
     if (checkItem.checker === IS_TYPE) {
 
         // Whitelisted types for checking
-        const whitelistTypeCheck = ['MemberExpression', 'Identifier'];
-        if (whitelistTypeCheck.indexOf(checkItem.args[0].type) === -1) {
+        if (!canCheckType(checkItem.args[0])) {
             return null;
         }
 
 
+        /*
         // Type Comparison
         const typeCmpNode = {
             type: 'ObjectProperty',
@@ -318,21 +445,48 @@ const buildNodeFromCheck = (checkItem, loc) => {
 
         setNodeLoc(typeCmpNode);
         checkItemNode.properties.push(typeCmpNode);
+        */
 
         // Node to check
         const clonedNode = cloneNode(checkItem.args[0]);
-        const objNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'node'
-            },
-            value: clonedNode,
-            kind: 'init'
-        };
+        //const objNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'node'
+        //    },
+        //    value: clonedNode,
+        //    kind: 'init'
+        //};
 
-        setNodeLoc(objNode);
-        checkItemNode.properties.push(objNode);
+
+
+
+
+        checkItemNode.type = 'CallExpression';
+        checkItemNode.callee = {
+            object: {
+                type: 'Identifier',
+                name: 'OBJECT_TYPES'
+            },
+            property: {
+                type: 'Identifier',
+                name: 'includes'
+            },
+            computed: false,
+            type: 'MemberExpression'
+        };
+        checkItemNode.arguments = [{
+            type: 'UnaryExpression',
+            operator: 'typeof',
+            argument: clonedNode
+        }];
+
+
+
+        setNodeLoc(checkItemNode.callee);
+        setNodeLoc(checkItemNode.arguments[0]);
+        //checkItemNode.properties.push(objNode);
 
     } else if (checkItem.checker === HAS_KEY) {
 
@@ -367,34 +521,39 @@ const buildNodeFromCheck = (checkItem, loc) => {
 
         // Object
         const clonedObjNode = cloneNode(checkItem.args[1]);
-        const objInitNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'object'
-            },
-            value: clonedObjNode,
-            kind: 'init'
-        };
-        setNodeLoc(objInitNode);
-        checkItemNode.properties.push(objInitNode);
+        //const objInitNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'object'
+        //    },
+        //    value: clonedObjNode,
+        //    kind: 'init'
+        //};
+        //setNodeLoc(objInitNode);
+        //checkItemNode.properties.push(objInitNode);
 
-        // Property
-        const objPropNode = {
-            type: 'ObjectProperty',
-            key: {
-                type: 'Identifier',
-                name: 'property'
-            },
-            value: propNode,
-            kind: 'init'
-        };
-        setNodeLoc(objPropNode);
-        checkItemNode.properties.push(objPropNode);
+        //// Property
+        //const objPropNode = {
+        //    type: 'ObjectProperty',
+        //    key: {
+        //        type: 'Identifier',
+        //        name: 'property'
+        //    },
+        //    value: propNode,
+        //    kind: 'init'
+        //};
+        //setNodeLoc(objPropNode);
+        //checkItemNode.properties.push(objPropNode);
+        checkItemNode.type = 'BinaryExpression';
+        checkItemNode.operator = 'in';
+        checkItemNode.left = propNode;
+        checkItemNode.right = clonedObjNode;
+        setNodeLoc(checkItemNode);
 
     }
 
-    checkNodeArr.push(checkItemNode);
+    //checkNodeArr.push(checkItemNode);
 
     return checkNodeExpr;
 };
@@ -411,7 +570,12 @@ const stringifyNode = (node, topNode) => {
                 valStr = stringifyNode(node.property);
 
             if (!objStr || !valStr) return;
-            return `${objStr}.${valStr}`;
+
+            if (node.computed) {
+                return `${objStr}[${valStr}]`;
+            } else {
+                return `${objStr}.${valStr}`;
+            }
         }
     } else if (node.type === 'Identifier') {
         return node.name;
@@ -419,6 +583,14 @@ const stringifyNode = (node, topNode) => {
         return 'this';
     } else if (node.type === 'StringLiteral') {
         return node.value;
+    } else if (node.type === 'NumericLiteral') {
+        return node.value;
+    } else if (node.type === 'BinaryExpression') {
+        const left = stringifyNode(node.left),
+            right = stringifyNode(node.right);
+
+        if (!left || !right) return;
+        return `${left}${node.operator}${right}`;
     }
 };
 
@@ -441,12 +613,13 @@ const isSafeIdentifier = (node) => {
 // Check if we've already whitelisted this check
 const isCheckWhitelisted = (checkItem, builtCheck, scopedWhitelist) => {
 
-    let checks = builtCheck.expression.arguments[0].elements[0].properties;
+    //let checks = builtCheck.expression.left.arguments[0] .left.argument;
     let hashedCheck = '';
 
     let validHashCheck = false;
     if (checkItem.checker === IS_TYPE) {
-        let check = checks[2];
+        //let check = checks[2];
+        let check = checkItem.args[0];
         if (checkItem.args[1] === OBJECT_TYPE) {
             hashedCheck = 'IS_TYPE:OBJECT_TYPE:';
         } else if (checkItem.args[1] === FUNCTION_TYPE) {
@@ -454,17 +627,18 @@ const isCheckWhitelisted = (checkItem, builtCheck, scopedWhitelist) => {
         }
 
         // Is this a globally safe object?
-        if (isSafeIdentifier(check.value)) {
+        if (isSafeIdentifier(check)) {
             return true;
         }
 
-        let nodeCheckStr = stringifyNode(check.value);
+        let nodeCheckStr = stringifyNode(check);
         if (nodeCheckStr) {
             hashedCheck += nodeCheckStr;
             validHashCheck = true;
         }
     } else if (checkItem.checker === HAS_KEY) {
-        let obj = checks[1], prop = checks[2];
+        //let obj = checks[1], prop = checks[2];
+        let obj = checkItem.args[1], prop = checkItem.args[2];
         let objCheckStr = stringifyNode(obj.value);
         let valCheckStr = stringifyNode(prop.value);
 
@@ -516,9 +690,8 @@ const checkNodeBody = (node, state) => {
         state.modifyNode = innerModifyNode;
         CheckNode(node, null, state);
 
-        // FIXME: For each of these checks, check against whitelist first
-        //  - Convert check to string, or basic object
-        //  - Before building node for check, first check scoped whitelist
+        let lastAssertLine = -2,
+            lastAssert = null;
 
         // Prepend all preChecks before node
         if (innerModifyNode.preCheck.length > 0) {
@@ -528,10 +701,88 @@ const checkNodeBody = (node, state) => {
                 const checkNode = buildNodeFromCheck(checkItem, node.loc);
                 if (checkNode) {
                     if (isCheckWhitelisted(checkItem, checkNode, innerScope)) return;
-                    body.splice(i, 0, checkNode);
-                    ++i;
+
+                    // Can we flatten this assert into the previous line?
+                    if (lastAssertLine === (i - 1)) {
+                        // Find rightmost node and splice as logicalExpression there to branch this check
+                        let rightMostNode = lastAssert.expression, rightMostNodeParent = null;
+                        while (rightMostNode.right && rightMostNode.right.NODE_CHECKTYPE) {
+                            rightMostNodeParent = rightMostNode;
+                            rightMostNode = rightMostNode.right;
+                        }
+
+                        if (!rightMostNodeParent) {
+                            lastAssert.expression = {
+                                type: 'LogicalExpression',
+                                NODE_CHECKTYPE: true,
+                                left: rightMostNode,
+                                operator: '&&',
+                                right: checkNode.expression
+                            };
+                        } else {
+                            rightMostNodeParent.right = {
+                                type: 'LogicalExpression',
+                                NODE_CHECKTYPE: true,
+                                left: rightMostNode,
+                                operator: '&&',
+                                right: checkNode.expression
+                            };
+
+                            rightMostNodeParent.right.loc = rightMostNodeParent.loc;
+                        }
+
+                        // Steal loc from lastAssert
+                        checkNode.loc = lastAssert.expression.loc;
+
+                        //lastAssert.expression.arguments[0].elements.push(
+                        //    checkNode.expression.arguments[0].elements[0]
+                        //);
+                    } else {
+                        lastAssertLine = i;
+                        lastAssert = checkNode;
+                        body.splice(i, 0, checkNode);
+                        ++i;
+                    }
                 }
             });
+
+            if (lastAssert && lastAssert.loc) {
+                let source = codeLines[lastAssert.loc.start.line - 1];
+                if (source) {
+                    source = source.trim();
+                    let rightMostNode = lastAssert.expression, rightMostNodeParent = null;
+                    while (rightMostNode.right && rightMostNode.right.NODE_CHECKTYPE) {
+                        rightMostNodeParent = rightMostNode;
+                        rightMostNode = rightMostNode.right;
+                    }
+
+                    const sourceNodeDebug = {
+                        type: 'StringLiteral',
+                        value: source
+                    };
+
+                    if (!rightMostNodeParent) {
+                        lastAssert.expression = {
+                            type: 'LogicalExpression',
+                            NODE_CHECKTYPE: true,
+                            left: rightMostNode,
+                            operator: '&&',
+                            right: sourceNodeDebug
+                        };
+                    } else {
+                        rightMostNodeParent.right = {
+                            type: 'LogicalExpression',
+                            NODE_CHECKTYPE: true,
+                            left: rightMostNode,
+                            operator: '&&',
+                            right: sourceNodeDebug
+                        };
+
+                        rightMostNodeParent.right.loc = rightMostNodeParent.loc;
+                    }
+
+                }
+            }
         }
 
         // Replace node with replacement nodes
@@ -668,11 +919,13 @@ const CheckNode = (curNode, expectType, state) => {
             //   a[b]  ===>  a.hasOwnProperty(b)    // computed
             const propComputed = curNode.computed;// curNode.property.type === 'MemberExpression';
 
-            let preCheck = { 
-                checker: HAS_KEY,
-                args: [curNode, curNode.object, curNode.property, propComputed]
-            };
-            Assertion(state.modifyNode.preCheck, preCheck, state.scope);
+            // FIXME: Can we get rid of the HAS_KEY check? Since we're about to check that prop is an object anyways, we
+            // can piggyback off that check
+            //let preCheck = { 
+            //    checker: HAS_KEY,
+            //    args: [curNode, curNode.object, curNode.property, propComputed]
+            //};
+            //Assertion(state.modifyNode.preCheck, preCheck, state.scope);
 
             preCheck = {
                 checker: IS_TYPE,
@@ -972,6 +1225,82 @@ const CheckNode = (curNode, expectType, state) => {
             CheckNode(callArg, null, state);
         });
 
+    } else if (curNode.type === 'ConditionalExpression') {
+
+        // test, consequent, alternate
+        // Attempt to check these and replace node
+
+        ['test', 'consequent', 'alternate'].forEach((nodeKey) => {
+            const savedModifyNode = state.modifyNode;
+            const innerModifyNode = new ModifyNode();
+            state.modifyNode = innerModifyNode;
+
+            const nodePart = curNode[nodeKey];
+            CheckNode(nodePart, null, state);
+
+            // Setup all assertions
+            const testNodes = [];
+            innerModifyNode.preCheck.forEach((preCheck) => {
+                const checkNode = buildNodeFromCheck(preCheck, curNode.loc);
+                if (checkNode) testNodes.push(checkNode);
+            });
+
+            innerModifyNode.replaceNode.forEach((replaceNode) => {
+                const checkNode = buildNodeFromCheck(replaceNode, curNode.loc);
+                if (checkNode) testNodes.push(checkNode);
+            });
+
+            let rightMostCheckNode = null;
+            testNodes.forEach((testNode) => {
+
+                if (rightMostCheckNode) {
+                    const newNode = {
+                        type: 'LogicalExpression',
+                        NODE_CHECKTYPE: true,
+                        left: testNode.expression,
+                        operator: '&&',
+                        right: {
+                            type: 'BooleanLiteral',
+                            value: true
+                        }
+                    };
+                    rightMostCheckNode.right = newNode;
+                    rightMostCheckNode = newNode;
+                } else {
+
+                    const newNode = {
+                        type: 'LogicalExpression',
+                        NODE_CHECKTYPE: true,
+                        left: testNode.expression,
+                        operator: '&&',
+                        right: {
+                            type: 'BooleanLiteral',
+                            value: true
+                        }
+                    };
+
+                    curNode[nodeKey] = {
+                        type: 'ConditionalExpression',
+                        NODE_CHECKTYPE: true,
+                        test: newNode,
+                        consequent: curNode[nodeKey],
+                        alternate: {
+                            type: 'Identifier',
+                            name: 'undefined'
+                        }
+                    };
+
+                    rightMostCheckNode = newNode;
+                }
+            });
+
+
+
+            state.modifyNode = savedModifyNode;
+        });
+
+
+
 
     // ================================================
     // Special Treatment Expressions (whitelisted for now)
@@ -1004,8 +1333,16 @@ const CheckNode = (curNode, expectType, state) => {
 };
 
 // Begin checking body
-const parsed = Parser.parse(code, { sourceFilename: sourceFile });
-const SafeIdentifiers = ['Math', 'Env', 'Assert', '_', 'Array', 'Object', 'Promise', 'JSON', 'Err', 'String', 'Date', 'Number', 'Error'];
+let parsed = null;
+
+try {
+    parsed = Parser.parse(code, { sourceFilename: sourceFile });
+} catch (e) {
+    console.error(e);
+    process.exit(-1);
+}
+
+const SafeIdentifiers = ['Math', 'Env', 'Assert', '_', 'Array', 'Object', 'Promise', 'JSON', 'Err', 'String', 'Date', 'Number', 'Error', 'window', 'GLOBAL', 'define'];
 const scope = { parentScope: null, whitelist: [] };
 const state = { modifyNode: null, scope };
 CheckNode(parsed.program, null, state);
@@ -1020,6 +1357,12 @@ const output = generate(parsed, {
     //compact: true,
     sourceMaps: true
 }, { sourceFile: code });
+
+if (Settings.checkSyntax) {
+    console.log(jshint);
+    jshint(output.code, { esversion: 9 });
+    console.log(jshint.data());
+}
 
 
 if (Settings.verbose) {

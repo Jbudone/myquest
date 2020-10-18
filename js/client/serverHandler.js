@@ -1,5 +1,6 @@
 define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
+
     const ServerHandler = function() {
 
         extendClass(this).with(Dynamic);
@@ -36,14 +37,16 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                     if (req) break;
                 }
 
+
                 if (req.evtType === EVT_LOGIN) {
+                    evt.login = 1; // So that we don't queue it and wait for EVT_FRAME_END
                     return false;
                 }
             }
             return true;
         };
 
-        window.handledEvents       = new Array(10); // Array of events that have been passed to handleEvent (for debugging purposes)
+        window.handledEvents       = new Array(30); // Array of events that have been passed to handleEvent (for debugging purposes)
         window.handledEventsCursor = 0;
         window.processingEvents    = [];
         window.reorderedProcessingEvents = [];
@@ -74,8 +77,27 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                 this.handleEvent = (evt) => {
 
                     // Push event to list of handled events (circular array)
-                    window.handledEventsCursor = (window.handledEventsCursor + 1) % window.handledEvents.length;
-                    window.handledEvents[window.handledEventsCursor] = evt;
+                    // NOTE: This shit fills up fast w/ end of frame messages, so just keep a count on EVT_END_OF_FRAME
+                    // instead of filling up a spot for each and every EVT_END_OF_FRAME
+                    if
+                    (
+                        evt.evtType === EVT_END_OF_FRAME &&
+                        window.handledEvents[window.handledEventsCursor] &&
+                        window.handledEvents[window.handledEventsCursor].evtType === EVT_END_OF_FRAME
+                    )
+                    {
+                        // Yet another EVT_END_OF_FRAME
+                        ++window.handledEvents[window.handledEventsCursor].count;
+                    }
+                    else
+                    {
+                        window.handledEventsCursor = (window.handledEventsCursor + 1) % window.handledEvents.length;
+                        window.handledEvents[window.handledEventsCursor] = evt;
+
+                        if (evt.evtType === EVT_END_OF_FRAME) {
+                            window.handledEvents[window.handledEventsCursor].count = 1;
+                        }
+                    }
 
                     // TODO: form server as an FSM, since we can expect newCharacter or login first; and then area
                     // initialization responses next, and then area related events. Move from one state of responses to
@@ -85,7 +107,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                         else             this.onNewCharacterFailed();
                     } else if (evt.login) {
                         if (evt.success) this.onLogin( evt.player );
-                        else             this.onLoginFailed();
+                        else             this.onLoginFailed( evt );
                     } else if (evt.initialization) {
                         this.onInitialization( evt );
                     } else if (evt.evtType === EVT_END_OF_FRAME) {
@@ -364,9 +386,11 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
                             else if (evtType == EVT_NETSERIALIZE) this.onEntityNetserialize( page, event.data.entityId, event.data.serialize );
                             else if (evtType == EVT_PATH_PARTIAL_PROGRESS) this.onEntityPathProgress( page, event.data );
                             else if (evtType == EVT_CANCELLED_PATH) this.onEntityPathCancelled( page, event.data );
+                            else if (evtType == EVT_FINISHED_PATH) this.onEntityPathFinished( page, event.data );
                             else if (evtType == EVT_DAMAGED) this.onEntityDamaged( page, event.data );
                             else if (evtType == EVT_DIED) this.onEntityDied( page, event.data );
                             else if (evtType == EVT_TELEPORT) this.onEntityTeleport( page, event.data );
+                            else if (evtType == EVT_ZONE) this.onEntityLeavePage( page, event.entity, event.newPage );
                             else {
                                 const dynamicHandler = this.handler(evtType);
                                 if (dynamicHandler) {
@@ -519,6 +543,7 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
         this.onEntityRemoved        = function(){};
         this.onEntityNetserialize   = function(){};
         this.onEntityPathProgress   = function(){};
+        this.onEntityPathFinished   = function(){};
         this.onEntityPathCancelled  = function(){};
         this.onEntityDamaged        = function(){};
         this.onEntityDied           = function(){};
@@ -592,7 +617,6 @@ define(['dynamic','loggable'], (Dynamic, Loggable) => {
 
                 this.websocket.send(event.serialize());
                 this.requestBuffer.addEvent(event);
-
             });
         };
     };

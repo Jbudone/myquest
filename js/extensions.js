@@ -5,7 +5,8 @@ define(function(){
 		CLIENT=1<<1,
         TEST=1<<2,
         CLIENT_TEST=1<<3,
-        SERVER_TEST=1<<4;
+        SERVER_TEST=1<<4,
+        TEST_USESERVER=1<<5,
 		status={loaded:false},
         environments={
             client: { env: CLIENT, path: 'client/' },
@@ -13,6 +14,7 @@ define(function(){
             test: { env: TEST, path: 'test/' },
             client_test: { env: CLIENT_TEST, path: 'client/test/' },
             server_test: { env: SERVER_TEST, path: 'server/test/' },
+            test_useserver: { env: TEST_USESERVER, path: 'server/' },
         },
 		extensions={
 			movable:(CLIENT|SERVER),
@@ -21,10 +23,25 @@ define(function(){
             resources:(CLIENT|SERVER),
             game:(CLIENT_TEST),
             server:(SERVER_TEST),
-            errorReporter:(CLIENT|SERVER|TEST)
+            errorReporter:(CLIENT|SERVER|TEST),
+            webworker:(CLIENT|SERVER|TEST_USESERVER),
 		}, ready=function(environment){
 			return new Promise(function(loaded) {
                 const envPaths = [];
+
+                // TEST environment. Find all extensions that have TEST_USESERVER and remove CLIENT to override to
+                // SERVER env
+                if (environment & TEST) {
+
+                    _.each(extensions, function(env, extension, extensions){
+                        if (extensions[extension] & TEST_USESERVER) {
+                            extensions[extension] &= ~CLIENT;
+                        }
+                    });
+
+                    environment |= TEST_USESERVER;
+                    envPaths.push(environments.test_useserver);
+                }
 
                 if (environment & CLIENT) envPaths.push(environments.client);
                 if (environment & SERVER) envPaths.push(environments.server);
@@ -46,7 +63,7 @@ define(function(){
 
                                 --loading;
                                 if (waiting && !loading) {
-                                    loaded();
+                                    cleanup();
                                 }
                             };
                             require([module], function(mod) {
@@ -56,9 +73,21 @@ define(function(){
 
                     });
                 });
+
+
+                // Clear up any extensions that don't exist in this environment
+                var cleanup = () => {
+
+                    for (let key in extensions) {
+                        if (!(typeof extensions[key] === 'object')) delete extensions[key];
+                    }
+
+                    loaded();
+                };
+
 				waiting = true;
 				if (!loading) {
-					loaded();
+                    cleanup();
 				}
 			});
 		};

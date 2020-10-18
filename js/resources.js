@@ -30,6 +30,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
             fx: {},
             media: {},
             testing: {},
+            eventnodes: {},
 
 			initialize: function(){},
 			findSheetFromFile: function(){},
@@ -292,6 +293,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 			else if (assetID == 'components') return initializeComponents(asset);
 			else if (assetID == 'media') return initializeMedia(asset);
 			else if (assetID == 'testing') return initializeTesting(asset);
+			else if (assetID == 'eventnodes') return initializeEventNodes(asset);
 			else return new Error("Unknown asset: "+ assetID);
 		}),
 
@@ -370,7 +372,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 				}
 
 				this.sheets[_sheet.id] = sheet;
-                if (!Env.isServer) {
+                if (!Env.isServer && !Env.isBot) {
                     ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                         sheet.image = bitmapImage;
                     }, (err) => {
@@ -518,7 +520,7 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 					}.bind(env));
 
                     this.sprites[_sheet.id] = sheet;
-                    if (!Env.isServer) {
+                    if (!Env.isServer && !Env.isBot) {
                         ResourceProcessor.readImage(_sheet.id).then((bitmapImage) => {
                             sheet.image = bitmapImage;
                             prepareImage();
@@ -725,6 +727,29 @@ define(['loggable', 'resourceProcessor'], function(Loggable, ResourceProcessor){
 
 			var res = JSON.parse(asset);
             this.testing = res;
+        }.bind(_interface)),
+
+        initializeEventNodes = (function(asset){
+
+            return new Promise((loaded, failed) => {
+                var res = JSON.parse(asset).eventnodes,
+                    loading = 0;
+                res.forEach((eventNode) => {
+
+                    var eventNodeBaseRes = eventNode.base,
+                        baseFile = "scripts/eventnodes."+eventNodeBaseRes;
+                    ++loading;
+                    this.eventnodes[eventNode.id]=eventNode;
+                    requirejs([baseFile], function(baseScript) {
+                        eventNode.base = baseScript;
+
+                        --loading;
+                        if (loading === 0) {
+                            loaded();
+                        }
+                    });
+                });
+            });
         }.bind(_interface)),
 
         loadComponents = (function(){

@@ -10,7 +10,12 @@ const ResourceMgr = (new function(){
 
         sheets: {
             findResources: (data) => {
-                return data.tilesheets.list;
+                const list = data.tilesheets.list;
+                list.forEach((sheet) => {
+                    if (!sheet.data.collisions) sheet.data.collisions = [];
+                    if (!sheet.data.floating)   sheet.data.floating = [];
+                });
+                return list;
             },
 
             resType: (res) => 'tilesheet'
@@ -405,6 +410,9 @@ const ResourceMgr = (new function(){
                                             })
                                 )
                 );
+
+                // Push all avatars at the beginning for when we load a map
+                MapEditor.addAvatar({ id: avatar, img: avatarImg });
             });
         });
 

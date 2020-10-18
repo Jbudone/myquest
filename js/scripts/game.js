@@ -125,25 +125,28 @@ define(
                                 const killer = details.advocate;
                                 assert(killer instanceof Character, "The listed advocate is not a Character type");
 
-                                const XP = character.entity.npc.XP;
-                                assert(_.isNumber(XP), "A character was killed by somebody, yet he has no XP");
+                                // Give player XP
+                                if (killer.isPlayer) {
+                                    const XP = character.entity.npc.XP;
+                                    assert(_.isNumber(XP), "A character was killed by somebody, yet he has no XP");
 
-                                // XP gained from an enemy is equal to its base XP if you have the same level as the
-                                // enemy. That amount is scaled accordingly if your level is higher or lower than the
-                                // enemy, and capped at a min (0) and max multiplier
-                                //
-                                // ReceivedXP = BaseXP * (2.0 * (8.0 + [yourLevel - myLevel]{-8,8}) / 16)
-                                // TODO: It may be worth modifying the scaler (8.0) based off of your level
-                                const yourLevel  = character.entity.npc.level,
-                                    myLevel      = killer.charComponent('levelling').level,
-                                    xpScaler     = 6.0,
-                                    xpMultiplier = (Math.min(xpScaler, Math.max(-xpScaler, yourLevel - myLevel)) + xpScaler) / xpScaler,
-                                    gainedXP     = Math.floor(xpMultiplier * XP);
+                                    // XP gained from an enemy is equal to its base XP if you have the same level as the
+                                    // enemy. That amount is scaled accordingly if your level is higher or lower than the
+                                    // enemy, and capped at a min (0) and max multiplier
+                                    //
+                                    // ReceivedXP = BaseXP * (2.0 * (8.0 + [yourLevel - myLevel]{-8,8}) / 16)
+                                    // TODO: It may be worth modifying the scaler (8.0) based off of your level
+                                    const yourLevel  = character.entity.npc.level,
+                                        myLevel      = killer.charComponent('levelling').level,
+                                        xpScaler     = 6.0,
+                                        xpMultiplier = (Math.min(xpScaler, Math.max(-xpScaler, yourLevel - myLevel)) + xpScaler) / xpScaler,
+                                        gainedXP     = Math.floor(xpMultiplier * XP);
 
-                                // FIXME: Store GainedXP symbol somewhere
-                                killer.doHook('GainedXP').post({
-                                    XP: gainedXP
-                                });
+                                    // FIXME: Store GainedXP symbol somewhere
+                                    killer.doHook('GainedXP').post({
+                                        XP: gainedXP
+                                    });
+                                }
                             }
                         }
                     }
@@ -600,75 +603,47 @@ define(
 
                 handleMoving: () => {
 
-                    user.hook('clickedTile', this).after((toTile) => {
+                    user.hook('clickedTile', this).after((toTile, toGlobal, mouse) => {
 
                         if (!(The.area.hasTile(toTile) && The.area.isTileOpen(toTile))) return;
 
                         //  click to move player creates path for player
                         const playerX    = The.player.position.global.x,
                             playerY      = The.player.position.global.y,
-                            nearestTiles = The.area.findNearestTiles(playerX, playerY);
+                            nearestTiles = The.area.findNearestTiles(playerX, playerY); // FIXME: Nuke this once we swap to ptPath
 
-                        this.Log(`Finding path from (${playerX}, ${playerY}) to (${toTile.x}, ${toTile.y})`, LOG_DEBUG);
-                        let path = The.area.findPath(nearestTiles, [toTile]);
 
-                        if (path && path.path) {
 
-                            // inject walk to beginning of path depending on where player is relative to start tile
-                            const startTile    = path.start.tile,
-                                playerPosition = {
-                                    global: {
-                                        x: The.player.position.global.x,
-                                        y: The.player.position.global.y
-                                    }
-                                };
 
-                            let recalibrateX   = false,
-                                recalibrateY   = false;
 
-                            path = path.path;
+                        {
+                            const fromTiles = nearestTiles,
+                                toTiles = [toTile];
 
-                            if (playerPosition.global.y - startTile.y * Env.tileSize !== 0) recalibrateY = true;
-                            if (playerPosition.global.x - startTile.x * Env.tileSize !== 0) recalibrateX = true;
+                            The.area.pathfinding.workerHandlePath({
+                                movableID: The.player.id,
+                                startPt: { x: playerX, y: playerY },
+                                endPt: { x: toGlobal.x, y: toGlobal.y },
+                                immediate: true
+                            }).then((data) => {
 
-                            path.splitWalks();
+                                // FIXME: Need to recalibrate from curPos -> nearest point along path?
+                                if (data.path.ALREADY_THERE) {
 
-                            if (recalibrateY) {
-                                // Inject walk to this tile
-                                const distance = -1 * (playerPosition.global.y - startTile.y * Env.tileSize),
-                                    walk       = new Walk((distance < 0 ? NORTH : SOUTH), Math.abs(distance), startTile.offset(0, 0));
-                                this.Log(`Recalibrating Walk (Y): steps (${distance})`, LOG_DEBUG);
-                                path.walks.unshift(walk);
-                            }
+                                    console.log("No path to be created..we're already there!");
+                                    return;
+                                }
 
-                            if (recalibrateX) {
-                                // Inject walk to this tile
-                                const distance = -1 * (playerPosition.global.x - startTile.x * Env.tileSize),
-                                    walk       = new Walk((distance < 0 ? WEST : EAST), Math.abs(distance), startTile.offset(0, 0));
-                                this.Log(`Recalibrating Walk (X): steps (${distance})`, LOG_DEBUG);
-                                // this.Log("   steps: "+distance+" FROM ("+The.player.position.global.x+") TO ("+startTile.x*Env.tileSize+")", LOG_DEBUG);
-                                path.walks.unshift(walk);
-                            }
+                                const path  = data.path,
+                                    movable = data.movable;
+                                movable.addPath(path);
+                                movable.recordNewPath(path);
 
-                            path.walks[0].time = now();
+                            }).catch((data) => {
+                                console.error("Could not find path!");
+                            });
 
-                            for (let i = 0; i < path.walks.length; ++i) {
-                                const walk = path.walks[i];
-                                this.Log(`Walk: (${walk.direction}, ${walk.distance}, ${walk.steps})`, LOG_DEBUG);
-                            }
-
-                            if (path.walks.length) {
-                                The.player.addPath(path);
-                                The.player.recordNewPath(path);
-                            }
-
-                            The.UI.tilePathHighlight = toTile;
-                            The.UI.tilePathHighlight.step = 0; // FIXME: UI.setTilePathHighlight(...) to copy the tile, and also set the 'step' property for fading in/out
-
-                        } else if (path) {
-                            // Already there
-                        } else {
-                            this.Log("Bad path :(", LOG_ERROR);
+                            return;
                         }
                     });
                 },
@@ -680,7 +655,6 @@ define(
                             x          = item.coord.x,
                             y          = item.coord.y,
                             tile       = new Tile(x, y),
-                            path       = area.pathfinding.findPath(The.player, tile),
                             pickupItem = () => {
                                 server.request(EVT_GET_ITEM, {
                                     coord: (item.coord.y - page.y) * Env.pageWidth + (item.coord.x - page.x),
@@ -703,16 +677,36 @@ define(
                                 .catch(errorInGame);
                             };
 
-                        if (path === false) {
-                            throw Err("Could not find path to item");
-                        } else if (path === ALREADY_THERE) {
-                            pickupItem();
-                        } else {
+                        const playerX = The.player.position.global.x,
+                            playerY   = The.player.position.global.y,
+                            toX       = x,
+                            toY       = y,
+                            fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                            toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
+
+
+                        The.player.cancelPath();
+                        The.area.pathfinding.workerHandlePath({
+                            movableID: The.player.id,
+                            startPt: { x: playerX, y: playerY },
+                            endPt: { x: toGlobal.x, y: toGlobal.y }
+                        }).then((data) => {
+
+                            if (data.path.ALREADY_THERE) {
+
+                                pickupItem();
+                                return;
+                            }
+
+                            const path = data.path;
                             The.player.addPath(path).finished(pickupItem, () => {
                                 this.Log("Awww I couldn't get the item :(");
                             });
                             The.player.recordNewPath(path);
-                        }
+
+                        }).catch((data) => {
+                            throw Err("Could not find path to item");
+                        });
                     });
 
                     server.registerHandler(EVT_GET_ITEM);
@@ -755,88 +749,107 @@ define(
                         assert(area.interactables[interactableID], `Interactable (${interactableID}) not found!`);
 
                         const interactable  = area.interactables[interactableID],
-                            path            = area.pathfinding.findPath(The.player, interactable.positions, { range: 1, adjacent: false }),
+                            //path            = area.pathfinding.findPath(The.player, interactable.positions, { range: 1, adjacent: false }),
                             interactableRes = Resources.interactables.list[interactableID];
 
-                        if (!path) {
-                            this.Log("No path found to interactable");
-                            return;
-                        }
 
-                        let destination = null;
-                        if (path === ALREADY_THERE) {
-                            destination = The.player.position.tile;
-                        } else {
-                            destination = _.last(path.walks).destination; // The tile which we are going to walk to
-                            if (!destination) return; // No destination provided from walk/path
-                        }
+                        const playerX = The.player.position.global.x,
+                            playerY   = The.player.position.global.y,
+                            toX       = interactable.positions[0].x * Env.tileSize, // TILE
+                            toY       = interactable.positions[0].y * Env.tilesize,
+                            fromTiles = [new Tile(Math.floor(playerX / Env.tileSize), Math.floor(playerY / Env.tileSize))],
+                            toTiles   = [new Tile(Math.floor(toX / Env.tileSize), Math.floor(toY / Env.tileSize))];
 
-                        // NOTE: we need to tell the server which tile in particular we've clicked. Since we're only
-                        // walking up to the interactable (and not ontop of it), our destination tile is a neighbour
-                        // tile. The server needs to know exactly which tile we're walking up to, so find that tile here
-                        let nearestTile = null,
-                            coord       = null;
-                        for (let i = 0; i < interactable.positions.length; ++i) {
-                            const tile  = interactable.positions[i],
-                                page    = area.pages[tile.page],
-                                globalX = tile.x + page.x,
-                                globalY = tile.y + page.y;
 
-                            if (inRange(destination.x, globalX - 1, globalX + 1) &&
-                                inRange(destination.y, globalY - 1, globalY + 1)) {
+                        The.player.cancelPath();
+                        The.area.pathfinding.workerHandlePath({
+                            movableID: The.player.id,
+                            startPt: { x: playerX, y: playerY },
+                            endPt: { x: toGlobal.x, y: toGlobal.y }
+                        }).then((data) => {
 
-                                nearestTile = tile;
-                                coord = (globalY - page.y) * Env.pageWidth + (globalX - page.x); // local coordinate
-                                break;
-                            }
-                        }
+                            let destination = null;
+                            if (data.path.ALREADY_THERE) {
 
-                        if (nearestTile === null) {
-                            throw Err("Could not find tile of interactable");
-                        }
-
-                        const readyToInteract = () => {
-
-                            const interaction = Resources.interactions[interactableID];
-                            if (!interaction) {
-
-                                // Simple interaction, no FSM involved
-                                const interactionMgr = The.player.character.charComponent('interactionmgr');
-                                interactionMgr.simpleInteract(interactableID);
-
-                            } else if (interaction.clientOnly === true) {
-
-                                const interactionMgr = The.player.character.charComponent('interactionmgr');
-                                interactionMgr.interact(interactableID, key);
+                                destination = The.player.position.tile;
                             } else {
-
-                                server.request(EVT_INTERACT, {
-                                    interactable: interactableID,
-                                    tile: { x: nearestTile.x, y: nearestTile.y },
-                                    coord,
-                                    page: nearestTile.page,
-                                    key
-                                })
-                                .then((result) => {
-                                    this.Log("Clicked the interactable!", LOG_DEBUG);
-                                }, (reply) => {
-                                    this.Log(`Couldn't click the interactable: ${reply.msg}`, LOG_WARNING);
-                                })
-                                .catch(errorInGame);
+                                destination = _.last(path.walks).destination; // The tile which we are going to walk to
+                                if (!destination) return; // No destination provided from walk/path
                             }
-                        };
 
-                        if (interactableRes.notouch) {
-                            readyToInteract(); // No need to walk up to ("touch") the interactable
-                        } else if (path === ALREADY_THERE) {
-                            readyToInteract(); // Already there
-                        } else {
-                            The.player.addPath(path).finished(readyToInteract, () => {
-                                this.Log("Awww I couldn't interact with the interactable thingy :(");
-                            });
-                            The.player.recordNewPath(path);
-                        }
+                            const path = data.path;
+
+                            // NOTE: we need to tell the server which tile in particular we've clicked. Since we're only
+                            // walking up to the interactable (and not ontop of it), our destination tile is a neighbour
+                            // tile. The server needs to know exactly which tile we're walking up to, so find that tile here
+                            let nearestTile = null,
+                                coord       = null;
+                            for (let i = 0; i < interactable.positions.length; ++i) {
+                                const tile  = interactable.positions[i],
+                                    page    = area.pages[tile.page],
+                                    globalX = tile.x + page.x,
+                                    globalY = tile.y + page.y;
+
+                                if (inRange(destination.x, globalX - 1, globalX + 1) &&
+                                    inRange(destination.y, globalY - 1, globalY + 1)) {
+
+                                    nearestTile = tile;
+                                    coord = (globalY - page.y) * Env.pageWidth + (globalX - page.x); // local coordinate
+                                    break;
+                                }
+                            }
+
+                            if (nearestTile === null) {
+                                throw Err("Could not find tile of interactable");
+                            }
+
+                            const readyToInteract = () => {
+
+                                const interaction = Resources.interactions[interactableID];
+                                if (!interaction) {
+
+                                    // Simple interaction, no FSM involved
+                                    const interactionMgr = The.player.character.charComponent('interactionmgr');
+                                    interactionMgr.simpleInteract(interactableID);
+
+                                } else if (interaction.clientOnly === true) {
+
+                                    const interactionMgr = The.player.character.charComponent('interactionmgr');
+                                    interactionMgr.interact(interactableID, key);
+                                } else {
+
+                                    server.request(EVT_INTERACT, {
+                                        interactable: interactableID,
+                                        tile: { x: nearestTile.x, y: nearestTile.y },
+                                        coord,
+                                        page: nearestTile.page,
+                                        key
+                                    })
+                                        .then((result) => {
+                                            this.Log("Clicked the interactable!", LOG_DEBUG);
+                                        }, (reply) => {
+                                            this.Log(`Couldn't click the interactable: ${reply.msg}`, LOG_WARNING);
+                                        })
+                                        .catch(errorInGame);
+                                }
+                            };
+
+                            if (interactableRes.notouch) {
+                                readyToInteract(); // No need to walk up to ("touch") the interactable
+                            } else if (data.path.ALREADY_THERE) {
+                                readyToInteract(); // Already there
+                            } else {
+                                The.player.addPath(path).finished(readyToInteract, () => {
+                                    this.Log("Awww I couldn't interact with the interactable thingy :(");
+                                });
+                                The.player.recordNewPath(path);
+                            }
+
+                        }).catch((data) => {
+                            this.Log("No path found to interactable");
+                        });
                     });
+
                 },
 
                 unload: () => {

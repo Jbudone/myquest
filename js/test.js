@@ -22,12 +22,35 @@ const couldNotStartup = (e) => {
 };
 
 let exitingGame = () => {
+    console.log(" TEST EXITING");
     process.exit();
 };
+
+process.stdin.setRawMode(true);
 
 process.on('exit', () => { exitingGame(); });
 process.on('SIGINT', () => { exitingGame(); });
 process.on('uncaughtException', couldNotStartup);
+
+const stdinCallbacks = [];
+stdinCallbacks.push({
+    process: process,
+    
+    cb: (b) => {
+
+        if (b[0] === 3) {
+            console.log("SIGINT received");
+            exitingGame();
+
+            return false;
+        }
+
+
+        console.log("Got an input: ");
+        console.log(b);
+        console.log(b.toString());
+    }
+});
 
 // Setup options
 const options = {
@@ -89,7 +112,10 @@ var { JSDOM } = jsdom;
 
     exitingGame = () => {
         killBots();
-        process.exit();
+
+        setTimeout(() => {
+            process.exit();
+        }, 500);
     };
 
 	const printMsg = (msg) => {
@@ -129,20 +155,25 @@ var { JSDOM } = jsdom;
             ++x;
             let connectOn = 9222 + x;
 
-            const botOptions = ['./dist/js/test/bot2.js'];
+            const botOptions = ['./dist/js/test/bot2.js', '--colors'];
             if (options.debug) {
-                botOptions.unshift('--inspect=' + connectOn, '--debug-brk');
+                botOptions.unshift('--inspect=' + connectOn, '--inspect-brk');
             }
 
-            const bot = spawn('node', botOptions, { stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
+            console.log(botOptions);
+            const bot = spawn('node', botOptions, {
+                stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+            });
 
             // Detached/Unref doesn't seem to kill bot when we kill parent and attempt to kill bot
-            //const bot = spawn('node', ['--inspect', '--debug-brk', './dist/js/test/bot2.js'], { detached: true, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
+            //const bot = spawn('node', ['--inspect', '--inspect-brk', './dist/js/test/bot2.js'], { detached: true, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
             //bot.unref();
 
             // Pipe stdout to process stdout
             // TODO: Find out why using 'pipe' and 'inherit' don't work in stdio option for spawn
             bot.stdout.pipe(process.stdout);
+            //process.stdin.pipe(bot.stdin); // Piping our stdin into bot.stdin seems to redirect stdin such that parent
+            //doesn't have it anymore; this won't work (no ctrl-c, no inputs across multiple bots)
 
             let debugURL = null;
 
@@ -154,6 +185,15 @@ var { JSDOM } = jsdom;
             // pipe
             const catchDebugURL = (chunk) => {
                 if (!debugURL) {
+
+                    // This may be an actual error
+                    let err = chunk.toString();
+                    if (err.indexOf("Debugger listening on") === -1) {
+                        console.error(err);
+                        return;
+                    }
+
+
                     const idx = chunk.indexOf("chrome-devtools:\/\/");
                     if (idx >= 0) {
                         const c = `${chunk}`;
@@ -183,6 +223,7 @@ var { JSDOM } = jsdom;
                 }
             };
 
+            // FIXME: Go back to catchDebugURL, but have an extra check for *actual* error that isn't debugURL
             bot.stderr.on('data', catchDebugURL);
 
             console.log(`I spawned a bot: You are ${bot.pid}`);
@@ -275,6 +316,7 @@ var { JSDOM } = jsdom;
 
                 if (!bot.exitedAfterDisconnect) {
                     bot.kill('SIGTERM');
+                    bot.disconnect();
                 }
             });
 
@@ -346,9 +388,57 @@ var { JSDOM } = jsdom;
 
                         if (!bot.exitedAfterDisconnect) {
                             bot.kill('SIGTERM');
+                            bot.disconnect();
                         }
                     });
 
+                });
+
+                Smoke.onInput((botPID, forwardStdin) => {
+
+                    let bot = activeBots.find((bot) => bot.pid == botPID);
+
+                    // Check if this is the same bot
+                    console.log(`Smoke.onInput(${botPID})`);
+
+                    if (!bot.exitedAfterDisconnect) {
+
+                        // Do we already have an input cb for this bot?
+
+                        let idx, stdinCb;
+                        for (idx = 0; idx < stdinCallbacks.length; ++idx) {
+                            if (stdinCallbacks[idx].process === bot) {
+                                stdinCb = stdinCallbacks[idx];
+                                break;
+                            }
+                        }
+
+                        if (stdinCb && forwardStdin) {
+                            debugger;
+                            console.error("ERROR: You already have a stdin cb for this bot!");
+                            return;
+                        } else if (!stdinCb && !forwardStdin) {
+                            debugger;
+                            console.error("ERROR: Trying to disable stdin cb for a bot that isn't already listening");
+                            return;
+                        }
+
+                        if (forwardStdin) {
+
+                            stdinCallbacks.push({
+                                process: bot,
+                                
+                                cb: (b) => {
+                                    console.log("Passing input to bot..");
+                                    bot.stdin.write(b);
+                                    bot.stdin.end();
+                                }
+                            });
+                        } else {
+                            stdinCallbacks.splice(idx, 1);
+                            debugger;
+                        }
+                    }
                 });
 
                 Smoke.start();
@@ -404,6 +494,15 @@ var { JSDOM } = jsdom;
         };
     };
 
+    const stdin = process.openStdin();
+    stdin.addListener('data', function(d) {
+        for (let i = 0; i < stdinCallbacks.length; ++i) {
+            let ret = stdinCallbacks[i].cb(d);
+            if (ret === true) {
+                break; // Some cbs may want to steal input for themselves
+            }
+        }
+    });
 
     connectToServer();
     //prepareForTesting();

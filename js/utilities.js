@@ -27,6 +27,10 @@ define(['serializable'], (Serializable) => {
         return n >= min && n <= max;
     };
 
+    const directionFromOffset = function(x, y) {
+        return (Math.abs(x) > Math.abs(y)) ?  (x >= 0 ? EAST : WEST) : (y >= 0 ? SOUTH : NORTH);
+    };
+
     const extendClass = function(toClass) {
         return {
             with(module) {
@@ -119,6 +123,7 @@ define(['serializable'], (Serializable) => {
         this.walked      = 0; // Number of steps into the path
         this.walkIndex   = 0; // Index of the walk that we're currently on
         this.lastMarkedWalked = 0; // How much had we walked at the last mark? In other words, triggering evt progress will mark the path `path.lastMarkedWalked = path.walked`
+        this.debugging   = {};
 
         this.length = () => {
             let distance = 0;
@@ -245,6 +250,7 @@ define(['serializable'], (Serializable) => {
         BufferQueue,
         isObjectEmpty,
         frontOfObject,
-        inRange
+        inRange,
+        directionFromOffset
     };
 });

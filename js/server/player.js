@@ -25,6 +25,7 @@ define(
 
             this.onPreparingToWalk     = function() {};
             this.onSomeEvent           = function() {};
+            this.queuedReceives        = [];
 
             this.pages                 = { }; // Visible pages
             this.stalePages            = [];
@@ -293,6 +294,7 @@ define(
                 //    return;
                 //}
 
+                path.destination = action.data.walks[action.data.walks.length - 1].destination;
                 path.id = reqState.path.id;
                 path.flag = reqState.path.flag;
                 this.Log(`Path Received: {${path.id}}, ${path.flag}}`, LOG_DEBUG);
@@ -301,7 +303,8 @@ define(
                 //
                 // This works by essentially finding the starting point for the path and walking along that path to
                 // check if each tile is open.
-                const safePath = area.pathfinding.checkSafePath(reqState, path);
+                //const safePath = area.pathfinding.checkSafePath(reqState, path);
+
 
                 const movableState = {
                     position: {
@@ -326,6 +329,30 @@ define(
                     }
                 };
 
+
+                if (!player.character.canMove()) {
+                    if (this.isConnected) {
+
+                        const response = new Response(action.id);
+                        response.success = false;
+                        response.state   = {
+                            position: {
+                                global: {
+                                    x: movableState.position.global.x,
+                                    y: movableState.position.global.y },
+                                tile: {
+                                    x: movableState.position.tile.x,
+                                    y: movableState.position.tile.y }
+                            }
+                        };
+                        response.frameId = The.frameEvtId;
+                        this.client.send(response.serialize());
+                    }
+
+                    return;
+                }
+
+                /*
                 if (!safePath) {
                     this.Log("Path is not safe for user... cancelling!");
 
@@ -354,7 +381,7 @@ define(
                 const distX = Math.abs(pathState.position.tile.x - movableState.position.tile.x),
                     distY   = Math.abs(pathState.position.tile.y - movableState.position.tile.y);
                 // TODO: Env the max recal distance
-                if (distX + distY > 8) {
+                if (distX + distY > 80) {
 
                     this.Log("We're not close enough to the beginning of the requested path");
                     this.Log(pathState);
@@ -378,51 +405,89 @@ define(
                     }
                     return;
                 }
+                */
 
-                let maxPathLength = path.length() + maxWalk;
-                this.Log(path, LOG_DEBUG);
-                const success = area.recalibratePath(movableState, pathState, path, maxPathLength);
 
-                if (success) {
+                // FIXME: Decide if we should recalibrate from curPos -> pathPos and unshift to provide path  OR  find a
+                // direct path from curPos -> pathDestination
+                // We could also use provided path as a hint to the worker pathfinding, or even add some properties that
+                // we don't stray too far from the provided path
+                {
+                    const fromPt  = { x: movableState.position.global.x, y: movableState.position.global.y },
+                        toPt      = { x: path.destination.x, y: path.destination.y },
+                        fromTiles = [new Tile(Math.floor(fromPt.x / Env.tileSize), Math.floor(fromPt.y / Env.tileSize))],
+                        toTiles   = [new Tile(Math.floor(toPt.x / Env.tileSize), Math.floor(toPt.y / Env.tileSize))];
 
-                    player.path = null;
 
-                    this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
-                    this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
-                    this.Log(path, LOG_DEBUG);
-                    player.addPath(path);
-                    player.recordNewPath(path, movableState);
-                    this.triggerEvent(EVT_USER_ADDED_PATH);
+                    player.cancelPath();
+                    this.Log(`Going from: (${fromPt.x}, ${fromPt.y}) -> (${toPt.x}, ${toPt.y})`, LOG_DEBUG);
+                    area.pathfinding.workerHandlePath({
+                        movableID: player.id,
+                        startPt: { x: fromPt.x, y: fromPt.y },
+                        endPt: { x: toPt.x, y: toPt.y }
+                    }).then((localPath) => {
 
-                    if (this.isConnected) {
-                        const response = new Response(action.id);
-                        response.success = true;
-                        response.frameId = The.frameEvtId;
-                        this.client.send(response.serialize());
-                    }
-                } else {
-                    this.Log("Could not recalibrate our current position to the beginning of the requested path");
-                    this.Log(pathState);
-                    this.Log(movableState);
-                    this.Log(path);
+                        this.Log(localPath, LOG_DEBUG);
+                        player.path = null;
+                        if (localPath.path.ALREADY_THERE) {
+                            this.Log("No need to recalibate to position; we're already synced");
 
-                    if (this.isConnected) {
+                            // NOTE: This can happen where the user and server position are out of sync and the user
+                            // just happens to click to move to the server position
+                        } else {
 
-                        const response = new Response(action.id);
-                        response.success = false;
-                        response.state   = {
-                            position: {
-                                global: {
-                                    x: movableState.position.global.x,
-                                    y: movableState.position.global.y },
-                                tile: {
-                                    x: movableState.position.tile.x,
-                                    y: movableState.position.tile.y }
-                            }
-                        };
-                        response.frameId = The.frameEvtId;
-                        this.client.send(response.serialize());
-                    }
+                            // FIXME: Prepend recalibration to path?
+                            //let walks = localPath.path.walks;
+                            //_.forEachRight(walks, (walk) => {
+                            //    path.walks.unshift(walk);
+                            //});
+
+                            this.Log(`User path from (${player.position.tile.x}, ${player.position.tile.y}) -> (${pathState.position.tile.x}, ${pathState.position.tile.y})`, LOG_DEBUG);
+                            this.Log(`    (${movableState.position.global.x}, ${movableState.position.global.y}) => (${pathState.position.global.x}, ${pathState.position.global.y})`, LOG_DEBUG);
+                            this.Log(localPath.path, LOG_DEBUG);
+                            player.addPath(localPath.path);
+                            player.recordNewPath(localPath.path, movableState);
+                            this.triggerEvent(EVT_USER_ADDED_PATH);
+                        }
+
+
+                        if (this.isConnected) {
+                            const response = new Response(action.id);
+                            response.success = true;
+                            response.frameId = The.frameEvtId;
+                            this.client.send(response.serialize());
+                        }
+                    }).catch((data) => {
+
+                        this.Log("Could not find path");
+                        this.Log(pathState);
+                        this.Log(movableState);
+                        this.Log(data);
+
+                        if (this.isConnected) {
+
+                            const response = new Response(action.id);
+                            response.success = false;
+                            response.state   = {
+                                position: {
+                                    global: {
+                                        x: movableState.position.global.x,
+                                        y: movableState.position.global.y },
+                                    tile: {
+                                        x: movableState.position.tile.x,
+                                        y: movableState.position.tile.y }
+                                }
+                            };
+                            response.frameId = The.frameEvtId;
+                            this.client.send(response.serialize());
+                        }
+
+
+                        console.error("Could not find path!");
+                        this.Log(`FAILED TO FIND PATH: (${fromPt.x}, ${fromPt.x}) -> (${toPt.x}, ${toPt.y})`, LOG_INFO);
+                    });
+
+                    return;
                 }
             };
 
@@ -454,6 +519,83 @@ define(
             });
 
             client.on('message', (evt) => {
+
+                // If we haven't even logged in yet, then we won't end up stepping through this. So can't queue messages
+                if (this.id === null) {
+                    this.receiveEvt(evt);
+                } else {
+
+                    let rcvTime = now();
+                    if (Env.game.server.simulateLag) {
+                        // Simulated lag by delaying received message by some arbitrary amount
+                        const delayPacketsMin = Env.game.server.simulateLag.delayPacketsMin,
+                            delayPacketsMax   = Env.game.server.simulateLag.delayPacketsMax,
+                            delay             = Math.random() * (delayPacketsMax - delayPacketsMin) + delayPacketsMin;
+
+                        // NOTE: TCP promises ordered packets, so have to add ontop of last queued packet rcvTime
+                        if (this.queuedReceives.length) {
+                            rcvTime = Math.max(rcvTime, this.queuedReceives[this.queuedReceives.length - 1].rcvTime);
+                        }
+
+                        rcvTime += Math.floor(delay);
+                    }
+
+                    this.queuedReceives.push({ evt, rcvTime });
+                }
+
+                //this.receiveEvt(evt);
+            });
+
+            this.respond = (id, success, args) => {
+
+                if (this.isConnected) {
+                    const response = new Response(id);
+                    response.success = success;
+                    response.frameId = The.frameEvtId;
+                    if (args) {
+                        // Don't overwrite evt response args
+                        assert(!args.hasOwnProperty('id'));
+                        assert(!args.hasOwnProperty('frameId'));
+                        assert(!args.hasOwnProperty('success'));
+
+                        _.extend(response, args);
+                    }
+                    this.client.send(response.serialize());
+                }
+            };
+
+            this.send = (evt, args) => {
+
+                if (this.isConnected) {
+                    this.client.send(JSON.stringify({
+                        evtType: evt,
+                        data: args,
+                        frameId: The.frameEvtId
+                    }));
+                }
+            };
+
+            this.step = (time) => {
+                this.handlePendingEvents();
+
+                const nowTime = now();
+                let receivedIdx = -1;
+                for (let i = 0; i < this.queuedReceives.length; ++i) {
+                    if (nowTime >= this.queuedReceives[i].rcvTime) {
+                        receivedIdx = i;
+                        this.Log("About to dequeue receive", LOG_INFO);
+                        this.receiveEvt(this.queuedReceives[i].evt);
+                    } else {
+                        this.Log(`${nowTime} < ${this.queuedReceives[i].rcvTime}`, LOG_DEBUG);
+                    }
+                }
+
+                if (receivedIdx >= 0) {
+                    this.queuedReceives.splice(0, receivedIdx + 1);
+                }
+            };
+
+            this.receiveEvt = (evt) => {
 
                 this.Log(evt, LOG_DEBUG);
                 evt = JSON.parse(evt);
@@ -520,7 +662,7 @@ define(
                             callback();
                         }, (err) => {
 
-                            this.Log("Could not login player..");
+                            this.Log(`Could not login player: ${err}`);
 
                             if (this.isConnected) {
                                 const response   = new Response(evt.id);
@@ -606,34 +748,6 @@ define(
                         this.onSomeEvent(evt);
                     }
                 }
-            });
-
-            this.respond = (id, success, args) => {
-
-                if (this.isConnected) {
-                    const response = new Response(id);
-                    response.success = success;
-                    response.frameId = The.frameEvtId;
-                    if (args) {
-                        _.extend(response, args);
-                    }
-                    this.client.send(response.serialize());
-                }
-            };
-
-            this.send = (evt, args) => {
-
-                if (this.isConnected) {
-                    this.client.send(JSON.stringify({
-                        evtType: evt,
-                        data: args,
-                        frameId: The.frameEvtId
-                    }));
-                }
-            };
-
-            this.step = (time) => {
-                this.handlePendingEvents();
             };
 
             this.setCharacterTemplate = (template) => {

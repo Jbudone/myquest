@@ -60,6 +60,9 @@ define(
                 this.listenTo(this, EVT_ZONE_OUT, (oldArea, oldPage, entity, zone) => {
                     this.removeEntity(entity);
                 });
+
+
+                this.pathfinding.setupArea();
             },
 
             addPages(addedPages, isZoning) {
@@ -566,6 +569,10 @@ define(
                                     entity.name = movable.name;
                                 }
 
+                                if (movable.playerID) {
+                                    entity.playerID = movable.playerID;
+                                }
+
                                 entity.updatePosition();
 
                                 if (movable.path) {
@@ -612,6 +619,14 @@ define(
                         });
                     }
 
+                    // Add EventNodes
+                    if (evtPage.evtnodes) {
+
+                        evtPage.evtnodes.forEach((eventnode) => {
+                            this.evtNodeMgr.netInitializeNode(eventnode, page);
+                        });
+                    }
+
                     // figure out neighbours..
                     if ((pageI % this.pagesPerRow) !== 0 && this.pages[pageI - 1]) { // West Neighbour
                         page.neighbours.west = this.pages[pageI - 1];
@@ -653,12 +668,19 @@ define(
                         page.neighbours.southwest = this.pages[pageI - 1 + this.pagesPerRow];
                         page.neighbours.southwest.neighbours.northeast = page;
                     }
+
+                    this.pathfinding.addPage(page, pageI);
+                    this.evtNodeMgr.addPage(page, pageI);
                 });
             },
 
             zoning: false,
             zone(newPage) {
                 this.curPage = newPage;
+
+                // TODO: Gross to do this here, but we HAVE to center the camera when we change area.curPage
+                // Camera position is primarily based off curPage
+                The.camera.centerCamera();
             },
 
             step(time) {
@@ -667,6 +689,10 @@ define(
                 _.forEach(this.pages, (page) => {
                     page.step(time);
                 });
+
+                this.evtNodeMgr.step(time);
+                this.physicsMgr.step(time);
+
                 this.handlePendingEvents(); // events from pages
 
                 const dynamicHandler = this.handler('step');
@@ -682,11 +708,20 @@ define(
                     page.unload();
                 });
 
+                this.evtNodeMgr.unload();
+
                 this.unloadListener();
                 if ('unhookAllHooks' in this) {
                     this.unhookAllHooks();
                 }
                 this.unregisterAllHooks();
+            },
+
+            removePage(page, pageI) {
+                this.pathfinding.removePage(page, pageI);
+                this.evtNodeMgr.removePage(page, pageI);
+                page.unload();
+                delete this.pages[pageI];
             },
 
             hasTile(tile) {
