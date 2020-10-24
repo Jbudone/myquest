@@ -26,7 +26,7 @@ define(() => {
                         failed(`Could not find media for ${file} (${assetFile})`);
                     }
 
-                    // TODO: Should offload this stuff into webworkers
+                    // TODO: Should offload this stuff into webworkers (NOTE: openpgp has inherent webworker support)
                     const oReq = new XMLHttpRequest();
                     oReq.open("GET", assetFile, true);
                     oReq.responseType = "arraybuffer";
@@ -35,31 +35,35 @@ define(() => {
                         if (oReq.response) {
                             if (mediaNode.options.encrypted) {
 
-                                const encrypted = new Uint8Array(oReq.response),
-                                    options     = {
-                                        message: openpgp.message.read(encrypted), // parse encrypted bytes
-                                        password: 'secret stuff',                 // decrypt with password
-                                        format: 'binary'                          // output as Uint8Array
+                                const encrypted = new Uint8Array(oReq.response);
+                                //openpgp.message.read(encrypted).then((encryptedMessage) => {
+                                    const options = {
+                                        message: openpgp.message.read(encrypted),
+                                        //message: encryptedMessage,   // parse encrypted bytes
+                                        passwords: ['secret stuff'],   // decrypt with password
+                                        format: 'binary'               // output as Uint8Array
                                     };
 
-                                openpgp.decrypt(options).then((plaintext) => {
+                                    openpgp.decrypt(options).then((plaintext) => {
 
-                                    const blob = new Blob([plaintext.data]),
-                                        url    = URL.createObjectURL(blob),
-                                        img    = new Image();
+                                        const blob = new Blob([plaintext.data]),
+                                            url    = URL.createObjectURL(blob),
+                                            img    = new Image();
 
-                                    img.onload = function() {
-                                        URL.revokeObjectURL(this.src); // free memory held by Object URL
+                                        img.onload = function() {
+                                            URL.revokeObjectURL(this.src); // free memory held by Object URL
 
-                                        createImageBitmap(this).then((bitmapImage) => {
-                                            succeeded(bitmapImage);
-                                        }, (err) => {
-                                            console.error(err);
-                                        });
-                                    };
+                                            createImageBitmap(this).then((bitmapImage) => {
+                                                succeeded(bitmapImage);
+                                            }, (err) => {
+                                                console.error(err);
+                                            });
+                                        };
 
-                                    img.src = url;
-                                });
+                                        img.src = url;
+                                    });
+                                //});
+
                             } else {
 
                                 const byteArray = new Uint8ClampedArray(oReq.response),

@@ -24,6 +24,11 @@ if [ ! -f dist/js/SCRIPT.INJECTION.js ]; then
     needToRebuild=1;
 fi
 
+if [ ! -f dist/js/SCRIPT.INJECTION.min.js ]; then
+    echo "dist/js/SCRIPT.INJECTION.min.js doesn't exist. Rebuilding";
+    needToRebuild=1;
+fi
+
 # Hashes differ between js/SCRIPT.INJECTION.js and dist/js/SCRIPT.INJECTION.js?
 uniques=$( cksum js/SCRIPT.INJECTION.js dist/js/SCRIPT.INJECTION.js | awk '{ print $1 }' | uniq | xargs | wc --words )
 if [ "$uniques" -eq "2" ]; then

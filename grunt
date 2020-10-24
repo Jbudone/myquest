@@ -1,3 +1,0 @@
-#!/bin/bash
-
-/usr/bin/node /usr/bin/grunt $@ --debug -v
