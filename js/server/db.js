@@ -23,7 +23,7 @@ define(['loggable'], function(Loggable){
 
 				// Setup our mongo connection
 				mongo = require('mongodb').MongoClient;
-				mongo.connect('mongodb://127.0.0.1:27017/myquest', function(err, _client){
+				mongo.connect('mongodb://127.0.0.1:27017/myquest', { useUnifiedTopology:true }, function(err, _client){
 					if (err) {
 						this.Log("Failed to connect", LOG_ERROR);
 						this.Log(err, LOG_ERROR);
@@ -310,7 +310,7 @@ define(['loggable'], function(Loggable){
 
 			db
 			.collection('players')
-            .update({id:player.playerID}, {
+            .updateOne({id:player.playerID}, {
                 "$set": {
                     position: {
                         tile: { y: y, x: x }
