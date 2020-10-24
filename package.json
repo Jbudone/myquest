@@ -39,7 +39,7 @@
     "jshint": "^2.11.0",
     "l1-path-finder": "*",
     "mongodb": "^3.2.5",
-    "openpgp": "3.1.0",
+    "openpgp": "4.10.8",
     "prettier": "^1.17.1",
     "redis": "^2.8.0",
     "requirejs": "^2.3.6",
