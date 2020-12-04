@@ -8,8 +8,8 @@ define(['loggable'], (Loggable) => {
             (
                 entity.position.global.x >= topLeft.x &&
                 entity.position.global.y >= topLeft.y &&
-                entity.position.global.x <  botRight.x &&
-                entity.position.global.y <  botRight.y
+                entity.position.global.x <=  botRight.x &&
+                entity.position.global.y <=  botRight.y
             )
             {
                 console.log("  Collision found");
