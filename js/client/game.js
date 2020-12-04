@@ -1288,8 +1288,9 @@ define(
                             if (attacker) {
                                 FX.event('attacked', attacker, { amount });
 
-                                const direction = attacker.directionOfTarget(entity);
-                                attacker.sprite.dirAnimate('atk', direction);
+                                // NOTE: We've been attacked from a particular direction, but for now the best direction
+                                // would be where we're currently facing
+                                attacker.sprite.dirAnimate('atk');
 
                                 // Is this a ranged attack? Spawn a projectile
                                 // FIXME: Find a better way to fetch ranged flag and projectile id
