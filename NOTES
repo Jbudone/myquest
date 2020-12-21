@@ -1063,9 +1063,6 @@ WORKING ON (was previously working on)
          
 
         STEPS FOR SYSTEM
-         2) Setup subdata w/ renderData & physicsData
-            - TEST: Melee swing
-                - Clean/FIXMEs/submit
          3) More complex skills
             - pseudoActivate/pseudoDeactivate on client side while waiting for server approval/confirmation/handling
             - UI skills; show cooldown; click to activate
