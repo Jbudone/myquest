@@ -444,7 +444,6 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
             ],
             server: (evt, data, self, player) => {
 
-                let success = false;
                 if
                 (
                     _.isObject(data) &&
@@ -455,9 +454,10 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                     this.Log(`User loading into character template: (${data.charTemplate})`);
                     results = player.setCharacterTemplate(TestingData.charTemplates[data.charTemplate]);
                     player.respond(evt.id, true, results);
+                    return;
                 }
 
-                player.respond(evt.id, success, { });
+                player.respond(evt.id, false, { });
             },
             client: {
                 pre: (self) => {
@@ -497,6 +497,44 @@ define(['SCRIPTINJECT'], (SCRIPTINJECT) => {
                 },
                 failed: () => {
                     UI.postMessage("Failed to disabled levelling", MESSAGE_BAD);
+                }
+            }
+        },
+        {
+            typedCommand: 'forcestaff',
+            command: CMD_ADMIN_FORCE_STAFF,
+            requiresAdmin: true,
+            description: "/forcestaff : Apply an impulse similar to Dota's Force Staff",
+            args: [],
+            server: (evt, data, self, player) => {
+                this.Log(`User force staffing`);
+
+                const eventnode = {
+                    id: "impulse",
+                    data: {
+                        character: player.movable,
+                        timer: 2000,
+                        impulse: {
+                            direction: player.movable.direction || EAST,
+                            amount: 40
+                        }
+                    }
+                };
+
+                const evtNode = player.movable.page.area.evtNodeMgr.addNode(eventnode, player.movable.page, true);
+                const success = !evtNode.destroyed;
+
+                player.respond(evt.id, success, {});
+            },
+            client: {
+                pre: (self) => {
+                    The.player.cancelPath();
+                },
+                succeeded: (self, data) => {
+                    UI.postMessage("Successfully force staffed", MESSAGE_GOOD);
+                },
+                failed: () => {
+                    UI.postMessage("Failed to force staff", MESSAGE_BAD);
                 }
             }
         }

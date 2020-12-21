@@ -112,6 +112,7 @@ define(function(){
 	addKey('EVT_TARGET_ZONED_OUT');
 	addKey('EVT_MOVED_TO_NEW_TILE');
 	addKey('EVT_MOVING_TO_NEW_TILE');
+	addKey('EVT_MOVED');
 	addKey('EVT_BORED');
 	addKey('EVT_RESPAWNING');
 	addKey('EVT_RESPAWNED');
@@ -137,6 +138,10 @@ define(function(){
 	/// %%%%%%%%%%%%%%%%%%%%%
 
 	addKey('ACTION_NEW_PATH');
+
+    addKey('PATHPOS_PASSED');
+    addKey('PATHPOS_UPCOMING');
+    addKey('PATHPOS_NOTONPATH');
 
 	// addKey('HIGH_PRIORITY');
 	addKey('LOW_PRIORITY');
@@ -176,6 +181,7 @@ define(function(){
     addKey('CMD_ADMIN_CLEAR_BUFFS');
     addKey('CMD_ADMIN_GIVE_ITEM');
     addKey('CMD_ADMIN_DISABLE_XP');
+    addKey('CMD_ADMIN_FORCE_STAFF');
 
 	addKey('HOOK_INTO_MAP');
 
@@ -228,7 +234,7 @@ define(function(){
         'CON_CUR', 'CON_MAX', 'CON_CURMAX',
         'DEX_CUR', 'DEX_MAX', 'DEX_CURMAX',
         'XP', 'LEVEL',
-        'FEARED'
+        'FEARED', 'IMPULSED'
     ]);
 
     addKey('EVT_EVTNODEMGR_UPDATES_PAGE');

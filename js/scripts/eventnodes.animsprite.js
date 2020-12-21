@@ -94,6 +94,14 @@ define(['scripts/eventnodes.base'], function(EventNodeBase){
 
                 modified.spriteIdx = 0;
                 owner.broadcast('SpriteIdx', modified.spriteIdx);
+            },
+
+            serialize(resArgs, instanceArgs, modified, owner) {
+                return {
+                    spriteIdx: modified.spriteIdx,
+                    timer: modified.timer,
+                    region: instanceArgs.region
+                };
             }
         };
 

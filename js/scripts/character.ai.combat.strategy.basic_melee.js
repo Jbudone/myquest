@@ -9,6 +9,8 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
     addKey('INPUT_TARGET_OUTOFRANGE');
     addKey('INPUT_TARGET_INRANGE');
     addKey('INPUT_BORED');
+    addKey('INPUT_STARTATTACK');
+    addKey('INPUT_FINISHEDATTACK');
 
 
     // Basic Melee
@@ -23,12 +25,16 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
         let timeSinceLastAttack = now(); // NOTE: Do NOT reset this since we could potentially repeatedly go
         //         in/out of this strategy because of chasing after target
         //         and being much faster than target
+        let timeSince = now();
 
         const attackInfo  = _character.entity.npc.attackInfo,
             chaseDistance = attackInfo.chaseDistance,
             attackTime    = attackInfo.attackTime,
-            range         = 32,//attackInfo.range * Env.tileSize;
-            rangeWidth    = 8;
+            range         = attackInfo.range;
+            rangeWidth    = attackInfo.rangeWidth;
+
+
+        assert(chaseDistance <= range);
 
 
         if (!attackInfo) throw Err(`No attack info found for NPC`, arguments, _character.entity.npc);
@@ -38,6 +44,45 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
             movement = combat.require('movement');
 
         let activeMovement = null; // Our current movement object
+        let activeCombatEvtNode = null;
+        let activeCombatDir = null; // Since we begin hitting before creating the evtNode
+
+        const BusyAttacking = this.AddState('BusyAttacking', function () {}, () => {
+
+
+            // NOTE: We're now throwing a melee attack; we can't stop now
+            // No need to check if you're in range or not, if you're out of range then you essentially dodged our attack
+            const _now = now();
+
+            this.Log(`BusyAttacking (${_character.entity.id}) ? ${_now - timeSince} > 100`);
+            if (activeCombatEvtNode) {
+                // Attacking: this is the cooldown phase
+                if (activeCombatEvtNode.destroyed && _now - timeSince > attackInfo.endSwingTime) {
+                    activeCombatEvtNode = null;
+                    this.Log("Finished swing", LOG_DEBUG);
+                    this.input(INPUT_FINISHEDATTACK);
+                }
+            } else {
+                if (_now - timeSince > attackInfo.startSwingTime) {
+
+                    //melee.attackTarget(this.target);
+
+                    const eventnode = {
+                        id: 'melee',
+                        direction: activeCombatDir,
+                        character: _character,
+                        range, rangeWidth,
+                        melee
+                    };
+
+                    const evtNode = _character.entity.page.area.evtNodeMgr.addNode(eventnode, _character.entity.page, true);
+                    activeCombatEvtNode = evtNode;
+                    timeSinceLastAttack = _now; // Finished attack
+
+                    this.Log("Attempting to attack you..", LOG_DEBUG);
+                }
+            }
+        });
 
         const ChaseTarget = this.AddState('ChaseTarget', () => {
             // init
@@ -72,6 +117,10 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
                 return;
             }
 
+            if (!_character.canMove()) {
+                return;
+            }
+
             const fromTile = _character.entity.position.tile,
                 toTile     = this.target.entity.position.tile,
                 fromReal   = _character.entity.position.global,
@@ -84,10 +133,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
             // without attempting to chase since the target may be in range (while we're moving) and halt our current
             // path before we get to the center of the tile
             isChasing = true;
-            const maxWalk = chaseDistance * (1000 / _character.entity.moveSpeed), // FIXME: Env this.. should be based off seconds to reach target and laziness factor of npc
-                options   = { range: range, shootThrough: melee.canAttackThroughShootable };
-
-            options.filterFunc = melee.chaseEntityFilterFunc;
+            const maxWalk = chaseDistance * (1000 / _character.entity.moveSpeed); // FIXME: Env this.. should be based off seconds to reach target and laziness factor of npc
             activeMovement = movement.chase(this.target, options, maxWalk).then(() => {
                 this.Log("Caught up to you!", LOG_DEBUG);
 
@@ -104,6 +150,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
                     activeMovement = null;
                     isChasing = false;
                 } else {
+                    this.Log("error in chase", LOG_DEBUG);
                     activeMovement = null; // TODO: Need to do this in both places? Or can we just unset these after the input
                     isChasing = false;
                 }
@@ -122,23 +169,39 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
                     }
                 }
             });
+        }, () => {
+            // Can't move, can we move now?
+            if (_character.canMove()) {
+                this.input(INPUT_TARGET_OUTOFRANGE);
+            }
         });
 
         const AttackTarget = this.AddState('AttackTarget', function() {}, () => {
             // step
-            // TODO: Abstract attack timing
+
             const _now = now();
             this.Log(`AttackTarget (${_character.entity.id}) ? ${_now - timeSinceLastAttack} > ${attackTime}`);
             if (_now - timeSinceLastAttack > attackTime) {
-                const options = { range: range, shootThrough: melee.canAttackThroughShootable };
+                const options = { range: range, rangeWidth: rangeWidth, shootThrough: melee.canAttackThroughShootable };
                 options.filterFunc = melee.inRangeFilterFunc;
                 if (movement.inRangeOf(this.target, options)){
-                    timeSinceLastAttack = _now;
-                    melee.attackTarget(this.target);
-                    this.Log("Attempting to attack you..", LOG_DEBUG);
+
+
+                    // Attack towards target
+                    const myPosition = _character.entity.position.global,
+                        yourPosition = this.target.entity.position.global;
+
+                    activeCombatDir = directionFromOffset(yourPosition.x - myPosition.x, yourPosition.y - myPosition.y);
+
+                    timeSince = _now;
+                    this.input(INPUT_STARTATTACK);
                 } else {
                     timeSinceLastAttack = _now;
-                    this.Log("Wtf you're too far?! I can't hit you", LOG_DEBUG);
+
+                    const xDistance = this.target.entity.position.tile.x - _character.entity.position.tile.x,
+                        yDistance   = this.target.entity.position.tile.y - _character.entity.position.tile.y;
+                    this.Log("Wtf you're too far?! I can't hit you. Dist: " + xDistance + ", " + yDistance + ", range: " + options.range, LOG_DEBUG);
+                    this.input(INPUT_TARGET_OUTOFRANGE);
                 }
             }
 
@@ -147,7 +210,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
         const HaveTarget = this.AddState('HaveTarget', () => {
             // init
 
-            const options = { range: range, shootThrough: melee.canAttackThroughShootable };
+            const options = { range: range, rangeWidth: rangeWidth, shootThrough: melee.canAttackThroughShootable };
             options.filterFunc = melee.inRangeFilterFunc;
             if (movement.inRangeOf(this.target, options)) {
                 this.Log("I'm in range of you!", LOG_DEBUG);
@@ -177,22 +240,40 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
 
         const Idle = this.states['Idle'];
 
-        ChaseTarget.on(INPUT_TARGET_MOVED).go(ChaseTarget)
-                    .on(INPUT_TARGET_INRANGE).go(AttackTarget)
-                    .on(INPUT_TARGET_LOST).go(LostTarget);
+        // Only NPCs have combat FSM for now
+        if (!_character.isPlayer) {
 
-        AttackTarget.on(INPUT_TARGET_OUTOFRANGE).go(ChaseTarget)
-                    .on(INPUT_TARGET_MOVED).go(ChaseTarget)
-                    .on(INPUT_TARGET_LOST).go(LostTarget);
+            ChaseTarget.on(INPUT_TARGET_MOVED).go(ChaseTarget)
+                       .on(INPUT_TARGET_INRANGE).go(AttackTarget)
+                       .on(INPUT_TARGET_OUTOFRANGE).go(ChaseTarget)
+                       .on(INPUT_TARGET_LOST).go(LostTarget)
+                       .on(INPUT_MOVED).go(ChaseTarget);
 
-        HaveTarget.on(INPUT_TARGET_OUTOFRANGE).go(ChaseTarget)
-                    .on(INPUT_TARGET_INRANGE).go(AttackTarget)
-                    .on(INPUT_TARGET_LOST).go(LostTarget);
+            AttackTarget.on(INPUT_TARGET_OUTOFRANGE).go(ChaseTarget)
+                        .on(INPUT_TARGET_MOVED).go(ChaseTarget)
+                        .on(INPUT_TARGET_LOST).go(LostTarget)
+                        .on(INPUT_STARTATTACK).go(BusyAttacking)
+                        .on(INPUT_MOVED).go(ChaseTarget);
 
-        LostTarget.on(INPUT_BORED).go(Idle);
+            BusyAttacking.on(INPUT_FINISHEDATTACK).go(HaveTarget)
+                         .on(INPUT_TARGET_MOVED).go(BusyAttacking)
+                         .on(INPUT_TARGET_INRANGE).go(BusyAttacking)
+                         .on(INPUT_TARGET_LOST).go(BusyAttacking)
+                         .on(INPUT_TARGET_OUTOFRANGE).go(BusyAttacking)
+                         .on(INPUT_MOVED).go(BusyAttacking);
 
-        Idle.on(INPUT_TARGET).go(HaveTarget)
-            .on(INPUT_TARGET_LOST).go(LostTarget);
+            HaveTarget.on(INPUT_TARGET_OUTOFRANGE).go(ChaseTarget)
+                      .on(INPUT_TARGET_INRANGE).go(AttackTarget)
+                      .on(INPUT_TARGET_LOST).go(LostTarget)
+                      .on(INPUT_MOVED).go(HaveTarget);
+
+            LostTarget.on(INPUT_BORED).go(Idle)
+                      .on(INPUT_MOVED).go(Idle);
+
+            Idle.on(INPUT_TARGET).go(HaveTarget)
+                .on(INPUT_TARGET_LOST).go(LostTarget)
+                .on(INPUT_MOVED).go(Idle);
+        }
 
         this.Idle   = Idle;
         this.state  = Idle;
@@ -225,9 +306,14 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.strategy'], (SCRIPTINJECT, 
             this.reset();
 
             if (activeMovement) {
+                this.Log("Resetting");
                 activeMovement.stop();
                 activeMovement = null;
                 isChasing = false;
+            }
+
+            if (activeCombatEvtNode) {
+                activeCombatEvtNode = null;
             }
         };
 

@@ -65,6 +65,8 @@ define(
                 if (!_.isFinite(this.position.tile.x) || !_.isFinite(this.position.tile.y)) {
                     throw Err("Bad tile!");
                 }
+
+                this.triggerEvent(EVT_MOVED);
             };
 
             this.pathHistory = [];

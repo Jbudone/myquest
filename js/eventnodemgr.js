@@ -1,9 +1,11 @@
 define(['loggable'], (Loggable) => {
 
+
     const EventNode = function(evtNodeRes, eventnode, page) {
+        assert(evtNodeRes);
+
         this.evtNodeRes  = evtNodeRes;
         this.base     = new evtNodeRes.base();
-        this.timer    = null;
         this.modified = {};
         this.id       = null;
         this.page     = page;
@@ -16,7 +18,8 @@ define(['loggable'], (Loggable) => {
         this.activate = () => {
 
             this.state.page = page;
-            this.base.activate(evtNodeRes.args, eventnode, this.modified, this.state, this);
+            let result = this.base.activate(evtNodeRes.args, eventnode, this.modified, this.state, this);
+            return result;
         };
 
         this.deactivate = () => {
@@ -46,11 +49,13 @@ define(['loggable'], (Loggable) => {
 
 
             this.serialize = () => {
+
+                const _modified = this.base.serialize(evtNodeRes.args, eventnode, this.modified, this);
+
                 const data = {
                     evtNodeRes: this.evtNodeRes.id,
                     id: this.id,
-                    modified: _.clone(this.modified),
-                    eventnode: eventnode
+                    data: _modified
                 };
 
                 return data;
@@ -64,7 +69,7 @@ define(['loggable'], (Loggable) => {
             };
 
             this.flushUpdates = () => {
-                if (!this.pendingInitialFlush && this.flushData.length === 0) return null;
+                if (!this.pendingInitialFlush && this.flushData.length === 0 && !this.destroyed) return null;
 
                 // Store evt updates and netUpdate state, then serialize/copy/flush here
                 const flush = {};
@@ -102,12 +107,14 @@ define(['loggable'], (Loggable) => {
         } else {
 
             this.clientOnly = false;
+            this.pseudoDeactivated = false;
 
             this.netInitialize = (id, modified) => {
                 this.id = id;
                 this.modified = modified;
                 modified.page = page;
-                this.activate();
+                const result = this.activate();
+                return result;
             };
 
             this.netUpdate = (modified) => {
@@ -121,12 +128,22 @@ define(['loggable'], (Loggable) => {
             };
 
             this.step = (delta) => {
-                this.base.step(evtNodeRes.args, eventnode, this.modified, this, delta);
+                const result = this.base.step(evtNodeRes.args, eventnode, this.modified, this, delta);
+                return result;
             };
 
             // Unload due to leaving page, different from deactivating
             this.unload = () => {
                 this.base.unload(evtNodeRes.args, eventnode, this.modified, this);
+            };
+
+            this.pseudoDeactivate = () => {
+                this.pseudoDeactivated = true;
+                const result = this.base.pseudoDeactivate(evtNodeRes.args, eventnode, this.modified, this);
+            };
+
+            this.linkToServer = (args) => {
+                this.id = args.evtId;
             };
         }
     };
@@ -140,6 +157,13 @@ define(['loggable'], (Loggable) => {
 
         this.evtNodes = [];
         this.lastTick = 0;
+
+        this.triggerNode = (id, key, args) => {
+            const evtNodeI = this.evtNodes.findIndex((e) => e.id === id),
+                evtNode    = this.evtNodes[evtNodeI];
+
+            evtNode.events[key](args);
+        };
 
         if (Env.isServer) {
             let maxID = 0;
@@ -160,10 +184,18 @@ define(['loggable'], (Loggable) => {
 
                 if (activate) {
                     this.evtNodes.push(evtNode);
-                    evtNode.activate();
+                    let idx = this.evtNodes.length - 1;
+                    let result = evtNode.activate();
+                    if (result === false) {
+                        evtNode.deactivate();
+                        this.queuedDestroyedNodes.push(evtNode); // FIXME: Double check we need this, I think we need it to flush update once across page serialize
+                        this.evtNodes.splice(idx, 1);
+                    }
                 } else {
                     this.queuedNodes.push(evtNode);
                 }
+
+                return evtNode;
             };
 
             this.serializePage = (page) => {
@@ -191,7 +223,13 @@ define(['loggable'], (Loggable) => {
             this.activate = () => {
                 this.queuedNodes.forEach((evtNode) => {
                     this.evtNodes.push(evtNode);
-                    evtNode.activate();
+                    let idx = this.evtNodes.length - 1;
+                    let result = evtNode.activate();
+                    if (result === false) {
+                        evtNode.deactivate();
+                        this.queuedDestroyedNodes.push(evtNode); // FIXME: Double check we need this, I think we need it to flush update once across page serialize
+                        this.evtNodes.splice(idx, 1);
+                    }
                 });
 
                 this.queuedNodes = [];
@@ -208,7 +246,6 @@ define(['loggable'], (Loggable) => {
                     const evtNode = this.evtNodes[i];
                     if (evtNode.step(delta) === false) {
                         evtNode.deactivate();
-
                         this.queuedDestroyedNodes.push(evtNode);
                         this.evtNodes.splice(i, 1);
                         --i;
@@ -237,6 +274,7 @@ define(['loggable'], (Loggable) => {
 
                 this.evtNodes.forEach(processEvtNode);
                 this.queuedDestroyedNodes.forEach(processEvtNode);
+                this.queuedDestroyedNodes = [];
 
                 _.forEach(pageUpdates, (updateList, pageI) => {
                     area.pages[pageI].broadcast(EVT_EVTNODEMGR_UPDATES_PAGE, updateList);
@@ -272,18 +310,26 @@ define(['loggable'], (Loggable) => {
 
                         const page = The.area.pages[evt.page];
                         assert(page);
-                        
+
+                        const id = parseInt(evtNodeId, 10);
+
                         if (_evtNode.init) {
-                            this.netInitializeNode(_evtNode.init, _evtNode.init.eventnode, page);
+                            // If this was a locally created evtNode then we'll already have this evtNode
+                            let evtNodeI = this.evtNodes.findIndex((e) => e.id === id);
+                            if (evtNodeI >= 0) {
+                                // FIXME: Do we need to do anything here?
+                            } else {
+                                this.netInitializeNode(_evtNode.init, page);
+                            }
                         }
 
-                        const id = parseInt(evtNodeId, 10),
-                            evtNodeI = this.evtNodes.findIndex((e) => e.id === id),
-                            evtNode = this.evtNodes[evtNodeI];
+                        const evtNodeI = this.evtNodes.findIndex((e) => e.id === id),
+                            evtNode    = this.evtNodes[evtNodeI];
 
                         // We remove the evtNode on the server before sending update/remove; so we may be seeing the end
                         // of this evtNodes life before seeing it initialized. Just ignore
                         if (!evtNode && _evtNode.remove) {
+                            DEBUGGER(); // FIXME: Does this ever occur? Seems like we would init -> create _evtNode -> remove
                             return;
                         }
 
@@ -300,6 +346,8 @@ define(['loggable'], (Loggable) => {
                         if (_evtNode.remove) {
                             // Removal stuff (this can all happen in the same frame)
                             evtNode.destroyed = true; // Queue destruction until final step
+                            evtNode.deactivate();
+                            this.evtNodes.splice(evtNodeI, 1);
                         }
                     });
                 });
@@ -317,8 +365,19 @@ define(['loggable'], (Loggable) => {
 
                 for (let i = 0; i < this.evtNodes.length; ++i) {
                     const evtNode = this.evtNodes[i];
+                    if (evtNode.pseudoDeactivated) continue;
+
                     if (evtNode.step(delta) === false) {
                         // FIXME: Deactivate if clientOnly? Pseudodeactivate otherwise?
+                        if (evtNode.env === "client") {
+                            evtNode.deactivate();
+
+                            this.evtNodes.splice(i, 1);
+                            --i;
+                        } else {
+                            // Wait for server to deactivate for us
+                            evtNode.pseudoDeactivate();
+                        }
                     }
 
                     if (evtNode.destroyed) {
@@ -329,12 +388,23 @@ define(['loggable'], (Loggable) => {
                 }
             };
 
-            this.netInitializeNode = (eventnode, eventnodeArgs, page) => {
+            this.localInitializeNode = (eventnode, page) => {
+                eventnode.id = -1;
+                return this.netInitializeNode(eventnode, page);
+            };
+
+            this.netInitializeNode = (eventnode, page) => {
+                const eventnodeArgs = eventnode.data;
                 const EventNodes = Resources.eventnodes;
                 const evtNodeRes = EventNodes[eventnode.evtNodeRes];
                 const evtNode = new EventNode(evtNodeRes, eventnodeArgs, page);
                 this.evtNodes.push(evtNode);
-                evtNode.netInitialize(eventnode.id, eventnode.modified);
+                const result = evtNode.netInitialize(eventnode.id, eventnode.data);
+                if (result === false) {
+                    evtNode.pseudoDeactivate();
+                }
+
+                return evtNode;
             };
 
             this.removePage = (page, pageI) => {
@@ -364,19 +434,18 @@ define(['loggable'], (Loggable) => {
                         const init = {
                                 evtNodeRes: eventnode.id,
                                 id: -1,
-                                modified: { }
-                            },
-                            args = {
-                                region: [globalCoord]
+                                data: {
+                                    region: [globalCoord]
+                                }
                             };
 
-                        this.netInitializeNode(init, args, page);
+                        this.netInitializeNode(init, page);
                     }
                 });
             };
 
             this.unload = () => {
-                server.handler(EVT_EVTNODEMGR_UPDATES_PAGE).unset();
+                The.scripting.server.handler(EVT_EVTNODEMGR_UPDATES_PAGE).unset();
             };
         }
     };

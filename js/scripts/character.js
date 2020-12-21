@@ -156,7 +156,16 @@ define(
                     });
                 }
 
-                if (!this.isPlayer && ownerOnly) return;
+                obj.props[propName] = initialValue;
+                if (!this.isPlayer && ownerOnly) {
+
+                    Object.defineProperty(obj, propName, {
+                        "get": function() { return obj.props[propName]; },
+                        "set": function(v) { obj.props[propName] = v; }
+                    });
+
+                    return;
+                }
 
                 // FIXME: This is disgusting! Lets see if we can string build our function instead  (new Function("..."))
                 let propSet_Own_Net_CB = (value) => {
@@ -210,7 +219,6 @@ define(
                                     obj.props[propName] = value;
                                 };
 
-                obj.props[propName] = initialValue;
                 Object.defineProperty(obj, propName, {
 
                     "get": function() {
@@ -329,6 +337,10 @@ define(
             this.loadState = () => {
                 this.addProperty('feared', N_FEARED, this.state, false, true, (oldValue, newValue) => {
                     this.doHook('StateEvt_Feared').post();
+                }, true);
+
+                this.addProperty('impulsed', N_IMPULSED, this.state, false, true, (oldValue, newValue) => {
+                    this.doHook('StateEvt_Impulsed').post();
                 }, true);
             };
 
@@ -542,6 +554,12 @@ define(
                 this.doHook('moved').post();
             });
 
+            this.listenTo(this.entity, EVT_MOVED, () => {
+                if (!this.doHook('moved').pre()) return;
+                this.triggerEvent(EVT_MOVED);
+                this.doHook('moved').post();
+            });
+
             this.listenTo(this.entity, EVT_ZONE_OUT, (movable, oldArea, oldPage, area, page) => {
                 this.triggerEvent(EVT_ZONE_OUT);
 
@@ -618,6 +636,7 @@ define(
             this.canMove = () => {
                 // FIXME: Right now canMove is only used for deciding if you can move on your own volition
                 if (this.state.feared) return false;
+                if (this.state.impulsed) return false;
                 return true;
             };
 

@@ -51,6 +51,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.state', 'loggable'], (SCRIP
 
     addKey('INPUT_TARGET_LOST');
     addKey('INPUT_TARGET');
+    addKey('INPUT_MOVED');
 
     const Strategy = function(combat, _character) {
 
@@ -128,6 +129,10 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.state', 'loggable'], (SCRIP
         const lostTarget = () => {
             this.input(INPUT_TARGET_LOST);
         };
+        
+        const moved = () => {
+            this.input(INPUT_MOVED);
+        };
 
         const reset = () => {
             this.reset();
@@ -150,6 +155,7 @@ define(['SCRIPTINJECT', 'scripts/character.ai.combat.state', 'loggable'], (SCRIP
 
             target: setTarget,
             lostTarget,
+            moved,
 
             finished: (callback) => { finished = callback; },
             reset

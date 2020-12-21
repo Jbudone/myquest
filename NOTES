@@ -845,6 +845,12 @@ WORKING ON (was previously working on)
         - We could send all zone-out, d/c, death, etc. across the map
         - We could send/store playerID and check if we already have that playerID, then if so remove the previous player (NOTE: This should ONLY happen if the stale copy is out of our PVS) and reload the new copy
     - Use machine learning colourize tool to assist w/ spritesheet colouring
+    - Time sync w/ server: periodically send 1 minute time to users (we're now at 0s on the clock again), then server messages only need to send time mod 1 minute (shorten messages + synced)
+    - openpgp upgrade to 4.6.2:
+        Error starting around 4.5.0:  TypeError: This readable stream reader has been released and cannot be used to monitor the stream's state
+        Error starting around 4.0.0:  npm install has SyntaxError
+    - Upgrade to Babel 7 + presets
+    - Upgrade libs: jquery, lodash, bluebird (or replace?), replace requirejs
 
 
 
@@ -897,11 +903,10 @@ WORKING ON (was previously working on)
     ====== PATHFINDING SYSTEM
         - PRIORITY
             - FIXME
-                - Cleanup/Submit
-                - Smoke test many many paths (server; on startup w/ "smoke" args? -- smoke can be apart of startup routine for smoke testing basic funcs)
                 - Fix delayed path coming in after dying/respawning (player + npc?)
 
 
+            - Cleanup rework stuff (old pathfinding stuff still exists, path.ptPath, etc.)
             - Short paths should be immediate (especially due to delay and recalibrate from moved position -> beginning of path, this would be far slower than just immediate for short path)
             - Optimize end point recalibration (click to move somewhere: can use a range about point since we unlikely need exact point; maybe even the whole tile?) -- the larger the distance the higher the endpoint range?
                 - WARNING: We can only do this in some cases; eg. can't do this when we recalibrate from position to delayed path w/ stale beginning
@@ -1059,44 +1064,34 @@ WORKING ON (was previously working on)
 
         STEPS FOR SYSTEM
          2) Setup subdata w/ renderData & physicsData
-            - pseudoActivate/pseudoDeactivate on client side while waiting for server approval/confirmation/handling
-            - Modify combat system for user + npcs to use melee swings
             - TEST: Melee swing
-                - FIX ENEMY CHASING / POSITION BEFORE ATTACKING
-                    - Chase closer than max range?
-                    - Link range/rangeWidth (currently hardcoded in places)
-                    - Rework inRangeOf to work for non-tiles
-                    - Fix minor minute movements causing npc to chase even while in range?? AND resulting in weird movements in pathfind (assert opposing directions in walk)
-                        - Need to precheck if already in range before pathfinding
-                - Clean up player AI / combat; would rather have no combat, but ai.combat.melee; maybe separate combat logic to separate (singleton) system, and get rid of player AI/instincts/combat entirely
-                - Skill system: cooldown, state (can't attack while attacking); interrupt melee on move? (need to send to server too, but what if server already attacked? maybe free hit anyways)
-                    - Skill system state
-                    - Skill cooldowns
-                    - Interrupt active skills (may or may not be allowed)
-                    - Server checking (dead? busy? etc.)
-                    - Cancel on client if request denied by server
-                    - FSM logic?
-                - AI attack using this logic?
-                    - Link to evtNode finishing attack before resuming FSM logic
-                    - Chase to distance of melee
-                - Test on other clients
-                - Attack/impulse from player -> npc
-                - UI skills; show cooldown; click to activate
-                - Melee: stop moving, sync stopped position on server/users, animate in correct direction (walking right, then stop and attack north)
-                - Get rid of current melee / autoattack system
-                - Clean/submit
-                - Abstract to basic combat: bow/arrow attack (w/out aiming), staff/magic, spear, hand-to-hand, etc.
+                - Clean/FIXMEs/submit
          3) More complex skills
+            - pseudoActivate/pseudoDeactivate on client side while waiting for server approval/confirmation/handling
+            - UI skills; show cooldown; click to activate
+            - Skill system: cooldown, state (can't attack while attacking); interrupt melee on move? (need to send to server too, but what if server already attacked? maybe free hit anyways)
+                - Skill system state
+                - Skill cooldowns
+                - Interrupt active skills (may or may not be allowed)
+                - Server checking (dead? busy? etc.)
+                - Cancel on client if request denied by server
+                - FSM logic?
             TEST: Grenade (aimed/charge for distance)  (include AI)
             TEST: Bow/arrow  (include AI)
             TEST: Blink
             TEST: Spell area effect (aimed)  (include AI)
             TEST: Woodcutting, mining, carving (meat)
             TEST: Firemaking, cooking
+
+            - Abstract to basic combat: bow/arrow attack (w/out aiming), staff/magic, spear, hand-to-hand, etc.
+            - Test on other clients
+            - SOAK: Bloodbath map -- tons of movement + npcs attacking each other and bots + fast respawns + high hp
          4) Extra
             TEST: Town event
             TEST: AI Boss
          -- Next steps
+            - Player FSM used for state (check if alive, can attack, check skillmgr for cooldowns/can attack/etc.;  movement logic here? (hook user clickedTile, decide on can move here)
+                - Cleanup ai.instinct.combat and strategy.player.basic_melee for player  (replace w/ separate FSM)
             - Event node volume region (rather than single tile)
             - Skill system
             - Town logic
@@ -1119,6 +1114,7 @@ WORKING ON (was previously working on)
             - Accumulated delta in server evtNode.step varies on particular evtNode type/state (inactive? step less often)
             - InputMgr for mapping inputs to skills/actions
             - AnimEvents: Take future 3d transition into consideration, as well as blending. May need a single animation (melee) and 3d model to be able to face any direction. Each animation has list of anim events at different times
+            - Abstract player swing time / cooldown, also range/rangeWidth to wielded item + buffs
                 - Take lag into consideration: main anim event (melee: hit) takes longer to reach on client, faster on server (due to delay), and even faster on receiving clients, to attempt to keep in sync for visual anim events
 
 

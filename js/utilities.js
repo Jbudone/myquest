@@ -217,6 +217,118 @@ define(['serializable'], (Serializable) => {
             this.walks = walks;
         };
 
+        this.findPositionAlongPath = (position, from) => {
+
+            // In many cases the from/position will be somewhere along the same walk, we can check direction along path
+            // (forwards/backwards/equal) by giving each index a ridiculous offset, and an offset along walk to compare
+            // points in same walk
+            const MAX_WALK_DIST = 10000;
+
+            let foundPos = false,
+                foundStart = false,
+                curPos = this.start;
+
+            const inWalkRange = (pt, l0, l1) => {
+                return (pt >= Math.min(l0, l1) && pt <= Math.max(l0, l1));
+            };
+
+            const inWalkRangeDiag = (pt, l0, l1, dir) => {
+                const dX = (dir === NORTHEAST || dir === SOUTHEAST) ? 1 : -1;
+                const dY = (dir === NORTHWEST || dir === NORTHEAST) ? -1 : 1;
+
+                const l0X = pt.x - l0.x,
+                    l0Y = pt.y - l0.y;
+                if (dX * l0X - dY * l0Y !== 0) return false; // Equal x/y distance
+
+                const l1X = pt.x - l1.x,
+                    l1Y = pt.y - l1.y;
+                if (dX * l1X - dY * l1Y !== 0) return false; // Equal x/y distance
+
+                if
+                (
+                    pt.x >= Math.min(l0.x, l1.x) &&
+                    pt.x <= Math.max(l0.x, l1.x) &&
+                    pt.y >= Math.min(l0.y, l1.y) &&
+                    pt.y <= Math.max(l0.y, l1.y)
+                )
+                {
+                    return true;
+                }
+
+                return false;
+            };
+
+            // FIXME: Linear search along points for either to/from point
+            for (let i = 0; i < this.walks.length; ++i) {
+                const walk = this.walks[i];
+                if (walk.direction === WEST || walk.direction === EAST) {
+                    if
+                    (
+                        foundPos === false &&
+                        position.y === curPos.y &&
+                        inWalkRange(position.x, curPos.x, walk.destination.x)
+                    )
+                    {
+                        foundPos = i * MAX_WALK_DIST + Math.abs(position.x - curPos.x);
+                    }
+
+                    if
+                    (
+                        foundStart === false &&
+                        from.y === curPos.y &&
+                        inWalkRange(from.x, curPos.x, walk.destination.x)
+                    )
+                    {
+                        foundStart = i * MAX_WALK_DIST + Math.abs(from.x - curPos.x);
+                    }
+                } else if (walk.direction === NORTH || walk.direction === SOUTH) {
+                    if
+                    (
+                        foundPos === false &&
+                        position.x === curPos.x &&
+                        inWalkRange(position.y, curPos.y, walk.destination.y)
+                    )
+                    {
+                        foundPos = i * MAX_WALK_DIST + Math.abs(position.y - curPos.y);
+                    }
+
+                    if
+                    (
+                        foundStart === false &&
+                        from.x === curPos.x &&
+                        inWalkRange(from.y, curPos.y, walk.destination.y)
+                    )
+                    {
+                        foundStart = i * MAX_WALK_DIST + Math.abs(from.y - curPos.y);
+                    }
+                } else { // Diagonal
+                    if
+                    (
+                        foundPos === false &&
+                        inWalkRangeDiag(position, curPos, walk.destination, walk.direction)
+                    )
+                    {
+                        foundPos = i * MAX_WALK_DIST + Math.abs(position.x - curPos.x);
+                    }
+
+                    if
+                    (
+                        foundStart === false &&
+                        inWalkRangeDiag(from, curPos, walk.destination, walk.direction)
+                    )
+                    {
+                        foundStart = i * MAX_WALK_DIST + Math.abs(from.x - curPos.x);
+                    }
+                }
+
+                if (foundPos !== false && foundStart !== false) break;
+                curPos = walk.destination;
+            }
+
+            if (foundStart === false) assert(false); // From pos not on path; this probably wasn't planned
+            if (foundPos === false) return PATHPOS_NOTONPATH;
+            return (foundPos - foundStart > 0 ? PATHPOS_UPCOMING : PATHPOS_PASSED);
+        };
     };
 
     const BufferQueue = function() {

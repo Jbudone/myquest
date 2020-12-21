@@ -21,6 +21,8 @@ define(
         // The most simple combat strategy used for npcs. Simply chase/attack the current target
         const Player_Basic_Melee = function(combat, _character) {
 
+            assert(false); // Ensure we don't use player melee FSM anymore
+
             Basic_Melee.call(this, combat, _character);
 
             if (!Env.isServer) {

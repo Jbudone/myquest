@@ -74,8 +74,11 @@ define(
             this.onEnter = (instinct, data) => {
                 this.state = this.strategy;
                 this.isActive = true;
-                this.setTarget(data.enemy);
-                this.state.target(data.enemy);
+
+                if (!_character.isPlayer) {
+                    this.setTarget(data.enemy);
+                    this.state.target(data.enemy);
+                }
             };
 
             this.onLeave = () => {
@@ -365,6 +368,12 @@ define(
                 }
             };
 
+            this.moved = () => {
+                if (this.state) {
+                    this.state.moved();
+                }
+            };
+
             this.isBusy = () => {
                 return true;
             };
@@ -500,6 +509,8 @@ define(
 
                 combatInit: () => {
 
+                    assert(!_character.isPlayer);
+
                     this._abilities = [];// TODO: fetch this from NPC
                     if (!_character.isPlayer) {
                         this._abilities = ['melee', 'range', 'sight'];
@@ -555,7 +566,7 @@ define(
                             this.attackedBy(enemy, amount);
 
                             if (_character.isPlayer) {
-                                this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
+                                //this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
                             } else {
                                 this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
                             }
@@ -566,6 +577,10 @@ define(
                         this.distracted();
                     });
 
+                    _script.listenTo(_character, EVT_MOVED).after(() => {
+                        this.moved();
+                    });
+
                     if (_character.isPlayer) {
                         this.Log("You are a player", LOG_DEBUG);
                         const player = _character.entity.player;
@@ -574,7 +589,7 @@ define(
 
 
                         this.setStrategy('strategy.player.basic_melee');
-                        this.setTargetCallbacks();
+                        //this.setTargetCallbacks();
 
                         // FIXME: Is there a better way than overriding update?
                         this.update = () => {
@@ -660,10 +675,13 @@ define(
                 },
 
                 combatInit: () => {
-                    this.setTargetCallbacks();
+
+                    //this.setTargetCallbacks();
                 },
 
                 setToUser: () => {
+
+                    assert(false);
 
                     this._abilities = []; // TODO: fetch this from NPC
                     if (_character.isUser) {
@@ -694,7 +712,7 @@ define(
                         }
 
                         this.attackedBy(enemy, amount);
-                        this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
+                        //this.listenToTarget(enemy, COMBAT_TARGET_ACTIVE);
                     });
 
                     _script.listenTo(_character, EVT_DISTRACTED).after(() => {
