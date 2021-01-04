@@ -1,0 +1,38 @@
+{"eventnodes": [
+    {
+        "id": "campfire",
+        "base": "animsprite",
+        "env": "client",
+        "attach": {
+            "type": "sprite",
+            "sprite": 241
+        },
+        "args": {
+            "animation": {"0": [240,241,242], "16": [17,18,19]},
+            "animSpeed": 200,
+            "timer": 60000
+        }
+    },
+    {
+        "id": "melee",
+        "base": "melee",
+        "env": "both",
+        "args": {
+        }
+    },
+    {
+        "id": "impulse",
+        "base": "impulse",
+        "env": "both",
+        "args": {
+            "timer": 500
+        }
+    },
+    {
+        "id": "rangeattack",
+        "base": "rangeattack",
+        "env": "both",
+        "args": {
+        }
+    }
+]}

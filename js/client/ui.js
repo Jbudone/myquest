@@ -33,9 +33,11 @@ define(
 
             this.modules = [];
 
-            this.canvas      = null;
-            this.onMouseMove = function() {};
-            this.onMouseDown = function() {};
+            this.canvas       = null;
+            this.onMouseMove  = function() {};
+            this.onMouseDown  = function() {};
+            this.onMouseUp    = function() {};
+            this.lastMouseEvt = function() {};
 
             this.tileHover            = null;
             this.hoveringEntity       = null;
@@ -415,21 +417,31 @@ define(
 
                 let lastMouseEvt = null;
 
+                this.lastMouseEvt = function() {
+                    return this.positionFromMouse(lastMouseEvt);
+                };
+
                 this.canvas.addEventListener('mousemove', (evt) => {
                     lastMouseEvt = evt;
                     this.onMouseMove( this.positionFromMouse(evt), lastMouseEvt );
                 });
 
+                let buttonsDown = 0;
+
                 this.canvas.addEventListener('mousedown', (evt) => {
                     lastMouseEvt = evt;
 
                     _UI.entityMenu.hide();
-                    this.onMouseDown( this.positionFromMouse(evt), evt.button );
+                    buttonsDown = evt.buttons;
+                    this.onMouseDown( this.positionFromMouse(evt), evt.buttons );
                     return false;
                 });
 
                 this.canvas.addEventListener('mouseup', (evt) => {
                     lastMouseEvt = evt;
+                    const buttonsUp = (buttonsDown & ~evt.buttons);
+                    buttonsDown = evt.buttons;
+                    this.onMouseUp( this.positionFromMouse(evt), buttonsUp );
                     return false;
                 });
 

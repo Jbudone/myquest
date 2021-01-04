@@ -38,6 +38,15 @@ define(['loggable'], (Loggable) => {
         };
 
 
+        this.trigger = (key, args) => {
+            this.events[key](args);
+        };
+
+        this.cancel = () => {
+            this.base.cancel(evtNodeRes.args, eventnode, this.modified, this);
+            this.deactivate();
+        };
+
         if (Env.isServer) {
 
             // This indicates the evtNode hasn't had its first flush yet which includes the init/setup details. In case
@@ -162,7 +171,7 @@ define(['loggable'], (Loggable) => {
             const evtNodeI = this.evtNodes.findIndex((e) => e.id === id),
                 evtNode    = this.evtNodes[evtNodeI];
 
-            evtNode.events[key](args);
+            evtNode.trigger(key, args);
         };
 
         if (Env.isServer) {
@@ -246,6 +255,9 @@ define(['loggable'], (Loggable) => {
                     const evtNode = this.evtNodes[i];
                     if (evtNode.step(delta) === false) {
                         evtNode.deactivate();
+                    }
+
+                    if (evtNode.destroyed) {
                         this.queuedDestroyedNodes.push(evtNode);
                         this.evtNodes.splice(i, 1);
                         --i;
@@ -328,8 +340,8 @@ define(['loggable'], (Loggable) => {
 
                         // We remove the evtNode on the server before sending update/remove; so we may be seeing the end
                         // of this evtNodes life before seeing it initialized. Just ignore
+                        // We may also have removed locally due to local authoritative node
                         if (!evtNode && _evtNode.remove) {
-                            DEBUGGER(); // FIXME: Does this ever occur? Seems like we would init -> create _evtNode -> remove
                             return;
                         }
 
@@ -367,7 +379,7 @@ define(['loggable'], (Loggable) => {
                     const evtNode = this.evtNodes[i];
                     if (evtNode.pseudoDeactivated) continue;
 
-                    if (evtNode.step(delta) === false) {
+                    if (!evtNode.destroyed && evtNode.step(delta) === false) {
                         // FIXME: Deactivate if clientOnly? Pseudodeactivate otherwise?
                         if (evtNode.env === "client") {
                             evtNode.deactivate();
@@ -381,7 +393,6 @@ define(['loggable'], (Loggable) => {
                     }
 
                     if (evtNode.destroyed) {
-                        evtNode.deactivate();
                         this.evtNodes.splice(i, 1);
                         --i;
                     }

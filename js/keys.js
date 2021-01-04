@@ -131,6 +131,8 @@ define(function(){
     addKey('EVT_NETSERIALIZE_OWNER');
 
     addKey('EVT_SKILL_MELEE');
+    addKey('EVT_SKILL_RANGEATTACK_BEGIN');
+    addKey('EVT_SKILL_RANGEATTACK_END');
 
 
 	/// %%%%%%%%%%%%%%%%%%%%%
@@ -234,7 +236,7 @@ define(function(){
         'CON_CUR', 'CON_MAX', 'CON_CURMAX',
         'DEX_CUR', 'DEX_MAX', 'DEX_CURMAX',
         'XP', 'LEVEL',
-        'FEARED', 'IMPULSED'
+        'FEARED', 'IMPULSED', 'BUSY'
     ]);
 
     addKey('EVT_EVTNODEMGR_UPDATES_PAGE');

@@ -1144,10 +1144,14 @@ define(['loggable'], (Loggable) => {
                 y: fromEntity.position.global.y + offset.y
             };
 
-            const toPos = {
-                x: toEntity.position.global.x + offset.x,
-                y: toEntity.position.global.y + offset.y
-            };
+            const toPos = { x: 0, y: 0 };
+            if (toEntity.x && toEntity.y) {
+                toPos.x = toEntity.x;
+                toPos.y = toEntity.y;
+            } else {
+                toPos.x = toEntity.position.global.x + offset.x;
+                toPos.y = toEntity.position.global.y + offset.y;
+            }
 
             this.projectiles.push({
                 timeToDie: 80,

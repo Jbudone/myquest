@@ -1515,7 +1515,7 @@ define(
                     // NOTE: Provide some delay between repaths otherwise the user may "click" and start moving before
                     // onMouseUp comes in, so that we repath again after moving already, and end up somewhere else
                     let timeSinceRepath = now() - lastMouseMoveRepath;
-                    if (evt && evt.buttons && evt.buttons !== 2 && The.player.character && The.player.character.canMove() && timeSinceRepath > 150) {
+                    if (evt && evt.buttons && (evt.buttons & 1) === 1 && The.player.character && The.player.character.canMove() && timeSinceRepath > 150) {
                         lastMouseMoveRepath = now();
 
                         const globalPos = {
@@ -1640,6 +1640,11 @@ define(
                         return;
                     }
 
+                    if (buttonCode === 4) { // Middle mouse
+                        The.user.middleMouseDown(mouse);
+                        return;
+                    }
+
                     if (!The.player.character || !The.player.character.canMove()) {
                         return;
                     }
@@ -1676,6 +1681,14 @@ define(
 
                         const toTile = new Tile( parseInt(globalPos.x / Env.tileSize, 10), parseInt(globalPos.y / Env.tileSize, 10) );
                         The.user.clickedTile(toTile, globalPos, mouse);
+                    }
+                };
+
+                ui.onMouseUp = (mouse, buttonCode) => {
+
+                    if (buttonCode === 4) {
+                        The.user.middleMouseUp(mouse);
+                        return;
                     }
                 };
 

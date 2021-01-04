@@ -17,6 +17,8 @@ define(['hookable', 'dynamic', 'loggable'], (Hookable, Dynamic, Loggable) => {
             this.registerHook('clickedEntity');
             this.registerHook('rightClickedEntity');
             this.registerHook('rightClicked');
+            this.registerHook('middleDown');
+            this.registerHook('middleUp');
             this.registerHook('clickedTile');
             this.registerHook('clickedItem');
             this.registerHook('clickedInteractable');
@@ -55,6 +57,18 @@ define(['hookable', 'dynamic', 'loggable'], (Hookable, Dynamic, Loggable) => {
             if (!this.doHook('rightClicked').pre(mouse)) return;
             this.Log("Right Clicked");
             this.doHook('rightClicked').post(mouse);
+        };
+
+        this.middleMouseDown = (mouse) => {
+            if (!this.doHook('middleDown').pre(mouse)) return;
+            this.Log("Middle Mouse Down");
+            this.doHook('middleDown').post(mouse);
+        };
+
+        this.middleMouseUp = (mouse) => {
+            if (!this.doHook('middleUp').pre(mouse)) return;
+            this.Log("Middle Mouse Up");
+            this.doHook('middleUp').post(mouse);
         };
 
         this.unload = () => {

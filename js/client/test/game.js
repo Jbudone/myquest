@@ -7,7 +7,7 @@ define(() => {
             const randY  = Math.floor(Math.random() * 13 + 1),
                 randX    = Math.floor(Math.random() * 29 + 1),
                 randIndex = randY * 30 + randX;
-            if (The.area.curPage.collidables[randY] & (1 << randIndex) !== 0) {
+            if (The.area.curPage.collidables[Math.floor(randY / 16)] & (1 << Math.floor(randIndex / 16)) !== 0) {
                 return randomAreaPoint(attemptCount + 1);
             }
             this.Log(`Random Area Point: {y: ${randY}, x: ${randX}}   (${attemptCount} attempts)`);

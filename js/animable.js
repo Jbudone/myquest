@@ -10,6 +10,7 @@ define(['sprite'], (Sprite) => {
         this.animations = Resources.sprites[spriteID].data.animations;
         this.animation  = null;
         this.repeating  = null;
+        this.animName   = null;
 
         this.lastStep   = 0;
         this.spriteStep = 0;
@@ -19,6 +20,7 @@ define(['sprite'], (Sprite) => {
         this.animate = (spriteID, repeat) => {
             if (Env.isServer) return;
             if (this.animation != this.animations[spriteID]) {
+                this.animName  = spriteID;
                 this.animation = this.animations[spriteID];
                 this.repeating = repeat;
                 this.state.x   = 0;
@@ -60,6 +62,30 @@ define(['sprite'], (Sprite) => {
                 this.state.x = 0;
                 this.state.y = this.animation.y;
                 this.animation = null;
+            }
+        };
+
+        this.faceDirection = (direction) => {
+            if (Env.isServer || Env.isTesting || Env.isBot) return;
+
+            let dir = this.curDirection || "up";
+                 if (direction === NORTH) dir = "up";
+            else if (direction === SOUTH) dir = "down";
+            else if (direction === WEST)  dir = "left";
+            else if (direction === EAST)  dir = "right";
+
+            if (this.curDirection === dir) return;
+            this.curDirection = dir;
+
+            let nonDirAnim = 'idle';
+            if (this.animation) {
+                // FIXME: Change animation direction, but keep progress through animation?  what if there's differing
+                // sprite anim lengths
+                nonDirAnim = this.animName.substr(0, this.animName.indexOf('_'));
+            }
+
+            if (this.animations[nonDirAnim+'_'+this.curDirection]) {
+                this.animate(nonDirAnim+'_'+this.curDirection, false);
             }
         };
 

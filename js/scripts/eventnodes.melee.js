@@ -126,6 +126,10 @@ define(['scripts/eventnodes.base'], function(EventNodeBase){
                 console.log("DEACTIVATE MELEE");
             },
 
+            cancel(resArgs, instanceArgs, modified, owner) {
+                console.log("CANCEL MELEE");
+            },
+
             serialize(resArgs, instanceArgs, modified, owner) {
                 return {
                     direction: instanceArgs.direction,
@@ -163,6 +167,10 @@ define(['scripts/eventnodes.base'], function(EventNodeBase){
 
             deactivate(resArgs, instanceArgs, modified, owner) {
                 console.log("DEACTIVATE MELEE");
+            },
+
+            cancel(resArgs, instanceArgs, modified, owner) {
+                console.log("CANCEL MELEE");
             },
 
             unload(resArgs, instanceArgs, modified, owner) {

@@ -145,7 +145,7 @@ define(
             // Character Properties
             // Used for storing a hidden property in an object, and providing a callback on change, as well as
             // netSerialize functionality
-            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback, ownerOnly) => {
+            this.addProperty = (propName, propKey, obj, initialValue, shouldNetSerialize, callback, ownerOnly, assertDoubleSet) => {
 
                 assert(_.isFinite(propKey), `Passed bad property key: ${propKey} for property ${propName}`);
 
@@ -161,7 +161,7 @@ define(
 
                     Object.defineProperty(obj, propName, {
                         "get": function() { return obj.props[propName]; },
-                        "set": function(v) { obj.props[propName] = v; }
+                        "set": function(v) { if(assertDoubleSet && obj.props[propName] === v) { DEBUGGER(); } obj.props[propName] = v; }
                     });
 
                     return;
@@ -170,7 +170,7 @@ define(
                 // FIXME: This is disgusting! Lets see if we can string build our function instead  (new Function("..."))
                 let propSet_Own_Net_CB = (value) => {
                                     const oldVal = obj.props[propName];
-                                    if (value === oldVal) return;
+                                    if (value === oldVal) { assert(!assertDoubleSet); return; }
 
                                     obj.props[propName] = value;
                                     callback(oldVal, value);
@@ -181,7 +181,7 @@ define(
                                 },
                     propSet_Net_CB = (value) => {
                                     const oldVal = obj.props[propName];
-                                    if (value === oldVal) return;
+                                    if (value === oldVal) { assert(!assertDoubleSet); return; }
 
                                     obj.props[propName] = value;
                                     callback(oldVal, value);
@@ -192,7 +192,7 @@ define(
                                 },
                     propSet_Own_Net = (value) => {
                                     const oldVal = obj.props[propName];
-                                    if (value === oldVal) return;
+                                    if (value === oldVal) { assert(!assertDoubleSet); return; }
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
@@ -201,7 +201,7 @@ define(
                                 },
                     propSet_Net = (value) => {
                                     const oldVal = obj.props[propName];
-                                    if (value === oldVal) return;
+                                    if (value === oldVal) { assert(!assertDoubleSet); return; }
 
                                     obj.props[propName] = value;
                                     if (netSerializeEnabled) {
@@ -210,12 +210,13 @@ define(
                                 },
                     propSet_CB = (value) => {
                                     const oldVal = obj.props[propName];
-                                    if (value === oldVal) return;
+                                    if (value === oldVal) { assert(!assertDoubleSet); return; }
 
                                     obj.props[propName] = value;
                                     callback(oldVal, value);
                                 },
                     propSet = (value) => {
+                                    if (obj.props[propName] === value) assert(!assertDoubleSet);
                                     obj.props[propName] = value;
                                 };
 
@@ -336,11 +337,17 @@ define(
             this.state = {};
             this.loadState = () => {
                 this.addProperty('feared', N_FEARED, this.state, false, true, (oldValue, newValue) => {
+                    this.doHook('StateEvt_Interrupted').post();
                     this.doHook('StateEvt_Feared').post();
                 }, true);
 
                 this.addProperty('impulsed', N_IMPULSED, this.state, false, true, (oldValue, newValue) => {
+                    this.doHook('StateEvt_Interrupted').post();
                     this.doHook('StateEvt_Impulsed').post();
+                }, true);
+
+                this.addProperty('busy', N_BUSY, this.state, false, true, (oldValue, newValue) => {
+                    this.doHook('StateEvt_Busy').post();
                 }, true);
             };
 
@@ -637,6 +644,7 @@ define(
                 // FIXME: Right now canMove is only used for deciding if you can move on your own volition
                 if (this.state.feared) return false;
                 if (this.state.impulsed) return false;
+                if (this.state.busy) return false;
                 return true;
             };
 
