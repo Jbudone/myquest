@@ -1070,14 +1070,19 @@ WORKING ON (was previously working on)
             - Skill system: cooldown, state (can't attack while attacking); interrupt melee on move? (need to send to server too, but what if server already attacked? maybe free hit anyways)
                 - Skill system state
                     - bitmask of states:  eg.   SLIDING | BLOCKING | BREATHING_FIRE
+                    NOTE: Can piggyback off character state instead
                 - Skill list
-                    - list of skills that each subscribe to some skill type:  { SKILL_FIREBOLT: { .... }, ... }
+                    - list of skills that each subscribe to some skill type:  { SKILL_FIREBOLT: { res, cooldown, state }, ... }    (eg. levelling up -> firebolt 1 -> firebolt 2; slots to the same SKILL_FIREBOLT)
                     - similar to commands: skills have precondition check (skill system state bitmask pass? cooldown pass? in range pass? inventory pass? character state pass? etc.)
                     - skills have state: cooldown, enabled (eg. only enabled when another skill is active), etc.
                     - add to active skills list in skillmgr
                     - skillmgr listens to major state changes from character: eg. interrupted, disarmed, etc.  -- send signal to each active skill + inactive skills
                     - individual skills (evtnodes?) can hook into character state changes w/ bitmask filter for more complicated things:  var hook = character.hookStateChange(STATE_DISARMED | STATE_BLINDED, () => ...)  ; hook.unhook();
                         - var hook = rock.hookStateChange(STATE_MINED, () => { ...cancel mining... })
+
+                    - list of skills in skills.json w/ basic props
+                    - skills.js overrides some preconditions & client/server checks on skill res's
+                    - skillmgr: input -> find mapping for skill INPUT_SKILL_FIREBOLT -> run general checks (cooldown/state/etc.) -> run precondition checks from skill -> activate skill (evtnode) -> set skill state to evtnode
             - Input system: activate target spell -> left click should cast rather than move, etc.
                 - Stack based input overrides: left click to move -> activate skill, left click to cast -> hover over UI, left click to select -> fullscreen cinematic, left click to skip  ;; able to remove overrides, eg. skill interrupted, so remove left click override from nth in stack
                 - var id = The.user.subscribeInput(INPUT_SKILLACTIVE);  assert INPUT_SKILLACTIVE not already used;  The.user.unsubscribeInput(INPUT_SKILLACTIVE)
@@ -1093,8 +1098,6 @@ WORKING ON (was previously working on)
                     NOTE: lclick should be INPUT_SELECT; rclick should be INPUT_QUERY; shift-lclick INPUT_MODSELECT
                     NOTE: can have default interaction code for each entity type, and hook at different parts and add defaults/preconditions at other parts depending on entity; also error message? "Cannot mine that rock! Not in range" etc.
                     ERROR: disarm consumes input, but runs The.UI.printError("Cannot disarm, you are confused")
-            - FXMgr for VFX: upgrade fxmgr to support vfx (not just sounds)
-                - Bow/arrow vfx for aiming
             TEST: Grenade (aimed/charge for distance)  (include AI)
             TEST: Blink
             TEST: Spell area effect (aimed, max range, charge to cast)  (include AI)
