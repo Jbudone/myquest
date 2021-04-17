@@ -464,6 +464,9 @@ define(
                         this.Log(movableState);
                         this.Log(data);
 
+                        //this.Log(localPath); // FIXME: This causes a crash "ReferenceError: localPath is not defined"
+                        // obviously its correct but why are we crashing? Something we need to watch for in prepro?
+
                         if (this.isConnected) {
 
                             const response = new Response(action.id);
