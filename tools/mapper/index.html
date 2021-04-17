@@ -1,92 +1,96 @@
 <html>
     <head>
-		<title>Mapper</title>
+        <title>Mapper</title>
 
-		<link rel="stylesheet" type="text/css" href="style.css">
+        <link rel="stylesheet" type="text/css" href="style.css">
 
-		<script type="text/javascript" src="/js/lib/jquery-2.1.1.min.js"></script>
-		<script type="text/javascript" src="/js/lib/lodash.js"></script>
-		<script type="text/javascript" src="js/gl-matrix.js"></script>
+        <script type="text/javascript" src="/js/lib/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="/js/lib/lodash.js"></script>
+        <script type="text/javascript" src="js/gl-matrix.js"></script>
 
-		<script src="js/main.js"></script>
-		<script src="js/resourcemgr.js"></script>
-		<script src="js/interactionmgr.js"></script>
-		<script src="js/mapeditor.js"></script>
-		<script src="js/consolemgr.js"></script>
+        <script src="js/main.js"></script>
+        <script src="js/resourcemgr.js"></script>
+        <script src="js/interactionmgr.js"></script>
+        <script src="js/mapeditor.js"></script>
+        <script src="js/consolemgr.js"></script>
 
-		<!-- Bootstrap -->
-		<!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
-		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-        -->
+        <!-- Bootstrap -->
+        <!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+            <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+            <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+            -->
     </head>
     <body>
         <div id='workingWindow' class='pendingChanges'>
 
             <div id='mapperWindow'>
-				<canvas id="glcanvas">
-					Oh no! Your browser doesn't support web canvas!
-				</canvas>
+                <canvas id="glcanvas">
+                    Oh no! Your browser doesn't support web canvas!
+                </canvas>
+            </div>
+
+            <div id='coordinatesWindow'>
+                <span id='coordinates'>(234, 853)</span>
             </div>
 
 
-			<div id='controlsWindow'>
-				<div id='controlsTabs'>
-					<div class='controlsTab active' data='controlsResourceMgr'>
-						<a href='#' class='controlsTabBtn'>Properties</a>
-					</div>
-					<div class='controlsTab' data='controlsTilesheets'>
-						<a href='#' class='controlsTabBtn'>Tilesheets</a>
-					</div>
-					<div class='controlsTab' data='controlsSpawns'>
-						<a href='#' class='controlsTabBtn'>Spawns</a>
-					</div>
-					<div class='controlsTab' data='controlsTools'>
-						<a href='#' class='controlsTabBtn'>Tools</a>
-					</div>
-				</div>
-				<div id='controlsContainer'>
-					<div id='controlsResourceMgr' class='controlsContainerChild active'>
-						<div id='resourceMgr'>
-							<div id='mapList'></div>
-							<hr/>
+            <div id='controlsWindow'>
+                <div id='controlsTabs'>
+                    <div class='controlsTab active' data='controlsResourceMgr'>
+                        <a href='#' class='controlsTabBtn'>Properties</a>
+                    </div>
+                    <div class='controlsTab' data='controlsTilesheets'>
+                        <a href='#' class='controlsTabBtn'>Tilesheets</a>
+                    </div>
+                    <div class='controlsTab' data='controlsSpawns'>
+                        <a href='#' class='controlsTabBtn'>Spawns</a>
+                    </div>
+                    <div class='controlsTab' data='controlsTools'>
+                        <a href='#' class='controlsTabBtn'>Tools</a>
+                    </div>
+                </div>
+                <div id='controlsContainer'>
+                    <div id='controlsResourceMgr' class='controlsContainerChild active'>
+                        <div id='resourceMgr'>
+                            <div id='mapList'></div>
+                            <hr/>
 
-						</div>
+                        </div>
 
-						<a id='mapperSave' href="#">Save</a>
-						<br/>
-						<a id='mapperNew' href="#">New</a>
-					</div>
+                        <a id='mapperSave' href="#">Save</a>
+                        <br/>
+                        <a id='mapperNew' href="#">New</a>
+                    </div>
 
-					<div id='controlsTilesheets' class='controlsContainerChild'>
-						<div id='resourceMgrList'></div>
-						<canvas id='sheetCanvas'></canvas>
-					</div>
+                    <div id='controlsTilesheets' class='controlsContainerChild'>
+                        <div id='resourceMgrList'></div>
+                        <canvas id='sheetCanvas'></canvas>
+                    </div>
 
-					<div id='controlsSpawns' class='controlsContainerChild'>
-						<div id='spawnsList'></div>
-					</div>
+                    <div id='controlsSpawns' class='controlsContainerChild'>
+                        <div id='spawnsList'></div>
+                    </div>
 
-					<div id='controlsTools' class='controlsContainerChild'>
+                    <div id='controlsTools' class='controlsContainerChild'>
 
-						<div id='minimapContainer'>
-							<canvas id='minimapCanvas'></canvas>
-						</div>
+                        <div id='minimapContainer'>
+                            <canvas id='minimapCanvas'></canvas>
+                        </div>
 
-						<hr/>
+                        <hr/>
 
-						<a id='mapperToolCursor' class='controlsTool' href='#'>Cursor</a>
-						<a id='mapperToolErase' class='controlsTool' href='#'>Erase</a>
-						<a id='mapperToolInteraction' class='controlsTool' href='#'>Interaction</a>
-						<a id='mapperToolZone' class='controlsTool' href='#'>Zone</a>
+                        <a id='mapperToolCursor' class='controlsTool' href='#'>Cursor</a>
+                        <a id='mapperToolErase' class='controlsTool' href='#'>Erase</a>
+                        <a id='mapperToolInteraction' class='controlsTool' href='#'>Interaction</a>
+                        <a id='mapperToolZone' class='controlsTool' href='#'>Zone</a>
 
-						<hr/>
+                        <hr/>
 
-						<a id='mapperToolUndo' class='controlsTool' href='#'>Undo</a>
-						<a id='mapperToolRedo' class='controlsTool' href='#'>Redo</a>
-					</div>
-				</div>
-			</div>
+                        <a id='mapperToolUndo' class='controlsTool' href='#'>Undo</a>
+                        <a id='mapperToolRedo' class='controlsTool' href='#'>Redo</a>
+                    </div>
+                </div>
+            </div>
 
 
             <div id='consoleWindow'>

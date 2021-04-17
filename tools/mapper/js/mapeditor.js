@@ -1633,6 +1633,11 @@ const MapEditor = (new function(){
         //cursor.x = worldPt.x;
         //cursor.y = worldPt.y;
         //this.dirtyCanvas = true;
+        const tileX = parseInt(worldPt.x / 16, 10),
+            tileY   = parseInt(worldPt.y / 16, 10),
+            tileI   = tileY * (Math.ceil(mapProperties.columns / 30) * 30) + tileX;
+
+        $('#coordinates').text(`${tileX}, ${tileY}`);
     };
 
     const onMiddleMouseClick = (worldPt) => {
