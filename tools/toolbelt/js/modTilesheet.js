@@ -1012,6 +1012,7 @@ const ModTilesheet = (function(containerEl){
                 const depGroup = spriteGroups.find((spriteGroup) => spriteGroup.imageSrc === dep.imageSrc);
 
                 if (!depGroup) debugger; // FIXME: Could we still be in the process of loading dependencies? If so then change this to a return
+                if (!dep.previewImg) debugger; // FIXME: If you hit this then we're calling this function too early, where other deps haven't finished loading yet -- only 1 dep should be unloaded
 
                 const position   = { x: depGroup.newDstX, y: depGroup.newDstY };
 
@@ -1356,6 +1357,7 @@ const ModTilesheet = (function(containerEl){
 
             // Load images from image based deps
             dependencies = [];
+            const loadList = [];
             resource.dependencies.forEach((_dep) => {
 
                 const dep = {};
@@ -1374,10 +1376,18 @@ const ModTilesheet = (function(containerEl){
 
                 // Need to loadImageDependency in order to build previewImg (in case it doesn't exist), and draw virtual
                 // canvas of img
-                loadImageDependency(dep).then(() => { }).catch((err) => {
+                const promise = loadImageDependency(dep).then(() => { }).catch((err) => {
                     console.error("Could not loadImageDependency");
                     console.error(err);
                 });
+                loadList.push(promise);
+            });
+
+            // After we've finished loading all deps, redraw the virtual canvas
+            Promise.all(loadList).then(() => {
+                this.redrawVirtualCanvas();
+                imgReady = true;
+                needsRedraw = true;
             });
         }
 
@@ -1595,6 +1605,8 @@ const ModTilesheet = (function(containerEl){
                             break;
                         }
                     }
+
++                    updateVirtualCanvasHeight();
                 })
                 .onEndDrag(() => {
                     borderedIsland = null;
@@ -2100,6 +2112,11 @@ const ModTilesheet = (function(containerEl){
             ConsoleMgr.addSeperator();
             ConsoleMgr.log(`Successfully saved ${resource.id}`);
             ConsoleMgr.log(data.results);
+
+            pendingChanges = false;
+            dirtyOnLoad = false;
+            this.updateDirtyOnLoad();
+            this.updatePendingChanges();
         }).catch((data) => {
             ConsoleMgr.addSeperator();
             console.log(data);

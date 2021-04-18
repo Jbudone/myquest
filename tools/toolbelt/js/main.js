@@ -206,3 +206,11 @@ $(document).ready(() => {
 
     step(1);
 });
+
+window.Assert = (exp) => {
+    if(!exp) {
+        console.error("Assert");
+        debugger;
+    }
+};
+
