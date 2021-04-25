@@ -51,13 +51,11 @@ for (let i=0; i<process.argv.length; ++i) {
 
     if (arg === "--package") {
         const filterPackage = process.argv[++i];
-        console.log(`Filtering package: "${filterPackage}"`);
         Settings.filterPackage = filterPackage;
     }
 
     if (arg === "--asset") {
         const filterAsset = process.argv[++i];
-        console.log(`Filtering asset: "${filterAsset}"`);
         Settings.filterAsset = filterAsset;
     }
 
@@ -164,6 +162,9 @@ const packageRoutines = {
 
                 if (Settings.filterPackage) {
                     package.skipProcess = (Settings.filterPackage !== packageName);
+                    if (package.skipProcess && Settings.verbose) {
+                        console.log(`Filtering package: "${Settings.filterPackage}"`);
+                    }
                 }
 
                 assets.push(package);
@@ -280,6 +281,11 @@ const packageRoutines = {
 
             // Mark generated sheets as dirty if lists differ
             _.forEach(generatedSheets, (sheet, sheetId) => {
+
+
+                if (Settings.forceRebuild) {
+                    sheet.dirty = true;
+                }
 
                 if (!sheet.dirty && sheet.list && sheet.currentList && (sheet.currentList.length === sheet.list.length)) {
                     for (let i = 0; i < sheet.currentList.length; ++i) {
@@ -803,6 +809,11 @@ let processResources = (package) => {
                         const assetFilteredOut = Settings.filterAsset && (Settings.filterAsset !== asset.name);
 
                         if (!assetFilteredOut) {
+
+                            if (Settings.filterAsset && Settings.verbose) {
+                                console.log(`Filtering asset: "${Settings.filterAsset}"`);
+                            }
+
                             if (Settings.forceRebuild) {
                                 console.log(`Asset to process: ${package.name}: ${asset.name}`);
                                 rebuildAsset = true;
@@ -1051,6 +1062,7 @@ const processImage = (package) => {
                     if (package.options.encrypted) {
                         const options = {
                             data: buffer,
+                            //message: openpgp.message.fromBinary(buffer),
                             passwords: ['secret stuff'],
                             armor: false
                         };
@@ -1139,6 +1151,14 @@ const processGeneratedTilesheet = (package) => {
 
         const oldSprites = package.oldSprites,
             modifiedSprites = package.sprites;
+
+
+        if (newDependencies.length === 0 || (modifiedSprites?.length && package.sprites.length === 0)) {
+            debugger;
+            console.error(`Error processing tilesheet ${package.id}: No dependencies/sprites found to generate`);
+            fail();
+            return;
+        }
 
         const oldSpriteGroups = package.spriteGroups;
 
@@ -1613,12 +1633,21 @@ const processGeneratedTilesheet = (package) => {
             convertCmd += `\\( "resources/${sprite.source}" -crop ${sprite.srcW}x${sprite.srcH}+${sprite.srcX}+${sprite.srcY}  -filter box -resize ${package.tilesize}x${package.tilesize} -repage ${curX >= 0 ? '+' : '-'}${curX}${curY >= 0 ? '+' : '-'}${curY} \\) `;
         });
 
+        // Imagemagick:
+        //  1. layer -- build entire dimensions of tilesheet w/ a single sprite
+        //      add sprite and extend bottom-right edges of layer, then extend top-left edges of layer, now layer is the size of tilesheet w/ sprite in correct position
+        //      - gravity: float sprite image into that direction
+        //      - extent: extends size of layer
+        //  2. merge all layers into tilesheet
         imagesToExtract.forEach((img) => {
-            const dstX = img.dstX,
-                dstY   = img.dstY,
+            const dstX = img.dstX, // real dist from left
+                dstY   = img.dstY, // real dist from top
                 right  = newColumns * package.tilesize - dstX,
                 bot    = newRows * package.tilesize - dstY;
-            convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} -background none -gravity northwest -extent ${right}x${bot} -gravity southeast -extent ${right + dstX}x${bot + dstY} \\) `;
+
+            // TODO: I'm not sure why we need to repage +0+0 every time, and why we previous had args set for repage. Dig into this and drop notes for later
+            //convertCmd += `\\( "resources/${img.source}" -filter box -repage ${dstX >= 0 ? '+' : '-'}${dstX}${dstY >= 0 ? '+' : '-'}${dstY} -background none -gravity northwest -extent ${right}x${bot} -gravity southeast -extent ${right + dstX}x${bot + dstY} \\) `;
+            convertCmd += `\\( "resources/${img.source}" -filter box -repage +0+0 -background none -gravity northwest -extent ${right}x${bot} -gravity southeast -extent ${right + dstX}x${bot + dstY} \\) `;
         });
 
         convertCmd += `-background none -layers merge "${package.output}"`;
@@ -2119,10 +2148,10 @@ const processGeneratedTilesheet = (package) => {
                 // NOTE: If tiled isn't open this will silently fail without side effects
                 // FIXME: If the sheet bounds haven't changed then we won't receive a popup
                 // FIXME: xdotool also allows waiting for behaviors, will this recognize the popup?
-                const waitForPopupTime = 0.4, // Tiled will popup asking to reload (it hasn't recognized that we've changed the bounds yet)
-                    waitToReload = 0.1, // After denying reload: takes a moment for the popup press to respond
-                    waitToShow = 1.0;
-                execSync('export DISPLAY=:0.0 ; export XAUTHORITY=/home/jbud/.Xauthority ; xdotool search --class tiled windowactivate --sync %1 key ctrl+t sleep ' + waitForPopupTime + ' key N sleep ' + waitToReload + ' key ctrl+r key ctrl+r sleep ' + waitToShow + '  windowactivate $( xdotool getactivewindow )');
+                //const waitForPopupTime = 0.4, // Tiled will popup asking to reload (it hasn't recognized that we've changed the bounds yet)
+                //    waitToReload = 0.1, // After denying reload: takes a moment for the popup press to respond
+                //    waitToShow = 1.0;
+                //execSync('export DISPLAY=:0.0 ; export XAUTHORITY=/home/jbud/.Xauthority ; xdotool search --class tiled windowactivate --sync %1 key ctrl+t sleep ' + waitForPopupTime + ' key N sleep ' + waitToReload + ' key ctrl+r key ctrl+r sleep ' + waitToShow + '  windowactivate $( xdotool getactivewindow )');
 
                 success();
             }).catch((err) => {
